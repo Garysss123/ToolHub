@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片極限壓縮工具 | ToolHub - 支援 WebP/JPG 的純前端無損降檔引擎</title>
+    <meta name="description" content="免費且安全的線上圖片壓縮工具。支援 JPG, PNG, WebP 等主流格式，利用瀏覽器邊緣運算極致縮小檔案體積，100% 保障您的圖片隱私。">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+   
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(135deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1A263C 75%), 
+                linear-gradient(135deg, transparent 75%, #1A263C 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #0B1120;
+        }
+
+        .upload-zone { transition: all 0.3s ease; }
+        .upload-zone.dragover { border-color: #38BDF8; background-color: rgba(56,189,248,0.05); }
+
+        /* Range Slider 美化 */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            background: #38BDF8; cursor: pointer; margin-top: -7px;
+            box-shadow: 0 0 10px rgba(56,189,248,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Image Compressor -->
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                無損降檔壓縮矩陣已上線
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                圖片極限<span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-accent to-blue-500">壓縮工具</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                支援 JPG, PNG, WebP 格式。透過純前端邊緣運算，在畫質與檔案大小間取得完美平衡。您的圖片將不會離開這台設備，確保 100% 隱私安全。
+            </p>
+        </div>
+
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden p-6 md:p-8 min-h-[500px]">
+            
+            <!-- 上傳區 -->
+            <div id="upload-section" class="flex flex-col h-full min-h-[350px]">
+                <input type="file" id="image-upload" accept="image/jpeg, image/png, image/webp" class="hidden">
+                <div id="drop-zone" class="upload-zone flex-1 border-2 border-dashed border-hub-700 hover:border-hub-accent rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30 p-8">
+                    <div class="p-5 bg-hub-800 rounded-full mb-5 text-hub-accent shadow-lg border border-hub-700"><i class="ph ph-file-zip text-4xl"></i></div>
+                    <p class="text-white font-bold text-lg mb-2">點擊或拖曳圖片至此開始壓縮</p>
+                    <p class="text-sm text-slate-400 text-center mb-4">支援 JPG, PNG, WebP 等主流格式 (單檔建議 20MB 以內)</p>
+                    <div class="flex gap-3 mt-2">
+                        <span class="px-3 py-1 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 font-mono">.JPG</span>
+                        <span class="px-3 py-1 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 font-mono">.PNG</span>
+                        <span class="px-3 py-1 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 font-mono">.WEBP</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工作區 (預設隱藏) -->
+            <div id="workspace-section" class="hidden flex-col lg:flex-row gap-8">
+                
+                <!-- 左側：視覺對比與預覽 -->
+                <div class="w-full lg:w-1/2 flex flex-col gap-6">
+                    <!-- 預覽框 -->
+                    <div class="w-full aspect-video rounded-xl border border-hub-700 bg-hub-900 overflow-hidden relative checkerboard flex items-center justify-center">
+                        <img id="preview-image" class="max-w-full max-h-full object-contain drop-shadow-xl z-10" src="" alt="預覽圖片">
+                        <!-- 壓縮中遮罩 -->
+                        <div id="compressing-overlay" class="absolute inset-0 bg-hub-900/80 backdrop-blur-sm z-20 hidden flex-col items-center justify-center text-hub-accent">
+                            <i class="ph ph-spinner-gap text-4xl animate-spin mb-2"></i>
+                            <span class="text-sm font-medium tracking-widest">矩陣運算中...</span>
+                        </div>
+                    </div>
+
+                    <!-- 體積數據對比面板 -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-hub-900 border border-hub-700 rounded-xl p-4 flex flex-col items-center text-center">
+                            <span class="text-xs text-slate-400 font-medium mb-1"><i class="ph ph-image mr-1"></i>原始大小</span>
+                            <span id="original-size" class="text-xl font-bold text-white font-mono">0 KB</span>
+                            <span id="original-type" class="text-[10px] text-slate-500 uppercase mt-1">JPEG</span>
+                        </div>
+                        <div class="bg-hub-900 border border-hub-accent/30 rounded-xl p-4 flex flex-col items-center text-center relative overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-b from-hub-accent/10 to-transparent pointer-events-none"></div>
+                            <span class="text-xs text-hub-accent font-medium mb-1"><i class="ph ph-file-zip mr-1"></i>壓縮後大小</span>
+                            <span id="compressed-size" class="text-xl font-bold text-emerald-400 font-mono drop-shadow-[0_0_5px_rgba(52,211,153,0.4)]">0 KB</span>
+                            <span id="compressed-type" class="text-[10px] text-slate-400 uppercase mt-1">JPEG</span>
+                            <!-- 節省比例 Badge -->
+                            <div id="save-ratio-badge" class="absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">
+                                -0%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：壓縮參數控制 -->
+                <div class="w-full lg:w-1/2 flex flex-col gap-6">
+                    <div class="bg-hub-900/50 border border-hub-700 rounded-xl p-6 flex-1 flex flex-col">
+                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-hub-700">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="ph ph-sliders-horizontal text-hub-accent text-lg"></i> 壓縮參數設定</h3>
+                            <button id="btn-reset" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"><i class="ph ph-arrow-counter-clockwise"></i> 重新上傳</button>
+                        </div>
+
+                        <!-- 輸出格式選擇 -->
+                        <div class="space-y-3 mb-8">
+                            <label class="text-sm text-slate-300 font-medium">目標輸出格式</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="format" value="auto" class="peer hidden" checked>
+                                    <div class="px-3 py-2.5 rounded-lg border border-hub-700 bg-hub-800 text-slate-400 text-sm text-center peer-checked:border-hub-accent peer-checked:bg-hub-accent/10 peer-checked:text-hub-accent transition-all font-medium">
+                                        保持原格式
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer" title="具備最佳壓縮率且支援透明度，現代網頁首選">
+                                    <input type="radio" name="format" value="image/webp" class="peer hidden">
+                                    <div class="px-3 py-2.5 rounded-lg border border-hub-700 bg-hub-800 text-slate-400 text-sm text-center peer-checked:border-emerald-400 peer-checked:bg-emerald-400/10 peer-checked:text-emerald-400 transition-all font-medium flex flex-col items-center">
+                                        轉 WebP <span class="text-[10px] opacity-70 leading-none mt-0.5">最佳壓縮</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer" title="傳統相容性最高，會失去透明背景">
+                                    <input type="radio" name="format" value="image/jpeg" class="peer hidden">
+                                    <div class="px-3 py-2.5 rounded-lg border border-hub-700 bg-hub-800 text-slate-400 text-sm text-center peer-checked:border-hub-accent peer-checked:bg-hub-accent/10 peer-checked:text-hub-accent transition-all font-medium flex flex-col items-center">
+                                        轉 JPG <span class="text-[10px] opacity-70 leading-none mt-0.5">高相容性</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <p id="png-warning" class="text-xs text-amber-400/80 hidden mt-2"><i class="ph-fill ph-warning-circle mr-1"></i>原圖為 PNG。若選擇轉為 JPG，原本透明的背景將會被填補為白色。</p>
+                        </div>
+
+                        <!-- 畫質控制 Slider -->
+                        <div class="space-y-4 mb-auto">
+                            <div class="flex justify-between items-center">
+                                <label class="text-sm text-slate-300 font-medium">壓縮品質 (Quality)</label>
+                                <span id="quality-val" class="text-hub-accent font-mono bg-hub-800 px-2 py-0.5 rounded text-sm font-bold">80%</span>
+                            </div>
+                            <input type="range" id="quality-slider" min="10" max="100" value="80" class="w-full">
+                            <div class="flex justify-between text-xs text-slate-500 font-mono px-1">
+                                <span>檔案最小 (低畫質)</span>
+                                <span>畫質最佳 (檔案大)</span>
+                            </div>
+                        </div>
+
+                        <!-- 下載按鈕 -->
+                        <div class="pt-6 mt-6 border-t border-hub-700">
+                            <button id="btn-download" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-hub-accent to-blue-600 hover:from-[#1da7e0] hover:to-blue-500 text-white font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="ph ph-download-simple text-xl"></i> 下載壓縮圖片
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 內部運算用隱藏畫布 -->
+    <canvas id="compress-canvas" class="hidden"></canvas>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/image-compressor'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：邊緣壓縮矩陣引擎              -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Nodes
+            const uploadSection = document.getElementById('upload-section');
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('image-upload');
+            const workspaceSection = document.getElementById('workspace-section');
+            const btnReset = document.getElementById('btn-reset');
+            
+            const previewImage = document.getElementById('preview-image');
+            const compressingOverlay = document.getElementById('compressing-overlay');
+            const originalSizeEl = document.getElementById('original-size');
+            const originalTypeEl = document.getElementById('original-type');
+            const compressedSizeEl = document.getElementById('compressed-size');
+            const compressedTypeEl = document.getElementById('compressed-type');
+            const saveRatioBadge = document.getElementById('save-ratio-badge');
+            
+            const qualitySlider = document.getElementById('quality-slider');
+            const qualityVal = document.getElementById('quality-val');
+            const formatRadios = document.getElementsByName('format');
+            const pngWarning = document.getElementById('png-warning');
+            const btnDownload = document.getElementById('btn-download');
+            
+            const canvas = document.getElementById('compress-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Application State
+            let sourceFile = null;
+            let sourceImage = new Image();
+            let compressedBlob = null;
+            let currentObjectUrl = null;
+            let compressionTimeout = null;
+
+            // Utilities
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            const getFormatName = (mimeType) => {
+                return mimeType.replace('image/', '').toUpperCase();
+            };
+
+            // --- 階段 1：檔案載入與解析 ---
+            const handleFile = (file) => {
+                if (!file || !file.type.startsWith('image/')) return;
+                
+                sourceFile = file;
+                originalSizeEl.textContent = formatBytes(file.size);
+                originalTypeEl.textContent = getFormatName(file.type);
+                
+                // 動態提示 PNG 轉 JPG 的警告
+                checkPngWarning();
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    sourceImage.onload = () => {
+                        uploadSection.classList.add('hidden');
+                        workspaceSection.classList.remove('hidden');
+                        workspaceSection.classList.add('flex');
+                        
+                        // 啟動首次壓縮
+                        triggerCompression();
+                    };
+                    sourceImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            // 檔案拖曳與點擊事件
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => { if(e.target.files.length) handleFile(e.target.files[0]); });
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('dragover');
+                if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+
+            btnReset.addEventListener('click', () => {
+                sourceFile = null;
+                sourceImage.src = '';
+                fileInput.value = '';
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                workspaceSection.classList.add('hidden');
+                workspaceSection.classList.remove('flex');
+                uploadSection.classList.remove('hidden');
+            });
+
+            // --- 階段 2：核心壓縮矩陣 ---
+            const triggerCompression = () => {
+                // 防抖動 (Debounce) 保護機制，避免拉動 Slider 時瞬間觸發數十次龐大運算
+                clearTimeout(compressionTimeout);
+                compressingOverlay.classList.remove('hidden');
+                compressingOverlay.classList.add('flex');
+                btnDownload.disabled = true;
+
+                compressionTimeout = setTimeout(() => {
+                    executeCompression();
+                }, 300); // 延遲 300ms 執行
+            };
+
+            const executeCompression = () => {
+                if (!sourceFile || !sourceImage.src) return;
+
+                // 決定目標格式
+                let selectedFormat = document.querySelector('input[name="format"]:checked').value;
+                let targetMimeType = selectedFormat === 'auto' ? sourceFile.type : selectedFormat;
+                
+                // 畫質轉換 (0.1 ~ 1.0)
+                const quality = parseInt(qualitySlider.value, 10) / 100;
+
+                // 設定 Canvas 尺寸 (這裡不做縮放，保留原解析度。若需進階功能可在此加入寬高計算)
+                canvas.width = sourceImage.width;
+                canvas.height = sourceImage.height;
+
+                // 物理法則處理：若 PNG 帶有透明度但要轉為 JPEG，必須先鋪上一層白底，否則透明處會變黑
+                if (targetMimeType === 'image/jpeg' && sourceFile.type === 'image/png') {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+
+                // 將影像繪製入運算矩陣
+                ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+
+                // 執行壓縮並輸出 Blob (非同步操作)
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        compressedBlob = blob;
+                        
+                        // 更新 UI 數據
+                        compressedSizeEl.textContent = formatBytes(blob.size);
+                        compressedTypeEl.textContent = getFormatName(targetMimeType);
+                        
+                        // 計算節省比例
+                        let ratio = ((sourceFile.size - blob.size) / sourceFile.size) * 100;
+                        if (ratio > 0) {
+                            saveRatioBadge.textContent = `-${ratio.toFixed(1)}%`;
+                            saveRatioBadge.className = 'absolute top-2 right-2 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded';
+                        } else {
+                            // 有些原本就壓縮很好的圖，或者選了 100% 畫質，可能反而變大
+                            saveRatioBadge.textContent = `+${Math.abs(ratio).toFixed(1)}%`;
+                            saveRatioBadge.className = 'absolute top-2 right-2 px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded';
+                        }
+
+                        // 更新預覽圖
+                        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                        currentObjectUrl = URL.createObjectURL(blob);
+                        previewImage.src = currentObjectUrl;
+
+                        // 解除鎖定
+                        compressingOverlay.classList.add('hidden');
+                        compressingOverlay.classList.remove('flex');
+                        btnDownload.disabled = false;
+                    }
+                }, targetMimeType, quality);
+            };
+
+            // --- 參數異動監聽 ---
+            qualitySlider.addEventListener('input', (e) => {
+                qualityVal.textContent = `${e.target.value}%`;
+                triggerCompression();
+            });
+
+            const checkPngWarning = () => {
+                if (!sourceFile) return;
+                const isFormatJpg = document.querySelector('input[name="format"][value="image/jpeg"]').checked;
+                if (sourceFile.type === 'image/png' && isFormatJpg) {
+                    pngWarning.classList.remove('hidden');
+                } else {
+                    pngWarning.classList.add('hidden');
+                }
+            };
+
+            Array.from(formatRadios).forEach(radio => {
+                radio.addEventListener('change', () => {
+                    checkPngWarning();
+                    triggerCompression();
+                });
+            });
+
+            // --- 匯出下載機制 ---
+            btnDownload.addEventListener('click', () => {
+                if (!compressedBlob) return;
+                
+                // 決定副檔名
+                let selectedFormat = document.querySelector('input[name="format"]:checked').value;
+                let targetMimeType = selectedFormat === 'auto' ? sourceFile.type : selectedFormat;
+                let ext = targetMimeType.split('/')[1];
+                if (ext === 'jpeg') ext = 'jpg';
+
+                // 產生新檔名 (原檔名_min.副檔名)
+                const originalName = sourceFile.name.substring(0, sourceFile.name.lastIndexOf('.')) || 'image';
+                const newFilename = `${originalName}_min.${ext}`;
+
+                const link = document.createElement('a');
+                link.download = newFilename;
+                link.href = currentObjectUrl;
+                link.click();
+            });
+
+        });
+    </script>
+</body>
+</html>

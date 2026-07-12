@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo → Scan 文件掃描生成器 | ToolHub - 手機照片轉清晰掃描檔 (純前端)</title>
+    <meta name="description" content="將手機拍攝的照片快速轉換為乾淨的高對比掃描文件。支援自動黑白二值化、文件邊緣強化與自由裁切。所有影像運算皆在瀏覽器本地邊緣執行，100% 保障您的資料隱私。">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- 模塊專屬依賴 (裁切引擎與 PDF 固化引擎) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+       <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(135deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1A263C 75%), 
+                linear-gradient(135deg, transparent 75%, #1A263C 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #0f172a;
+        }
+
+        .upload-zone { transition: all 0.3s ease; }
+        .upload-zone.dragover { border-color: #38BDF8; background-color: rgba(56,189,248,0.05); }
+        
+        .filter-btn.active {
+            border-color: #38BDF8;
+            background-color: rgba(56,189,248,0.1);
+            color: #38BDF8;
+        }
+
+        /* 裁切器 UI 覆寫 */
+        .cropper-view-box, .cropper-face { outline-color: #38BDF8 !important; }
+        .cropper-line, .cropper-point { background-color: #38BDF8 !important; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Photo to Scan -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                物理實體數位化引擎已啟動
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Photo → Scan <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-hub-accent">文件掃描生成器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                將手機拍攝的照片快速轉換為乾淨的掃描文件。支援高對比黑白掃描、灰階邊緣增強與自由裁切。完全依賴本地邊緣運算，100% 保障您的機密隱私。
+            </p>
+        </div>
+
+        <!-- 運算主控台 -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col lg:flex-row min-h-[600px]">
+            
+            <!-- 左側：影像輸入與控制面板 -->
+            <div class="w-full lg:w-1/3 bg-hub-900/50 border-r border-hub-700 p-6 flex flex-col gap-6">
+                
+                <!-- 上傳區 -->
+                <div id="upload-section" class="flex-1 flex flex-col">
+                    <input type="file" id="image-upload" accept="image/*" class="hidden">
+                    <div id="drop-zone" class="upload-zone flex-1 border-2 border-dashed border-hub-700 hover:border-hub-accent rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-800/30 p-6 min-h-[200px]">
+                        <div class="p-4 bg-hub-800 rounded-full mb-4 text-emerald-400 shadow-lg border border-hub-700"><i class="ph ph-camera-plus text-3xl"></i></div>
+                        <p class="text-white font-bold mb-1">點擊或拖曳文件照片</p>
+                        <p class="text-xs text-slate-400 text-center">推薦拍攝環境：光線明亮且背景對比清晰</p>
+                    </div>
+                </div>
+
+                <!-- 控制區 (預設隱藏) -->
+                <div id="control-section" class="hidden flex-col gap-6">
+                    <div class="flex items-center justify-between border-b border-hub-700 pb-3">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="ph ph-sliders-horizontal text-hub-accent"></i> 渲染濾鏡模型</h3>
+                        <button id="btn-reupload" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"><i class="ph ph-arrows-clockwise"></i> 重新載入</button>
+                    </div>
+
+                    <!-- 濾鏡選擇 -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <button class="filter-btn active flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-hub-700 bg-hub-800 hover:bg-hub-700 transition-colors" data-filter="original">
+                            <i class="ph ph-image text-xl"></i>
+                            <span class="text-xs font-medium">原始照片</span>
+                        </button>
+                        <button class="filter-btn flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-hub-700 bg-hub-800 hover:bg-hub-700 transition-colors" data-filter="grayscale">
+                            <i class="ph ph-drop-half-bottom text-xl"></i>
+                            <span class="text-xs font-medium">灰階文件</span>
+                        </button>
+                        <button class="filter-btn flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-hub-700 bg-hub-800 hover:bg-hub-700 transition-colors" data-filter="bw">
+                            <i class="ph ph-copy text-xl"></i>
+                            <span class="text-xs font-medium">純黑白掃描</span>
+                        </button>
+                        <button class="filter-btn flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-hub-700 bg-hub-800 hover:bg-hub-700 transition-colors" data-filter="enhance">
+                            <i class="ph ph-magic-wand text-xl"></i>
+                            <span class="text-xs font-medium">色彩增強</span>
+                        </button>
+                    </div>
+
+                    <!-- 進階控制 (黑白閾值) -->
+                    <div id="threshold-control" class="hidden space-y-2 pt-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">二值化對比閾值</span>
+                            <span id="threshold-val" class="text-hub-accent font-mono">128</span>
+                        </div>
+                        <input type="range" id="threshold-slider" min="50" max="200" value="128" class="w-full">
+                    </div>
+
+                    <!-- 裁切與輸出 -->
+                    <div class="mt-auto space-y-3 pt-4 border-t border-hub-700">
+                        <button id="btn-toggle-crop" class="w-full py-2.5 rounded-xl border border-hub-700 bg-hub-800 hover:bg-hub-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-all">
+                            <i class="ph ph-crop"></i> 自由裁切文件邊緣
+                        </button>
+                        <div class="flex gap-2">
+                            <button id="btn-download-img" class="flex-1 py-3 rounded-xl border border-hub-700 bg-hub-900 hover:bg-hub-800 text-white text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-md">
+                                <i class="ph ph-download-simple text-lg text-emerald-400"></i> JPG
+                            </button>
+                            <button id="btn-download-pdf" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-hub-accent to-blue-600 hover:from-[#1da7e0] hover:to-blue-500 text-white text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/30">
+                                <i class="ph ph-file-pdf text-lg"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 右側：即時渲染畫布 -->
+            <div class="w-full lg:w-2/3 p-4 sm:p-6 bg-black checkerboard relative flex flex-col items-center justify-center overflow-hidden min-h-[400px]">
+                <!-- 預設狀態 -->
+                <div id="canvas-placeholder" class="text-slate-600 flex flex-col items-center">
+                    <i class="ph ph-scan text-6xl mb-2 opacity-50"></i>
+                    <p class="text-sm font-medium tracking-widest uppercase">SCANNER ENGINE IDLE</p>
+                </div>
+
+                <!-- 運算與渲染容器 -->
+                <div id="render-container" class="hidden w-full h-full relative flex items-center justify-center">
+                    <!-- 內部 img 用於 Cropper 綁定或 Canvas 繪製來源 -->
+                    <img id="source-img" class="hidden max-w-full max-h-full object-contain">
+                    <!-- 最終輸出顯示 Canvas -->
+                    <canvas id="output-canvas" class="max-w-full max-h-full object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]"></canvas>
+                </div>
+                
+                <!-- 裁切確認列 (漂浮) -->
+                <div id="crop-actions" class="hidden absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-hub-900/90 backdrop-blur border border-hub-700 p-2 rounded-full shadow-2xl flex items-center gap-2 z-20">
+                    <button id="btn-cancel-crop" class="px-4 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-hub-800 text-sm font-medium transition-colors">取消</button>
+                    <button id="btn-apply-crop" class="px-5 py-1.5 rounded-full bg-hub-accent text-hub-900 hover:bg-sky-400 text-sm font-bold transition-colors shadow-lg"><i class="ph ph-check mr-1"></i>確認裁切</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <!-- ⚠️ 注意：這裡沒有任何硬編碼的廣告腳本了，完全仰賴 Footer 的水合機制 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/scan';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：影像處理與掃描核心矩陣        -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const uploadSection = document.getElementById('upload-section');
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('image-upload');
+            const controlSection = document.getElementById('control-section');
+            
+            const placeholder = document.getElementById('canvas-placeholder');
+            const renderContainer = document.getElementById('render-container');
+            const sourceImg = document.getElementById('source-img');
+            const outputCanvas = document.getElementById('output-canvas');
+            const ctx = outputCanvas.getContext('2d', { willReadFrequently: true });
+            
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const thresholdControl = document.getElementById('threshold-control');
+            const thresholdSlider = document.getElementById('threshold-slider');
+            const thresholdVal = document.getElementById('threshold-val');
+            
+            const btnToggleCrop = document.getElementById('btn-toggle-crop');
+            const cropActions = document.getElementById('crop-actions');
+            const btnCancelCrop = document.getElementById('btn-cancel-crop');
+            const btnApplyCrop = document.getElementById('btn-apply-crop');
+            
+            const btnDownloadImg = document.getElementById('btn-download-img');
+            const btnDownloadPdf = document.getElementById('btn-download-pdf');
+
+            // State variables
+            let originalImage = new Image();
+            let currentFilter = 'original';
+            let cropper = null;
+            let isCropping = false;
+
+            // --- 影像載入處理 ---
+            const handleFile = (file) => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    originalImage.onload = () => {
+                        uploadSection.classList.add('hidden');
+                        controlSection.classList.remove('hidden');
+                        controlSection.classList.add('flex');
+                        placeholder.classList.add('hidden');
+                        renderContainer.classList.remove('hidden');
+                        
+                        sourceImg.src = originalImage.src;
+                        processImage();
+                    };
+                    originalImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => { if(e.target.files.length) handleFile(e.target.files[0]); });
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('dragover');
+                if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+
+            document.getElementById('btn-reupload').addEventListener('click', () => {
+                if (cropper) { cropper.destroy(); cropper = null; }
+                originalImage.src = ''; sourceImg.src = '';
+                uploadSection.classList.remove('hidden');
+                controlSection.classList.add('hidden'); controlSection.classList.remove('flex');
+                placeholder.classList.remove('hidden');
+                renderContainer.classList.add('hidden');
+                isCropping = false; cropActions.classList.add('hidden');
+                outputCanvas.style.display = 'block'; sourceImg.classList.add('hidden');
+                btnToggleCrop.disabled = false; btnToggleCrop.classList.remove('opacity-50');
+            });
+
+            // --- 核心演算法：影像處理矩陣 ---
+            const processImage = () => {
+                if (isCropping) return; 
+
+                const MAX_DIMENSION = 3000;
+                let width = originalImage.width;
+                let height = originalImage.height;
+
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+                    width = Math.floor(width * ratio);
+                    height = Math.floor(height * ratio);
+                }
+
+                outputCanvas.width = width;
+                outputCanvas.height = height;
+                ctx.drawImage(originalImage, 0, 0, width, height);
+
+                if (currentFilter === 'original') return;
+
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                const threshold = parseInt(thresholdSlider.value, 10);
+
+                for (let i = 0; i < data.length; i += 4) {
+                    let r = data[i];
+                    let g = data[i+1];
+                    let b = data[i+2];
+
+                    if (currentFilter === 'grayscale' || currentFilter === 'bw') {
+                        const gray = r * 0.299 + g * 0.587 + b * 0.114;
+                        
+                        if (currentFilter === 'bw') {
+                            const val = gray > threshold ? 255 : 0;
+                            data[i] = data[i+1] = data[i+2] = val;
+                        } else {
+                            let enhancedGray = gray;
+                            if (enhancedGray > 200) enhancedGray = 255;
+                            else if (enhancedGray < 100) enhancedGray = Math.max(0, enhancedGray - 20);
+                            data[i] = data[i+1] = data[i+2] = enhancedGray;
+                        }
+                    } else if (currentFilter === 'enhance') {
+                        const gray = r * 0.299 + g * 0.587 + b * 0.114;
+                        const factor = 1.3;
+                        r = gray + (r - gray) * factor;
+                        g = gray + (g - gray) * factor;
+                        b = gray + (b - gray) * factor;
+                        
+                        if (r>200 && g>200 && b>200) { r=255; g=255; b=255; }
+                        
+                        data[i] = Math.min(255, Math.max(0, r));
+                        data[i+1] = Math.min(255, Math.max(0, g));
+                        data[i+2] = Math.min(255, Math.max(0, b));
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            };
+
+            // --- UI 互動綁定 ---
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (isCropping) return;
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    const targetBtn = e.currentTarget;
+                    targetBtn.classList.add('active');
+                    currentFilter = targetBtn.dataset.filter;
+                    
+                    if (currentFilter === 'bw') {
+                        thresholdControl.classList.remove('hidden');
+                    } else {
+                        thresholdControl.classList.add('hidden');
+                    }
+                    
+                    processImage();
+                });
+            });
+
+            thresholdSlider.addEventListener('input', (e) => {
+                thresholdVal.textContent = e.target.value;
+                if(currentFilter === 'bw' && !isCropping) {
+                    clearTimeout(window.renderTimeout);
+                    window.renderTimeout = setTimeout(processImage, 50);
+                }
+            });
+
+            // --- 裁切模組整合 ---
+            btnToggleCrop.addEventListener('click', () => {
+                if (isCropping || !originalImage.src) return;
+                isCropping = true;
+                
+                outputCanvas.style.display = 'none';
+                sourceImg.classList.remove('hidden');
+                
+                cropper = new Cropper(sourceImg, {
+                    viewMode: 1,
+                    dragMode: 'crop',
+                    background: false,
+                    autoCropArea: 0.9,
+                });
+                
+                cropActions.classList.remove('hidden');
+                btnToggleCrop.disabled = true;
+                btnToggleCrop.classList.add('opacity-50');
+            });
+
+            const exitCropMode = () => {
+                if (cropper) { cropper.destroy(); cropper = null; }
+                isCropping = false;
+                sourceImg.classList.add('hidden');
+                outputCanvas.style.display = 'block';
+                cropActions.classList.add('hidden');
+                btnToggleCrop.disabled = false;
+                btnToggleCrop.classList.remove('opacity-50');
+            };
+
+            btnCancelCrop.addEventListener('click', () => {
+                exitCropMode();
+                processImage();
+            });
+
+            btnApplyCrop.addEventListener('click', () => {
+                if (!cropper) return;
+                const croppedCanvas = cropper.getCroppedCanvas({ imageSmoothingQuality: 'high' });
+                if (croppedCanvas) {
+                    originalImage.src = croppedCanvas.toDataURL('image/jpeg', 1.0);
+                    originalImage.onload = () => {
+                        sourceImg.src = originalImage.src;
+                        exitCropMode();
+                        processImage();
+                    };
+                } else {
+                    exitCropMode();
+                }
+            });
+
+            // --- 匯出功能 ---
+            const getFileName = (ext) => `ToolHub_Scan_${Date.now()}.${ext}`;
+
+            btnDownloadImg.addEventListener('click', () => {
+                if (isCropping) return;
+                const link = document.createElement('a');
+                link.download = getFileName('jpg');
+                link.href = outputCanvas.toDataURL('image/jpeg', 0.92);
+                link.click();
+            });
+
+            btnDownloadPdf.addEventListener('click', () => {
+                if (isCropping) return;
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const isLandscape = outputCanvas.width > outputCanvas.height;
+                    const doc = new jsPDF({
+                        orientation: isLandscape ? 'landscape' : 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+
+                    const pdfWidth = doc.internal.pageSize.getWidth();
+                    const pdfHeight = doc.internal.pageSize.getHeight();
+                    
+                    const ratio = Math.min(pdfWidth / outputCanvas.width, pdfHeight / outputCanvas.height);
+                    const imgX = (pdfWidth - outputCanvas.width * ratio) / 2;
+                    const imgY = 0; 
+
+                    const imgData = outputCanvas.toDataURL('image/jpeg', 0.9);
+                    doc.addImage(imgData, 'JPEG', imgX, imgY, outputCanvas.width * ratio, outputCanvas.height * ratio);
+                    doc.save(getFileName('pdf'));
+                } catch(e) {
+                    console.error('PDF 生成失敗', e);
+                    alert('PDF 生成引擎發生錯誤，請先使用 JPG 下載。');
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

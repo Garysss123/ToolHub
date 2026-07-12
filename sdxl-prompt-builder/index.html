@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDXL 提示詞產生器 - Stable Diffusion Prompt Builder | ToolHub</title>
+    <meta name="description" content="免費 SDXL 提示詞產生器，支援中英文切換與專業折疊分類，幫助創作者快速建立高品質 Prompt。">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 引入系統層圖示庫 (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入模塊層圖示庫 (Phosphor) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+   
+    
+    <!-- 引入 Tailwind CSS 引擎 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        // 融合系統核心色系與本模塊的客製化設定
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 保留原模塊的 CSS 變數，維持工具介面的獨特科技感 */
+        :root {
+            --bg-base: #0a0e17;
+            --bg-surface: #121926;
+            --bg-surface-hover: #1e293b;
+            --bg-nav: #111827;
+            --primary: #2ebcff;
+            --primary-dark: #008eb3;
+            --primary-transparent: rgba(46, 188, 255, 0.15);
+            --danger: #ef4444;
+            --danger-transparent: rgba(239, 68, 68, 0.15);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #1e293b;
+            --border-highlight: #334155;
+            --success: #10b981;
+            --font-main: 'Noto Sans TC', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            background-image: 
+                linear-gradient(var(--border-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center top;
+            overflow-x: hidden;
+        }
+
+        /* --- Main Content & Hero --- */
+        /* 微調 padding 確保與新的 sticky header 完美對齊 */
+        main.tool-main { 
+            padding: 40px 20px 60px; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            flex-grow: 1;
+            width: 100%;
+        }
+        
+        .hero { text-align: center; margin-bottom: 30px; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background-color: var(--primary-transparent); color: var(--primary);
+            padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; margin-bottom: 12px;
+            border: 1px solid rgba(46, 188, 255, 0.2);
+        }
+        .hero h1 { 
+            font-size: 2.2rem; margin-bottom: 8px; font-weight: bold;
+            background: linear-gradient(90deg, #ffffff 10%, var(--primary) 90%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* --- Tool Container --- */
+        .tool-card {
+            background-color: var(--bg-surface); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .controls-row {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+            margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;
+        }
+        .model-selector { display: flex; gap: 10px; overflow-x: auto; flex: 1; }
+        .model-btn {
+            background-color: transparent; border: 1px solid var(--border-color); color: var(--text-muted);
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .model-btn.active { background-color: var(--primary-transparent); border-color: var(--primary); color: var(--primary); }
+
+        .lang-toggle-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background-color: var(--bg-nav); border: 1px solid var(--border-highlight); color: var(--text-main);
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .lang-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Output Areas */
+        .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+        @media (max-width: 768px) { .grid-2col { grid-template-columns: 1fr; } }
+
+        .output-group label {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.95rem; color: var(--text-main); margin-bottom: 8px; font-weight: 500;
+        }
+        .output-group label.neg-label { color: #fca5a5; }
+        .word-count { font-size: 0.8rem; color: var(--text-muted); }
+        
+        textarea.prompt-box {
+            width: 100%; background-color: var(--bg-base); border: 1px solid var(--border-highlight);
+            border-radius: 12px; padding: 16px; color: var(--text-main); font-family: monospace;
+            font-size: 0.9rem; line-height: 1.5; resize: vertical; min-height: 120px; transition: border-color 0.2s;
+        }
+        textarea.prompt-box:focus { outline: none; border-color: var(--primary); }
+        #negativePrompt:focus { border-color: var(--danger); }
+
+        .action-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+        .action-btn {
+            display: inline-flex; align-items: center; gap: 6px; background-color: var(--bg-base);
+            border: 1px solid var(--border-highlight); color: var(--text-main); padding: 10px 16px;
+            border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .action-btn:hover { background-color: var(--bg-surface-hover); border-color: var(--text-muted); }
+        .btn-primary { background-color: var(--primary-transparent); border-color: var(--primary); color: var(--primary); }
+        .btn-primary:hover { background-color: var(--primary); color: var(--bg-base); }
+        .btn-danger-outline { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+        .btn-danger-outline:hover { background-color: var(--danger-transparent); border-color: var(--danger); }
+
+        /* Tabs System */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .tab-btn {
+            background: none; border: none; color: var(--text-muted); padding: 10px 20px;
+            font-size: 1rem; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent;
+            transition: all 0.2s; margin-bottom: -1px; display: flex; align-items: center; gap: 6px;
+        }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active[data-target="posTags"] { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-btn.active[data-target="negTags"] { color: var(--danger); border-bottom-color: var(--danger); }
+
+        .tags-panel { display: none; animation: fadeIn 0.3s ease; }
+        .tags-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Accordion (折疊面板) 架構 --- */
+        .accordion-item {
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background-color: var(--bg-base);
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            width: 100%; text-align: left; background: none; border: none;
+            padding: 16px 20px; color: var(--text-main); font-size: 1rem; font-weight: 500;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; transition: background-color 0.2s;
+        }
+        .accordion-header:hover { background-color: var(--bg-surface-hover); }
+        
+        .accordion-header i { transition: transform 0.3s ease; color: var(--text-muted); }
+        .accordion-item.open .accordion-header i { transform: rotate(180deg); }
+        
+        .acc-badge {
+            font-size: 0.75rem; background-color: var(--border-color); color: var(--text-muted);
+            padding: 2px 8px; border-radius: 12px; margin-left: 10px; transition: all 0.2s;
+            opacity: 0; transform: scale(0.8);
+        }
+        .acc-badge.active { opacity: 1; transform: scale(1); }
+        #posTags .acc-badge.active { background-color: var(--primary); color: #000; }
+        #negTags .acc-badge.active { background-color: var(--danger); color: #fff; }
+
+        .accordion-content {
+            display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out;
+            background-color: var(--bg-nav);
+        }
+        .accordion-item.open .accordion-content { grid-template-rows: 1fr; border-top: 1px solid var(--border-color); }
+        
+        .accordion-inner { overflow: hidden; }
+        
+        .tag-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px; }
+        .tag-btn {
+            background-color: var(--bg-surface); border: 1px solid var(--border-highlight);
+            color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;
+            cursor: pointer; transition: all 0.2s ease; user-select: none;
+        }
+        .tag-btn:hover { border-color: var(--text-muted); color: var(--text-main); }
+        #posTags .tag-btn.active { background-color: var(--primary); border-color: var(--primary); color: var(--bg-base); font-weight: 500; }
+        #negTags .tag-btn.active { background-color: var(--danger); border-color: var(--danger); color: white; font-weight: 500; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background-color: var(--success); color: white; padding: 10px 20px; border-radius: 30px;
+            font-size: 0.9rem; font-weight: 500; opacity: 0; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000; display: flex; align-items: center; gap: 8px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        
+        @media (max-width: 600px) {
+            .controls-row { flex-direction: column; align-items: stretch; }
+            .action-btn { flex: 1; justify-content: center; }
+            .tabs { overflow-x: auto; white-space: nowrap; padding-bottom: 5px; }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative">
+
+    <!-- 1. 動態載入：頂部導航欄 (Header) -->
+    <div id="component-header"></div>
+
+    <!-- 2. 動態載入：側邊欄 (Sidebar) -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心內容區域 (Tool Module) -->
+    <main class="tool-main relative z-10 animate-[fadeIn_0.5s_ease-out]">
+        <div class="hero">
+            <div class="badge"><i class="ph-fill ph-check-circle"></i> 深度細節詞庫已解除封印</div>
+            <h1>SDXL 提示詞產生器</h1>
+            <p>全能級 Prompt 構建器。具備折疊面板與巨量雙語詞庫，精準掌控生成細節。</p>
+        </div>
+
+        <section class="tool-card">
+            <div class="controls-row">
+                <div class="model-selector" id="modelSelector">
+                    <button class="model-btn active" data-model="sdxl">SDXL 通用</button>
+                    <button class="model-btn" data-model="illustrious">Illustrious XL</button>
+                    <button class="model-btn" data-model="pony">Pony Diffusion</button>
+                </div>
+                <button class="lang-toggle-btn" id="langToggleBtn">
+                    <i class="ph ph-translate"></i> <span>介面語言: 中文</span>
+                </button>
+            </div>
+
+            <div class="grid-2col">
+                <div class="output-group">
+                    <label for="positivePrompt">
+                        <span style="display:flex; align-items:center; gap:6px;"><i class="ph-fill ph-plus-circle" style="color:var(--primary)"></i> Positive Prompt</span>
+                        <span class="word-count" id="posCount">0 tags</span>
+                    </label>
+                    <textarea class="prompt-box" id="positivePrompt" placeholder="標籤的「英文代碼」會自動輸入於此..."></textarea>
+                </div>
+
+                <div class="output-group">
+                    <label for="negativePrompt" class="neg-label">
+                        <span style="display:flex; align-items:center; gap:6px;"><i class="ph-fill ph-minus-circle"></i> Negative Prompt</span>
+                        <span class="word-count" id="negCount">10 tags</span>
+                    </label>
+                    <textarea class="prompt-box" id="negativePrompt">lowres, bad anatomy, bad hands, missing fingers, extra digits, worst quality, low quality, jpeg artifacts, watermark, signature</textarea>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn btn-primary" id="btnCopyPos"><i class="ph ph-copy"></i> 複製正向</button>
+                <button class="action-btn" id="btnCopyNeg"><i class="ph ph-copy"></i> 複製負向</button>
+                <button class="action-btn" id="btnRandom"><i class="ph ph-dice-three"></i> 隨機靈感</button>
+                <button class="action-btn btn-danger-outline" id="btnClearPos" style="margin-left: auto;"><i class="ph ph-trash"></i> 清空</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-target="posTags">
+                    <i class="ph-fill ph-check-circle" style="color:var(--primary)"></i> 正向詞庫庫 (Positive)
+                </button>
+                <button class="tab-btn" data-target="negTags">
+                    <i class="ph-fill ph-warning-circle" style="color:var(--danger)"></i> 負向詞庫庫 (Negative)
+                </button>
+            </div>
+
+            <div id="posTags" class="tags-panel active"></div>
+            <div id="negTags" class="tags-panel"></div>
+
+        </section>
+    </main>
+
+    <div class="toast" id="toastMsg">
+        <i class="ph-fill ph-check-circle"></i> <span id="toastText">已複製</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                // 核心升級：擷取並重新喚醒組件內部的 <script> 標籤
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    // 複製所有屬性 (例如 type="text/javascript")
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    // 複製腳本內容
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    // 替換舊節點，這會強制瀏覽器執行這段程式碼
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            // 平行載入所有全局元件
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            // 渲染殼層所需要的 Lucide Icons
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // 啟動系統級防禦網與側邊欄控制
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        // 啟動系統框架
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：SDXL Prompt 引擎與詞庫         -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 全能擴充詞庫 (Massively Expanded Dictionaries) ---
+            const posPromptData = {
+                "🚀 模型特定起手式 (Model Base)": [
+                    { en: "score_9", zh: "Pony 9分" }, { en: "score_8_up", zh: "Pony 8分以上" },
+                    { en: "score_7_up", zh: "Pony 7分以上" }, { en: "score_6_up", zh: "Pony 6分以上" }
+                ],
+                "✨ 基礎畫質 (Quality & Resolution)": [
+                    { en: "masterpiece", zh: "傑作" }, { en: "best quality", zh: "最佳畫質" }, 
+                    { en: "highres", zh: "高解析度" }, { en: "ultra-detailed", zh: "極致細節" }, 
+                    { en: "8k resolution", zh: "8K 解析度" }, { en: "absurdres", zh: "超高解析度" }, 
+                    { en: "sharp focus", zh: "銳利對焦" }, { en: "intricate details", zh: "錯綜複雜的細節" }, 
+                    { en: "highly detailed", zh: "高度詳細" }, { en: "HDR", zh: "高動態範圍" }
+                ],
+                "👗 服裝與穿搭 (Clothing & Fashion)": [
+                    { en: "t-shirt", zh: "T恤" }, { en: "sweater", zh: "毛衣" }, { en: "turtleneck", zh: "高領毛衣" }, 
+                    { en: "crop top", zh: "短版上衣" }, { en: "blouse", zh: "女襯衫" }, { en: "tank top", zh: "無袖背心" }, 
+                    { en: "corset", zh: "馬甲" }, { en: "hoodie", zh: "帽T" }, { en: "jacket", zh: "夾克" }, 
+                    { en: "trench coat", zh: "風衣" }, { en: "blazer", zh: "西裝外套" }, { en: "cardigan", zh: "羊毛衫" },
+                    { en: "skirt", zh: "裙子" }, { en: "pleated skirt", zh: "百褶裙" }, { en: "pencil skirt", zh: "窄裙" }, 
+                    { en: "jeans", zh: "牛仔褲" }, { en: "shorts", zh: "短褲" }, { en: "leggings", zh: "內搭褲" }, 
+                    { en: "sweatpants", zh: "運動褲" }, { en: "trousers", zh: "長褲" },
+                    { en: "dress", zh: "洋裝" }, { en: "evening gown", zh: "晚禮服" }, { en: "wedding dress", zh: "婚紗" }, 
+                    { en: "suit", zh: "西裝" }, { en: "tuxedo", zh: "燕尾服" }, { en: "school uniform", zh: "學校制服" }, 
+                    { en: "sailor collar", zh: "水手服" }, { en: "kimono", zh: "和服" }, { en: "cheongsam", zh: "旗袍" }, 
+                    { en: "maid", zh: "女僕裝" }, { en: "swimsuit", zh: "泳裝" }, { en: "bikini", zh: "比基尼" }, 
+                    { en: "armor", zh: "盔甲" }, { en: "mecha armor", zh: "機甲" }, { en: "cyberpunk outfit", zh: "賽博服裝" }, 
+                    { en: "techwear", zh: "機能服" }, { en: "space suit", zh: "太空衣" }, { en: "gothic lolita", zh: "哥德蘿莉裝" },
+                    { en: "glasses", zh: "眼鏡" }, { en: "sunglasses", zh: "墨鏡" }, { en: "earrings", zh: "耳環" }, 
+                    { en: "necklace", zh: "項鍊" }, { en: "choker", zh: "頸鍊" }, { en: "gloves", zh: "手套" }, 
+                    { en: "fingerless gloves", zh: "半指手套" }, { en: "scarf", zh: "圍巾" }, { en: "hat", zh: "帽子" }, 
+                    { en: "baseball cap", zh: "棒球帽" }, { en: "beret", zh: "貝雷帽" }, { en: "pantyhose", zh: "褲襪" }, 
+                    { en: "thighhighs", zh: "大腿襪" }, { en: "kneehighs", zh: "膝上襪" }, { en: "boots", zh: "靴子" }, 
+                    { en: "high heels", zh: "高跟鞋" }, { en: "sneakers", zh: "運動鞋" }, { en: "sandals", zh: "涼鞋" },
+                    { en: "latex", zh: "乳膠材質" }, { en: "leather", zh: "皮革材質" }, { en: "silk", zh: "絲綢材質" },
+                    { en: "lace", zh: "蕾絲材質" }, { en: "translucent", zh: "半透明材質" }
+                ],
+                "🏃‍♀️ 姿勢與動作 (Pose & Action)": [
+                    { en: "standing", zh: "站立" }, { en: "sitting", zh: "坐著" }, { en: "lying", zh: "躺著" }, 
+                    { en: "kneeling", zh: "跪著" }, { en: "squatting", zh: "蹲著" }, { en: "leaning", zh: "靠著" }, 
+                    { en: "floating", zh: "漂浮" }, { en: "flying", zh: "飛行" }, { en: "falling", zh: "墜落" },
+                    { en: "running", zh: "奔跑" }, { en: "walking", zh: "行走" }, { en: "jumping", zh: "跳躍" }, 
+                    { en: "dancing", zh: "跳舞" }, { en: "stretching", zh: "伸展" }, { en: "reaching out", zh: "伸手" }, 
+                    { en: "pointing", zh: "指著" }, { en: "waving", zh: "揮手" }, { en: "saluting", zh: "敬禮" },
+                    { en: "holding weapon", zh: "拿著武器" }, { en: "aiming", zh: "瞄準" }, { en: "drawing sword", zh: "拔劍" }, 
+                    { en: "casting spell", zh: "施放法術" }, { en: "fighting stance", zh: "戰鬥姿態" }, { en: "defensive stance", zh: "防禦姿態" },
+                    { en: "kicking", zh: "踢擊" }, { en: "punching", zh: "出拳" }, { en: "dodging", zh: "閃避" },
+                    { en: "looking back", zh: "回頭" }, { en: "hands in pockets", zh: "插口袋" }, { en: "crossed arms", zh: "雙臂交叉" }, 
+                    { en: "hands on hips", zh: "雙手叉腰" }, { en: "adjusting hair", zh: "整理頭髮" }, { en: "touching face", zh: "摸臉" }, 
+                    { en: "holding cup", zh: "拿著杯子" }, { en: "reading book", zh: "看書" }, { en: "playing instrument", zh: "演奏樂器" }, 
+                    { en: "sitting on ground", zh: "坐在地上" }, { en: "crossed legs", zh: "盤腿/交叉腿" }, { en: "hugging", zh: "擁抱" }
+                ],
+                "🌆 環境與背景 (Environment & Background)": [
+                    { en: "forest", zh: "森林" }, { en: "deep woods", zh: "深林" }, { en: "jungle", zh: "叢林" }, 
+                    { en: "mountain", zh: "高山" }, { en: "cave", zh: "洞穴" }, { en: "waterfall", zh: "瀑布" }, 
+                    { en: "beach", zh: "海灘" }, { en: "ocean", zh: "海洋" }, { en: "underwater", zh: "水下" }, 
+                    { en: "desert", zh: "沙漠" }, { en: "field of flowers", zh: "花海" }, { en: "snowy landscape", zh: "雪景" },
+                    { en: "starry sky", zh: "星空" }, { en: "outer space", zh: "外太空" }, { en: "nebula", zh: "星雲" }, 
+                    { en: "aurora", zh: "極光" }, { en: "floating islands", zh: "空島" }, { en: "magical forest", zh: "魔法森林" },
+                    { en: "cityscape", zh: "城市景觀" }, { en: "street", zh: "街道" }, { en: "alleyway", zh: "小巷" }, 
+                    { en: "cyberpunk city", zh: "賽博龐克城市" }, { en: "neon streets", zh: "霓虹街道" }, { en: "ruined city", zh: "廢墟城市" }, 
+                    { en: "rooftop", zh: "屋頂" }, { en: "subway station", zh: "地鐵站" }, { en: "train interior", zh: "火車內部" },
+                    { en: "classroom", zh: "教室" }, { en: "bedroom", zh: "臥室" }, { en: "library", zh: "圖書館" }, 
+                    { en: "laboratory", zh: "實驗室" }, { en: "tavern", zh: "酒館" }, { en: "cathedral", zh: "大教堂" }, 
+                    { en: "castle interior", zh: "城堡內部" }, { en: "greenhouse", zh: "溫室" }, { en: "cafe", zh: "咖啡廳" }, 
+                    { en: "overgrown ruins", zh: "雜草叢生的廢墟" }, { en: "abandoned building", zh: "廢棄建築" },
+                    { en: "simple background", zh: "簡單背景" }, { en: "white background", zh: "白底" }, { en: "black background", zh: "黑底" }, 
+                    { en: "transparent background", zh: "透明背景" }, { en: "detailed background", zh: "精細背景" }, 
+                    { en: "gradient background", zh: "漸層背景" }, { en: "bokeh background", zh: "散景背景" }
+                ],
+                "🎨 藝術風格與媒材 (Art Style & Medium)": [
+                    { en: "anime style", zh: "動漫風格" }, { en: "illustration", zh: "插畫" }, 
+                    { en: "sketch", zh: "素描" }, { en: "watercolor", zh: "水彩" }, 
+                    { en: "oil painting", zh: "油畫" }, { en: "cyberpunk", zh: "賽博龐克" }, 
+                    { en: "fantasy", zh: "奇幻" }, { en: "photorealistic", zh: "相片寫實" }, 
+                    { en: "3d render", zh: "3D 渲染" }, { en: "studio ghibli style", zh: "吉卜力風格" }, 
+                    { en: "pixel art", zh: "像素藝術" }, { en: "concept art", zh: "概念藝術" },
+                    { en: "ink wash", zh: "水墨畫" }, { en: "comic book", zh: "美漫風格" },
+                    { en: "lineart", zh: "線稿" }, { en: "monochrome", zh: "單色/黑白" },
+                    { en: "aesthetic", zh: "唯美風格" }, { en: "retro art", zh: "復古藝術" }
+                ],
+                "🎥 鏡頭與構圖 (Camera & Framing)": [
+                    { en: "dynamic angle", zh: "動態視角" }, { en: "from below", zh: "由下往上仰視" }, 
+                    { en: "from above", zh: "由上往下俯視" }, { en: "cowboy shot", zh: "七分身鏡頭" }, 
+                    { en: "close-up", zh: "特寫" }, { en: "wide shot", zh: "廣角鏡頭" }, 
+                    { en: "fisheye", zh: "魚眼" }, { en: "depth of field", zh: "景深" },
+                    { en: "bokeh", zh: "散景" }, { en: "dutch angle", zh: "傾斜鏡頭" },
+                    { en: "full body", zh: "全身" }, { en: "upper body", zh: "上半身" },
+                    { en: "profile", zh: "側面輪廓" }, { en: "panoramic", zh: "全景" }
+                ],
+                "👤 人物與特徵 (Subject & Character)": [
+                    { en: "1girl", zh: "單獨女孩" }, { en: "1boy", zh: "單獨男孩" }, 
+                    { en: "solo", zh: "單人" }, { en: "multiple girls", zh: "多個女孩" }, 
+                    { en: "couple", zh: "情侶" }, { en: "chibi", zh: "Q版人物" }, 
+                    { en: "tall", zh: "高挑" }, { en: "petite", zh: "嬌小" },
+                    { en: "curvy", zh: "豐滿曲線" }, { en: "muscular", zh: "肌肉發達" },
+                    { en: "mature female", zh: "成熟女性" }, { en: "dark skin", zh: "黑皮膚" },
+                    { en: "pale skin", zh: "白皙皮膚" }, { en: "elf", zh: "精靈" },
+                    { en: "demon girl", zh: "惡魔女孩" }, { en: "catgirl", zh: "貓娘" },
+                    { en: "mecha girl", zh: "機甲少女" }
+                ],
+                "😊 臉部與表情 (Face & Emotion)": [
+                    { en: "smile", zh: "微笑" }, { en: "blush", zh: "臉紅" }, 
+                    { en: "parted lips", zh: "微張嘴" }, { en: "looking at viewer", zh: "看著鏡頭" }, 
+                    { en: "closed eyes", zh: "閉眼" }, { en: "smirk", zh: "得意笑" }, 
+                    { en: "tears", zh: "眼淚" }, { en: "expressionless", zh: "無表情" },
+                    { en: "embarrassed", zh: "害羞尷尬" }, { en: "angry", zh: "生氣" },
+                    { en: "crying", zh: "哭泣" }, { en: "laughing", zh: "大笑" },
+                    { en: "glowing eyes", zh: "發光的眼睛" }, { en: "detailed face", zh: "精緻五官" },
+                    { en: "makeup", zh: "化妝" }, { en: "lipstick", zh: "口紅" }
+                ],
+                "💇‍♀️ 髮型與髮飾 (Hair)": [
+                    { en: "long hair", zh: "長髮" }, { en: "short hair", zh: "短髮" }, 
+                    { en: "twintails", zh: "雙馬尾" }, { en: "ponytail", zh: "馬尾" }, 
+                    { en: "blonde hair", zh: "金髮" }, { en: "black hair", zh: "黑髮" }, 
+                    { en: "silver hair", zh: "銀髮" }, { en: "ahoge", zh: "呆毛" },
+                    { en: "curly hair", zh: "捲髮" }, { en: "straight hair", zh: "直髮" },
+                    { en: "messy hair", zh: "凌亂髮" }, { en: "braided hair", zh: "辮子" },
+                    { en: "bob cut", zh: "鮑伯頭" }, { en: "bangs", zh: "瀏海" },
+                    { en: "hair ornament", zh: "髮飾" }, { en: "hair bow", zh: "蝴蝶結髮飾" }
+                ],
+                "💡 光影與特效 (Lighting & Effects)": [
+                    { en: "cinematic lighting", zh: "電影光效" }, { en: "soft lighting", zh: "柔和光線" }, 
+                    { en: "volumetric lighting", zh: "體積光" }, { en: "god rays", zh: "耶穌光" }, 
+                    { en: "neon lights", zh: "霓虹燈" }, { en: "sunset", zh: "夕陽" }, 
+                    { en: "backlighting", zh: "逆光" }, { en: "lens flare", zh: "鏡頭光暈" },
+                    { en: "bioluminescence", zh: "生物發光" }, { en: "dramatic lighting", zh: "戲劇性光影" },
+                    { en: "dappled sunlight", zh: "斑駁陽光" }, { en: "glowing particles", zh: "發光粒子" },
+                    { en: "fire", zh: "火焰" }, { en: "water drops", zh: "水滴" }
+                ],
+                "🌈 色彩與氛圍 (Color & Atmosphere)": [
+                    { en: "pastel colors", zh: "柔和粉彩" }, { en: "dark theme", zh: "暗黑主題" },
+                    { en: "gothic", zh: "哥德式" }, { en: "dreamy", zh: "夢幻" },
+                    { en: "mysterious", zh: "神秘" }, { en: "romantic", zh: "浪漫" },
+                    { en: "energetic", zh: "充滿活力" }, { en: "melancholy", zh: "憂鬱" }
+                ]
+            };
+
+            const negPromptData = {
+                "⚠️ 基礎畫質缺陷 (General Quality)": [
+                    { en: "lowres", zh: "低解析度" }, { en: "worst quality", zh: "最差畫質" }, 
+                    { en: "low quality", zh: "低畫質" }, { en: "normal quality", zh: "普通畫質" },
+                    { en: "jpeg artifacts", zh: "JPEG壓縮失真" }, { en: "blurry", zh: "模糊" }, 
+                    { en: "pixelated", zh: "像素化" }, { en: "grainy", zh: "顆粒感" },
+                    { en: "noisy", zh: "噪點" }, { en: "overexposed", zh: "過度曝光" },
+                    { en: "underexposed", zh: "曝光不足" }
+                ],
+                "🧟 人體結構錯誤 (Anatomy)": [
+                    { en: "bad anatomy", zh: "錯誤的人體" }, { en: "bad proportions", zh: "比例錯誤" }, 
+                    { en: "deformed", zh: "畸形" }, { en: "mutated", zh: "突變" }, 
+                    { en: "ugly", zh: "醜陋" }, { en: "disfigured", zh: "毀容" },
+                    { en: "gross proportions", zh: "噁心的比例" }, { en: "malformed", zh: "畸形發育" },
+                    { en: "asymmetrical", zh: "不對稱" }, { en: "long neck", zh: "長脖子" },
+                    { en: "bad posture", zh: "姿勢不良" }
+                ],
+                "🖐️ 手部與四肢缺陷 (Limbs & Hands)": [
+                    { en: "bad hands", zh: "畫壞的手" }, { en: "missing fingers", zh: "缺手指" }, 
+                    { en: "extra digits", zh: "多餘手指" }, { en: "fewer digits", zh: "缺少手指" }, 
+                    { en: "mutated hands", zh: "突變的手" }, { en: "extra limbs", zh: "多餘肢體" },
+                    { en: "missing arms", zh: "斷臂" }, { en: "missing legs", zh: "斷腿" },
+                    { en: "bad feet", zh: "畫壞的腳" }, { en: "fused fingers", zh: "融合的手指" },
+                    { en: "poorly drawn hands", zh: "手部繪製粗糙" }
+                ],
+                "👁️ 臉部缺陷 (Face)": [
+                    { en: "poorly drawn face", zh: "畫壞的臉" }, { en: "cloned face", zh: "複製臉" }, 
+                    { en: "bad eyes", zh: "糟糕的眼睛" }, { en: "cross-eyed", zh: "鬥雞眼" },
+                    { en: "missing face", zh: "沒有臉" }, { en: "mutated face", zh: "突變的臉" },
+                    { en: "bad teeth", zh: "糟糕的牙齒" }, { en: "distorted face", zh: "扭曲的臉" }
+                ],
+                "🗑️ 多餘元素與文字 (Artifacts)": [
+                    { en: "watermark", zh: "浮水印" }, { en: "text", zh: "文字" }, 
+                    { en: "signature", zh: "簽名" }, { en: "username", zh: "使用者名稱" }, 
+                    { en: "logo", zh: "標誌" }, { en: "border", zh: "邊框" },
+                    { en: "frame", zh: "相框" }, { en: "speech bubble", zh: "對話框" },
+                    { en: "date", zh: "日期印記" }, { en: "censor", zh: "馬賽克/審查" }
+                ],
+                "✂️ 構圖問題 (Composition)": [
+                    { en: "cropped", zh: "被裁切的" }, { en: "out of frame", zh: "出框" },
+                    { en: "out of focus", zh: "失焦" }, { en: "duplicate", zh: "重複的" },
+                    { en: "cluttered background", zh: "雜亂的背景" }, { en: "bad perspective", zh: "透視錯誤" }
+                ]
+            };
+
+            // --- Core Application State ---
+            let currentLang = 'zh'; 
+            const posTextarea = document.getElementById('positivePrompt');
+            const negTextarea = document.getElementById('negativePrompt');
+            const posTagsContainer = document.getElementById('posTags');
+            const negTagsContainer = document.getElementById('negTags');
+            const langToggleBtn = document.getElementById('langToggleBtn');
+
+            langToggleBtn.addEventListener('click', () => {
+                currentLang = currentLang === 'zh' ? 'en' : 'zh';
+                langToggleBtn.querySelector('span').textContent = currentLang === 'zh' ? '介面語言: 中文' : '介面語言: English';
+                buildTagPanel(posPromptData, posTagsContainer, 'pos');
+                buildTagPanel(negPromptData, negTagsContainer, 'neg');
+                updateUI(); 
+            });
+
+            // 手風琴折疊面板渲染邏輯
+            function buildTagPanel(data, container, type) {
+                container.innerHTML = '';
+                let count = 0;
+
+                for (const [category, tags] of Object.entries(data)) {
+                    const isOpen = count < 2; 
+                    
+                    const item = document.createElement('div');
+                    item.className = `accordion-item ${isOpen ? 'open' : ''}`;
+                    
+                    const header = document.createElement('button');
+                    header.className = 'accordion-header';
+                    
+                    const badgeId = `badge-${type}-${category.replace(/[\s\W]+/g, '-')}`;
+                    header.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            ${category} <span class="acc-badge" id="${badgeId}">0</span>
+                        </div>
+                        <i class="ph ph-caret-down"></i>
+                    `;
+                    
+                    header.addEventListener('click', () => {
+                        item.classList.toggle('open');
+                    });
+
+                    const content = document.createElement('div');
+                    content.className = 'accordion-content';
+                    
+                    const inner = document.createElement('div');
+                    inner.className = 'accordion-inner tag-list';
+                    
+                    tags.forEach(tagObj => {
+                        const btn = document.createElement('button');
+                        btn.className = 'tag-btn';
+                        btn.textContent = currentLang === 'zh' ? tagObj.zh : tagObj.en; 
+                        btn.dataset.en = tagObj.en; 
+                        btn.dataset.type = type;
+                        btn.dataset.category = category; 
+                        btn.addEventListener('click', () => toggleTag(tagObj.en, type));
+                        inner.appendChild(btn);
+                    });
+                    
+                    content.appendChild(inner);
+                    item.appendChild(header);
+                    item.appendChild(content);
+                    container.appendChild(item);
+
+                    count++;
+                }
+            }
+
+            function getTagsArray(text) {
+                if (!text.trim()) return [];
+                return text.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            }
+
+            function toggleTag(enTag, type) {
+                const textarea = type === 'pos' ? posTextarea : negTextarea;
+                let currentTags = getTagsArray(textarea.value);
+                const index = currentTags.indexOf(enTag);
+                
+                if (index > -1) { currentTags.splice(index, 1); } 
+                else { currentTags.push(enTag); }
+                
+                textarea.value = currentTags.join(', ');
+                updateUI();
+            }
+
+            function updateUI() {
+                const posArray = getTagsArray(posTextarea.value);
+                const negArray = getTagsArray(negTextarea.value);
+
+                // Positive UI Sync
+                const posCategoryCounts = {};
+                posTagsContainer.querySelectorAll('.tag-btn').forEach(btn => {
+                    const cat = btn.dataset.category;
+                    posCategoryCounts[cat] = posCategoryCounts[cat] || 0;
+                    
+                    if (posArray.includes(btn.dataset.en)) {
+                        btn.classList.add('active');
+                        posCategoryCounts[cat]++;
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                for(const [cat, count] of Object.entries(posCategoryCounts)) {
+                    const badgeId = `badge-pos-${cat.replace(/[\s\W]+/g, '-')}`;
+                    const badge = document.getElementById(badgeId);
+                    if(badge) {
+                        badge.textContent = count;
+                        if(count > 0) badge.classList.add('active');
+                        else badge.classList.remove('active');
+                    }
+                }
+
+                // Negative UI Sync
+                const negCategoryCounts = {};
+                negTagsContainer.querySelectorAll('.tag-btn').forEach(btn => {
+                    const cat = btn.dataset.category;
+                    negCategoryCounts[cat] = negCategoryCounts[cat] || 0;
+
+                    if (negArray.includes(btn.dataset.en)) {
+                        btn.classList.add('active');
+                        negCategoryCounts[cat]++;
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                for(const [cat, count] of Object.entries(negCategoryCounts)) {
+                    const badgeId = `badge-neg-${cat.replace(/[\s\W]+/g, '-')}`;
+                    const badge = document.getElementById(badgeId);
+                    if(badge) {
+                        badge.textContent = count;
+                        if(count > 0) badge.classList.add('active');
+                        else badge.classList.remove('active');
+                    }
+                }
+
+                document.getElementById('posCount').textContent = `${posArray.length} tags`;
+                document.getElementById('negCount').textContent = `${negArray.length} tags`;
+            }
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tags-panel').forEach(p => p.classList.remove('active'));
+                    
+                    const targetId = e.currentTarget.dataset.target;
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+
+            posTextarea.addEventListener('input', updateUI);
+            negTextarea.addEventListener('input', updateUI);
+
+            document.querySelectorAll('.model-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+
+            function copyToClipboard(textElement, typeName) {
+                textElement.select();
+                textElement.setSelectionRange(0, 99999);
+                try {
+                    navigator.clipboard.writeText(textElement.value).then(() => showToast(`已複製 ${typeName} Prompt`));
+                } catch (err) {
+                    document.execCommand('copy');
+                    showToast(`已複製 ${typeName} Prompt`);
+                }
+                window.getSelection().removeAllRanges();
+            }
+
+            function showToast(msg) {
+                const toast = document.getElementById('toastMsg');
+                document.getElementById('toastText').textContent = msg;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2500);
+            }
+
+            document.getElementById('btnCopyPos').addEventListener('click', () => copyToClipboard(posTextarea, '正向'));
+            document.getElementById('btnCopyNeg').addEventListener('click', () => copyToClipboard(negTextarea, '負向'));
+
+            document.getElementById('btnClearPos').addEventListener('click', () => { 
+                posTextarea.value = ''; updateUI(); 
+            });
+
+            document.getElementById('btnRandom').addEventListener('click', () => {
+                const randomTags = [];
+                const categories = Object.keys(posPromptData).filter(k => !k.includes("模型特定起手式"));
+                
+                for (const key of categories) {
+                    const tags = posPromptData[key];
+                    if (Math.random() > 0.6) { 
+                        const randomIndex = Math.floor(Math.random() * tags.length);
+                        randomTags.push(tags[randomIndex].en);
+                    }
+                }
+                
+                posTextarea.value = randomTags.join(', ');
+                updateUI();
+            });
+
+            // --- 初始化啟動 ---
+            buildTagPanel(posPromptData, posTagsContainer, 'pos');
+            buildTagPanel(negPromptData, negTagsContainer, 'neg');
+            updateUI();
+        });
+    </script>
+</body>
+</html>

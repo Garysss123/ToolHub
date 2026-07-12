@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電腦零件價格計算器 | ToolHub</title>
+    
+    <!-- 引入 Tailwind CSS 引擎 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 引入 html2canvas 用於生成圖片 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+   
+
+    <script>
+        // 融合系統核心色系與本模塊的客製化設定
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 系統基礎色系 (供 Header/Sidebar 使用)
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        // 計算器專屬色系保留
+                        brand: {
+                            dark: '#0b1120', // ToolHub 頂部深色
+                            bg: '#0f172a',   // 網頁主背景 (slate-900)
+                            panel: '#1e293b' // 面板顏色 (slate-800)
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-brand-bg text-slate-200 font-sans selection:bg-cyan-500/30 flex flex-col relative overflow-x-hidden">
+
+    <!-- 1. 動態載入：頂部導航欄 (Header) -->
+    <div id="component-header"></div>
+
+    <!-- 2. 動態載入：側邊欄 (Sidebar) -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心內容區域 (Tool Module) -->
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-4 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 工具專屬控制標題列 -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 border-b border-slate-800 pb-5">
+            <div>
+                <div class="inline-flex items-center justify-center p-2 mb-3 rounded-full bg-slate-800 border border-slate-700 text-xs text-cyan-400">
+                    <span class="flex w-2 h-2 bg-cyan-400 rounded-full animate-pulse mr-2"></span>
+                    動態價格加總引擎已啟動
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white flex items-center tracking-tight">
+                    <div class="p-2.5 bg-slate-800 rounded-xl mr-3 shadow-inner border border-slate-700">
+                        <i data-lucide="cpu" class="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400"></i>
+                    </div>
+                    電腦零件價格計算器
+                </h2>
+                <p class="text-slate-400 text-sm sm:text-base mt-3 max-w-2xl leading-relaxed">
+                    精準計算組裝成本，規劃您的數位引擎。提供即時報價單生成與圖片固化功能。
+                </p>
+            </div>
+            
+            <button 
+                onclick="clearAll()"
+                class="flex items-center px-4 py-2.5 bg-slate-800/50 hover:bg-red-950/40 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-red-900/50 rounded-xl transition-all text-sm font-medium shadow-sm active:scale-[0.98]"
+                title="清空所有欄位"
+            >
+                <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
+                重置系統運算
+            </button>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-8 align-top">
+            <!-- Left Column: Input Forms -->
+            <div class="w-full lg:w-3/5 space-y-4">
+                <div id="inputs-container" class="space-y-3">
+                    <!-- 動態生成的輸入列表將放置於此 -->
+                </div>
+            </div>
+
+            <!-- Right Column: Receipt Menu & Actions -->
+            <div class="w-full lg:w-2/5">
+                <div class="sticky top-24">
+                    
+                    <!-- 圖片渲染區塊 (固化目標) -->
+                    <div id="receipt-container">
+                        <div class="bg-brand-dark border border-slate-700 rounded-2xl overflow-hidden shadow-2xl relative">
+                            <!-- Decorative receipt edge top -->
+                            <div class="h-2 w-full bg-[radial-gradient(circle,transparent_4px,#0f172a_4px)] bg-[length:12px_12px] -mt-1 rotate-180"></div>
+                            
+                            <div class="p-6 sm:p-8">
+                                <div class="flex items-center justify-between mb-6 pb-6 border-b border-slate-800/80 border-dashed">
+                                    <div class="flex items-center">
+                                        <i data-lucide="receipt" class="w-6 h-6 text-cyan-400 mr-2"></i>
+                                        <h3 class="text-xl font-bold text-white tracking-wider">系統組裝菜單</h3>
+                                    </div>
+                                    <span id="receipt-id" class="text-xs font-mono text-slate-500">
+                                        <!-- ID 動態生成 -->
+                                    </span>
+                                </div>
+
+                                <div class="min-h-[200px] mb-8">
+                                    <div id="receipt-empty" class="h-full flex flex-col items-center justify-center text-slate-500 space-y-3 py-10">
+                                        <i data-lucide="box" class="w-12 h-12 opacity-20"></i>
+                                        <p class="text-sm">尚未載入任何硬體拓撲</p>
+                                    </div>
+                                    <ul id="receipt-list" class="space-y-4 hidden">
+                                        <!-- 動態生成的菜單項目 -->
+                                    </ul>
+                                </div>
+
+                                <!-- Total Section -->
+                                <div class="pt-6 border-t border-slate-700/50">
+                                    <div class="flex justify-between items-end">
+                                        <span class="text-slate-400 font-medium">總計金額</span>
+                                        <span id="total-price" class="text-3xl font-bold text-cyan-400 font-mono tracking-tight drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]">
+                                            NT$ 0
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Decorative receipt edge bottom -->
+                            <div class="h-3 w-full bg-[radial-gradient(circle,transparent_4px,#0f172a_4px)] bg-[length:12px_12px] -mb-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                        <button
+                            id="btn-copy"
+                            onclick="handleCopyReceipt()"
+                            class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-3 px-4 rounded-xl font-medium transition-all active:scale-[0.98] flex items-center justify-center text-sm"
+                        >
+                            <span id="copy-icon" class="flex items-center"><i data-lucide="copy" class="w-4 h-4 mr-2"></i>複製純文字</span>
+                            <span id="copied-icon" class="hidden flex items-center"><i data-lucide="check" class="w-4 h-4 mr-2 text-green-400"></i>已複製</span>
+                        </button>
+                        
+                        <button
+                            id="btn-download"
+                            onclick="handleDownloadImage()"
+                            class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-lg shadow-cyan-900/20 active:scale-[0.98] flex items-center justify-center text-sm"
+                        >
+                            <span id="download-icon" class="flex items-center"><i data-lucide="image" class="w-4 h-4 mr-2"></i>下載圖片</span>
+                            <span id="downloading-icon" class="hidden flex items-center"><i data-lucide="download" class="w-4 h-4 mr-2 animate-bounce"></i>固化中...</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                // 核心升級：擷取並重新喚醒組件內部的 <script> 標籤
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    // 複製所有屬性 (例如 type="text/javascript")
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    // 複製腳本內容
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    // 替換舊節點，這會強制瀏覽器執行這段程式碼
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            // 載入全局元件 (採用絕對路徑確保子資料夾正常抓取)
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            // 渲染殼層所需要的 Lucide Icons
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // 啟動系統級防禦網與高光偵測
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        // 啟動系統框架
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 核心邏輯：計算器狀態與渲染                   -->
+    <!-- ========================================== -->
+    <script>
+        const COMMON_CPUS = [
+            "Intel Core i9-14900K", "Intel Core i7-14700K", "Intel Core i5-14600K", "Intel Core i5-13600K", "Intel Core i5-13400F",
+            "AMD Ryzen 9 7950X3D", "AMD Ryzen 9 7900X", "AMD Ryzen 7 7800X3D", "AMD Ryzen 5 7600X", "AMD Ryzen 5 7500F"
+        ];
+
+        const COMMON_GPUS = [
+            "NVIDIA RTX 4090 24GB", "NVIDIA RTX 4080 Super 16GB", "NVIDIA RTX 4070 Ti Super 16GB", "NVIDIA RTX 4070 Super 12GB", 
+            "NVIDIA RTX 4060 Ti 8GB", "NVIDIA RTX 4060 8GB",
+            "AMD Radeon RX 7900 XTX 24GB", "AMD Radeon RX 7800 XT 16GB", "AMD Radeon RX 7700 XT 12GB", "AMD Radeon RX 7600 8GB"
+        ];
+
+        const CATEGORIES = [
+            { id: 'cpu', label: '處理器 CPU', icon: 'cpu', placeholder: '自訂 CPU 型號...', options: COMMON_CPUS },
+            { id: 'mb', label: '主機板 MB', icon: 'server', placeholder: '例如: ASUS ROG STRIX B760-A' },
+            { id: 'ram', label: '記憶體 RAM', icon: 'box', placeholder: '例如: Kingston 32GB DDR5-6000' },
+            { id: 'gpu', label: '顯示卡 GPU', icon: 'monitor-play', placeholder: '自訂 GPU 型號...', options: COMMON_GPUS },
+            { id: 'storage', label: '固態硬碟 SSD', icon: 'hard-drive', placeholder: '例如: WD Black SN850X 1TB' },
+            { id: 'hdd', label: '傳統硬碟 HDD', icon: 'database', placeholder: '例如: Seagate 2TB' },
+            { id: 'psu', label: '電源供應器 PSU', icon: 'zap', placeholder: '例如: Corsair RM850e 850W' },
+            { id: 'case', label: '電腦機殼 CASE', icon: 'layers', placeholder: '例如: Fractal Design North' },
+            { id: 'cooling', label: '散熱系統 Cooler', icon: 'fan', placeholder: '例如: NZXT Kraken 240' },
+            { id: 'os', label: '作業系統 OS', icon: 'monitor', placeholder: '例如: Windows 11 家用版' },
+        ];
+
+        let partsState = {};
+        let customModeState = { cpu: false, gpu: false };
+
+        CATEGORIES.forEach(cat => {
+            partsState[cat.id] = { name: '', price: '' };
+        });
+
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(amount);
+        };
+
+        function renderInputs() {
+            const container = document.getElementById('inputs-container');
+            container.innerHTML = '';
+
+            CATEGORIES.forEach(cat => {
+                const hasOptions = cat.options !== undefined;
+                const isCustom = customModeState[cat.id];
+                const data = partsState[cat.id];
+                const hasValue = data.name || data.price;
+
+                const row = document.createElement('div');
+                row.className = `bg-brand-dark border transition-colors duration-200 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center ${hasValue ? 'border-cyan-500/50 shadow-sm shadow-cyan-900/20' : 'border-slate-800 hover:border-slate-700'}`;
+                row.id = `row-${cat.id}`;
+
+                let nameInputHTML = '';
+
+                if (hasOptions && !isCustom) {
+                    let optionsHTML = '<option value="">-- 展開常見型號 --</option>';
+                    cat.options.forEach(opt => {
+                        optionsHTML += `<option value="${opt}" ${data.name === opt ? 'selected' : ''}>${opt}</option>`;
+                    });
+                    optionsHTML += '<option value="___CUSTOM___" class="font-bold text-cyan-400">➕ 自行輸入...</option>';
+
+                    nameInputHTML = `
+                        <div class="relative w-full">
+                            <select
+                                onchange="handleSelectChange('${cat.id}', this.value)"
+                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 pr-10 appearance-none cursor-pointer outline-none"
+                            >
+                                ${optionsHTML}
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                        </div>
+                    `;
+                } else {
+                    nameInputHTML = `
+                        <div class="relative w-full flex items-center">
+                            <input
+                                type="text"
+                                placeholder="${cat.placeholder}"
+                                value="${data.name}"
+                                oninput="handleInputChange('${cat.id}', 'name', this.value)"
+                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 placeholder-slate-600 transition-shadow outline-none ${hasOptions ? 'pr-10' : ''}"
+                            />
+                            ${hasOptions ? `
+                            <button 
+                                onclick="toggleCustomMode('${cat.id}', false)"
+                                class="absolute right-2 text-slate-400 hover:text-cyan-400 transition-colors bg-brand-dark p-1 rounded-md border border-slate-700"
+                                title="返回預設型號清單"
+                            >
+                                <i data-lucide="list-restart" class="w-4 h-4"></i>
+                            </button>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                row.innerHTML = `
+                    <div class="flex items-center w-full sm:w-1/4 min-w-[140px]">
+                        <div id="icon-bg-${cat.id}" class="p-2 rounded-lg mr-3 flex-shrink-0 ${hasValue ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800 text-slate-400'}">
+                            <i data-lucide="${cat.icon}" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-medium text-sm text-slate-200 whitespace-nowrap">${cat.label}</span>
+                    </div>
+                    
+                    <div class="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="sm:col-span-2 relative flex items-center">
+                            ${nameInputHTML}
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span class="text-slate-500 sm:text-sm">$</span>
+                            </div>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="價格"
+                                value="${data.price}"
+                                oninput="handleInputChange('${cat.id}', 'price', this.value)"
+                                class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 block pl-7 p-2.5 placeholder-slate-600 transition-shadow outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        id="btn-clear-${cat.id}"
+                        onclick="clearCategory('${cat.id}')"
+                        class="${hasValue ? 'flex' : 'hidden'} sm:flex p-2 text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-lg transition-colors ml-auto flex-shrink-0"
+                        title="清除此列"
+                    >
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+
+                container.appendChild(row);
+            });
+
+            // 確保動態生成的 DOM 節點中，Lucide Icons 能夠被正確渲染
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function updateUI() {
+            const emptyState = document.getElementById('receipt-empty');
+            const receiptList = document.getElementById('receipt-list');
+            const totalPriceEl = document.getElementById('total-price');
+
+            let activeParts = [];
+            let total = 0;
+
+            CATEGORIES.forEach(cat => {
+                const data = partsState[cat.id];
+                if (data.name.trim() !== '' || data.price !== '') {
+                    activeParts.push({ cat, data });
+                    total += parseFloat(data.price) || 0;
+                }
+
+                const row = document.getElementById(`row-${cat.id}`);
+                const iconBg = document.getElementById(`icon-bg-${cat.id}`);
+                const clearBtn = document.getElementById(`btn-clear-${cat.id}`);
+                
+                if (row && iconBg && clearBtn) {
+                    const hasValue = data.name.trim() !== '' || data.price !== '';
+                    if (hasValue) {
+                        row.classList.add('border-cyan-500/50', 'shadow-sm', 'shadow-cyan-900/20');
+                        row.classList.remove('border-slate-800', 'hover:border-slate-700');
+                        iconBg.classList.add('bg-cyan-500/20', 'text-cyan-400');
+                        iconBg.classList.remove('bg-slate-800', 'text-slate-400');
+                        clearBtn.classList.remove('hidden');
+                        clearBtn.classList.add('flex');
+                    } else {
+                        row.classList.remove('border-cyan-500/50', 'shadow-sm', 'shadow-cyan-900/20');
+                        row.classList.add('border-slate-800', 'hover:border-slate-700');
+                        iconBg.classList.remove('bg-cyan-500/20', 'text-cyan-400');
+                        iconBg.classList.add('bg-slate-800', 'text-slate-400');
+                        clearBtn.classList.add('hidden');
+                        clearBtn.classList.remove('flex');
+                    }
+                }
+            });
+
+            if (activeParts.length === 0) {
+                emptyState.classList.remove('hidden');
+                receiptList.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                receiptList.classList.remove('hidden');
+                
+                receiptList.innerHTML = '';
+                activeParts.forEach(({ cat, data }) => {
+                    const priceStr = data.price ? formatCurrency(parseFloat(data.price)) : 'NT$ 0';
+                    const nameStr = data.name || '未指定型號';
+                    
+                    receiptList.innerHTML += `
+                        <li class="group flex justify-between items-start text-sm border-b border-slate-800/30 pb-3 last:border-0 last:pb-0">
+                            <div class="flex-1 pr-4">
+                                <span class="text-xs text-cyan-500/80 block mb-0.5 font-medium tracking-wide">${cat.label}</span>
+                                <span class="text-slate-200 leading-snug break-words">${nameStr}</span>
+                            </div>
+                            <div class="text-right whitespace-nowrap pt-3 font-mono">
+                                ${priceStr}
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+
+            totalPriceEl.textContent = formatCurrency(total);
+        }
+
+        // 綁定至 window 以確保行內 onclick 事件能正確抓取到函數
+        window.handleInputChange = (id, field, value) => {
+            partsState[id][field] = value;
+            updateUI();
+        };
+
+        window.handleSelectChange = (id, value) => {
+            if (value === '___CUSTOM___') {
+                customModeState[id] = true;
+                partsState[id].name = '';
+                renderInputs();
+            } else {
+                partsState[id].name = value;
+            }
+            updateUI();
+        };
+
+        window.toggleCustomMode = (id, isCustom) => {
+            customModeState[id] = isCustom;
+            if(!isCustom) partsState[id].name = '';
+            renderInputs();
+            updateUI();
+        };
+
+        window.clearCategory = (id) => {
+            partsState[id] = { name: '', price: '' };
+            if (customModeState[id]) {
+                customModeState[id] = false;
+                renderInputs();
+            } else {
+                const inputs = document.querySelectorAll(`#row-${id} input, #row-${id} select`);
+                inputs.forEach(input => input.value = '');
+            }
+            updateUI();
+        };
+
+        window.clearAll = () => {
+            if (confirm('確定要清空所有已輸入的零件資料嗎？這將使系統歸零。')) {
+                CATEGORIES.forEach(cat => {
+                    partsState[cat.id] = { name: '', price: '' };
+                });
+                customModeState = { cpu: false, gpu: false };
+                renderInputs();
+                updateUI();
+            }
+        };
+
+        window.handleCopyReceipt = () => {
+            let text = "=== 系統組裝報價單 ===\n\n";
+            let activeParts = CATEGORIES.filter(cat => partsState[cat.id].name.trim() !== '' || partsState[cat.id].price !== '');
+            let total = 0;
+
+            if (activeParts.length === 0) {
+                text += "尚無選擇任何零件。\n";
+            } else {
+                activeParts.forEach(cat => {
+                    const p = partsState[cat.id];
+                    const price = parseFloat(p.price) || 0;
+                    total += price;
+                    const priceStr = p.price ? formatCurrency(price) : 'NT$ 0';
+                    text += `[${cat.label}]\n${p.name || '未填寫名稱'} ...... ${priceStr}\n\n`;
+                });
+                text += "------------------------\n";
+                text += `總金額: ${formatCurrency(total)}\n`;
+                text += "========================";
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                const iconNormal = document.getElementById('copy-icon');
+                const iconCopied = document.getElementById('copied-icon');
+                
+                iconNormal.classList.add('hidden');
+                iconCopied.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    iconNormal.classList.remove('hidden');
+                    iconCopied.classList.add('hidden');
+                }, 2000);
+            }).catch(err => console.error('Failed to copy text: ', err));
+        };
+
+        window.handleDownloadImage = async () => {
+            const container = document.getElementById('receipt-container');
+            if (!container) return;
+
+            const iconNormal = document.getElementById('download-icon');
+            const iconDownloading = document.getElementById('downloading-icon');
+            const btn = document.getElementById('btn-download');
+
+            try {
+                btn.classList.add('bg-cyan-800', 'cursor-wait');
+                btn.classList.remove('bg-cyan-600', 'hover:bg-cyan-500');
+                iconNormal.classList.add('hidden');
+                iconDownloading.classList.remove('hidden');
+                btn.disabled = true;
+
+                await new Promise(resolve => setTimeout(resolve, 150));
+
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#0b1120', 
+                    scale: 2, 
+                    logging: false,
+                });
+                
+                const dataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `ToolHub-PC-Build-${Date.now()}.png`;
+                link.href = dataUrl;
+                link.click();
+            } catch (err) {
+                console.error('Failed to generate image', err);
+                alert('圖片生成時發生宇宙亂序（錯誤），請稍後再試。');
+            } finally {
+                btn.classList.remove('bg-cyan-800', 'cursor-wait');
+                btn.classList.add('bg-cyan-600', 'hover:bg-cyan-500');
+                iconNormal.classList.remove('hidden');
+                iconDownloading.classList.add('hidden');
+                btn.disabled = false;
+            }
+        };
+
+        // DOM 載入後初始化內部業務邏輯
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('receipt-id').textContent = '#' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            renderInputs();
+            updateUI();
+        });
+    </script>
+</body>
+</html>

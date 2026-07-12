@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 線上擲骰子工具 (Dice Roller) | ToolHub - 支援 D&D, TRPG 多面體骰子</title>
+    <meta name="description" content="免費、免安裝的線上 3D 擲骰子工具。支援標準 6 面骰 (D6) 以及 D4, D8, D10, D12, D20 等 TRPG 跑團專用多面體骰子。提供逼真的物理滾動特效、骰子鎖定 (Hold) 功能與即時機率統計。">
+    
+    <!-- 基地專屬徽章 -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        dice: {
+                            primary: '#ec4899', // Pink
+                            secondary: '#8b5cf6', // Violet
+                            success: '#10b981' // Emerald
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #ec4899; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px; }
+
+        input[type="color"] { -webkit-appearance: none; border: none; width: 32px; height: 32px; border-radius: 0.5rem; overflow: hidden; cursor: pointer; padding: 0; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.5rem; }
+
+        /* ========================================= */
+        /* 3D Dice Geometry & Polyhedrons            */
+        /* ========================================= */
+        
+        :root {
+            --dice-size: 64px;
+            --dice-half: 32px;
+            --dice-bg: #1e293b;
+            --dice-dot: #ec4899;
+        }
+
+        .dice-arena { perspective: 800px; }
+
+        .dice-scene {
+            width: var(--dice-size);
+            height: var(--dice-size);
+            margin: 10px;
+            display: inline-block;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* 凍結狀態 (Hold) 護盾特效 */
+        .dice-scene.held::after {
+            content: '';
+            position: absolute;
+            top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border: 2px dashed var(--dice-dot);
+            border-radius: 12px;
+            animation: shield-rotate 4s linear infinite;
+            pointer-events: none;
+            box-shadow: 0 0 15px var(--dice-dot) inset, 0 0 15px var(--dice-dot);
+            z-index: 20;
+        }
+        @keyframes shield-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- D6 (真 3D 立體骰子) --- */
+        .dice-cube {
+            width: 100%; height: 100%; position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+            transform: translateZ(calc(var(--dice-half) * -1));
+        }
+        .dice-face {
+            position: absolute; width: var(--dice-size); height: var(--dice-size);
+            background-color: var(--dice-bg);
+            border: 2px solid rgba(255,255,255,0.1); border-radius: 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.2);
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 2px;
+        }
+        .face-1 { transform: rotateY(0deg) translateZ(var(--dice-half)); }
+        .face-2 { transform: rotateY(90deg) translateZ(var(--dice-half)); }
+        .face-3 { transform: rotateX(90deg) translateZ(var(--dice-half)); }
+        .face-4 { transform: rotateX(-90deg) translateZ(var(--dice-half)); }
+        .face-5 { transform: rotateY(-90deg) translateZ(var(--dice-half)); }
+        .face-6 { transform: rotateY(180deg) translateZ(var(--dice-half)); }
+
+        .dot { background-color: var(--dice-dot); border-radius: 50%; width: 100%; height: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 5px var(--dice-dot); }
+        .face-1 .dot { grid-area: 2 / 2; }
+        .face-2 .dot:nth-child(1) { grid-area: 1 / 3; } .face-2 .dot:nth-child(2) { grid-area: 3 / 1; }
+        .face-3 .dot:nth-child(1) { grid-area: 1 / 3; } .face-3 .dot:nth-child(2) { grid-area: 2 / 2; } .face-3 .dot:nth-child(3) { grid-area: 3 / 1; }
+        .face-4 .dot:nth-child(1) { grid-area: 1 / 1; } .face-4 .dot:nth-child(2) { grid-area: 1 / 3; } .face-4 .dot:nth-child(3) { grid-area: 3 / 1; } .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+        .face-5 .dot:nth-child(1) { grid-area: 1 / 1; } .face-5 .dot:nth-child(2) { grid-area: 1 / 3; } .face-5 .dot:nth-child(3) { grid-area: 2 / 2; } .face-5 .dot:nth-child(4) { grid-area: 3 / 1; } .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+        .face-6 .dot:nth-child(1) { grid-area: 1 / 1; } .face-6 .dot:nth-child(2) { grid-area: 2 / 1; } .face-6 .dot:nth-child(3) { grid-area: 3 / 1; } .face-6 .dot:nth-child(4) { grid-area: 1 / 3; } .face-6 .dot:nth-child(5) { grid-area: 2 / 3; } .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+
+        /* --- TRPG 多面體 (全息 2.5D 投影) --- */
+        .dice-poly {
+            width: 100%; height: 100%;
+            background-color: var(--dice-bg);
+            color: var(--dice-dot);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 26px; font-weight: 900;
+            text-shadow: 0 0 10px var(--dice-dot);
+            transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+        
+        .poly-wrapper {
+            width: 100%; height: 100%;
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 2px var(--dice-dot));
+        }
+
+        .shape-d4 { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); padding-top: 15px; }
+        .shape-d8 { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+        .shape-d10 { clip-path: polygon(50% 0%, 100% 35%, 50% 100%, 0% 35%); padding-top: 10px;}
+        .shape-d12 { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
+        .shape-d20 { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+
+        .dice-poly::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(0,0,0,0.5) 100%);
+            pointer-events: none; z-index: 1;
+        }
+        .poly-num { position: relative; z-index: 5; }
+
+        @keyframes pop { 0% { transform: scale(0.95); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header & Sidebar -->
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Kinetic Dice Matrix -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-pink-950/30 border border-pink-900/50 text-xs text-pink-400 shadow-inner">
+                <i class="ph-fill ph-cube mr-1.5 text-sm"></i>
+                線上 3D 物理模擬擲骰工具
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                3D Dice Roller <span class="text-transparent bg-clip-text bg-gradient-to-r from-dice-primary to-dice-secondary">線上擲骰子</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                專業級純前端 3D 擲骰子工具。完美支援 D4, D6, D8, D10, D12, D20 等 TRPG 跑團規格。具備真實物理翻滾特效、獨立骰子鎖定(Hold)、自訂顏色，以及即時機率統計。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ========================================== -->
+            <!-- 左側：參數控制台 (Configuration Console)      -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-4 flex flex-col gap-5">
+                
+                <!-- 骰子配置 (Dice Config) -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph-fill ph-sliders-horizontal text-dice-primary text-lg"></i> 骰子設定 (Settings)
+                    </h3>
+                    
+                    <!-- 骰子類型 (Type) -->
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">骰子類型 (Dice Type)</label>
+                        <select id="in-dice-type" class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:border-dice-primary outline-none transition-colors cursor-pointer">
+                            <option value="4">D4 (四面骰)</option>
+                            <option value="6" selected>D6 (六面骰 - 標準)</option>
+                            <option value="8">D8 (八面骰)</option>
+                            <option value="10">D10 (十面骰)</option>
+                            <option value="12">D12 (十二面骰)</option>
+                            <option value="20">D20 (二十面骰 - TRPG)</option>
+                        </select>
+                    </div>
+
+                    <!-- 數量控制 -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
+                            <span>數量 (Count)</span>
+                            <span id="val-dice-count" class="text-dice-primary font-mono text-sm">5</span>
+                        </div>
+                        <input type="range" id="in-dice-count" min="1" max="15" step="1" value="5">
+                        <p class="text-[9px] text-slate-500 font-mono text-right">支援 1 ~ 15 顆骰子</p>
+                    </div>
+
+                    <!-- 動作按鈕 -->
+                    <div class="flex flex-col gap-3 pt-2 border-t border-hub-700">
+                        <button id="btn-roll-all" class="w-full px-5 py-3.5 bg-gradient-to-r from-dice-primary to-pink-600 hover:from-pink-500 hover:to-pink-400 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(236,72,153,0.3)] flex items-center justify-center gap-2 active:scale-[0.98]">
+                            <i class="ph-bold ph-arrows-clockwise text-xl"></i> 擲骰子 (Roll All)
+                        </button>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btn-roll-unheld" class="px-3 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs opacity-50 cursor-not-allowed" disabled>
+                                <i class="ph-bold ph-arrow-u-up-right text-base"></i> 僅擲未鎖定
+                            </button>
+                            <button id="btn-clear-holds" class="px-3 py-2.5 bg-hub-900 hover:bg-hub-800 border border-hub-700 text-slate-400 hover:text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs">
+                                <i class="ph-bold ph-lock-key-open"></i> 解除鎖定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 材質與光學設定 (Material & Optics) -->
+                <div class="glass-panel p-5 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph-fill ph-palette text-dice-secondary text-lg"></i> 外觀風格 (Appearance)
+                    </h3>
+                    
+                    <div class="flex gap-4">
+                        <div class="flex-1 bg-hub-900/50 p-3 rounded-lg border border-hub-700/50 flex flex-col gap-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">骰子顏色 (Body)</span>
+                            <div class="flex items-center justify-between">
+                                <span id="val-color-bg" class="text-[10px] font-mono text-slate-500">#1e293b</span>
+                                <input type="color" id="in-color-bg" value="#1e293b">
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-hub-900/50 p-3 rounded-lg border border-hub-700/50 flex flex-col gap-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">點數顏色 (Dot)</span>
+                            <div class="flex items-center justify-between">
+                                <span id="val-color-dot" class="text-[10px] font-mono text-slate-500">#ec4899</span>
+                                <input type="color" id="in-color-dot" value="#ec4899">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-1">
+                        <button class="preset-theme flex-1 py-1.5 rounded bg-hub-900 border border-hub-700 text-[10px] text-slate-400 hover:text-white transition-colors" data-bg="#1e293b" data-dot="#ec4899">Cyber</button>
+                        <button class="preset-theme flex-1 py-1.5 rounded bg-hub-900 border border-hub-700 text-[10px] text-slate-400 hover:text-white transition-colors" data-bg="#78350f" data-dot="#fbbf24">Tavern</button>
+                        <button class="preset-theme flex-1 py-1.5 rounded bg-hub-900 border border-hub-700 text-[10px] text-slate-400 hover:text-white transition-colors" data-bg="#10b981" data-dot="#ffffff">Emerald</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：物理引擎競技場 (Kinetic Arena)            -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-8 flex flex-col gap-5 h-full">
+                
+                <!-- 3D 競技場與結果總和 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col min-h-[350px]">
+                    
+                    <div class="flex justify-between items-start z-10 mb-4">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-1">
+                                <i class="ph-fill ph-sigma"></i> 總和 (Total Sum)
+                            </h3>
+                            <div class="flex items-baseline gap-2">
+                                <span id="out-total-sum" class="text-5xl sm:text-6xl font-mono font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] tracking-tight">0</span>
+                            </div>
+                        </div>
+                        <div class="text-right flex flex-col items-end gap-1">
+                            <span class="text-[10px] font-mono text-slate-500 border border-hub-700 bg-hub-900 px-2 py-1 rounded">點擊骰子以鎖定保留 (Hold)</span>
+                            <span id="current-type-badge" class="text-[10px] font-bold text-dice-primary bg-dice-primary/10 border border-dice-primary/30 px-2 py-1 rounded mt-1">目前模式: D6</span>
+                        </div>
+                    </div>
+
+                    <!-- 骰子物理容器 -->
+                    <div id="dice-container" class="dice-arena flex-grow w-full bg-[#0a0f18]/50 border border-hub-700/50 rounded-xl p-6 sm:p-10 flex flex-wrap justify-center items-center gap-6 sm:gap-10 shadow-inner z-10 relative">
+                        <!-- 骰子由 JS 動態注入 -->
+                    </div>
+
+                </div>
+
+                <!-- 機率與歷史拓撲圖 (Analytics Matrix) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    
+                    <!-- 機率動態熱力圖 -->
+                    <div class="glass-panel p-5 shadow-xl flex flex-col border border-hub-700/50 h-full">
+                        <div class="flex justify-between items-center border-b border-hub-700 pb-2 mb-4">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="ph-fill ph-chart-bar text-dice-success text-lg"></i> 點數統計 (Statistics)
+                            </h3>
+                            <button id="btn-reset-stats" class="text-[10px] text-slate-500 hover:text-red-400 transition-colors"><i class="ph ph-trash"></i> 重置</button>
+                        </div>
+                        
+                        <!-- 動態 Grid -->
+                        <div class="flex-grow overflow-y-auto pr-1" id="stats-scroll-area">
+                            <div class="grid gap-x-3 gap-y-1.5" id="stats-chart">
+                                <!-- 長條圖動態產生 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 歷史軌跡 -->
+                    <div class="glass-panel p-5 shadow-xl flex flex-col border border-hub-700/50 h-full max-h-[220px]">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2 mb-3">
+                            <i class="ph-fill ph-clock-counter-clockwise text-dice-secondary text-lg"></i> 擲骰紀錄 (History)
+                        </h3>
+                        
+                        <div class="flex-grow overflow-y-auto pr-2 space-y-2 font-mono text-xs" id="history-container">
+                            <div class="text-center text-slate-600 mt-6">等待擲骰...</div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 動態載入：頁尾 -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/dice-roller'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：3D 幾何引擎與機率統計矩陣     -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- DOM Elements ---
+            const inDiceType = document.getElementById('in-dice-type');
+            const inDiceCount = document.getElementById('in-dice-count');
+            const valDiceCount = document.getElementById('val-dice-count');
+            const currentTypeBadge = document.getElementById('current-type-badge');
+            
+            const inColorBg = document.getElementById('in-color-bg');
+            const inColorDot = document.getElementById('in-color-dot');
+            const valColorBg = document.getElementById('val-color-bg');
+            const valColorDot = document.getElementById('val-color-dot');
+            
+            const btnRollAll = document.getElementById('btn-roll-all');
+            const btnRollUnheld = document.getElementById('btn-roll-unheld');
+            const btnClearHolds = document.getElementById('btn-clear-holds');
+            
+            const diceContainer = document.getElementById('dice-container');
+            const outTotalSum = document.getElementById('out-total-sum');
+            const historyContainer = document.getElementById('history-container');
+            const statsChart = document.getElementById('stats-chart');
+            const btnResetStats = document.getElementById('btn-reset-stats');
+
+            // --- State Matrix ---
+            let diceArray = []; 
+            let isRolling = false;
+            let stats = { totalRolls: 0 };
+            
+            // D6 的面朝向矩陣
+            const targetRotationsD6 = {
+                1: { x: 0, y: 0 },
+                2: { x: 0, y: -90 },
+                3: { x: -90, y: 0 },
+                4: { x: 90, y: 0 },
+                5: { x: 0, y: 90 },
+                6: { x: 180, y: 0 }
+            };
+
+            // --- 重置統計 ---
+            const resetStats = (maxVal) => {
+                stats = { totalRolls: 0 };
+                for (let i = 1; i <= maxVal; i++) stats[i] = 0;
+                
+                statsChart.innerHTML = '';
+                statsChart.className = maxVal > 12 ? 'grid grid-cols-2 gap-x-4 gap-y-1.5' : 'grid grid-cols-1 gap-y-1.5';
+                
+                for (let i = 1; i <= maxVal; i++) {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center gap-2 text-xs font-mono text-slate-400';
+                    row.innerHTML = `
+                        <span class="w-4 text-right">${i}</span>
+                        <div class="flex-grow bg-hub-900 h-2 rounded-full overflow-hidden">
+                            <div class="bg-dice-success h-full w-[0%] transition-all" id="bar-${i}"></div>
+                        </div>
+                        <span class="w-6 text-right" id="count-${i}">0</span>
+                    `;
+                    statsChart.appendChild(row);
+                }
+            };
+
+            // --- 核心構建：生成 3D 幾何結構 ---
+            const createD6DOM = () => {
+                const scene = document.createElement('div');
+                scene.className = 'dice-scene';
+                
+                const cube = document.createElement('div');
+                cube.className = 'dice-cube';
+                
+                for (let i = 1; i <= 6; i++) {
+                    const face = document.createElement('div');
+                    face.className = `dice-face face-${i}`;
+                    for(let d = 0; d < i; d++) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        face.appendChild(dot);
+                    }
+                    cube.appendChild(face);
+                }
+                
+                scene.appendChild(cube);
+                return { scene, cube, textNode: null };
+            };
+
+            const createPolyhedronDOM = (maxVal) => {
+                const scene = document.createElement('div');
+                scene.className = 'dice-scene';
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'poly-wrapper';
+
+                const poly = document.createElement('div');
+                poly.className = `dice-poly shape-d${maxVal}`;
+                
+                const text = document.createElement('span');
+                text.className = 'poly-num';
+                text.textContent = maxVal;
+                
+                poly.appendChild(text);
+                wrapper.appendChild(poly);
+                scene.appendChild(wrapper);
+                
+                return { scene, cube: poly, textNode: text };
+            };
+
+            const initArena = () => {
+                const count = parseInt(inDiceCount.value);
+                const maxVal = parseInt(inDiceType.value);
+                
+                valDiceCount.textContent = count;
+                currentTypeBadge.textContent = `目前模式: D${maxVal}`;
+                diceContainer.innerHTML = '';
+                diceArray = [];
+
+                if (Object.keys(stats).length - 1 !== maxVal) {
+                    resetStats(maxVal);
+                }
+
+                let initSum = 0;
+
+                for (let i = 0; i < count; i++) {
+                    let domObj;
+                    if (maxVal === 6) {
+                        domObj = createD6DOM();
+                        domObj.cube.style.transform = `translateZ(calc(var(--dice-half) * -1)) rotateX(0deg) rotateY(0deg)`;
+                        initSum += 1; 
+                    } else {
+                        domObj = createPolyhedronDOM(maxVal);
+                        domObj.cube.style.transform = `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
+                        initSum += maxVal;
+                    }
+                    
+                    const diceData = { 
+                        sceneObj: domObj.scene, 
+                        cubeObj: domObj.cube,
+                        textNode: domObj.textNode,
+                        value: maxVal === 6 ? 1 : maxVal, 
+                        isHeld: false,
+                        type: maxVal
+                    };
+
+                    domObj.scene.addEventListener('click', () => {
+                        if (isRolling) return;
+                        diceData.isHeld = !diceData.isHeld;
+                        if (diceData.isHeld) domObj.scene.classList.add('held');
+                        else domObj.scene.classList.remove('held');
+                        updateControlButtons();
+                    });
+
+                    diceContainer.appendChild(domObj.scene);
+                    diceArray.push(diceData);
+                }
+                
+                outTotalSum.textContent = initSum;
+                updateControlButtons();
+            };
+
+            // --- 物理翻滾與投影引擎 ---
+            const rollLogic = (rollAll = true) => {
+                if (isRolling) return;
+                isRolling = true;
+                btnRollAll.disabled = true;
+                btnRollUnheld.disabled = true;
+                btnRollAll.classList.add('opacity-50', 'cursor-not-allowed');
+
+                let currentSum = 0;
+                let activeRollValues = [];
+                const maxVal = parseInt(inDiceType.value);
+
+                let flashInterval;
+                if (maxVal !== 6) {
+                    flashInterval = setInterval(() => {
+                        diceArray.forEach(d => {
+                            if (!d.isHeld && d.textNode) {
+                                d.textNode.textContent = Math.floor(Math.random() * maxVal) + 1;
+                            }
+                        });
+                    }, 100);
+                }
+
+                diceArray.forEach((dice) => {
+                    if (rollAll || !dice.isHeld) {
+                        const newValue = Math.floor(Math.random() * maxVal) + 1;
+                        dice.value = newValue;
+                        activeRollValues.push(newValue);
+                        stats[newValue]++;
+                        stats.totalRolls++;
+
+                        if (maxVal === 6) {
+                            const extraSpinsX = (Math.floor(Math.random() * 3) + 2) * 360; 
+                            const extraSpinsY = (Math.floor(Math.random() * 3) + 2) * 360;
+                            const extraSpinsZ = (Math.floor(Math.random() * 2)) * 360; 
+                            const targetX = targetRotationsD6[newValue].x + extraSpinsX;
+                            const targetY = targetRotationsD6[newValue].y + extraSpinsY;
+                            dice.cubeObj.style.transform = `translateZ(calc(var(--dice-half) * -1)) rotateX(${targetX}deg) rotateY(${targetY}deg) rotateZ(${extraSpinsZ}deg)`;
+                        } else {
+                            const spinX = (Math.floor(Math.random() * 4) + 2) * 360;
+                            const spinY = (Math.floor(Math.random() * 4) + 2) * 360;
+                            const spinZ = (Math.floor(Math.random() * 2)) * 360;
+                            
+                            dice.cubeObj.style.transition = 'transform 1.0s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                            dice.cubeObj.style.transform = `rotateX(${spinX}deg) rotateY(${spinY}deg) rotateZ(${spinZ}deg)`;
+                            
+                            setTimeout(() => {
+                                dice.cubeObj.style.transition = 'transform 0.2s ease-out';
+                                dice.cubeObj.style.transform = `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
+                            }, 1000);
+                        }
+                    }
+                    currentSum += dice.value;
+                });
+
+                updateStatsUI(maxVal);
+
+                setTimeout(() => {
+                    if (flashInterval) clearInterval(flashInterval);
+                    
+                    diceArray.forEach(d => {
+                        if (d.textNode) d.textNode.textContent = d.value;
+                    });
+
+                    outTotalSum.textContent = currentSum;
+                    
+                    const outEl = document.getElementById('out-total-sum');
+                    outEl.classList.remove('animate-pop');
+                    void outEl.offsetWidth;
+                    outEl.classList.add('animate-pop');
+                    outEl.classList.replace('text-white', 'text-dice-primary');
+                    setTimeout(() => outEl.classList.replace('text-dice-primary', 'text-white'), 400);
+
+                    addHistory(activeRollValues, currentSum, rollAll, maxVal);
+                    
+                    isRolling = false;
+                    btnRollAll.disabled = false;
+                    btnRollAll.classList.remove('opacity-50', 'cursor-not-allowed');
+                    updateControlButtons();
+                }, 1200);
+            };
+
+            // --- 狀態更新與 UI 連動 ---
+            const updateControlButtons = () => {
+                const hasHeld = diceArray.some(d => d.isHeld);
+                if (hasHeld && !isRolling) {
+                    btnRollUnheld.disabled = false;
+                    btnRollUnheld.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btnRollUnheld.classList.replace('bg-hub-800', 'bg-dice-secondary');
+                    btnRollUnheld.classList.replace('text-slate-300', 'text-white');
+                    btnRollUnheld.classList.add('shadow-[0_0_10px_rgba(139,92,246,0.5)]');
+                } else {
+                    btnRollUnheld.disabled = true;
+                    btnRollUnheld.classList.add('opacity-50', 'cursor-not-allowed');
+                    btnRollUnheld.classList.replace('bg-dice-secondary', 'bg-hub-800');
+                    btnRollUnheld.classList.replace('text-white', 'text-slate-300');
+                    btnRollUnheld.classList.remove('shadow-[0_0_10px_rgba(139,92,246,0.5)]');
+                }
+            };
+
+            const clearHolds = () => {
+                if(isRolling) return;
+                diceArray.forEach(d => {
+                    d.isHeld = false;
+                    d.sceneObj.classList.remove('held');
+                });
+                updateControlButtons();
+            };
+
+            const addHistory = (values, sum, wasRollAll, type) => {
+                if(values.length === 0) return; 
+                
+                const time = new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: 'numeric', minute:'numeric', second:'numeric' });
+                const typeStr = wasRollAll ? `D${type} 全部` : `D${type} 部分`;
+                
+                const entry = document.createElement('div');
+                entry.className = 'flex justify-between items-center bg-hub-900/50 p-2 rounded border border-hub-700/50 hover:border-hub-700 transition-colors animate-[fadeIn_0.3s_ease-out]';
+                entry.innerHTML = `
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[10px] text-slate-500">${time}</span>
+                        <span class="text-[10px] px-1.5 rounded bg-hub-800 text-slate-400 font-bold">${typeStr}</span>
+                        <span class="text-slate-300 tracking-wider">[${values.join(', ')}]</span>
+                    </div>
+                    <span class="text-dice-primary font-bold">總和: ${sum}</span>
+                `;
+                
+                if (historyContainer.children[0] && historyContainer.children[0].textContent.includes('等待')) {
+                    historyContainer.innerHTML = '';
+                }
+                historyContainer.insertBefore(entry, historyContainer.firstChild);
+                
+                if (historyContainer.children.length > 20) {
+                    historyContainer.removeChild(historyContainer.lastChild);
+                }
+            };
+
+            const updateStatsUI = (maxVal) => {
+                if (stats.totalRolls === 0) return;
+                
+                let counts = [];
+                for (let i = 1; i <= maxVal; i++) counts.push(stats[i]);
+                let maxCount = Math.max(...counts);
+
+                for (let i = 1; i <= maxVal; i++) {
+                    const countEl = document.getElementById(`count-${i}`);
+                    const barEl = document.getElementById(`bar-${i}`);
+                    if(countEl && barEl) {
+                        countEl.textContent = stats[i];
+                        let percentage = maxCount === 0 ? 0 : (stats[i] / maxCount) * 100;
+                        barEl.style.width = `${percentage}%`;
+                    }
+                }
+            };
+
+            // --- 材質色彩引擎 ---
+            const updateColors = () => {
+                const bg = inColorBg.value;
+                const dot = inColorDot.value;
+                valColorBg.textContent = bg.toUpperCase();
+                valColorDot.textContent = dot.toUpperCase();
+                
+                document.documentElement.style.setProperty('--dice-bg', bg);
+                document.documentElement.style.setProperty('--dice-dot', dot);
+            };
+
+            // --- 事件綁定 ---
+            inDiceType.addEventListener('change', () => {
+                if(isRolling) return;
+                initArena();
+            });
+
+            inDiceCount.addEventListener('input', () => {
+                if(isRolling) return;
+                initArena();
+            });
+
+            btnRollAll.addEventListener('click', () => rollLogic(true));
+            btnRollUnheld.addEventListener('click', () => rollLogic(false));
+            btnClearHolds.addEventListener('click', clearHolds);
+
+            inColorBg.addEventListener('input', updateColors);
+            inColorDot.addEventListener('input', updateColors);
+
+            document.querySelectorAll('.preset-theme').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    inColorBg.value = e.currentTarget.dataset.bg;
+                    inColorDot.value = e.currentTarget.dataset.dot;
+                    updateColors();
+                });
+            });
+
+            btnResetStats.addEventListener('click', () => {
+                const maxVal = parseInt(inDiceType.value);
+                resetStats(maxVal);
+                historyContainer.innerHTML = '<div class="text-center text-slate-600 mt-6">已清空，等待擲骰...</div>';
+            });
+
+            // 初始化
+            updateColors();
+            initArena();
+        });
+    </script>
+</body>
+</html>

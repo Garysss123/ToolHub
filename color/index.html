@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Toolkit 顏色工具箱 | ToolHub - 免費圖片吸色、色碼轉換與漸層生成引擎</title>
+    <meta name="description" content="免費線上專業顏色工具箱，提供高精度圖片吸色、HEX/RGB/HSL即時轉換、智慧配色生成與 CSS 漸層產生器。純前端運算，確保隱私與極致效能。">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+   
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        /* 捲軸美化 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        /* 工具專屬樣式 */
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-btn.active { 
+            color: #38BDF8; 
+            border-bottom-color: #38BDF8; 
+            background: linear-gradient(to top, rgba(56,189,248,0.1), transparent);
+        }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out forwards; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 透明背景棋盤格 (供圖片與漸層預覽使用) */
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(135deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1A263C 75%), 
+                linear-gradient(135deg, transparent 75%, #1A263C 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #0f172a;
+        }
+
+        /* 色彩輸入框美化 */
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 100%; height: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 0; background: none;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
+
+        /* Range Slider 美化 */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #38BDF8; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56,189,248,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px;
+        }
+        
+        .upload-zone.dragover { border-color: #38BDF8; background-color: rgba(56,189,248,0.05); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Color Toolkit -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-10">
+            <div class="inline-flex items-center justify-center p-2 mb-2 rounded-full bg-hub-800 border border-hub-700 text-sm text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                色彩空間運算矩陣已上線
+            </div>
+            <h1 class="text-3xl md:text-5xl font-bold tracking-tight text-white">
+                Color <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-accent to-fuchsia-400">Toolkit</span> 顏色工具箱
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                整合圖片精準吸色、跨色彩空間轉換、演算法智慧配色與漸層渲染引擎。純前端運作，解放設計與開發效能。
+            </p>
+        </div>
+
+        <!-- 主控台容器 -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+            
+            <!-- 頁籤導航 (Tabs) -->
+            <div class="flex overflow-x-auto border-b border-hub-700 bg-hub-900/50 no-scrollbar">
+                <button class="tab-btn active flex-1 min-w-[140px] py-4 px-4 text-sm font-medium text-slate-400 border-b-2 border-transparent flex items-center justify-center gap-2 hover:text-white" data-target="tab-picker">
+                    <i class="ph ph-eyedropper text-lg"></i> 圖片吸色器
+                </button>
+                <button class="tab-btn flex-1 min-w-[140px] py-4 px-4 text-sm font-medium text-slate-400 border-b-2 border-transparent flex items-center justify-center gap-2 hover:text-white" data-target="tab-converter">
+                    <i class="ph ph-arrows-left-right text-lg"></i> 色碼轉換器
+                </button>
+                <button class="tab-btn flex-1 min-w-[140px] py-4 px-4 text-sm font-medium text-slate-400 border-b-2 border-transparent flex items-center justify-center gap-2 hover:text-white" data-target="tab-palette">
+                    <i class="ph ph-palette text-lg"></i> 智慧配色生成
+                </button>
+                <button class="tab-btn flex-1 min-w-[140px] py-4 px-4 text-sm font-medium text-slate-400 border-b-2 border-transparent flex items-center justify-center gap-2 hover:text-white" data-target="tab-gradient">
+                    <i class="ph ph-paint-brush-broad text-lg"></i> 漸層產生器
+                </button>
+            </div>
+
+            <div class="p-6 md:p-8 min-h-[500px]">
+                
+                <!-- ========================================== -->
+                <!-- 模組 1: Image Color Picker (圖片吸色) -->
+                <!-- ========================================== -->
+                <div id="tab-picker" class="tab-content active">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- 左側：上傳與畫布 -->
+                        <div class="lg:col-span-2 flex flex-col gap-4">
+                            <input type="file" id="image-upload" accept="image/*" class="hidden">
+                            <div id="drop-zone" class="upload-zone w-full border-2 border-dashed border-hub-700 hover:border-hub-accent rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30">
+                                <div class="p-3 bg-hub-800 rounded-full mb-3 text-hub-accent shadow-lg"><i class="ph ph-upload-simple text-2xl"></i></div>
+                                <p class="text-white font-medium">點擊或拖曳圖片至此</p>
+                                <p class="text-xs text-slate-400 mt-1">本機端 Canvas 渲染，保障圖檔隱私</p>
+                            </div>
+                            
+                            <!-- Canvas 渲染區 -->
+                            <div id="canvas-container" class="hidden relative w-full rounded-xl overflow-hidden checkerboard border border-hub-700 bg-black cursor-crosshair">
+                                <canvas id="image-canvas" class="max-w-full h-auto mx-auto object-contain"></canvas>
+                                <!-- 游標放大鏡提示 -->
+                                <div id="color-magnifier" class="absolute pointer-events-none w-16 h-16 rounded-full border-2 border-white shadow-[0_0_10px_rgba(0,0,0,0.8)] hidden flex items-center justify-center z-10" style="transform: translate(-50%, -50%);">
+                                    <div class="w-1.5 h-1.5 bg-white rounded-full mix-blend-difference"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 右側：吸色結果與歷史 -->
+                        <div class="flex flex-col gap-6">
+                            <div class="bg-hub-900/80 rounded-xl border border-hub-700 p-5">
+                                <h3 class="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2"><i class="ph ph-crosshair text-hub-accent"></i> 當前選取像素</h3>
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div id="picked-color-preview" class="w-16 h-16 rounded-lg shadow-inner border border-slate-600 bg-transparent checkerboard relative">
+                                        <div class="absolute inset-0 rounded-lg" id="picked-color-fill" style="background-color: #000000"></div>
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                        <div class="relative">
+                                            <input type="text" id="picked-hex" readonly class="w-full bg-hub-800 border border-hub-700 rounded-md py-1.5 px-3 text-sm font-mono text-white outline-none" value="#000000">
+                                            <button onclick="copyColor('picked-hex')" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="text" id="picked-rgb" readonly class="w-full bg-hub-800 border border-hub-700 rounded-md py-1.5 px-3 text-sm font-mono text-white outline-none" value="rgb(0, 0, 0)">
+                                            <button onclick="copyColor('picked-rgb')" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"><i class="ph ph-copy"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 bg-hub-900/80 rounded-xl border border-hub-700 p-5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-sm font-semibold text-slate-400 flex items-center gap-2"><i class="ph ph-clock-counter-clockwise text-hub-accent"></i> 擷取歷史</h3>
+                                    <button id="clear-history-btn" class="text-xs text-red-400 hover:text-red-300">清空</button>
+                                </div>
+                                <div id="color-history" class="grid grid-cols-5 gap-2">
+                                    <!-- 歷史色塊動態插入 -->
+                                </div>
+                                <p id="history-empty" class="text-xs text-slate-500 text-center mt-4">尚未擷取任何色彩</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- 模塊 2: Color Converter (色碼轉換) -->
+                <!-- ========================================== -->
+                <div id="tab-converter" class="tab-content">
+                    <div class="max-w-3xl mx-auto flex flex-col md:flex-row gap-8 items-start">
+                        <!-- 大色塊預覽 -->
+                        <div class="w-full md:w-1/3 flex flex-col items-center">
+                            <div class="w-full aspect-square rounded-2xl shadow-xl border-4 border-hub-800 relative overflow-hidden checkerboard mb-4">
+                                <div id="conv-preview" class="absolute inset-0 transition-colors duration-200" style="background-color: #38BDF8;"></div>
+                            </div>
+                            <div class="relative w-full h-12 rounded-lg overflow-hidden border border-hub-700">
+                                <input type="color" id="conv-native-picker" value="#38bdf8">
+                                <div class="absolute inset-0 pointer-events-none flex items-center justify-center text-xs font-medium text-white mix-blend-difference drop-shadow-md">
+                                    開啟系統選色器
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 轉換矩陣輸入區 -->
+                        <div class="w-full md:w-2/3 space-y-5 bg-hub-900/50 p-6 rounded-xl border border-hub-700">
+                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-hub-700 pb-2">跨空間數值同步矩陣</h3>
+                            
+                            <!-- HEX -->
+                            <div class="space-y-1">
+                                <label class="text-xs text-slate-400 font-medium">HEX (十六進位)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="conv-hex" value="#38bdf8" class="flex-1 bg-hub-800 border border-hub-700 rounded-lg p-3 text-white font-mono focus:border-hub-accent outline-none uppercase transition-all">
+                                    <button onclick="copyColor('conv-hex')" class="px-4 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 transition-colors"><i class="ph ph-copy"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- RGB -->
+                            <div class="space-y-1">
+                                <label class="text-xs text-slate-400 font-medium">RGB (紅綠藍)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="conv-rgb" value="rgb(56, 189, 248)" class="flex-1 bg-hub-800 border border-hub-700 rounded-lg p-3 text-white font-mono focus:border-hub-accent outline-none transition-all">
+                                    <button onclick="copyColor('conv-rgb')" class="px-4 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 transition-colors"><i class="ph ph-copy"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- HSL -->
+                            <div class="space-y-1">
+                                <label class="text-xs text-slate-400 font-medium">HSL (色相/飽和度/亮度)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="conv-hsl" value="hsl(198, 93%, 60%)" class="flex-1 bg-hub-800 border border-hub-700 rounded-lg p-3 text-white font-mono focus:border-hub-accent outline-none transition-all">
+                                    <button onclick="copyColor('conv-hsl')" class="px-4 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 transition-colors"><i class="ph ph-copy"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- 模組 3: Palette Generator (智慧配色) -->
+                <!-- ========================================== -->
+                <div id="tab-palette" class="tab-content">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-8 bg-hub-900/50 p-4 rounded-xl border border-hub-700 gap-4">
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-slate-300 font-medium">基準色彩 (Base Color)</span>
+                            <div class="w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shadow-inner flex-shrink-0">
+                                <input type="color" id="pal-base-color" value="#8b5cf6">
+                            </div>
+                            <span id="pal-base-hex" class="text-hub-accent font-mono text-lg font-bold uppercase">#8B5CF6</span>
+                        </div>
+                        <button id="btn-random-palette" class="px-5 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-white rounded-lg transition-all flex items-center gap-2 text-sm font-medium shadow-sm">
+                            <i class="ph ph-dice-three text-lg text-fuchsia-400"></i> 隨機激發靈感
+                        </button>
+                    </div>
+
+                    <div class="space-y-8" id="palette-container">
+                        <!-- 調色盤區域由 JS 動態生成 -->
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- 模組 4: Gradient Generator (漸層產生器) -->
+                <!-- ========================================== -->
+                <div id="tab-gradient" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        
+                        <!-- 控制面板 -->
+                        <div class="space-y-6 bg-hub-900/50 p-6 rounded-xl border border-hub-700">
+                            <!-- 顏色端點 -->
+                            <div class="flex justify-between gap-4">
+                                <div class="flex-1 space-y-2">
+                                    <label class="text-xs text-slate-400 font-medium">起始色彩 (Start)</label>
+                                    <div class="flex gap-2 items-center">
+                                        <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-600 flex-shrink-0">
+                                            <input type="color" id="grad-color-1" value="#f43f5e">
+                                        </div>
+                                        <input type="text" id="grad-hex-1" value="#f43f5e" class="w-full bg-hub-800 border border-hub-700 rounded-md py-2 px-3 text-sm font-mono text-white outline-none uppercase">
+                                    </div>
+                                </div>
+                                <div class="flex items-center pt-6 text-slate-500">
+                                    <button id="btn-swap-grad" class="p-2 hover:bg-hub-800 rounded-full transition-colors hover:text-white"><i class="ph ph-arrows-left-right text-xl"></i></button>
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <label class="text-xs text-slate-400 font-medium">結束色彩 (End)</label>
+                                    <div class="flex gap-2 items-center">
+                                        <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-600 flex-shrink-0">
+                                            <input type="color" id="grad-color-2" value="#3b82f6">
+                                        </div>
+                                        <input type="text" id="grad-hex-2" value="#3b82f6" class="w-full bg-hub-800 border border-hub-700 rounded-md py-2 px-3 text-sm font-mono text-white outline-none uppercase">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 角度控制 -->
+                            <div class="space-y-3 pt-4 border-t border-hub-700">
+                                <div class="flex justify-between items-center">
+                                    <label class="text-xs text-slate-400 font-medium">渲染角度 (Angle)</label>
+                                    <span id="grad-angle-text" class="text-sm font-mono text-hub-accent bg-hub-800 px-2 py-0.5 rounded">135°</span>
+                                </div>
+                                <div class="flex gap-4 items-center">
+                                    <input type="range" id="grad-angle" min="0" max="360" value="135" class="flex-1">
+                                    <div class="w-8 h-8 rounded-full border border-hub-700 flex items-center justify-center relative bg-hub-800 flex-shrink-0">
+                                        <div id="grad-angle-dial" class="w-0.5 h-3 bg-hub-accent absolute top-1 rounded-full origin-bottom" style="transform: rotate(135deg);"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 預覽與輸出 -->
+                        <div class="flex flex-col gap-4">
+                            <div class="w-full h-48 sm:h-64 rounded-xl shadow-inner checkerboard relative border border-hub-700 overflow-hidden">
+                                <div id="grad-preview" class="absolute inset-0" style="background: linear-gradient(135deg, #f43f5e, #3b82f6);"></div>
+                            </div>
+                            
+                            <div class="bg-hub-900/80 rounded-xl border border-hub-700 p-4 relative group">
+                                <div class="text-xs text-slate-500 mb-2 font-medium tracking-wide">CSS 輸出代碼</div>
+                                <textarea id="grad-css-output" readonly class="w-full bg-transparent text-slate-300 font-mono text-sm resize-none outline-none h-16">background: linear-gradient(135deg, #f43f5e, #3b82f6);</textarea>
+                                <button onclick="copyColor('grad-css-output')" class="absolute top-4 right-4 p-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 transition-colors shadow-sm group-hover:text-white">
+                                    <i class="ph ph-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 全域 Toast 提示 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-full font-medium shadow-xl shadow-emerald-900/30 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-center gap-2">
+        <i class="ph-fill ph-check-circle text-lg"></i> <span id="toast-msg">已複製</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/color';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：色彩矩陣運算核心              -->
+    <!-- ========================================== -->
+    <script>
+        // --- 核心數學引擎：跨色彩空間轉換 ---
+        const ColorMath = {
+            hexToRgb: (hex) => {
+                let r = 0, g = 0, b = 0;
+                hex = hex.replace('#', '');
+                if (hex.length === 3) {
+                    r = parseInt(hex[0] + hex[0], 16);
+                    g = parseInt(hex[1] + hex[1], 16);
+                    b = parseInt(hex[2] + hex[2], 16);
+                } else if (hex.length === 6) {
+                    r = parseInt(hex.substring(0, 2), 16);
+                    g = parseInt(hex.substring(2, 4), 16);
+                    b = parseInt(hex.substring(4, 6), 16);
+                }
+                return isNaN(r) ? null : { r, g, b };
+            },
+            rgbToHex: (r, g, b) => {
+                const toHex = c => {
+                    const hex = Math.max(0, Math.min(255, Math.round(c))).toString(16);
+                    return hex.length === 1 ? '0' + hex : hex;
+                };
+                return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+            },
+            rgbToHsl: (r, g, b) => {
+                r /= 255; g /= 255; b /= 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                if (max === min) { h = s = 0; } 
+                else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+            },
+            hslToRgb: (h, s, l) => {
+                s /= 100; l /= 100;
+                const k = n => (n + h / 30) % 12;
+                const a = s * Math.min(l, 1 - l);
+                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+                return { r: Math.round(255 * f(0)), g: Math.round(255 * f(8)), b: Math.round(255 * f(4)) };
+            },
+            isValidHex: (hex) => /^#([0-9A-F]{3}){1,2}$/i.test(hex),
+            parseRgbString: (str) => {
+                const match = str.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+                return match ? { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) } : null;
+            },
+            parseHslString: (str) => {
+                const match = str.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
+                return match ? { h: parseInt(match[1]), s: parseInt(match[2]), l: parseInt(match[3]) } : null;
+            }
+        };
+
+        // 全域 Toast 函數
+        window.copyColor = (elementId) => {
+            const el = document.getElementById(elementId);
+            el.select();
+            document.execCommand('copy');
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = `已複製 ${el.value}`;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2000);
+            window.getSelection().removeAllRanges();
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 頁籤切換邏輯 ---
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(e.currentTarget.dataset.target).classList.add('active');
+                });
+            });
+
+            // ==========================================
+            // 模塊 1: 圖片吸色器 (Canvas Pixel Extractor)
+            // ==========================================
+            const dropZone = document.getElementById('drop-zone');
+            const imageUpload = document.getElementById('image-upload');
+            const canvasContainer = document.getElementById('canvas-container');
+            const canvas = document.getElementById('image-canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const magnifier = document.getElementById('color-magnifier');
+            
+            const colorPreview = document.getElementById('picked-color-fill');
+            const hexInput = document.getElementById('picked-hex');
+            const rgbInput = document.getElementById('picked-rgb');
+            const historyContainer = document.getElementById('color-history');
+            const historyEmpty = document.getElementById('history-empty');
+            
+            let colorHistory = [];
+            let imgElement = new Image();
+
+            const handleImageLoad = (file) => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    imgElement.onload = () => {
+                        dropZone.classList.add('hidden');
+                        canvasContainer.classList.remove('hidden');
+                        
+                        // 計算 Canvas 尺寸以適應容器同時保持比例
+                        const maxWidth = canvasContainer.clientWidth;
+                        const scale = Math.min(1, maxWidth / imgElement.width);
+                        canvas.width = imgElement.width * scale;
+                        canvas.height = imgElement.height * scale;
+                        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+                    };
+                    imgElement.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            dropZone.addEventListener('click', () => imageUpload.click());
+            imageUpload.addEventListener('change', (e) => { if(e.target.files.length) handleImageLoad(e.target.files[0]); });
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) handleImageLoad(e.dataTransfer.files[0]);
+            });
+
+            const getPixelColor = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                // 處理高 DPI 螢幕與 CSS 縮放的座標轉換
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return null;
+
+                const pixel = ctx.getImageData(x, y, 1, 1).data;
+                return { r: pixel[0], g: pixel[1], b: pixel[2] };
+            };
+
+            const updatePickedColor = (rgb) => {
+                if (!rgb) return;
+                const hex = ColorMath.rgbToHex(rgb.r, rgb.g, rgb.b);
+                colorPreview.style.backgroundColor = hex;
+                hexInput.value = hex;
+                rgbInput.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                magnifier.style.borderColor = hex;
+            };
+
+            canvasContainer.addEventListener('mousemove', (e) => {
+                const rect = canvasContainer.getBoundingClientRect();
+                magnifier.classList.remove('hidden');
+                magnifier.style.left = `${e.clientX - rect.left}px`;
+                magnifier.style.top = `${e.clientY - rect.top}px`;
+                updatePickedColor(getPixelColor(e));
+            });
+
+            canvasContainer.addEventListener('mouseleave', () => magnifier.classList.add('hidden'));
+
+            canvasContainer.addEventListener('click', (e) => {
+                const rgb = getPixelColor(e);
+                if (!rgb) return;
+                const hex = ColorMath.rgbToHex(rgb.r, rgb.g, rgb.b);
+                
+                if (!colorHistory.includes(hex)) {
+                    colorHistory.unshift(hex);
+                    if (colorHistory.length > 10) colorHistory.pop();
+                    renderHistory();
+                }
+            });
+
+            const renderHistory = () => {
+                if (colorHistory.length > 0) historyEmpty.classList.add('hidden');
+                historyContainer.innerHTML = '';
+                colorHistory.forEach(hex => {
+                    const div = document.createElement('div');
+                    div.className = 'w-full aspect-square rounded-md shadow-sm cursor-pointer border border-slate-600 hover:scale-110 transition-transform';
+                    div.style.backgroundColor = hex;
+                    div.title = hex;
+                    div.onclick = () => {
+                        const rgb = ColorMath.hexToRgb(hex);
+                        updatePickedColor(rgb);
+                    };
+                    historyContainer.appendChild(div);
+                });
+            };
+
+            document.getElementById('clear-history-btn').addEventListener('click', () => {
+                colorHistory = [];
+                historyContainer.innerHTML = '';
+                historyEmpty.classList.remove('hidden');
+            });
+
+
+            // ==========================================
+            // 模塊 2: 色碼轉換器 (Synchronized Converter)
+            // ==========================================
+            const convNative = document.getElementById('conv-native-picker');
+            const convPreview = document.getElementById('conv-preview');
+            const cHex = document.getElementById('conv-hex');
+            const cRgb = document.getElementById('conv-rgb');
+            const cHsl = document.getElementById('conv-hsl');
+
+            const syncConverter = (source, val) => {
+                let rgb = null, hex = '', hsl = null;
+
+                if (source === 'hex' && ColorMath.isValidHex(val)) {
+                    hex = val.toUpperCase();
+                    rgb = ColorMath.hexToRgb(hex);
+                    hsl = ColorMath.rgbToHsl(rgb.r, rgb.g, rgb.b);
+                } else if (source === 'rgb') {
+                    rgb = ColorMath.parseRgbString(val);
+                    if (rgb) {
+                        hex = ColorMath.rgbToHex(rgb.r, rgb.g, rgb.b);
+                        hsl = ColorMath.rgbToHsl(rgb.r, rgb.g, rgb.b);
+                    }
+                } else if (source === 'hsl') {
+                    hsl = ColorMath.parseHslString(val);
+                    if (hsl) {
+                        rgb = ColorMath.hslToRgb(hsl.h, hsl.s, hsl.l);
+                        hex = ColorMath.rgbToHex(rgb.r, rgb.g, rgb.b);
+                    }
+                }
+
+                if (rgb && hex && hsl) {
+                    if (source !== 'hex') cHex.value = hex;
+                    if (source !== 'rgb') cRgb.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                    if (source !== 'hsl') cHsl.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+                    convPreview.style.backgroundColor = hex;
+                    convNative.value = hex;
+                    // 同步到配色模塊
+                    document.getElementById('pal-base-color').value = hex;
+                    updatePalette(hex);
+                }
+            };
+
+            convNative.addEventListener('input', (e) => syncConverter('hex', e.target.value));
+            cHex.addEventListener('input', (e) => syncConverter('hex', e.target.value));
+            cRgb.addEventListener('input', (e) => syncConverter('rgb', e.target.value));
+            cHsl.addEventListener('input', (e) => syncConverter('hsl', e.target.value));
+
+
+            // ==========================================
+            // 模塊 3: 智慧配色生成 (Palette Generator)
+            // ==========================================
+            const palBaseColor = document.getElementById('pal-base-color');
+            const palBaseHex = document.getElementById('pal-base-hex');
+            const palContainer = document.getElementById('palette-container');
+
+            const createPaletteRow = (title, hexArray) => {
+                let blocks = '';
+                hexArray.forEach(hex => {
+                    blocks += `
+                        <div class="group flex-1 flex flex-col items-center cursor-pointer" onclick="navigator.clipboard.writeText('${hex}'); showToast('${hex}')">
+                            <div class="w-full h-16 sm:h-20 transition-transform group-hover:scale-105 group-hover:shadow-lg rounded-lg border border-slate-700 mb-2" style="background-color: ${hex}"></div>
+                            <span class="text-xs font-mono text-slate-400 group-hover:text-white transition-colors">${hex}</span>
+                        </div>
+                    `;
+                });
+                return `
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-300 mb-3">${title}</h4>
+                        <div class="flex gap-2 sm:gap-4 w-full">${blocks}</div>
+                    </div>
+                `;
+            };
+
+            window.showToast = (hex) => {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-msg').textContent = `已複製 ${hex}`;
+                toast.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 2000);
+            };
+
+            const updatePalette = (baseHex) => {
+                palBaseHex.textContent = baseHex.toUpperCase();
+                palBaseColor.value = baseHex;
+                const rgb = ColorMath.hexToRgb(baseHex);
+                const hsl = ColorMath.rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+                // 產生演算法配色
+                const getHex = (h, s, l) => {
+                    const r = ColorMath.hslToRgb(h % 360, s, l);
+                    return ColorMath.rgbToHex(r.r, r.g, r.b);
+                };
+
+                const complementary = [
+                    getHex(hsl.h, hsl.s, Math.max(0, hsl.l - 20)),
+                    baseHex,
+                    getHex(hsl.h + 180, hsl.s, hsl.l),
+                    getHex(hsl.h + 180, hsl.s, Math.max(0, hsl.l - 20))
+                ];
+
+                const analogous = [
+                    getHex(hsl.h - 30, hsl.s, hsl.l),
+                    baseHex,
+                    getHex(hsl.h + 30, hsl.s, hsl.l),
+                    getHex(hsl.h + 60, hsl.s, hsl.l)
+                ];
+
+                const triadic = [
+                    baseHex,
+                    getHex(hsl.h + 120, hsl.s, hsl.l),
+                    getHex(hsl.h + 240, hsl.s, hsl.l)
+                ];
+
+                const monochromatic = [
+                    getHex(hsl.h, hsl.s, 20),
+                    getHex(hsl.h, hsl.s, 40),
+                    baseHex,
+                    getHex(hsl.h, hsl.s, 80),
+                    getHex(hsl.h, hsl.s, 95)
+                ];
+
+                palContainer.innerHTML = 
+                    createPaletteRow('互補色 (Complementary)', complementary) +
+                    createPaletteRow('相近色 (Analogous)', analogous) +
+                    createPaletteRow('三等分色 (Triadic)', triadic) +
+                    createPaletteRow('單色階調 (Monochromatic)', monochromatic);
+            };
+
+            palBaseColor.addEventListener('input', (e) => {
+                const hex = e.target.value.toUpperCase();
+                updatePalette(hex);
+                syncConverter('hex', hex); // 聯動轉換器
+            });
+
+            document.getElementById('btn-random-palette').addEventListener('click', () => {
+                const randomHex = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+                updatePalette(randomHex);
+                syncConverter('hex', randomHex);
+            });
+
+
+            // ==========================================
+            // 模塊 4: 漸層產生器 (Gradient Generator)
+            // ==========================================
+            const gColor1 = document.getElementById('grad-color-1');
+            const gHex1 = document.getElementById('grad-hex-1');
+            const gColor2 = document.getElementById('grad-color-2');
+            const gHex2 = document.getElementById('grad-hex-2');
+            const gAngle = document.getElementById('grad-angle');
+            const gAngleText = document.getElementById('grad-angle-text');
+            const gAngleDial = document.getElementById('grad-angle-dial');
+            const gPreview = document.getElementById('grad-preview');
+            const gCssOut = document.getElementById('grad-css-output');
+
+            const updateGradient = () => {
+                const c1 = gColor1.value;
+                const c2 = gColor2.value;
+                const a = gAngle.value;
+                
+                gHex1.value = c1.toUpperCase();
+                gHex2.value = c2.toUpperCase();
+                gAngleText.textContent = `${a}°`;
+                gAngleDial.style.transform = `rotate(${a}deg)`;
+
+                const css = `background: linear-gradient(${a}deg, ${c1}, ${c2});`;
+                gPreview.style.background = `linear-gradient(${a}deg, ${c1}, ${c2})`;
+                gCssOut.value = css;
+            };
+
+            gColor1.addEventListener('input', updateGradient);
+            gColor2.addEventListener('input', updateGradient);
+            gAngle.addEventListener('input', updateGradient);
+
+            gHex1.addEventListener('change', (e) => {
+                if(ColorMath.isValidHex(e.target.value)) { gColor1.value = e.target.value; updateGradient(); }
+            });
+            gHex2.addEventListener('change', (e) => {
+                if(ColorMath.isValidHex(e.target.value)) { gColor2.value = e.target.value; updateGradient(); }
+            });
+
+            document.getElementById('btn-swap-grad').addEventListener('click', () => {
+                const temp = gColor1.value;
+                gColor1.value = gColor2.value;
+                gColor2.value = temp;
+                updateGradient();
+            });
+
+            // 初次載入渲染
+            updatePalette('#8B5CF6');
+            updateGradient();
+        });
+    </script>
+</body>
+</html>

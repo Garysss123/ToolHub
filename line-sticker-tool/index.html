@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LINE 貼圖影像處理套件 | ToolHub</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide Icons (供 Header/Sidebar 使用) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 Phosphor Icons (供工具內容使用) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- 引入 Cropper.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+   
+
+    <script>
+        // 融合主機板與工具模組的 Tailwind 參數
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 系統核心色系
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        // 工具專屬色系
+                        darkBase: '#090E17',
+                        darkCard: '#131C2D',
+                        brandCyan: '#00B4D8',
+                        textMain: '#E2E8F0',
+                        textMuted: '#94A3B8'
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
+
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            overflow-x: hidden;
+        }
+
+        /* 系統級網格背景 */
+        .bg-grid {
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glow-text { text-shadow: 0 0 10px rgba(0, 180, 216, 0.5); }
+
+        /* Cropper 視覺覆蓋 */
+        .cropper-view-box, .cropper-face { outline-color: #00B4D8 !important; }
+        .cropper-line, .cropper-point { background-color: #00B4D8 !important; }
+        .cropper-point.point-se { width: 10px; height: 10px; }
+        
+        /* 捲軸美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .upload-zone { transition: all 0.2s ease; }
+        .upload-zone.dragover { border-color: #00B4D8; background-color: rgba(0, 180, 216, 0.05); }
+
+        .checkerboard-bg {
+            background-image: 
+                linear-gradient(45deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(135deg, #1A263C 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1A263C 75%), 
+                linear-gradient(135deg, transparent 75%, #1A263C 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #131C2D;
+        }
+
+        /* Input Range 美化 */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #00B4D8; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(0,180,216,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #1A263C; border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative font-sans">
+
+    <div class="bg-grid"></div>
+
+    <!-- 1. 動態載入：頂部導航欄 (Header) -->
+    <div id="component-header"></div>
+
+    <!-- 2. 動態載入：側邊欄 (Sidebar) -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心內容區 (Tool Module) -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-3xl relative z-10">
+        
+        <div class="mb-8 text-center sm:text-left">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-darkCard border border-white/5 text-xs text-textMuted mb-4">
+                <span class="w-2 h-2 rounded-full bg-brandCyan animate-pulse"></span>
+                影像處理模組已全面掛載
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-black mb-2 tracking-tight">像素與精準的<span class="text-brandCyan glow-text">創作者引擎</span></h1>
+            <p class="text-textMuted text-sm sm:text-base leading-relaxed">
+                整合裁切、智慧白邊生成與規範化尺寸輸出，為 LINE 貼圖創作者打造的高效運算節點。
+            </p>
+        </div>
+
+        <div class="bg-darkCard rounded-2xl border border-white/10 shadow-lg overflow-hidden relative">
+            <div class="absolute top-4 right-4 hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+                <i class="ph-fill ph-check-circle text-green-400 text-sm"></i>
+                <span class="text-green-400 text-xs font-medium">系統就緒</span>
+            </div>
+
+            <div class="p-6 border-b border-white/5 flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl bg-darkBase border border-white/5 flex items-center justify-center shrink-0">
+                    <i class="ph ph-image text-2xl text-brandCyan" id="headerIcon"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white mb-1" id="headerTitle">LINE 貼圖裁切</h2>
+                    <p class="text-xs text-textMuted" id="headerDesc">精準處理圖像邊緣，產生符合通訊軟體規格之透明 PNG。</p>
+                </div>
+            </div>
+
+            <div class="flex border-b border-white/5 bg-darkBase/50" id="tabContainer">
+                <button data-target="tab-crop" class="tab-btn flex-1 py-3 text-sm font-medium border-b-2 border-brandCyan text-brandCyan transition-colors">貼圖裁切</button>
+                <button data-target="tab-stroke" class="tab-btn flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-textMuted hover:text-white transition-colors">白邊貼紙</button>
+                <button data-target="tab-resize" class="tab-btn flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-textMuted hover:text-white transition-colors">尺寸調整</button>
+            </div>
+
+            <div class="p-4 sm:p-6 relative min-h-[400px]">
+
+                <!-- 模組 1: 貼圖裁切 -->
+                <div id="tab-crop" class="tab-content block">
+                    <div id="cropUploadSection" class="upload-zone w-full border-2 border-dashed border-white/20 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-brandCyan/50 bg-darkBase/30">
+                        <input type="file" id="cropFileInput" class="hidden" accept="image/png, image/jpeg, image/webp">
+                        <div class="w-16 h-16 rounded-full bg-darkCard flex items-center justify-center mb-4 text-brandCyan shadow-lg">
+                            <i class="ph ph-upload-simple text-3xl"></i>
+                        </div>
+                        <p class="text-white font-medium mb-1">點擊或拖曳以上傳圖片</p>
+                        <p class="text-xs text-textMuted text-center">進行高精度影像裁切</p>
+                    </div>
+
+                    <div id="cropActiveSection" class="hidden flex-col gap-4">
+                        <div class="w-full bg-darkBase/80 rounded-xl overflow-hidden relative checkerboard-bg" style="height: 50vh; min-height: 300px;">
+                            <img id="imageToCrop" src="" alt="待裁切圖片" class="max-w-full hidden">
+                        </div>
+                        <div class="flex flex-wrap gap-3 items-center justify-between mt-2">
+                            <div class="flex gap-2">
+                                <button id="cropResetBtn" class="px-4 py-2 rounded-lg bg-darkBase border border-white/10 text-sm hover:bg-white/5 transition-colors"><i class="ph ph-arrow-counter-clockwise"></i> 重設</button>
+                                <button id="cropReuploadBtn" class="px-4 py-2 rounded-lg bg-darkBase border border-white/10 text-sm hover:bg-white/5 transition-colors"><i class="ph ph-image"></i> 更換</button>
+                            </div>
+                            <button id="cropPreviewBtn" class="px-6 py-2 rounded-lg bg-brandCyan text-darkBase font-bold text-sm hover:bg-brandCyan/80 hover:shadow-[0_0_15px_rgba(0,180,216,0.4)] transition-all">
+                                <i class="ph ph-check"></i> 確認裁切
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模組 2: 白邊貼紙 -->
+                <div id="tab-stroke" class="tab-content hidden">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-white mb-2 flex items-center justify-between">
+                            <span>邊緣厚度 (像素)</span>
+                            <span id="strokeWidthValue" class="text-brandCyan font-mono">5 px</span>
+                        </label>
+                        <input type="range" id="strokeSlider" min="1" max="20" value="5">
+                    </div>
+
+                    <div id="strokeUploadSection" class="upload-zone w-full border-2 border-dashed border-white/20 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-brandCyan/50 bg-darkBase/30">
+                        <input type="file" id="strokeFileInput" class="hidden" accept="image/png, image/jpeg, image/webp" multiple>
+                        <div class="w-16 h-16 rounded-full bg-darkCard flex items-center justify-center mb-4 text-brandCyan shadow-lg">
+                            <i class="ph ph-files text-3xl"></i>
+                        </div>
+                        <p class="text-white font-medium mb-1">點擊或拖曳圖片至此 (可多張)</p>
+                        <p class="text-xs text-textMuted text-center">透明 PNG 效果最佳，系統將自動生成白邊</p>
+                    </div>
+
+                    <div id="strokePreviewGrid" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4"></div>
+                    
+                    <div id="strokeActions" class="hidden mt-4 flex justify-end">
+                         <button id="strokeClearBtn" class="px-4 py-2 rounded-lg bg-darkBase border border-white/10 text-sm hover:bg-white/5 transition-colors mr-2">清空重設</button>
+                    </div>
+                </div>
+
+                <!-- 模組 3: 尺寸調整 -->
+                <div id="tab-resize" class="tab-content hidden">
+                    <p class="text-xs text-textMuted mb-4 border-l-2 border-brandCyan pl-2">上傳圖片後，系統將自動按比例縮放並置中於指定畫布尺寸，背景補透明。</p>
+                    
+                    <div class="space-y-4">
+                        <!-- Main 圖片 -->
+                        <div class="bg-darkBase/50 border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                            <div class="w-full sm:w-1/3 text-center sm:text-left">
+                                <h3 class="font-bold text-white">Main 圖片</h3>
+                                <p class="text-xs font-mono text-brandCyan">240 × 240</p>
+                            </div>
+                            <div class="flex-1 w-full relative">
+                                <input type="file" id="resizeMainInput" class="hidden" accept="image/png, image/jpeg, image/webp">
+                                <div id="resizeMainDrop" class="upload-zone border-2 border-dashed border-white/20 rounded-lg p-4 text-center cursor-pointer hover:border-brandCyan/50 h-[120px] flex items-center justify-center relative checkerboard-bg overflow-hidden">
+                                    <span class="text-sm text-textMuted z-10" id="resizeMainText">點擊或拖曳上傳</span>
+                                    <img id="resizeMainPreview" class="absolute inset-0 w-full h-full object-contain hidden z-20" src="">
+                                </div>
+                            </div>
+                            <div class="w-full sm:w-auto">
+                                <button id="resizeMainDownload" class="w-full sm:w-auto px-4 py-2 rounded-lg bg-darkCard border border-white/10 text-sm hover:text-brandCyan hover:border-brandCyan/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled><i class="ph ph-download-simple"></i> 下載</button>
+                            </div>
+                        </div>
+
+                        <!-- Tab 圖片 -->
+                        <div class="bg-darkBase/50 border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                            <div class="w-full sm:w-1/3 text-center sm:text-left">
+                                <h3 class="font-bold text-white">Tab 圖片</h3>
+                                <p class="text-xs font-mono text-brandCyan">96 × 74</p>
+                            </div>
+                            <div class="flex-1 w-full relative">
+                                <input type="file" id="resizeTabInput" class="hidden" accept="image/png, image/jpeg, image/webp">
+                                <div id="resizeTabDrop" class="upload-zone border-2 border-dashed border-white/20 rounded-lg p-4 text-center cursor-pointer hover:border-brandCyan/50 h-[80px] flex items-center justify-center relative checkerboard-bg overflow-hidden">
+                                    <span class="text-sm text-textMuted z-10" id="resizeTabText">點擊或拖曳</span>
+                                    <img id="resizeTabPreview" class="absolute inset-0 w-full h-full object-contain hidden z-20" src="">
+                                </div>
+                            </div>
+                            <div class="w-full sm:w-auto">
+                                <button id="resizeTabDownload" class="w-full sm:w-auto px-4 py-2 rounded-lg bg-darkCard border border-white/10 text-sm hover:text-brandCyan hover:border-brandCyan/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled><i class="ph ph-download-simple"></i> 下載</button>
+                            </div>
+                        </div>
+
+                        <!-- 普通貼圖 -->
+                        <div class="bg-darkBase/50 border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                            <div class="w-full sm:w-1/3 text-center sm:text-left">
+                                <h3 class="font-bold text-white">普通貼圖</h3>
+                                <p class="text-xs font-mono text-brandCyan">320 × 320</p>
+                            </div>
+                            <div class="flex-1 w-full relative">
+                                <input type="file" id="resizeStandardInput" class="hidden" accept="image/png, image/jpeg, image/webp">
+                                <div id="resizeStandardDrop" class="upload-zone border-2 border-dashed border-white/20 rounded-lg p-4 text-center cursor-pointer hover:border-brandCyan/50 h-[150px] flex items-center justify-center relative checkerboard-bg overflow-hidden">
+                                    <span class="text-sm text-textMuted z-10" id="resizeStandardText">點擊或拖曳上傳</span>
+                                    <img id="resizeStandardPreview" class="absolute inset-0 w-full h-full object-contain hidden z-20" src="">
+                                </div>
+                            </div>
+                            <div class="w-full sm:w-auto">
+                                <button id="resizeStandardDownload" class="w-full sm:w-auto px-4 py-2 rounded-lg bg-darkCard border border-white/10 text-sm hover:text-brandCyan hover:border-brandCyan/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled><i class="ph ph-download-simple"></i> 下載</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 裁切結果 Modal -->
+    <div id="cropResultModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-darkCard border border-white/10 rounded-2xl shadow-2xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300 flex flex-col" id="cropModalContent">
+            <div class="p-5 border-b border-white/5 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="ph-fill ph-sparkle text-brandCyan"></i> 裁切完成</h3>
+                <button id="closeCropModalBtn" class="text-textMuted hover:text-white transition-colors"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 flex flex-col items-center">
+                <div class="rounded-lg overflow-hidden border border-white/10 p-4 w-full max-w-[250px] checkerboard-bg flex justify-center items-center">
+                    <img id="finalCropImg" src="" alt="裁切結果" class="max-w-full max-h-[200px] object-contain shadow-lg drop-shadow-md">
+                </div>
+                <div class="mt-4 text-xs font-mono text-textMuted bg-darkBase px-3 py-1 rounded border border-white/5" id="cropImageDimensions">尺寸計算中...</div>
+            </div>
+            <div class="p-5 border-t border-white/5 flex gap-3">
+                <button id="cancelCropModalBtn" class="flex-1 py-2 rounded-lg bg-darkBase border border-white/10 text-sm hover:bg-white/5 transition-colors">返回修改</button>
+                <button id="downloadCropBtn" class="flex-1 py-2 rounded-lg bg-brandCyan text-darkBase font-bold text-sm hover:bg-brandCyan/80 transition-all flex items-center justify-center gap-2"><i class="ph ph-download-simple text-lg"></i> 下載 PNG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下載輔助用 -->
+    <a id="downloadAnchor" style="display:none"></a>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                // 核心升級：擷取並重新喚醒組件內部的 <script> 標籤
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    // 複製所有屬性 (例如 type="text/javascript")
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    // 複製腳本內容
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    // 替換舊節點，這會強制瀏覽器執行這段程式碼
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            // 載入全局元件 (注意使用絕對路徑 /components/...)
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            // 渲染 Header/Sidebar 所需的 Lucide Icons
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // 啟動側邊欄控制與高光
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        // 啟動系統框架
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：LINE 貼圖影像處理專用          -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // 注意：我們已經刪除了原本本地 Sidebar 的控制邏輯，將其交由上述系統中樞負責。
+
+            // --- 頁籤切換 ---
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const headerIcon = document.getElementById('headerIcon');
+            const headerTitle = document.getElementById('headerTitle');
+            const headerDesc = document.getElementById('headerDesc');
+
+            const tabInfo = {
+                'tab-crop': { icon: 'ph-scissors', title: 'LINE 貼圖裁切', desc: '精準處理圖像邊緣，產生符合通訊軟體規格之透明 PNG。' },
+                'tab-stroke': { icon: 'ph-magic-wand', title: '白邊貼紙生成', desc: '幾何疊加演算法，純前端為透明圖加上純潔白邊。' },
+                'tab-resize': { icon: 'ph-bounding-box', title: '畫布尺寸標準化', desc: '精確等比例縮放並置中填滿透明像素，迎合官方規格。' }
+            };
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => {
+                        b.classList.remove('border-brandCyan', 'text-brandCyan');
+                        b.classList.add('border-transparent', 'text-textMuted');
+                    });
+                    btn.classList.remove('border-transparent', 'text-textMuted');
+                    btn.classList.add('border-brandCyan', 'text-brandCyan');
+
+                    const targetId = btn.getAttribute('data-target');
+                    tabContents.forEach(c => c.classList.add('hidden'));
+                    document.getElementById(targetId).classList.remove('hidden');
+
+                    const info = tabInfo[targetId];
+                    headerIcon.className = `ph ${info.icon} text-2xl text-brandCyan`;
+                    headerTitle.textContent = info.title;
+                    headerDesc.textContent = info.desc;
+                });
+            });
+
+            const downloadImage = (dataUrl, filename) => {
+                const anchor = document.getElementById('downloadAnchor');
+                anchor.href = dataUrl;
+                anchor.download = filename;
+                anchor.click();
+            };
+
+            const setupDragDrop = (zone, input, callback) => {
+                zone.addEventListener('click', () => input.click());
+                zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+                zone.addEventListener('dragleave', (e) => { e.preventDefault(); zone.classList.remove('dragover'); });
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault(); zone.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) callback(e.dataTransfer.files);
+                });
+                input.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) callback(e.target.files);
+                    input.value = '';
+                });
+            };
+
+            // ==========================================
+            // 模組 1: 貼圖裁切
+            // ==========================================
+            let cropper = null;
+            let cropFinalDataUrl = '';
+            const cropUploadSection = document.getElementById('cropUploadSection');
+            const cropActiveSection = document.getElementById('cropActiveSection');
+            const cropFileInput = document.getElementById('cropFileInput');
+            const imageToCrop = document.getElementById('imageToCrop');
+
+            setupDragDrop(cropUploadSection, cropFileInput, (files) => {
+                const file = files[0];
+                if (!file.type.match('image.*')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    cropUploadSection.classList.add('hidden');
+                    cropActiveSection.classList.remove('hidden');
+                    cropActiveSection.classList.add('flex');
+                    imageToCrop.src = e.target.result;
+                    imageToCrop.classList.remove('hidden');
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(imageToCrop, { viewMode: 1, dragMode: 'move', autoCropArea: 0.8, background: false });
+                };
+                reader.readAsDataURL(file);
+            });
+
+            document.getElementById('cropResetBtn').addEventListener('click', () => { if(cropper) cropper.reset(); });
+            document.getElementById('cropReuploadBtn').addEventListener('click', () => {
+                if(cropper){ cropper.destroy(); cropper = null; }
+                imageToCrop.src = '';
+                cropActiveSection.classList.add('hidden'); cropActiveSection.classList.remove('flex');
+                cropUploadSection.classList.remove('hidden');
+            });
+
+            const cropModal = document.getElementById('cropResultModal');
+            document.getElementById('cropPreviewBtn').addEventListener('click', () => {
+                if (!cropper) return;
+                const canvas = cropper.getCroppedCanvas({ imageSmoothingQuality: 'high' });
+                if (canvas) {
+                    cropFinalDataUrl = canvas.toDataURL('image/png');
+                    document.getElementById('finalCropImg').src = cropFinalDataUrl;
+                    document.getElementById('cropImageDimensions').textContent = `${canvas.width} × ${canvas.height} px`;
+                    cropModal.classList.remove('hidden');
+                    void cropModal.offsetWidth;
+                    cropModal.classList.remove('opacity-0');
+                }
+            });
+
+            const closeCropModal = () => {
+                cropModal.classList.add('opacity-0');
+                setTimeout(() => cropModal.classList.add('hidden'), 300);
+            };
+            document.getElementById('closeCropModalBtn').addEventListener('click', closeCropModal);
+            document.getElementById('cancelCropModalBtn').addEventListener('click', closeCropModal);
+            document.getElementById('downloadCropBtn').addEventListener('click', () => {
+                downloadImage(cropFinalDataUrl, `cropped_${Date.now()}.png`);
+                closeCropModal();
+            });
+
+            // ==========================================
+            // 模組 2: 白邊貼紙
+            // ==========================================
+            const strokeSlider = document.getElementById('strokeSlider');
+            const strokeWidthValue = document.getElementById('strokeWidthValue');
+            const strokeUploadSection = document.getElementById('strokeUploadSection');
+            const strokeFileInput = document.getElementById('strokeFileInput');
+            const strokePreviewGrid = document.getElementById('strokePreviewGrid');
+            const strokeActions = document.getElementById('strokeActions');
+            let processedStrokes = [];
+
+            strokeSlider.addEventListener('input', (e) => {
+                strokeWidthValue.textContent = `${e.target.value} px`;
+                if(processedStrokes.length > 0) reprocessAllStrokes();
+            });
+
+            const generateStroke = (imgElement, width) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = imgElement.width + width * 2;
+                canvas.height = imgElement.height + width * 2;
+                const ctx = canvas.getContext('2d');
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tCtx = tempCanvas.getContext('2d');
+
+                const cx = width;
+                const cy = width;
+
+                const angles = 36; 
+                for (let i = 0; i < angles; i++) {
+                    const angle = (i * Math.PI * 2) / angles;
+                    const dx = width * Math.cos(angle);
+                    const dy = width * Math.sin(angle);
+                    tCtx.drawImage(imgElement, cx + dx, cy + dy);
+                }
+
+                tCtx.globalCompositeOperation = 'source-in';
+                tCtx.fillStyle = 'white';
+                tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+                ctx.drawImage(tempCanvas, 0, 0);
+                ctx.drawImage(imgElement, cx, cy);
+
+                return canvas.toDataURL('image/png');
+            };
+
+            const renderStrokePreviews = () => {
+                strokePreviewGrid.innerHTML = '';
+                processedStrokes.forEach((item, index) => {
+                    const box = document.createElement('div');
+                    box.className = 'bg-darkCard border border-white/10 rounded-xl p-3 flex flex-col items-center gap-3 relative';
+                    
+                    const imgBox = document.createElement('div');
+                    imgBox.className = 'w-full h-24 checkerboard-bg rounded flex items-center justify-center p-2';
+                    const img = document.createElement('img');
+                    img.src = item.resultUrl;
+                    img.className = 'max-w-full max-h-full object-contain filter drop-shadow-md';
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full py-1.5 bg-brandCyan text-darkBase text-xs font-bold rounded flex justify-center items-center gap-1 hover:bg-brandCyan/80';
+                    btn.innerHTML = '<i class="ph ph-download-simple"></i> 下載';
+                    btn.onclick = () => downloadImage(item.resultUrl, `stroke_${Date.now()}.png`);
+
+                    imgBox.appendChild(img);
+                    box.appendChild(imgBox);
+                    box.appendChild(btn);
+                    strokePreviewGrid.appendChild(box);
+                });
+                
+                strokeUploadSection.classList.add('hidden');
+                strokePreviewGrid.classList.remove('hidden');
+                strokeActions.classList.remove('hidden');
+            };
+
+            const processStrokeFiles = async (files) => {
+                const width = parseInt(strokeSlider.value, 10);
+                const newItems = [];
+                
+                for(let i=0; i<files.length; i++){
+                    const file = files[i];
+                    if(!file.type.match('image.*')) continue; 
+                    
+                    const url = await new Promise(res => {
+                        const r = new FileReader();
+                        r.onload = e => res(e.target.result);
+                        r.readAsDataURL(file);
+                    });
+                    
+                    const img = await new Promise(res => {
+                        const im = new Image();
+                        im.onload = () => res(im);
+                        im.src = url;
+                    });
+
+                    newItems.push({ originalImg: img, resultUrl: generateStroke(img, width) });
+                }
+                
+                if (newItems.length > 0) {
+                    processedStrokes = [...processedStrokes, ...newItems];
+                    renderStrokePreviews();
+                }
+            };
+
+            const reprocessAllStrokes = () => {
+                const width = parseInt(strokeSlider.value, 10);
+                processedStrokes.forEach(item => {
+                    item.resultUrl = generateStroke(item.originalImg, width);
+                });
+                renderStrokePreviews();
+            };
+
+            setupDragDrop(strokeUploadSection, strokeFileInput, processStrokeFiles);
+
+            document.getElementById('strokeClearBtn').addEventListener('click', () => {
+                processedStrokes = [];
+                strokePreviewGrid.innerHTML = '';
+                strokePreviewGrid.classList.add('hidden');
+                strokeActions.classList.add('hidden');
+                strokeUploadSection.classList.remove('hidden');
+            });
+
+            // ==========================================
+            // 模組 3: 尺寸調整
+            // ==========================================
+            const resizeImageWithPadding = (img, targetW, targetH) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetW;
+                canvas.height = targetH;
+                const ctx = canvas.getContext('2d');
+
+                const scale = Math.min(targetW / img.width, targetH / img.height);
+                const drawW = img.width * scale;
+                const drawH = img.height * scale;
+                
+                const dx = (targetW - drawW) / 2;
+                const dy = (targetH - drawH) / 2;
+
+                ctx.drawImage(img, dx, dy, drawW, drawH);
+                return canvas.toDataURL('image/png');
+            };
+
+            const setupResizeBox = (idPrefix, targetW, targetH) => {
+                const dropZone = document.getElementById(`${idPrefix}Drop`);
+                const input = document.getElementById(`${idPrefix}Input`);
+                const preview = document.getElementById(`${idPrefix}Preview`);
+                const text = document.getElementById(`${idPrefix}Text`);
+                const btn = document.getElementById(`${idPrefix}Download`);
+                let finalUrl = '';
+
+                setupDragDrop(dropZone, input, async (files) => {
+                    const file = files[0];
+                    if(!file.type.match('image.*')) return;
+                    
+                    const url = await new Promise(res => {
+                        const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file);
+                    });
+                    
+                    const img = new Image();
+                    img.onload = () => {
+                        finalUrl = resizeImageWithPadding(img, targetW, targetH);
+                        preview.src = finalUrl;
+                        preview.classList.remove('hidden');
+                        text.classList.add('hidden');
+                        btn.disabled = false;
+                        btn.classList.replace('text-sm', 'font-bold');
+                        btn.classList.add('border-brandCyan', 'text-brandCyan');
+                    };
+                    img.src = url;
+                });
+
+                btn.addEventListener('click', () => {
+                    if(finalUrl) downloadImage(finalUrl, `resized_${targetW}x${targetH}_${Date.now()}.png`);
+                });
+            };
+
+            setupResizeBox('resizeMain', 240, 240);
+            setupResizeBox('resizeTab', 96, 74);
+            setupResizeBox('resizeStandard', 320, 320);
+
+        });
+    </script>
+</body>
+</html>

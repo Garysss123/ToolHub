@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Bitrate Calculator | ToolHub - 雙向碼率與容量推演矩陣</title>
+    <meta name="description" content="專業級影片碼率與檔案大小推演工具。具備 CBR/VBR 熵值預測引擎，支援正向計算 (碼率推算大小含浮動區間) 與逆向求解。內建多軌音訊耗損計算與 YouTube 平台規範。">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        vid: {
+                            video: '#3b82f6', 
+                            audio: '#ec4899', 
+                            size: '#10b981'   
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 模式切換按鈕 (Radio Pills) */
+        .mode-radio:checked + .mode-label {
+            background-color: #38BDF8;
+            color: #0B1120;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+        
+        /* 次級切換按鈕 (CBR/VBR) */
+        .sub-radio:checked + .sub-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+            font-weight: bold;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        .preset-card { transition: all 0.2s ease; border: 1px solid #1E293B; }
+        .preset-card:hover { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); transform: translateY(-2px); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-vid-video/10 border border-vid-video/30 text-xs text-vid-video shadow-inner">
+                <i class="ph-fill ph-film-strip mr-1.5 text-sm"></i>
+                影像熵值預測與流體封裝矩陣已啟動
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Video Bitrate <span class="text-transparent bg-clip-text bg-gradient-to-r from-vid-video to-vid-audio">Calculator</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                超越絕對值的專業推演引擎。支援 CBR/VBR 雙態控制，動態推算畫面複雜度帶來的容量浮動區間 (±20%)。內建多軌音訊耗損剝離與上傳時空預測。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ========================================== -->
+            <!-- 左側：變數控制台 (Input Console)              -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+                
+                <!-- 運算模式切換 (Mode Switcher) -->
+                <div class="glass-panel p-2 flex rounded-xl shadow-xl">
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="calc-mode" value="find-size" class="mode-radio hidden" checked>
+                        <div class="mode-label py-3 text-center rounded-lg text-sm text-slate-400 font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="ph ph-hard-drive"></i> 計算檔案大小
+                        </div>
+                    </label>
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="calc-mode" value="find-bitrate" class="mode-radio hidden">
+                        <div class="mode-label py-3 text-center rounded-lg text-sm text-slate-400 font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="ph ph-film-script"></i> 逆推極限碼率
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 核心參數輸入 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+                    
+                    <!-- 影片時長 (Duration) -->
+                    <div class="space-y-3">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="ph-fill ph-clock text-amber-400"></i> 影片時長 (Duration)
+                        </label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="relative bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-amber-400 transition-colors">
+                                <input type="number" id="in-hrs" value="0" min="0" class="w-full bg-transparent px-3 py-2.5 text-white font-mono text-center outline-none">
+                                <div class="absolute bottom-1 right-2 text-[9px] text-slate-500 font-bold">HRS</div>
+                            </div>
+                            <div class="relative bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-amber-400 transition-colors">
+                                <input type="number" id="in-mins" value="10" min="0" max="59" class="w-full bg-transparent px-3 py-2.5 text-white font-mono text-center outline-none">
+                                <div class="absolute bottom-1 right-2 text-[9px] text-slate-500 font-bold">MIN</div>
+                            </div>
+                            <div class="relative bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-amber-400 transition-colors">
+                                <input type="number" id="in-secs" value="0" min="0" max="59" class="w-full bg-transparent px-3 py-2.5 text-white font-mono text-center outline-none">
+                                <div class="absolute bottom-1 right-2 text-[9px] text-slate-500 font-bold">SEC</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 碼率控制模式 (CBR / VBR) - The Killer Feature -->
+                    <div class="space-y-2 border-t border-hub-700 pt-4">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Rate Control (碼率控制)</label>
+                            <i class="ph-fill ph-info text-sky-400 text-sm cursor-help" title="CBR: 固定碼率，檔案大小絕對精準。VBR: 變動碼率，會根據畫面複雜度浮動。"></i>
+                        </div>
+                        <div class="flex gap-2">
+                            <label class="flex-1 cursor-pointer relative">
+                                <input type="radio" name="rate-control" value="cbr" class="sub-radio hidden">
+                                <div class="sub-label py-2 text-center rounded border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all">CBR (固定)</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer relative">
+                                <input type="radio" name="rate-control" value="vbr" class="sub-radio hidden" checked>
+                                <div class="sub-label py-2 text-center rounded border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all">VBR (變動)</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 動態輸入區：根據模式切換 -->
+                    <div class="w-full h-px bg-hub-700"></div>
+                    
+                    <!-- [A] 求大小模式：輸入 Video Bitrate -->
+                    <div id="section-input-bitrate" class="space-y-3 block animate-fadeIn">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="ph-fill ph-video-camera text-vid-video"></i> 影像碼率 (<span id="label-target-bitrate">Target Bitrate</span>)
+                        </label>
+                        <div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-vid-video transition-colors">
+                            <input type="number" id="in-vbitrate" value="16" min="0" step="any" class="w-full bg-transparent px-4 py-2.5 text-white font-mono text-lg outline-none">
+                            <select id="in-vbitrate-unit" class="bg-hub-800 text-slate-300 font-bold text-xs border-l border-hub-700 outline-none cursor-pointer px-3">
+                                <option value="1000">Mbps</option>
+                                <option value="1">kbps</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- [B] 求碼率模式：輸入 Target Size -->
+                    <div id="section-input-size" class="space-y-3 hidden animate-fadeIn">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="ph-fill ph-hard-drives text-vid-size"></i> 目標檔案大小 (Target Size)
+                        </label>
+                        <div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-vid-size transition-colors">
+                            <input type="number" id="in-targetsize" value="4.7" min="0" step="any" class="w-full bg-transparent px-4 py-2.5 text-white font-mono text-lg outline-none">
+                            <select id="in-targetsize-unit" class="bg-hub-800 text-slate-300 font-bold text-xs border-l border-hub-700 outline-none cursor-pointer px-3">
+                                <option value="1024">GB</option>
+                                <option value="1">MB</option>
+                            </select>
+                        </div>
+                        <p class="text-[10px] text-slate-500">注意：此計算基於二進位標準 (1 GB = 1024 MB)。</p>
+                    </div>
+
+                    <div class="w-full h-px bg-hub-700"></div>
+
+                    <!-- 音訊耗損 (Audio Overhead) -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="ph-fill ph-speaker-high text-vid-audio"></i> 音訊耗損 (Audio Overhead)
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1 relative bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-vid-audio transition-colors">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold">Bitrate</span>
+                                <input type="number" id="in-abitrate" value="320" min="0" class="w-full bg-transparent pl-16 pr-3 py-2.5 text-white font-mono text-sm outline-none">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">kbps</div>
+                            </div>
+                            <i class="ph ph-x text-slate-500"></i>
+                            <div class="flex-1 relative bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-vid-audio transition-colors">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold">Tracks</span>
+                                <input type="number" id="in-atracks" value="1" min="0" class="w-full bg-transparent pl-16 pr-3 py-2.5 text-white font-mono text-sm outline-none text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：結果矩陣與平台規範 (Output Matrix)       -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+                
+                <!-- 核心輸出儀表板 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col justify-center min-h-[250px]">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-chart-pie-slice text-9xl"></i>
+                    </div>
+
+                    <!-- [A] 輸出結果：檔案大小預估 -->
+                    <div id="output-view-size" class="relative z-10 flex flex-col items-start block w-full">
+                        <div class="w-full flex justify-between items-end mb-1">
+                            <h3 class="text-xs font-bold text-vid-size uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-hard-drive"></i> Estimated File Size</h3>
+                            <span id="out-size-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-hub-800 text-slate-400 border border-slate-700">VBR 模式</span>
+                        </div>
+                        <div class="flex items-baseline gap-3">
+                            <span class="text-3xl text-slate-500 font-light" id="out-size-approx">~</span>
+                            <span id="out-size-val" class="text-5xl sm:text-7xl font-mono font-bold text-white drop-shadow-lg tracking-tight">0.00</span>
+                            <span id="out-size-unit" class="text-2xl font-bold text-slate-500">GB</span>
+                        </div>
+                        
+                        <!-- VBR 熵值浮動區間 (The Killer Feature) -->
+                        <div id="vbr-size-range" class="hidden mt-3 w-full max-w-sm bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                            <div class="flex items-center gap-1.5 text-xs font-bold text-amber-400 mb-1">
+                                <i class="ph-fill ph-warning"></i> 熵值浮動區間 (Estimated Range)
+                            </div>
+                            <div class="text-xs text-slate-300 font-mono">
+                                <span id="vbr-size-min">--</span> <span class="text-slate-500 mx-1">~</span> <span id="vbr-size-max">--</span>
+                                <span class="text-amber-500/70 ml-2">(±20% variance)</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex gap-4 text-xs font-mono text-slate-400 bg-hub-900/50 px-3 py-2 rounded-lg border border-hub-700">
+                            <div>Base Video: <span id="out-size-v-share" class="text-vid-video font-bold">--</span></div>
+                            <div>Audio: <span id="out-size-a-share" class="text-vid-audio font-bold">--</span></div>
+                        </div>
+                    </div>
+
+                    <!-- [B] 輸出結果：逆推碼率 -->
+                    <div id="output-view-bitrate" class="relative z-10 flex flex-col items-start hidden w-full">
+                        <div class="w-full flex justify-between items-end mb-1">
+                            <h3 class="text-xs font-bold text-vid-video uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-video-camera"></i> <span id="out-bitrate-title">Target Average Bitrate</span></h3>
+                            <span id="out-bitrate-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-hub-800 text-slate-400 border border-slate-700">VBR 模式</span>
+                        </div>
+                        <div class="flex items-baseline gap-3">
+                            <span id="out-bitrate-val" class="text-5xl sm:text-7xl font-mono font-bold text-white drop-shadow-lg tracking-tight">0.00</span>
+                            <span id="out-bitrate-unit" class="text-2xl font-bold text-slate-500">Mbps</span>
+                        </div>
+                        
+                        <!-- VBR 峰值建議 (The Killer Feature) -->
+                        <div id="vbr-bitrate-max-box" class="hidden mt-3 w-full max-w-sm bg-sky-900/20 border border-sky-500/30 rounded-lg p-3">
+                            <div class="flex items-center gap-1.5 text-xs font-bold text-sky-400 mb-1">
+                                <i class="ph-fill ph-trend-up"></i> 建議峰值碼率 (Suggested Maxrate)
+                            </div>
+                            <div class="text-xs text-slate-300 font-mono">
+                                <span id="vbr-bitrate-max-val" class="font-bold">--</span>
+                                <span class="text-sky-500/70 ml-2">(+50% overhead)</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex gap-4 text-xs font-mono text-slate-400 bg-hub-900/50 px-3 py-2 rounded-lg border border-hub-700">
+                            <div>Audio Overhead: <span id="out-bitrate-a-cost" class="text-vid-audio font-bold">-- kbps</span></div>
+                        </div>
+                        <div id="out-bitrate-error" class="mt-2 text-xs text-red-400 hidden"><i class="ph-fill ph-warning-circle"></i> 目標容量太小，無法容納音軌。</div>
+                    </div>
+
+                </div>
+
+                <!-- 傳輸預測與平台規範並排 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    <!-- 時空傳輸預測 -->
+                    <div class="glass-panel p-5 shadow-xl flex flex-col">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2 mb-4">
+                            <i class="ph ph-cloud-arrow-up text-sky-400 text-lg"></i> 上傳時間推演
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">網路頻寬 (Upload Speed)</span>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="in-network" value="100" class="w-12 bg-hub-900 border border-hub-700 rounded text-center text-white font-mono outline-none py-0.5">
+                                    <span class="text-slate-500 font-bold">Mbps</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-hub-900/80 border border-hub-700 rounded-lg p-4 flex flex-col items-center justify-center relative overflow-hidden min-h-[80px]">
+                                <div class="absolute inset-0 bg-gradient-to-t from-sky-500/5 to-transparent"></div>
+                                <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Estimated Time</span>
+                                <span id="out-transfer-time" class="text-xl font-mono font-bold text-sky-300">00:00:00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 平台標準規範庫 -->
+                    <div class="glass-panel p-5 shadow-xl flex flex-col">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2 mb-3">
+                            <i class="ph ph-youtube-logo text-red-500 text-lg"></i> 平台官方規範庫
+                        </h3>
+                        <p class="text-[10px] text-slate-500 mb-3">點擊套用官方建議 Video Bitrate (SDR/60fps)。</p>
+                        
+                        <div class="space-y-2 overflow-y-auto max-h-[150px] pr-1">
+                            <button class="preset-card w-full flex justify-between items-center bg-hub-900/50 p-2.5 rounded-lg cursor-pointer" data-vrate="53" data-vunit="1000">
+                                <span class="text-xs font-bold text-slate-300">YouTube 4K</span>
+                                <span class="text-xs font-mono text-vid-video bg-vid-video/10 px-2 py-0.5 rounded">53 Mbps</span>
+                            </button>
+                            <button class="preset-card w-full flex justify-between items-center bg-hub-900/50 p-2.5 rounded-lg cursor-pointer" data-vrate="15" data-vunit="1000">
+                                <span class="text-xs font-bold text-slate-300">YouTube 1080p</span>
+                                <span class="text-xs font-mono text-vid-video bg-vid-video/10 px-2 py-0.5 rounded">15 Mbps</span>
+                            </button>
+                            <button class="preset-card w-full flex justify-between items-center bg-hub-900/50 p-2.5 rounded-lg cursor-pointer" data-vrate="6000" data-vunit="1">
+                                <span class="text-xs font-bold text-slate-300">Twitch 1080p (Max)</span>
+                                <span class="text-xs font-mono text-vid-video bg-vid-video/10 px-2 py-0.5 rounded">6000 kbps</span>
+                            </button>
+                            <button class="preset-card w-full flex justify-between items-center bg-hub-900/50 p-2.5 rounded-lg cursor-pointer" data-vrate="16" data-vunit="1000">
+                                <span class="text-xs font-bold text-slate-300">Netflix 4K (Avg)</span>
+                                <span class="text-xs font-mono text-vid-video bg-vid-video/10 px-2 py-0.5 rounded">16 Mbps</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/video-bitrate'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：碼率推演與熱力學收斂引擎      -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- DOM Elements ---
+            const modeRadios = document.getElementsByName('calc-mode');
+            const rateControlRadios = document.getElementsByName('rate-control');
+            
+            const sectionBitrate = document.getElementById('section-input-bitrate');
+            const sectionSize = document.getElementById('section-input-size');
+            const viewSize = document.getElementById('output-view-size');
+            const viewBitrate = document.getElementById('output-view-bitrate');
+            const labelTargetBitrate = document.getElementById('label-target-bitrate');
+
+            const inHrs = document.getElementById('in-hrs');
+            const inMins = document.getElementById('in-mins');
+            const inSecs = document.getElementById('in-secs');
+            
+            const inVBitrate = document.getElementById('in-vbitrate');
+            const inVBitrateUnit = document.getElementById('in-vbitrate-unit');
+            const inTargetSize = document.getElementById('in-targetsize');
+            const inTargetSizeUnit = document.getElementById('in-targetsize-unit');
+            const inABitrate = document.getElementById('in-abitrate');
+            const inATracks = document.getElementById('in-atracks');
+
+            // 輸出元素
+            const outSizeApprox = document.getElementById('out-size-approx');
+            const outSizeVal = document.getElementById('out-size-val');
+            const outSizeUnit = document.getElementById('out-size-unit');
+            const outSizeBadge = document.getElementById('out-size-badge');
+            const outSizeVShare = document.getElementById('out-size-v-share');
+            const outSizeAShare = document.getElementById('out-size-a-share');
+            const vbrSizeRange = document.getElementById('vbr-size-range');
+            const vbrSizeMin = document.getElementById('vbr-size-min');
+            const vbrSizeMax = document.getElementById('vbr-size-max');
+
+            const outBitrateTitle = document.getElementById('out-bitrate-title');
+            const outBitrateBadge = document.getElementById('out-bitrate-badge');
+            const outBitrateVal = document.getElementById('out-bitrate-val');
+            const outBitrateUnit = document.getElementById('out-bitrate-unit');
+            const outBitrateACost = document.getElementById('out-bitrate-a-cost');
+            const outBitrateError = document.getElementById('out-bitrate-error');
+            const vbrBitrateMaxBox = document.getElementById('vbr-bitrate-max-box');
+            const vbrBitrateMaxVal = document.getElementById('vbr-bitrate-max-val');
+
+            const inNetwork = document.getElementById('in-network');
+            const outTransferTime = document.getElementById('out-transfer-time');
+
+            // --- 狀態控制 ---
+            let currentMode = 'find-size'; 
+            let rateControl = 'vbr'; // 'cbr' or 'vbr'
+            
+            const triggerPop = (el) => {
+                el.classList.remove('animate-pop');
+                void el.offsetWidth;
+                el.classList.add('animate-pop');
+            };
+
+            const switchMode = () => {
+                currentMode = document.querySelector('input[name="calc-mode"]:checked').value;
+                rateControl = document.querySelector('input[name="rate-control"]:checked').value;
+
+                if (currentMode === 'find-size') {
+                    sectionBitrate.style.display = 'block';
+                    sectionSize.style.display = 'none';
+                    viewSize.style.display = 'flex';
+                    viewBitrate.style.display = 'none';
+                    
+                    labelTargetBitrate.textContent = rateControl === 'vbr' ? 'Target Average Bitrate' : 'Target Bitrate';
+                } else {
+                    sectionBitrate.style.display = 'none';
+                    sectionSize.style.display = 'block';
+                    viewSize.style.display = 'none';
+                    viewBitrate.style.display = 'flex';
+                    
+                    outBitrateTitle.textContent = rateControl === 'vbr' ? 'Target Average Bitrate' : 'Target Video Bitrate';
+                }
+                
+                calculateMatrix();
+            };
+
+            // --- 核心演算法 ---
+            const formatSize = (bytes) => {
+                if (bytes === 0) return { v: 0, u: 'MB', rawV: 0 };
+                const mb = bytes / (1024 * 1024);
+                if (mb >= 1024) return { v: (mb / 1024).toFixed(2), u: 'GB', rawV: mb / 1024 };
+                return { v: mb.toFixed(2), u: 'MB', rawV: mb };
+            };
+
+            const formatTime = (seconds) => {
+                if (!isFinite(seconds) || seconds <= 0) return '00:00:00';
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = Math.floor(seconds % 60);
+                return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            };
+
+            const formatBitrateStr = (bps) => {
+                if (bps >= 1000000) return `${(bps / 1000000).toFixed(2)} Mbps`;
+                return `${(bps / 1000).toFixed(0)} kbps`;
+            }
+
+            const calculateMatrix = () => {
+                const h = parseInt(inHrs.value) || 0;
+                const m = parseInt(inMins.value) || 0;
+                const s = parseInt(inSecs.value) || 0;
+                const durationSecs = (h * 3600) + (m * 60) + s;
+
+                const audioKbps = parseFloat(inABitrate.value) || 0;
+                const audioTracks = parseInt(inATracks.value) || 0;
+                const totalAudioBps = audioKbps * 1000 * audioTracks;
+
+                let finalFileSizeBytes = 0;
+
+                if (currentMode === 'find-size') {
+                    // [模式 A] 計算檔案大小
+                    const vRateRaw = parseFloat(inVBitrate.value) || 0;
+                    const vRateMult = parseFloat(inVBitrateUnit.value);
+                    const videoBps = vRateRaw * vRateMult * 1000; 
+
+                    const totalBps = videoBps + totalAudioBps;
+                    
+                    finalFileSizeBytes = (totalBps * durationSecs) / 8;
+                    const vSizeBytes = (videoBps * durationSecs) / 8;
+                    const aSizeBytes = (totalAudioBps * durationSecs) / 8;
+
+                    const fmtTotal = formatSize(finalFileSizeBytes);
+                    const fmtV = formatSize(vSizeBytes);
+                    const fmtA = formatSize(aSizeBytes);
+
+                    outSizeVal.textContent = fmtTotal.v;
+                    outSizeUnit.textContent = fmtTotal.u;
+                    outSizeVShare.textContent = `${fmtV.v} ${fmtV.u}`;
+                    outSizeAShare.textContent = `${fmtA.v} ${fmtA.u}`;
+
+                    // VBR / CBR 視覺與範圍處理
+                    if (rateControl === 'vbr' && finalFileSizeBytes > 0) {
+                        outSizeApprox.style.display = 'inline';
+                        outSizeBadge.textContent = 'VBR 變動碼率';
+                        outSizeBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-vid-video/20 text-vid-video border border-vid-video/30';
+                        
+                        // 浮動區間 ±20%
+                        const minSize = finalFileSizeBytes * 0.8;
+                        const maxSize = finalFileSizeBytes * 1.2;
+                        const fmtMin = formatSize(minSize);
+                        const fmtMax = formatSize(maxSize);
+                        
+                        vbrSizeMin.textContent = `${fmtMin.v} ${fmtMin.u}`;
+                        vbrSizeMax.textContent = `${fmtMax.v} ${fmtMax.u}`;
+                        vbrSizeRange.classList.remove('hidden');
+                        vbrSizeRange.classList.add('flex');
+                    } else {
+                        outSizeApprox.style.display = 'none';
+                        outSizeBadge.textContent = 'CBR 固定碼率';
+                        outSizeBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                        vbrSizeRange.classList.add('hidden');
+                        vbrSizeRange.classList.remove('flex');
+                    }
+
+                    triggerPop(outSizeVal);
+
+                } else {
+                    // [模式 B] 逆推影片碼率
+                    const targetRaw = parseFloat(inTargetSize.value) || 0;
+                    const targetMult = parseInt(inTargetSizeUnit.value); 
+                    finalFileSizeBytes = targetRaw * targetMult * 1024 * 1024;
+                    
+                    if (durationSecs === 0) {
+                        outBitrateVal.textContent = '0.00';
+                        outBitrateError.classList.add('hidden');
+                        vbrBitrateMaxBox.classList.add('hidden');
+                        return;
+                    }
+
+                    const totalAvailableBps = (finalFileSizeBytes * 8) / durationSecs;
+                    const videoBps = totalAvailableBps - totalAudioBps;
+
+                    outBitrateACost.textContent = `${(totalAudioBps/1000).toLocaleString()} kbps`;
+
+                    if (videoBps <= 0 && finalFileSizeBytes > 0) {
+                        outBitrateVal.textContent = 'ERR';
+                        outBitrateUnit.textContent = '';
+                        outBitrateError.classList.remove('hidden');
+                        outBitrateError.classList.add('block');
+                        vbrBitrateMaxBox.classList.add('hidden');
+                    } else {
+                        outBitrateError.classList.add('hidden');
+                        outBitrateError.classList.remove('block');
+                        
+                        if (videoBps >= 1000000) {
+                            outBitrateVal.textContent = (videoBps / 1000000).toFixed(2);
+                            outBitrateUnit.textContent = 'Mbps';
+                        } else {
+                            outBitrateVal.textContent = (videoBps / 1000).toFixed(0);
+                            outBitrateUnit.textContent = 'kbps';
+                        }
+
+                        // VBR / CBR 視覺與範圍處理
+                        if (rateControl === 'vbr') {
+                            outBitrateBadge.textContent = 'VBR 變動碼率';
+                            outBitrateBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-vid-video/20 text-vid-video border border-vid-video/30';
+                            
+                            // 建議峰值碼率 (通常為平均值的 1.5x)
+                            const maxBitrateBps = videoBps * 1.5;
+                            vbrBitrateMaxVal.textContent = formatBitrateStr(maxBitrateBps);
+                            vbrBitrateMaxBox.classList.remove('hidden');
+                            vbrBitrateMaxBox.classList.add('block');
+                        } else {
+                            outBitrateBadge.textContent = 'CBR 固定碼率';
+                            outBitrateBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                            vbrBitrateMaxBox.classList.add('hidden');
+                            vbrBitrateMaxBox.classList.remove('block');
+                        }
+                    }
+                    
+                    triggerPop(outBitrateVal);
+                }
+
+                // 3. 推演上傳時間 (依照理論上的總大小計算)
+                const netSpeedMbps = parseFloat(inNetwork.value) || 0;
+                if (netSpeedMbps > 0 && finalFileSizeBytes > 0) {
+                    const netSpeedBps = netSpeedMbps * 1000 * 1000;
+                    const fileBits = finalFileSizeBytes * 8;
+                    const transferSeconds = fileBits / netSpeedBps;
+                    outTransferTime.textContent = formatTime(transferSeconds);
+                    outTransferTime.classList.remove('text-slate-500');
+                    outTransferTime.classList.add('text-sky-300');
+                } else {
+                    outTransferTime.textContent = '--:--:--';
+                    outTransferTime.classList.add('text-slate-500');
+                    outTransferTime.classList.remove('text-sky-300');
+                }
+            };
+
+            // --- 綁定事件 ---
+            Array.from(modeRadios).forEach(r => r.addEventListener('change', switchMode));
+            Array.from(rateControlRadios).forEach(r => r.addEventListener('change', switchMode));
+            
+            [inHrs, inMins, inSecs, inVBitrate, inVBitrateUnit, inTargetSize, inTargetSizeUnit, inABitrate, inATracks, inNetwork].forEach(el => {
+                el.addEventListener('input', calculateMatrix);
+            });
+
+            // 預設平台設定
+            document.querySelectorAll('.preset-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    const btn = e.currentTarget;
+                    
+                    // 強制切換到「算大小」模式 + VBR
+                    document.querySelector('input[name="calc-mode"][value="find-size"]').checked = true;
+                    document.querySelector('input[name="rate-control"][value="vbr"]').checked = true;
+                    switchMode();
+
+                    inVBitrate.value = btn.dataset.vrate;
+                    inVBitrateUnit.value = btn.dataset.vunit; 
+                    
+                    calculateMatrix();
+                    
+                    inVBitrate.parentElement.classList.add('ring-2', 'ring-vid-video');
+                    setTimeout(() => inVBitrate.parentElement.classList.remove('ring-2', 'ring-vid-video'), 300);
+                });
+            });
+
+            // 初始化
+            calculateMatrix();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code & Barcode Reader | ToolHub - 本機端光學掃描解碼器</title>
+    <meta name="description" content="專業的線上 QR Code 與一維條碼 (Barcode) 掃描器。支援實時相機鏡頭掃描與圖片上傳解析。內建 GPU 點陣化時序同步引擎，100% 本機端邊緣運算，保障絕對的隱私安全。">
+    
+    <!-- 基地專屬徽章 -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 模塊專屬依賴：ZXing (工業級多格式光學解碼引擎) -->
+    <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        scan: {
+                            laser: '#10b981', // Emerald
+                            frame: '#3b82f6'  // Blue
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 模式切換按鈕 (Tabs) */
+        .mode-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+        .mode-tab.active { border-color: #38BDF8; color: #38BDF8; background: rgba(56, 189, 248, 0.05); font-weight: bold; }
+        
+        /* 強制阻斷 Tailwind 權重覆蓋 */
+        .mode-panel { display: none !important; animation: fadeIn 0.3s ease-out forwards; }
+        .mode-panel.active { display: flex !important; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 相機掃描雷射動畫 */
+        .scanner-container { position: relative; overflow: hidden; background-color: #000; }
+        #video-stream { width: 100%; height: 100%; object-fit: cover; }
+        
+        .laser-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #10b981;
+            box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.5);
+            animation: scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 5%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 95%; opacity: 0; }
+        }
+
+        /* 相機邊框準星 */
+        .scanner-guide {
+            position: absolute; inset: 15%; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 1rem; z-index: 5; pointer-events: none; transition: border-color 0.3s;
+        }
+        .scanner-guide::before, .scanner-guide::after { content: ''; position: absolute; width: 30px; height: 30px; border-color: #38BDF8; border-style: solid; transition: border-color 0.3s; }
+        .scanner-guide::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-top-left-radius: 1rem; }
+        .scanner-guide::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-bottom-right-radius: 1rem; }
+        
+        .scanner-guide-corners::before, .scanner-guide-corners::after { content: ''; position: absolute; width: 30px; height: 30px; border-color: #38BDF8; border-style: solid; transition: border-color 0.3s; }
+        .scanner-guide-corners::before { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-top-right-radius: 1rem; }
+        .scanner-guide-corners::after { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-bottom-left-radius: 1rem; }
+
+        /* 成功掃描時的綠色閃爍 */
+        .scan-success .scanner-guide { border-color: rgba(16, 185, 129, 0.8); }
+        .scan-success .scanner-guide::before, .scan-success .scanner-guide::after,
+        .scan-success .scanner-guide-corners::before, .scan-success .scanner-guide-corners::after { border-color: #10b981; }
+
+        /* 檔案上傳拖曳區 */
+        .drag-active { border-color: #38BDF8 !important; background-color: rgba(56, 189, 248, 0.05) !important; }
+        
+        /* 視覺跳動 */
+        @keyframes pop { 0% { transform: scale(0.98); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s ease-out; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header & Sidebar -->
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Scanner Matrix -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-emerald-950/30 border border-emerald-900/50 text-xs text-emerald-400 shadow-inner">
+                <i class="ph-fill ph-scan mr-1.5 text-sm"></i>
+                全頻段光學解碼陣列 (GPU 時序強制同步版) 已連線
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Optical Code <span class="text-transparent bg-clip-text bg-gradient-to-r from-scan-frame to-scan-laser">Scanner</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                賦予瀏覽器工業級的光學識別能力。支援鏡頭實時掃描與圖片上傳解析。內建 GPU 點陣化時序對齊引擎，100% 本機端邊緣運算，保障絕對的隱私安全。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ========================================== -->
+            <!-- 左側：感測器控制台 (Sensor Matrix)             -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-6 flex flex-col gap-0 glass-panel shadow-2xl overflow-hidden border border-hub-700">
+                
+                <!-- 雙態偵測儀切換 -->
+                <div class="flex bg-hub-900/80 border-b border-hub-700">
+                    <button class="mode-tab active flex-1 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-2" data-target="panel-camera">
+                        <i class="ph ph-camera text-lg"></i> 實時鏡頭 (Live Stream)
+                    </button>
+                    <button class="mode-tab flex-1 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-2" data-target="panel-image">
+                        <i class="ph ph-image text-lg"></i> 靜態影像 (Upload)
+                    </button>
+                </div>
+
+                <!-- 模式 A: 相機實時串流 -->
+                <div id="panel-camera" class="mode-panel active flex-col h-full w-full">
+                    
+                    <div class="p-4 bg-hub-800/50 flex flex-col sm:flex-row gap-3 items-center justify-between border-b border-hub-700">
+                        <select id="camera-select" class="w-full sm:w-auto flex-grow bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-scan-frame outline-none transition-colors cursor-pointer appearance-none">
+                            <option value="">預設相機 (請授權啟動)</option>
+                        </select>
+                        <button id="btn-toggle-camera" class="w-full sm:w-auto px-6 py-2 bg-hub-accent hover:bg-sky-400 text-hub-900 font-bold rounded-lg transition-all shadow-md flex items-center justify-center gap-2 shrink-0">
+                            <i class="ph-bold ph-power"></i> 啟動感測器
+                        </button>
+                    </div>
+
+                    <div class="scanner-container w-full aspect-square sm:aspect-video relative flex items-center justify-center bg-[#050b14]">
+                        
+                        <div id="camera-standby" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 z-20 bg-[#050b14]">
+                            <i class="ph-fill ph-camera-slash text-6xl mb-4 opacity-30"></i>
+                            <p class="text-sm font-mono">點擊上方按鈕啟動相機</p>
+                            <p class="text-[10px] mt-2 px-6 text-center max-w-sm text-slate-600">若使用手機，點擊啟動後請允許相機權限。</p>
+                        </div>
+
+                        <video id="video-stream" class="hidden"></video>
+                        
+                        <div id="scanner-ui" class="hidden absolute inset-0 pointer-events-none">
+                            <div class="scanner-guide">
+                                <div class="scanner-guide-corners w-full h-full"></div>
+                            </div>
+                            <div class="laser-line"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模式 B: 靜態圖片上傳 -->
+                <div id="panel-image" class="mode-panel p-6 sm:p-8 flex-col items-center justify-center h-full min-h-[400px] w-full">
+                    <input type="file" id="file-input" class="hidden" accept="image/png, image/jpeg, image/webp, image/heic">
+                    
+                    <div id="drop-zone" class="w-full h-full border-2 border-dashed border-hub-700 hover:border-scan-frame rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30 p-10 relative overflow-hidden group">
+                        <div class="p-4 bg-hub-800 rounded-full mb-4 text-scan-frame shadow-lg border border-hub-700 group-hover:scale-110 transition-transform">
+                            <i class="ph ph-qr-code text-4xl"></i>
+                        </div>
+                        <p class="text-white font-bold text-lg mb-2 text-center">點擊或拖曳包含條碼的圖片</p>
+                        <p class="text-xs text-slate-500 font-mono text-center max-w-xs leading-relaxed">
+                            支援截圖、相片檔案。完全在邊緣端解析，零知識處理。
+                        </p>
+                        
+                        <!-- 預覽圖 -->
+                        <img id="image-preview" class="hidden absolute inset-0 w-full h-full object-contain bg-hub-900/90 backdrop-blur-sm p-4" alt="Preview">
+                    </div>
+                    
+                    <button id="btn-reset-image" class="hidden mt-4 text-xs text-slate-400 hover:text-white items-center gap-1 transition-colors bg-hub-800 px-3 py-1.5 rounded-lg border border-hub-700">
+                        <i class="ph ph-trash"></i> 移除圖片
+                    </button>
+                </div>
+
+                <!-- 安全信任宣告 -->
+                <div class="bg-emerald-900/20 border-t border-emerald-900/50 p-4 text-xs text-emerald-400/90 leading-relaxed flex gap-3 shadow-inner mt-auto">
+                    <i class="ph-fill ph-shield-check text-emerald-500 text-xl shrink-0 mt-0.5"></i>
+                    <p>
+                        <strong class="text-emerald-400 block mb-0.5">絕對零知識防禦 (Zero-Knowledge)</strong>
+                        無論是相機畫面還是上傳的圖片，<strong>100% 的光學矩陣運算都在您的設備端進行</strong>。影像不會被封裝，也絕對不會傳送至任何伺服器。
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：資料解析儀表板 (Decoded Dashboard)      -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-6 flex flex-col gap-5 h-full">
+                
+                <div class="glass-panel p-6 shadow-2xl flex flex-col h-full border border-hub-700/50 relative overflow-hidden" id="result-dashboard">
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-scan text-[15rem]"></i>
+                    </div>
+
+                    <div class="flex justify-between items-center border-b border-hub-700 pb-3 mb-4 relative z-10">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-terminal-window text-scan-frame text-lg"></i> 解碼結果矩陣 (Decoded Payload)
+                        </h3>
+                        <span id="decode-status" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 transition-colors">Waiting</span>
+                    </div>
+
+                    <!-- 格式標籤區 -->
+                    <div class="flex items-center gap-3 mb-3 relative z-10 min-h-[24px]">
+                        <span id="format-badge" class="hidden px-2.5 py-1 bg-hub-800 text-slate-300 font-mono text-[10px] font-bold rounded border border-hub-700 uppercase tracking-widest shadow-sm">
+                            FORMAT: --
+                        </span>
+                    </div>
+
+                    <!-- 資料展示區 -->
+                    <div class="flex-grow flex flex-col relative z-10 mb-6">
+                        <textarea id="decoded-output" class="w-full flex-grow bg-[#0a0f18]/80 backdrop-blur-sm border border-hub-700 rounded-xl p-4 sm:p-5 text-white font-mono text-sm sm:text-base outline-none resize-none shadow-inner leading-relaxed placeholder:text-slate-600 transition-colors" readonly placeholder="等待光學感測器捕捉訊號..."></textarea>
+                    </div>
+
+                    <!-- 智能路由按鈕區 -->
+                    <div class="flex flex-col sm:flex-row gap-3 relative z-10">
+                        <button id="btn-copy" class="flex-1 py-3 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                            <i class="ph ph-copy text-lg"></i> 複製內容
+                        </button>
+                        
+                        <button id="btn-action" class="flex-1 py-3 bg-scan-frame/20 border border-scan-frame/50 text-sky-400 hover:bg-scan-frame/30 font-bold rounded-xl transition-all shadow-[0_0_10px_rgba(59,130,246,0.1)] flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                            <i class="ph ph-arrow-square-out text-lg"></i> 開啟 / 搜尋
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 動態載入：頁尾 -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/code-reader';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：ZXing 光學掃描與解析矩陣      -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const modeTabs = document.querySelectorAll('.mode-tab');
+            const modePanels = document.querySelectorAll('.mode-panel');
+            
+            const cameraSelect = document.getElementById('camera-select');
+            const btnToggleCamera = document.getElementById('btn-toggle-camera');
+            const videoStream = document.getElementById('video-stream');
+            const cameraStandby = document.getElementById('camera-standby');
+            const scannerUi = document.getElementById('scanner-ui');
+            
+            const fileInput = document.getElementById('file-input');
+            const dropZone = document.getElementById('drop-zone');
+            const imagePreview = document.getElementById('image-preview');
+            const btnResetImage = document.getElementById('btn-reset-image');
+
+            const decodeStatus = document.getElementById('decode-status');
+            const formatBadge = document.getElementById('format-badge');
+            const decodedOutput = document.getElementById('decoded-output');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnAction = document.getElementById('btn-action');
+            const resultDashboard = document.getElementById('result-dashboard');
+
+            let codeReader = new ZXing.BrowserMultiFormatReader();
+            let isVideoRunning = false;
+            let currentDeviceId = ''; 
+            let lastDecodedText = '';
+            let currentObjectUrl = null; 
+
+            const triggerSuccessEffect = () => {
+                scannerUi.classList.add('scan-success');
+                setTimeout(() => scannerUi.classList.remove('scan-success'), 500);
+                
+                resultDashboard.classList.remove('animate-pop');
+                void resultDashboard.offsetWidth;
+                resultDashboard.classList.add('animate-pop');
+                resultDashboard.classList.add('border-emerald-500/50');
+                setTimeout(() => resultDashboard.classList.remove('border-emerald-500/50'), 500);
+            };
+
+            const isUrl = (str) => {
+                try { new URL(str); return true; } catch (_) { return false; }
+            };
+
+            const handleResult = (result) => {
+                if (result.text === lastDecodedText) return; 
+                lastDecodedText = result.text;
+                triggerSuccessEffect();
+
+                decodeStatus.textContent = 'Decoded';
+                decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]';
+                
+                const formatName = result.format !== undefined ? ZXing.BarcodeFormat[result.format].replace(/_/g, ' ') : 'UNKNOWN FORMAT';
+                formatBadge.textContent = `FORMAT: ${formatName}`;
+                formatBadge.classList.remove('hidden');
+                
+                decodedOutput.value = result.text;
+                decodedOutput.classList.replace('border-hub-700', 'border-emerald-500/50');
+                setTimeout(() => decodedOutput.classList.replace('border-emerald-500/50', 'border-hub-700'), 1000);
+
+                btnCopy.disabled = false;
+                btnCopy.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnAction.disabled = false;
+                btnAction.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                btnAction.onclick = null; 
+                if (isUrl(result.text)) {
+                    btnAction.innerHTML = '<i class="ph ph-link text-lg"></i> 開啟連結';
+                    btnAction.onclick = () => window.open(result.text, '_blank', 'noopener,noreferrer');
+                } else {
+                    btnAction.innerHTML = '<i class="ph ph-magnifying-glass text-lg"></i> Google 搜尋';
+                    btnAction.onclick = () => window.open(`https://www.google.com/search?q=${encodeURIComponent(result.text)}`, '_blank');
+                }
+            };
+
+            const resetDashboard = () => {
+                lastDecodedText = '';
+                decodeStatus.textContent = 'Waiting';
+                decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                formatBadge.classList.add('hidden');
+                decodedOutput.value = '';
+                
+                btnCopy.disabled = true;
+                btnCopy.classList.add('opacity-50', 'cursor-not-allowed');
+                btnAction.disabled = true;
+                btnAction.classList.add('opacity-50', 'cursor-not-allowed');
+                btnAction.innerHTML = '<i class="ph ph-arrow-square-out text-lg"></i> 開啟 / 搜尋';
+            };
+
+            // --- 模式 A：相機控制引擎 ---
+            const loadCameras = async () => {
+                try {
+                    const videoInputDevices = await codeReader.listVideoInputDevices();
+                    
+                    if (videoInputDevices.length === 0) {
+                        cameraSelect.innerHTML = '<option value="">預設相機 (請授權啟動)</option>';
+                        return;
+                    }
+
+                    cameraSelect.innerHTML = '';
+                    let defaultDevice = videoInputDevices[0].deviceId;
+                    
+                    videoInputDevices.forEach((element) => {
+                        const option = document.createElement('option');
+                        option.value = element.deviceId;
+                        option.text = element.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                        
+                        if (element.label.toLowerCase().includes('back') || element.label.toLowerCase().includes('rear')) {
+                            defaultDevice = element.deviceId;
+                        }
+                    });
+                    
+                    cameraSelect.value = defaultDevice;
+                    currentDeviceId = defaultDevice;
+
+                } catch (error) {
+                    cameraSelect.innerHTML = '<option value="">無法獲取相機權限</option>';
+                }
+            };
+
+            const startCamera = () => {
+                cameraStandby.classList.add('hidden');
+                videoStream.classList.remove('hidden');
+                scannerUi.classList.remove('hidden');
+                
+                btnToggleCamera.innerHTML = '<i class="ph-bold ph-stop text-red-500"></i> 停止掃描';
+                btnToggleCamera.classList.replace('bg-hub-accent', 'bg-hub-800');
+                btnToggleCamera.classList.replace('text-hub-900', 'text-white');
+                btnToggleCamera.classList.replace('hover:bg-sky-400', 'hover:bg-hub-700');
+                btnToggleCamera.classList.add('border', 'border-hub-700');
+
+                resetDashboard();
+
+                const deviceToUse = currentDeviceId || undefined;
+
+                codeReader.decodeFromVideoDevice(deviceToUse, 'video-stream', (result, err) => {
+                    if (result && result.text !== lastDecodedText) {
+                        handleResult(result);
+                    }
+                }).then(async () => {
+                    const devices = await codeReader.listVideoInputDevices();
+                    if (devices.length > 0 && cameraSelect.options.length <= 1) {
+                        cameraSelect.innerHTML = '';
+                        devices.forEach(d => {
+                            const opt = document.createElement('option');
+                            opt.value = d.deviceId;
+                            opt.text = d.label || `Camera ${cameraSelect.length + 1}`;
+                            cameraSelect.appendChild(opt);
+                        });
+                        if (currentDeviceId) cameraSelect.value = currentDeviceId;
+                    }
+                }).catch((err) => {
+                    showToast('無法存取相機，請確認已給予瀏覽器權限', true);
+                    stopCamera();
+                });
+                
+                isVideoRunning = true;
+            };
+
+            const stopCamera = () => {
+                codeReader.reset();
+                
+                videoStream.classList.add('hidden');
+                scannerUi.classList.add('hidden');
+                cameraStandby.classList.remove('hidden');
+                
+                btnToggleCamera.innerHTML = '<i class="ph-bold ph-power"></i> 啟動感測器';
+                btnToggleCamera.classList.replace('bg-hub-800', 'bg-hub-accent');
+                btnToggleCamera.classList.replace('text-white', 'text-hub-900');
+                btnToggleCamera.classList.replace('hover:bg-hub-700', 'hover:bg-sky-400');
+                btnToggleCamera.classList.remove('border', 'border-hub-700');
+                
+                isVideoRunning = false;
+            };
+
+            cameraSelect.addEventListener('change', (e) => {
+                currentDeviceId = e.target.value;
+                if (isVideoRunning) {
+                    stopCamera();
+                    startCamera(); 
+                }
+            });
+
+            btnToggleCamera.addEventListener('click', () => {
+                if (isVideoRunning) stopCamera();
+                else startCamera();
+            });
+
+            loadCameras();
+
+            // --- 模式 B：圖片靜態解析引擎 (GPU 時序強制同步版) ---
+            const processImageFile = async (file) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    return showToast('請上傳有效的圖片檔案', true);
+                }
+
+                resetDashboard();
+                lastDecodedText = ''; 
+                
+                decodeStatus.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> Parsing...';
+                decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-hub-800 text-sky-400 border border-sky-900/50 flex items-center gap-1';
+
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                currentObjectUrl = URL.createObjectURL(file);
+                
+                // 即時顯示預覽圖
+                imagePreview.src = currentObjectUrl;
+                imagePreview.classList.remove('hidden');
+                btnResetImage.classList.remove('hidden');
+                btnResetImage.classList.add('flex');
+
+                try {
+                    const img = new Image();
+                    img.src = currentObjectUrl;
+                    
+                    // 【終極物理防禦：強制等待 GPU 將點陣圖完全展開到記憶體】
+                    // 這是粉碎「第一次失敗、第二次成功」幻象的唯一解法
+                    await img.decode(); 
+
+                    // 1. 建立降採樣畫布 (防禦千萬畫素 OOM 崩潰)
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    
+                    // 將維度收斂至 2048，這能保留條碼的邊緣密度，同時極大降低 ZXing 運算量
+                    const MAX_DIM = 2048; 
+                    let scale = 1;
+                    if (img.width > MAX_DIM || img.height > MAX_DIM) {
+                        scale = Math.min(MAX_DIM / img.width, MAX_DIM / img.height);
+                    }
+                    
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    
+                    // 強制白底 (防禦透明 PNG 條碼轉檔黑屏)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // 2. 光學重序列化
+                    const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    const scanImg = new Image();
+                    scanImg.src = resizedDataUrl;
+                    
+                    // 再次等待降採樣後的影像被 GPU 完全展開
+                    await scanImg.decode();
+
+                    // 3. 執行解析 (雙重保險)
+                    try {
+                        // Pass 1: 解析降採樣且鋪白底的優化影像
+                        const result = await codeReader.decodeFromImageElement(scanImg);
+                        handleResult(result);
+                        showToast('影像解碼成功');
+                    } catch (err) {
+                        // Pass 2: 如果找不到，且原圖不是大到離譜，嘗試裸送原圖作最後掙扎
+                        if (err instanceof ZXing.NotFoundException && img.width <= 4000) {
+                             console.log('Downsampled scan failed, attempting original fidelity...');
+                             const originalResult = await codeReader.decodeFromImageElement(img);
+                             handleResult(originalResult);
+                             showToast('高解析度影像解碼成功');
+                        } else {
+                             throw err;
+                        }
+                    }
+
+                } catch (e) {
+                    console.error("Optical Pipeline Error:", e);
+                    decodeStatus.textContent = 'Not Found';
+                    decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-900/50 text-red-400 border border-red-500/50';
+                    decodedOutput.value = '無法在影像中找到有效的條碼特徵。請確保影像清晰且條碼未被裁切。';
+                    showToast('找不到條碼', true);
+                }
+            };
+
+            fileInput.addEventListener('change', (e) => processImageFile(e.target.files[0]));
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-active'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); 
+                dropZone.classList.remove('drag-active');
+                if (e.dataTransfer.files.length) processImageFile(e.dataTransfer.files[0]);
+            });
+
+            btnResetImage.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                fileInput.value = '';
+                imagePreview.src = '';
+                imagePreview.classList.add('hidden');
+                
+                if (currentObjectUrl) {
+                    URL.revokeObjectURL(currentObjectUrl);
+                    currentObjectUrl = null;
+                }
+                
+                btnResetImage.classList.add('hidden');
+                btnResetImage.classList.remove('flex');
+                resetDashboard();
+            });
+
+            // --- 介面切換與資源釋放管理 ---
+            modeTabs.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const target = e.currentTarget.dataset.target;
+                    
+                    modeTabs.forEach(b => b.classList.remove('active'));
+                    modePanels.forEach(p => p.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(target).classList.add('active');
+
+                    if (target !== 'panel-camera' && isVideoRunning) {
+                        stopCamera();
+                    }
+                    
+                    resetDashboard();
+                });
+            });
+
+            // --- 按鈕事件 ---
+            btnCopy.addEventListener('click', () => {
+                const text = decodedOutput.value;
+                if (!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('解碼內容 已複製');
+                }).catch(() => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("Copy");
+                    textArea.remove();
+                    showToast('解碼內容 已複製');
+                });
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (isVideoRunning) stopCamera();
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+            });
+
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash & HMAC 產生器 | ToolHub - 支援無限大檔的密碼學驗證工具</title>
+    <meta name="description" content="專業級 Hash 產生器。支援 MD5, SHA-1, SHA-256, SHA-512 與 HMAC 簽章。內建串流切塊引擎，支援 GB 級超大檔案拖曳驗證而不卡頓。純前端邊緣運算，絕對保障檔案隱私。">
+    
+    <!-- 系統核心依賴 (無廣告純淨版) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 模塊專屬依賴：CryptoJS (支援全面且穩定的雜湊演算法) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        /* 模塊專屬 UI */
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { 
+            color: #38BDF8; 
+            background-color: rgba(56, 189, 248, 0.1);
+            border-color: #38BDF8;
+        }
+        
+        .panel { display: none; animation: fadeIn 0.3s ease forwards; }
+        .panel.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .editor-textarea {
+            width: 100%; height: 100%; min-height: 150px;
+            background-color: #0f172a; color: #e2e8f0; border: none;
+            resize: vertical; padding: 1rem; outline: none; line-height: 1.6;
+        }
+        .editor-textarea::placeholder { color: #475569; }
+
+        .drag-active {
+            border-color: #38BDF8 !important;
+            background-color: rgba(56, 189, 248, 0.05) !important;
+        }
+
+        /* 自訂進度條動畫 */
+        .progress-bar-stripes {
+            background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+            background-size: 1rem 1rem;
+            animation: progress-stripes 1s linear infinite;
+        }
+        @keyframes progress-stripes {
+            from { background-position: 1rem 0; }
+            to { background-position: 0 0; }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Hash Generator -->
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                串流切塊運算引擎 (Streaming Chunk Engine) 已就緒
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Hash & HMAC <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-sky-400">雜湊運算矩陣</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                並行計算 MD5, SHA-256 等多種密碼學雜湊。支援 API 開發必備的 HMAC 簽章。具備高階檔案串流讀取技術，輕鬆秒解 GB 級超大檔案而不卡頓。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+
+            <!-- ========================================== -->
+            <!-- 上半部：輸入與設定區 (Input & Config)         -->
+            <!-- ========================================== -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-xl flex flex-col overflow-hidden">
+                
+                <!-- 模式切換器 (Tabs) -->
+                <div class="flex p-3 border-b border-hub-700 bg-hub-900/50 gap-2 overflow-x-auto no-scrollbar">
+                    <button class="tab-btn active px-6 py-2.5 rounded-lg border border-hub-700 text-slate-400 font-bold text-sm flex items-center justify-center gap-2 flex-1 sm:flex-none" data-target="panel-text">
+                        <i class="ph ph-text-t text-lg"></i> 文字雜湊 (Text)
+                    </button>
+                    <button class="tab-btn px-6 py-2.5 rounded-lg border border-hub-700 text-slate-400 font-bold text-sm flex items-center justify-center gap-2 flex-1 sm:flex-none" data-target="panel-file">
+                        <i class="ph ph-file-arrow-up text-lg"></i> 檔案校驗 (File)
+                    </button>
+                </div>
+
+                <!-- 模式 A: 文字輸入 -->
+                <div id="panel-text" class="panel active flex-col p-4 sm:p-6">
+                    <div class="border border-hub-700 rounded-xl overflow-hidden focus-within:border-hub-accent transition-colors">
+                        <div class="bg-hub-900 px-4 py-2 border-b border-hub-700 flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Input Text</span>
+                            <span id="text-stats" class="text-[10px] font-mono text-slate-500">0 bytes</span>
+                        </div>
+                        <textarea id="text-input" class="editor-textarea font-mono text-sm" placeholder="請輸入需要計算 Hash 的字串..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 模式 B: 檔案拖曳 (支援串流) -->
+                <div id="panel-file" class="panel flex-col p-4 sm:p-6 relative">
+                    <input type="file" id="file-input" class="hidden">
+                    <div id="file-drop-zone" class="w-full border-2 border-dashed border-hub-700 hover:border-hub-accent rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30 p-10 min-h-[200px]">
+                        <div class="p-4 bg-hub-800 rounded-full mb-3 text-emerald-400 shadow-lg border border-hub-700 relative">
+                            <i class="ph ph-hard-drives text-4xl"></i>
+                        </div>
+                        <p class="text-white font-bold text-lg mb-1">點擊或拖曳檔案至此</p>
+                        <p class="text-xs text-slate-400 max-w-sm text-center">
+                            採用前端 Chunk 串流切塊運算，支援 ISO、影片等 GB 級大型檔案，瀏覽器絕不崩潰。檔案 100% 不會上傳至伺服器。
+                        </p>
+                    </div>
+
+                    <!-- 檔案處理中的 UI (File Processing Overlay) -->
+                    <div id="file-processing-ui" class="hidden flex-col items-center justify-center absolute inset-0 bg-hub-900/95 backdrop-blur-md z-10 p-6 rounded-xl">
+                        <div class="w-full max-w-md">
+                            <div class="flex justify-between items-end mb-2">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-sm truncate max-w-[200px]" id="proc-filename">filename.zip</span>
+                                    <span class="text-slate-400 text-xs font-mono" id="proc-filesize">0 MB</span>
+                                </div>
+                                <span class="text-hub-accent font-bold font-mono text-xl" id="proc-percent">0%</span>
+                            </div>
+                            <!-- 進度條本體 -->
+                            <div class="w-full h-3 bg-hub-800 rounded-full overflow-hidden border border-hub-700">
+                                <div id="proc-bar" class="h-full bg-hub-accent progress-bar-stripes" style="width: 0%;"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 text-center mt-4 animate-pulse">正在進行矩陣切塊運算，請勿關閉視窗...</p>
+                            
+                            <div class="flex justify-center mt-6">
+                                <button id="btn-cancel-hash" class="px-4 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-500/30 rounded-lg text-xs transition-colors">中止運算</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 全域參數設定列 (Config Bar) -->
+                <div class="bg-hub-900 border-t border-hub-700 p-4 sm:p-6 flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+                    
+                    <!-- HMAC 密鑰設定 -->
+                    <div class="flex flex-col gap-2 w-full lg:w-1/2">
+                        <label class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                            <i class="ph ph-key text-hub-accent text-base"></i> HMAC Secret Key (可選)
+                        </label>
+                        <div class="relative group">
+                            <input type="text" id="hmac-input" placeholder="若留空，則計算標準 Hash" class="w-full bg-hub-800 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-sm focus:border-hub-accent outline-none transition-all placeholder:text-slate-600">
+                            <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                <span id="hmac-status" class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded uppercase font-bold">Hash 模式</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hidden lg:block w-px h-10 bg-hub-700"></div>
+
+                    <!-- 輸出格式設定 -->
+                    <div class="flex flex-col gap-2 w-full lg:w-auto shrink-0">
+                        <span class="text-xs font-bold text-slate-400">Output Format</span>
+                        <div class="flex items-center gap-3 bg-hub-800 px-3 py-2.5 rounded-lg border border-hub-700">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-sm font-mono text-slate-300">
+                                <input type="radio" name="out-format" value="hex" checked class="text-hub-accent focus:ring-hub-accent bg-hub-900 border-hub-700">
+                                Hex
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-sm font-mono text-slate-300 ml-2">
+                                <input type="radio" name="out-format" value="base64" class="text-hub-accent focus:ring-hub-accent bg-hub-900 border-hub-700">
+                                Base64
+                            </label>
+                            <div class="w-px h-4 bg-hub-600 mx-2"></div>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-400">
+                                <input type="checkbox" id="toggle-uppercase" class="rounded border-slate-600 text-hub-accent focus:ring-0 bg-hub-900">
+                                大寫
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 下半部：並行矩陣輸出區 (Hash Matrix Output)   -->
+            <!-- ========================================== -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-xl p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-hub-700">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="ph ph-list-numbers text-emerald-400 text-xl"></i> 並行輸出矩陣
+                    </h3>
+                    <span id="output-source-badge" class="px-2.5 py-1 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 font-mono truncate max-w-[150px] sm:max-w-xs">Waiting...</span>
+                </div>
+
+                <div class="space-y-4" id="hash-matrix-container">
+                    
+                    <!-- MD5 -->
+                    <div class="group flex flex-col gap-1 relative">
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs font-bold text-sky-400 uppercase tracking-widest w-24 shrink-0">MD5</span>
+                            <span class="text-[10px] text-slate-500 font-mono">128-bit</span>
+                        </div>
+                        <div class="relative flex items-center">
+                            <input type="text" id="out-md5" readonly value="" class="w-full bg-hub-900/50 border border-hub-700 rounded-lg px-4 py-3 text-slate-300 font-mono text-sm outline-none cursor-text pr-12 transition-colors focus:border-sky-400 focus:text-white placeholder:text-slate-700" placeholder="--">
+                            <button onclick="copyHash('out-md5', 'MD5')" class="absolute right-2 p-1.5 text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity bg-hub-800 rounded-md border border-hub-700" title="複製"><i class="ph ph-copy text-base"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- SHA-1 -->
+                    <div class="group flex flex-col gap-1 relative">
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest w-24 shrink-0">SHA-1</span>
+                            <span class="text-[10px] text-slate-500 font-mono">160-bit</span>
+                        </div>
+                        <div class="relative flex items-center">
+                            <input type="text" id="out-sha1" readonly value="" class="w-full bg-hub-900/50 border border-hub-700 rounded-lg px-4 py-3 text-slate-300 font-mono text-sm outline-none cursor-text pr-12 transition-colors focus:border-emerald-400 focus:text-white placeholder:text-slate-700" placeholder="--">
+                            <button onclick="copyHash('out-sha1', 'SHA-1')" class="absolute right-2 p-1.5 text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity bg-hub-800 rounded-md border border-hub-700" title="複製"><i class="ph ph-copy text-base"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- SHA-256 -->
+                    <div class="group flex flex-col gap-1 relative">
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs font-bold text-fuchsia-400 uppercase tracking-widest w-24 shrink-0">SHA-256</span>
+                            <span class="text-[10px] text-slate-500 font-mono">256-bit</span>
+                        </div>
+                        <div class="relative flex items-center">
+                            <input type="text" id="out-sha256" readonly value="" class="w-full bg-hub-900/50 border border-hub-700 rounded-lg px-4 py-3 text-slate-300 font-mono text-sm outline-none cursor-text pr-12 transition-colors focus:border-fuchsia-400 focus:text-white placeholder:text-slate-700" placeholder="--">
+                            <button onclick="copyHash('out-sha256', 'SHA-256')" class="absolute right-2 p-1.5 text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity bg-hub-800 rounded-md border border-hub-700" title="複製"><i class="ph ph-copy text-base"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- SHA-512 -->
+                    <div class="group flex flex-col gap-1 relative">
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-widest w-24 shrink-0">SHA-512</span>
+                            <span class="text-[10px] text-slate-500 font-mono">512-bit</span>
+                        </div>
+                        <div class="relative flex items-center">
+                            <input type="text" id="out-sha512" readonly value="" class="w-full bg-hub-900/50 border border-hub-700 rounded-lg px-4 py-3 text-slate-300 font-mono text-sm outline-none cursor-text pr-12 transition-colors focus:border-amber-400 focus:text-white placeholder:text-slate-700" placeholder="--">
+                            <button onclick="copyHash('out-sha512', 'SHA-512')" class="absolute right-2 p-1.5 text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity bg-hub-800 rounded-md border border-hub-700" title="複製"><i class="ph ph-copy text-base"></i></button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast 提示 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/hash-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // 側邊欄事件代理
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：多維度密碼學矩陣核心           -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 基礎設施：Toast 與複製 ---
+            window.showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            window.copyHash = (elementId, name) => {
+                const el = document.getElementById(elementId);
+                if (!el.value) return;
+                el.select();
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showToast(`${name} 已複製`);
+            };
+
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            // --- DOM 映射 ---
+            const textInput = document.getElementById('text-input');
+            const textStats = document.getElementById('text-stats');
+            
+            const fileInput = document.getElementById('file-input');
+            const fileDropZone = document.getElementById('file-drop-zone');
+            const fileProcessingUi = document.getElementById('file-processing-ui');
+            const procFilename = document.getElementById('proc-filename');
+            const procFilesize = document.getElementById('proc-filesize');
+            const procPercent = document.getElementById('proc-percent');
+            const procBar = document.getElementById('proc-bar');
+            const btnCancelHash = document.getElementById('btn-cancel-hash');
+            
+            const hmacInput = document.getElementById('hmac-input');
+            const hmacStatus = document.getElementById('hmac-status');
+            const outFormatRadios = document.getElementsByName('out-format');
+            const toggleUppercase = document.getElementById('toggle-uppercase');
+            
+            const outMd5 = document.getElementById('out-md5');
+            const outSha1 = document.getElementById('out-sha1');
+            const outSha256 = document.getElementById('out-sha256');
+            const outSha512 = document.getElementById('out-sha512');
+            const outputSourceBadge = document.getElementById('output-source-badge');
+
+            // --- 全域狀態 ---
+            let currentMode = 'text'; // 'text' or 'file'
+            let isFileProcessing = false;
+            let cancelFileProcess = false;
+
+            // --- 頁籤切換 ---
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (isFileProcessing) return showToast('請先等待或中止目前的檔案運算', true);
+                    
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                    
+                    const targetId = e.currentTarget.dataset.target;
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(targetId).classList.add('active');
+                    
+                    currentMode = targetId === 'panel-text' ? 'text' : 'file';
+                    
+                    if (currentMode === 'text') triggerTextHash();
+                    else clearOutputs(); // 切換到 File 時，如果沒選檔案就清空
+                });
+            });
+
+            // --- 核心：格式化輸出結果 ---
+            const formatOutput = (wordArray) => {
+                const format = document.querySelector('input[name="out-format"]:checked').value;
+                const isUpper = toggleUppercase.checked;
+                
+                let result = '';
+                if (format === 'base64') {
+                    result = CryptoJS.enc.Base64.stringify(wordArray);
+                } else {
+                    result = CryptoJS.enc.Hex.stringify(wordArray);
+                    if (isUpper) result = result.toUpperCase();
+                }
+                return result;
+            };
+
+            const clearOutputs = () => {
+                outMd5.value = ''; outSha1.value = ''; 
+                outSha256.value = ''; outSha512.value = '';
+                outputSourceBadge.textContent = 'Waiting...';
+                outputSourceBadge.className = 'px-2.5 py-1 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 font-mono truncate max-w-[150px] sm:max-w-xs';
+            };
+
+            // ==========================================
+            // 模式 A：文字雜湊引擎
+            // ==========================================
+            const triggerTextHash = () => {
+                if (currentMode !== 'text') return;
+                const text = textInput.value;
+                const secret = hmacInput.value;
+                
+                textStats.textContent = `${new Blob([text]).size} bytes`;
+                
+                if (!text) {
+                    clearOutputs();
+                    return;
+                }
+
+                outputSourceBadge.textContent = 'Source: Text String';
+                outputSourceBadge.className = 'px-2.5 py-1 bg-sky-900/40 border border-sky-500/30 text-sky-400 rounded text-xs font-mono truncate max-w-[150px] sm:max-w-xs';
+
+                if (secret) {
+                    // HMAC Mode
+                    outMd5.value = formatOutput(CryptoJS.HmacMD5(text, secret));
+                    outSha1.value = formatOutput(CryptoJS.HmacSHA1(text, secret));
+                    outSha256.value = formatOutput(CryptoJS.HmacSHA256(text, secret));
+                    outSha512.value = formatOutput(CryptoJS.HmacSHA512(text, secret));
+                } else {
+                    // Normal Hash
+                    outMd5.value = formatOutput(CryptoJS.MD5(text));
+                    outSha1.value = formatOutput(CryptoJS.SHA1(text));
+                    outSha256.value = formatOutput(CryptoJS.SHA256(text));
+                    outSha512.value = formatOutput(CryptoJS.SHA512(text));
+                }
+            };
+
+            textInput.addEventListener('input', triggerTextHash);
+
+            // ==========================================
+            // 模式 B：檔案串流切塊引擎 (The Killer Feature)
+            // ==========================================
+            const processFile = (file) => {
+                if (!file) return;
+                const secret = hmacInput.value;
+
+                isFileProcessing = true;
+                cancelFileProcess = false;
+                
+                // UI 啟動
+                procFilename.textContent = file.name;
+                procFilesize.textContent = formatBytes(file.size);
+                procPercent.textContent = '0%';
+                procBar.style.width = '0%';
+                fileProcessingUi.classList.remove('hidden');
+                fileProcessingUi.classList.add('flex');
+                clearOutputs();
+
+                outputSourceBadge.textContent = `Source: ${file.name}`;
+                outputSourceBadge.className = 'px-2.5 py-1 bg-emerald-900/40 border border-emerald-500/30 text-emerald-400 rounded text-xs font-mono truncate max-w-[150px] sm:max-w-xs';
+
+                // 建立增量演算器
+                let algoMd5, algoSha1, algoSha256, algoSha512;
+                
+                if (secret) {
+                    algoMd5 = CryptoJS.algo.HMAC.create(CryptoJS.algo.MD5, secret);
+                    algoSha1 = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA1, secret);
+                    algoSha256 = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA256, secret);
+                    algoSha512 = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA512, secret);
+                } else {
+                    algoMd5 = CryptoJS.algo.MD5.create();
+                    algoSha1 = CryptoJS.algo.SHA1.create();
+                    algoSha256 = CryptoJS.algo.SHA256.create();
+                    algoSha512 = CryptoJS.algo.SHA512.create();
+                }
+
+                // Chunk 設定：5MB
+                const chunkSize = 5 * 1024 * 1024;
+                let offset = 0;
+
+                const readNextChunk = () => {
+                    if (cancelFileProcess) {
+                        isFileProcessing = false;
+                        fileProcessingUi.classList.add('hidden');
+                        fileProcessingUi.classList.remove('flex');
+                        fileInput.value = '';
+                        clearOutputs();
+                        showToast('運算已中止', true);
+                        return;
+                    }
+
+                    const slice = file.slice(offset, offset + chunkSize);
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        // 轉換 ArrayBuffer 為 CryptoJS 認識的 WordArray
+                        const arrayBuffer = e.target.result;
+                        const wordBuffer = CryptoJS.lib.WordArray.create(new Uint8Array(arrayBuffer));
+                        
+                        // 餵給演算法
+                        algoMd5.update(wordBuffer);
+                        algoSha1.update(wordBuffer);
+                        algoSha256.update(wordBuffer);
+                        algoSha512.update(wordBuffer);
+
+                        offset += chunkSize;
+                        
+                        // 更新 UI (使用 requestAnimationFrame 防阻塞)
+                        requestAnimationFrame(() => {
+                            const progress = Math.min(100, Math.round((offset / file.size) * 100));
+                            procPercent.textContent = `${progress}%`;
+                            procBar.style.width = `${progress}%`;
+
+                            if (offset < file.size) {
+                                readNextChunk(); // 遞迴讀取下一塊
+                            } else {
+                                // 運算完成，提取 Final Hash
+                                outMd5.value = formatOutput(algoMd5.finalize());
+                                outSha1.value = formatOutput(algoSha1.finalize());
+                                outSha256.value = formatOutput(algoSha256.finalize());
+                                outSha512.value = formatOutput(algoSha512.finalize());
+                                
+                                isFileProcessing = false;
+                                fileProcessingUi.classList.add('hidden');
+                                fileProcessingUi.classList.remove('flex');
+                                fileInput.value = ''; // 清空以允許重複選取相同檔案
+                                showToast('檔案雜湊運算完成');
+                            }
+                        });
+                    };
+                    
+                    reader.onerror = () => {
+                        isFileProcessing = false;
+                        fileProcessingUi.classList.add('hidden');
+                        fileProcessingUi.classList.remove('flex');
+                        showToast('讀取檔案時發生錯誤', true);
+                    };
+
+                    reader.readAsArrayBuffer(slice);
+                };
+
+                // 啟動引擎
+                readNextChunk();
+            };
+
+            // 檔案 UI 綁定
+            fileDropZone.addEventListener('click', () => { if(!isFileProcessing) fileInput.click(); });
+            fileInput.addEventListener('change', (e) => { if(e.target.files.length) processFile(e.target.files[0]); });
+            fileDropZone.addEventListener('dragover', (e) => { e.preventDefault(); if(!isFileProcessing) fileDropZone.classList.add('drag-active'); });
+            fileDropZone.addEventListener('dragleave', (e) => { e.preventDefault(); fileDropZone.classList.remove('drag-active'); });
+            fileDropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); 
+                fileDropZone.classList.remove('drag-active');
+                if(!isFileProcessing && e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+            });
+
+            btnCancelHash.addEventListener('click', () => { cancelFileProcess = true; });
+
+            // ==========================================
+            // 全域參數連動 (Config Observers)
+            // ==========================================
+            const reformatExistingOutputs = () => {
+                if (isFileProcessing) return;
+                
+                // 如果目前是文字模式且有輸入，直接重算最準確 (包含 HMAC 的變化)
+                if (currentMode === 'text' && textInput.value) {
+                    triggerTextHash();
+                    return;
+                }
+                
+                // 如果是檔案模式，因為無法瞬間重算大檔案，這裡只能處理大小寫切換 (無法即時處理 Hex <-> Base64 互轉)
+                // 實務上檔案雜湊通常只看 Hex，若使用者需要 Base64，需重新拖曳。為保持邏輯簡潔，此處僅提示
+                if (currentMode === 'file' && outMd5.value !== '') {
+                    showToast('變更格式需重新拖曳檔案運算', true);
+                }
+            };
+
+            hmacInput.addEventListener('input', (e) => {
+                if(e.target.value) {
+                    hmacStatus.textContent = 'HMAC 模式';
+                    hmacStatus.className = 'text-[10px] bg-fuchsia-900 text-fuchsia-300 px-2 py-0.5 rounded uppercase font-bold';
+                } else {
+                    hmacStatus.textContent = 'Hash 模式';
+                    hmacStatus.className = 'text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded uppercase font-bold';
+                }
+                if (currentMode === 'text') triggerTextHash();
+            });
+
+            Array.from(outFormatRadios).forEach(r => r.addEventListener('change', reformatExistingOutputs));
+            toggleUppercase.addEventListener('change', reformatExistingOutputs);
+
+        });
+    </script>
+</body>
+</html>

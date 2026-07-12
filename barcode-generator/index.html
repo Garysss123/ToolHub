@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Generator 條碼產生器 | ToolHub - 支援 CODE128/EAN 的工業級渲染引擎</title>
+    <meta name="description" content="專業級的線上條碼 (Barcode) 產生器。支援 CODE128, EAN-13, UPC, CODE39 等多種工業標準。具備即時格式驗證、向量 (SVG) 與高解析度 PNG 匯出功能。完全本機端生成，保障資料隱私。">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 模塊專屬依賴：JsBarcode (業界標準的一維條碼渲染引擎) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* Range Slider 美化 */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #38BDF8; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56,189,248,0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px; }
+
+        /* Color Picker 美化 */
+        input[type="color"] {
+            -webkit-appearance: none; border: none; width: 32px; height: 32px; border-radius: 0.5rem; overflow: hidden; cursor: pointer; padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.5rem; }
+
+        /* 棋盤格背景 (用於預覽透明度) */
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #cbd5e1 25%, transparent 25%), 
+                linear-gradient(135deg, #cbd5e1 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #cbd5e1 75%), 
+                linear-gradient(135deg, transparent 75%, #cbd5e1 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Barcode Generator -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent shadow-inner">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                一維光學識別渲染陣列已就緒
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Barcode <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-accent to-emerald-400">Generator</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                工業級條碼生成引擎。支援 CODE128, EAN 等標準，內建即時動態格式約束驗證。產出無損 SVG 與高解析度 PNG，完美符合實體列印與系統掃描需求。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- ========================================== -->
+            <!-- 左側：設定與參數矩陣 (Configuration)          -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-5 glass-panel p-6 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+                <div class="flex justify-between items-center border-b border-hub-700 pb-3">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="ph ph-sliders-horizontal text-hub-accent text-xl"></i> 渲染參數設定
+                    </h3>
+                    <button id="btn-reset" class="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+                        <i class="ph ph-arrow-counter-clockwise"></i> 數值重置
+                    </button>
+                </div>
+
+                <!-- 資料輸入區 -->
+                <div class="space-y-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+                            <span>資料內容 (Barcode Data)</span>
+                            <span id="data-length" class="text-[10px] text-slate-500 font-mono">0 chars</span>
+                        </label>
+                        <input type="text" id="barcode-input" value="TOOLHUB2026" class="w-full bg-hub-900 border border-hub-700 rounded-xl px-4 py-3 text-white font-mono text-base focus:border-hub-accent outline-none transition-all shadow-inner" placeholder="請輸入條碼內容...">
+                    </div>
+
+                    <!-- 格式選擇與約束提示 -->
+                    <div class="space-y-2 bg-hub-900/50 p-3 rounded-xl border border-hub-700/50">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">編碼格式 (Format)</label>
+                        <select id="barcode-format" class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-hub-accent outline-none cursor-pointer">
+                            <option value="CODE128">CODE128 (泛用型，支援英數符號)</option>
+                            <option value="EAN13">EAN-13 (國際商品條碼)</option>
+                            <option value="UPC">UPC (北美商品條碼)</option>
+                            <option value="CODE39">CODE39 (工業/標準，僅支援大寫英數)</option>
+                            <option value="ITF14">ITF-14 (物流外箱條碼)</option>
+                        </select>
+                        <div id="format-hint" class="text-[10px] text-sky-400 mt-1 flex items-start gap-1">
+                            <i class="ph-fill ph-info mt-0.5"></i>
+                            <span>CODE128 為最強大的泛用格式，支援幾乎所有 ASCII 字元。</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 視覺微調區 -->
+                <div class="space-y-5 pt-2">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-hub-700 pb-1">Visual Tweaks</h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- 線條寬度 -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-400">線條寬度 (Width)</span>
+                                <span id="val-width" class="text-hub-accent font-mono font-bold">2</span>
+                            </div>
+                            <input type="range" id="slider-width" min="1" max="4" step="1" value="2">
+                        </div>
+                        <!-- 條碼高度 -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-400">條碼高度 (Height)</span>
+                                <span id="val-height" class="text-hub-accent font-mono font-bold">100</span>
+                            </div>
+                            <input type="range" id="slider-height" min="30" max="200" step="5" value="100">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 items-center">
+                        <!-- 顯示文字 -->
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" id="toggle-text" checked class="rounded border-slate-600 text-hub-accent focus:ring-0 bg-hub-900 cursor-pointer">
+                            <span class="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">顯示底部文字</span>
+                        </label>
+                        <!-- 邊距 -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-400">邊界留白 (Margin)</span>
+                                <span id="val-margin" class="text-hub-accent font-mono font-bold">10</span>
+                            </div>
+                            <input type="range" id="slider-margin" min="0" max="50" step="5" value="10">
+                        </div>
+                    </div>
+
+                    <!-- 顏色選擇器 -->
+                    <div class="flex gap-4 pt-2">
+                        <div class="flex-1 bg-hub-900/50 p-2 rounded-lg border border-hub-700/50 flex items-center justify-between">
+                            <span class="text-xs text-slate-400">條碼顏色</span>
+                            <div class="flex items-center gap-2">
+                                <span id="val-color-line" class="text-[10px] font-mono text-slate-500 uppercase">#000000</span>
+                                <input type="color" id="color-line" value="#000000">
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-hub-900/50 p-2 rounded-lg border border-hub-700/50 flex items-center justify-between">
+                            <span class="text-xs text-slate-400">背景顏色</span>
+                            <div class="flex items-center gap-2">
+                                <span id="val-color-bg" class="text-[10px] font-mono text-slate-500 uppercase">#FFFFFF</span>
+                                <input type="color" id="color-bg" value="#ffffff">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：即時渲染畫布與輸出 (Live Canvas & Output) -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-7 glass-panel flex flex-col overflow-hidden shadow-xl">
+                
+                <!-- 標題與狀態 -->
+                <div class="bg-hub-900/80 px-6 py-4 border-b border-hub-700 flex justify-between items-center z-10">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="ph ph-barcode text-emerald-400 text-xl"></i> 預覽與輸出 (Preview & Export)
+                    </h3>
+                    <div id="render-status" class="px-3 py-1 rounded-md text-xs font-bold bg-emerald-900/50 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors">
+                        <i class="ph-fill ph-check-circle"></i> Rendered
+                    </div>
+                </div>
+
+                <!-- 畫布區 (Canvas Area) -->
+                <div class="flex-grow relative p-6 sm:p-10 flex items-center justify-center checkerboard border-b border-hub-700 min-h-[300px] overflow-x-auto">
+                    <!-- JsBarcode 需要一個實體 SVG 元素作為標的 -->
+                    <div class="bg-white p-2 rounded shadow-2xl transition-transform" id="barcode-wrapper">
+                        <svg id="barcode-canvas" class="max-w-full drop-shadow-sm"></svg>
+                    </div>
+                    
+                    <!-- 錯誤狀態遮罩 -->
+                    <div id="error-overlay" class="absolute inset-0 bg-hub-900/90 backdrop-blur-sm hidden flex-col items-center justify-center p-6 text-center z-20">
+                        <i class="ph-fill ph-warning-circle text-5xl text-red-500 mb-3 animate-pulse"></i>
+                        <h4 class="text-lg font-bold text-white mb-1">無效的格式或字元</h4>
+                        <p id="error-message" class="text-sm text-red-400 font-mono bg-red-950/30 p-2 rounded border border-red-900/50 mt-2 max-w-md break-words">Error details here</p>
+                    </div>
+                </div>
+
+                <!-- 匯出控制列 -->
+                <div class="bg-hub-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-end gap-3 z-10">
+                    <button id="btn-download-svg" class="px-5 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <i class="ph ph-bezier-curve text-lg text-sky-400"></i> 下載 SVG (向量)
+                    </button>
+                    <button id="btn-download-png" class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.98]">
+                        <i class="ph ph-image text-lg"></i> 下載 PNG (高畫質)
+                    </button>
+                </div>
+                
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 隱藏的 Canvas 用於將 SVG 轉換為 PNG -->
+    <canvas id="hidden-canvas" class="hidden"></canvas>
+
+    <!-- 全域 Toast 提示 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <!-- ⚠️ 純淨架構 -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/barcode-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：條碼動態渲染與匯出矩陣          -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 基礎設施 ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const barcodeInput = document.getElementById('barcode-input');
+            const dataLength = document.getElementById('data-length');
+            const barcodeFormat = document.getElementById('barcode-format');
+            const formatHint = document.getElementById('format-hint');
+            
+            const sliderWidth = document.getElementById('slider-width');
+            const sliderHeight = document.getElementById('slider-height');
+            const toggleText = document.getElementById('toggle-text');
+            const sliderMargin = document.getElementById('slider-margin');
+            const colorLine = document.getElementById('color-line');
+            const colorBg = document.getElementById('color-bg');
+            
+            const valWidth = document.getElementById('val-width');
+            const valHeight = document.getElementById('val-height');
+            const valMargin = document.getElementById('val-margin');
+            const valColorLine = document.getElementById('val-color-line');
+            const valColorBg = document.getElementById('val-color-bg');
+
+            const barcodeCanvas = document.getElementById('barcode-canvas');
+            const renderStatus = document.getElementById('render-status');
+            const errorOverlay = document.getElementById('error-overlay');
+            const errorMessage = document.getElementById('error-message');
+            
+            const btnReset = document.getElementById('btn-reset');
+            const btnDownloadSvg = document.getElementById('btn-download-svg');
+            const btnDownloadPng = document.getElementById('btn-download-png');
+            const hiddenCanvas = document.getElementById('hidden-canvas');
+
+            // --- 格式約束矩陣 (Validation & Hints) ---
+            const formatConstraints = {
+                'CODE128': { hint: '最強大的泛用格式，支援英數與各種 ASCII 符號。', color: 'text-sky-400' },
+                'EAN13': { hint: '國際零售條碼。必須是 12 碼數字 (第 13 碼會自動計算)，或精確的 13 碼。', color: 'text-amber-400' },
+                'UPC': { hint: '北美零售條碼。必須是 11 碼數字 (第 12 碼會自動計算)，或精確的 12 碼。', color: 'text-amber-400' },
+                'CODE39': { hint: '工業標準。僅支援「大寫英文字母」、「數字」與少數符號 (- . $ / + %)。', color: 'text-fuchsia-400' },
+                'ITF14': { hint: '物流外箱條碼。必須是 13 碼數字 (第 14 碼會自動計算)，或精確的 14 碼。', color: 'text-fuchsia-400' }
+            };
+
+            const updateFormatHint = () => {
+                const type = barcodeFormat.value;
+                const conf = formatConstraints[type];
+                formatHint.innerHTML = `<i class="ph-fill ph-info mt-0.5"></i> <span>${conf.hint}</span>`;
+                formatHint.className = `text-[10px] mt-1 flex items-start gap-1 ${conf.color}`;
+            };
+
+            // --- 核心渲染引擎 ---
+            let isValid = true;
+
+            const renderBarcode = () => {
+                const text = barcodeInput.value;
+                dataLength.textContent = `${text.length} chars`;
+
+                // 數值 UI 更新
+                valWidth.textContent = sliderWidth.value;
+                valHeight.textContent = sliderHeight.value;
+                valMargin.textContent = sliderMargin.value;
+                valColorLine.textContent = colorLine.value.toUpperCase();
+                valColorBg.textContent = colorBg.value.toUpperCase();
+
+                if (!text) {
+                    errorOverlay.classList.remove('hidden');
+                    errorOverlay.classList.add('flex');
+                    errorMessage.textContent = "請輸入條碼內容";
+                    setRenderStatus('error');
+                    isValid = false;
+                    return;
+                }
+
+                try {
+                    // 呼叫 JsBarcode 進行 SVG 渲染
+                    JsBarcode("#barcode-canvas", text, {
+                        format: barcodeFormat.value,
+                        width: parseInt(sliderWidth.value),
+                        height: parseInt(sliderHeight.value),
+                        displayValue: toggleText.checked,
+                        margin: parseInt(sliderMargin.value),
+                        lineColor: colorLine.value,
+                        background: colorBg.value,
+                        font: "monospace",
+                        valid: function(valid) {
+                            if(valid) {
+                                errorOverlay.classList.add('hidden');
+                                errorOverlay.classList.remove('flex');
+                                setRenderStatus('success');
+                                isValid = true;
+                            } else {
+                                // 這個 callback 似乎在某些情況下不如 catch 可靠，但作為輔助
+                                throw new Error("Invalid format requirements.");
+                            }
+                        }
+                    });
+                } catch (e) {
+                    // 捕獲格式約束錯誤 (例如 EAN 輸入了字母)
+                    errorOverlay.classList.remove('hidden');
+                    errorOverlay.classList.add('flex');
+                    errorMessage.textContent = `不符合 ${barcodeFormat.value} 的格式規範。請參考下方提示調整內容。`;
+                    setRenderStatus('error');
+                    isValid = false;
+                }
+            };
+
+            const setRenderStatus = (state) => {
+                if (state === 'success') {
+                    renderStatus.innerHTML = '<i class="ph-fill ph-check-circle"></i> Rendered';
+                    renderStatus.className = 'px-3 py-1 rounded-md text-xs font-bold bg-emerald-900/50 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors shadow-[0_0_10px_rgba(52,211,153,0.1)]';
+                } else {
+                    renderStatus.innerHTML = '<i class="ph-fill ph-warning-circle"></i> Failed';
+                    renderStatus.className = 'px-3 py-1 rounded-md text-xs font-bold bg-red-900/50 text-red-400 border border-red-500/30 flex items-center gap-1 transition-colors';
+                }
+            };
+
+            // --- 事件綁定 ---
+            barcodeInput.addEventListener('input', renderBarcode);
+            barcodeFormat.addEventListener('change', () => { updateFormatHint(); renderBarcode(); });
+            
+            sliderWidth.addEventListener('input', renderBarcode);
+            sliderHeight.addEventListener('input', renderBarcode);
+            sliderMargin.addEventListener('input', renderBarcode);
+            toggleText.addEventListener('change', renderBarcode);
+            colorLine.addEventListener('input', renderBarcode);
+            colorBg.addEventListener('input', renderBarcode);
+
+            btnReset.addEventListener('click', () => {
+                barcodeInput.value = 'TOOLHUB2026';
+                barcodeFormat.value = 'CODE128';
+                sliderWidth.value = 2;
+                sliderHeight.value = 100;
+                sliderMargin.value = 10;
+                toggleText.checked = true;
+                colorLine.value = '#000000';
+                colorBg.value = '#ffffff';
+                updateFormatHint();
+                renderBarcode();
+                showToast('設定已重置');
+            });
+
+            // --- 匯出引擎 ---
+            const getFilename = (ext) => {
+                const format = barcodeFormat.value;
+                const safeText = barcodeInput.value.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 15);
+                return `ToolHub_${format}_${safeText}.${ext}`;
+            };
+
+            btnDownloadSvg.addEventListener('click', () => {
+                if (!isValid) return showToast('請先修正條碼錯誤', true);
+                
+                // 序列化 SVG DOM
+                const svgData = new XMLSerializer().serializeToString(barcodeCanvas);
+                const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = getFilename('svg');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            });
+
+            btnDownloadPng.addEventListener('click', () => {
+                if (!isValid) return showToast('請先修正條碼錯誤', true);
+                
+                const svgData = new XMLSerializer().serializeToString(barcodeCanvas);
+                const img = new Image();
+                
+                // 將 SVG 轉換為 Base64 以供 Image 載入
+                const svgBase64 = "data:image/svg+xml;base64," + window.btoa(unescape(encodeURIComponent(svgData)));
+
+                img.onload = function() {
+                    const ctx = hiddenCanvas.getContext("2d");
+                    // 為了列印品質，輸出 PNG 時給予兩倍的解析度提升 (Scale x2)
+                    const scale = 2; 
+                    hiddenCanvas.width = img.width * scale;
+                    hiddenCanvas.height = img.height * scale;
+                    
+                    ctx.scale(scale, scale);
+                    // 填充背景色，避免透明背景造成列印問題
+                    ctx.fillStyle = colorBg.value;
+                    ctx.fillRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                    
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const pngUrl = hiddenCanvas.toDataURL("image/png");
+                    const link = document.createElement("a");
+                    link.href = pngUrl;
+                    link.download = getFilename('png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                
+                img.src = svgBase64;
+            });
+
+            // 初始執行
+            updateFormatHint();
+            renderBarcode();
+        });
+    </script>
+</body>
+</html>

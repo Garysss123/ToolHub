@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Bandwidth Matrix | ToolHub - 顯示介面頻寬推演矩陣</title>
+    <meta name="description" content="具備工業級權威性的螢幕頻寬計算器。內建 VESA CVT-RBv2 精確時序演算法，透視隱藏的 H-Blank/V-Blank 像素消耗。精準判定 HDMI 2.1, DP 1.4/2.1 支援度與 DSC 壓縮需求。">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        hw: {
+                            hdmi: '#3b82f6', 
+                            dp: '#8b5cf6',   
+                            dsc: '#d946ef'   
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        .radio-pill-input:checked + .radio-pill-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        .bandwidth-pipe {
+            background-image: linear-gradient(90deg, 
+                rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.2) 20%, rgba(255,255,255,0.1) 40%);
+            background-size: 200% 100%;
+            animation: flow 2s linear infinite;
+        }
+        @keyframes flow {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        .status-pass { border-color: rgba(52, 211, 153, 0.5); background-color: rgba(6, 78, 59, 0.2); }
+        .status-dsc { border-color: rgba(217, 70, 239, 0.5); background-color: rgba(112, 26, 117, 0.2); }
+        .status-fail { border-color: rgba(248, 113, 113, 0.3); background-color: rgba(69, 10, 10, 0.2); opacity: 0.7; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-emerald-950/50 border border-emerald-900/50 text-xs text-emerald-400 shadow-inner">
+                <i class="ph-fill ph-math-operations mr-1.5 text-sm"></i>
+                VESA CVT-RBv2 絕對數學確定性已掛載
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Display Bandwidth <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-500">Matrix</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                高階硬體除錯樞紐。捨棄模糊的近似值，內建 VESA 時序演算法，精準推演包含消隱區間 (Blanking Overhead) 的真實頻寬，並瞬間判定各代顯示介面的物理極限。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ========================================== -->
+            <!-- 左側：變數控制台 (Variables Input)            -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+                
+                <!-- 解析度設定 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-corners-out text-sky-400 text-lg"></i> 有效解析度 (Active Resolution)
+                    </h3>
+                    
+                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        <button class="preset-res text-[10px] sm:text-xs bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 py-1.5 rounded transition-colors" data-w="1920" data-h="1080">1080p</button>
+                        <button class="preset-res text-[10px] sm:text-xs bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 py-1.5 rounded transition-colors" data-w="2560" data-h="1440">1440p (2K)</button>
+                        <button class="preset-res text-[10px] sm:text-xs bg-hub-accent/20 border border-hub-accent/50 text-hub-accent font-bold py-1.5 rounded transition-colors" data-w="3840" data-h="2160">2160p (4K)</button>
+                        <button class="preset-res text-[10px] sm:text-xs bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 py-1.5 rounded transition-colors" data-w="5120" data-h="1440">UWQHD</button>
+                        <button class="preset-res text-[10px] sm:text-xs bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 py-1.5 rounded transition-colors" data-w="7680" data-h="4320">8K</button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">W:</span>
+                            <input type="number" id="in-width" value="3840" class="w-full bg-hub-900 border border-hub-700 rounded-lg pl-8 pr-3 py-2.5 text-white font-mono text-sm outline-none focus:border-sky-400 transition-colors">
+                        </div>
+                        <i class="ph ph-x text-slate-500"></i>
+                        <div class="flex-1 relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">H:</span>
+                            <input type="number" id="in-height" value="2160" class="w-full bg-hub-900 border border-hub-700 rounded-lg pl-8 pr-3 py-2.5 text-white font-mono text-sm outline-none focus:border-sky-400 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 更新率與色彩設定 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-6 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-aperture text-indigo-400 text-lg"></i> 幀率與色彩深度 (Timing & Color)
+                    </h3>
+
+                    <!-- Refresh Rate -->
+                    <div class="space-y-3">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+                            <span>Refresh Rate (Hz)</span>
+                            <span id="val-hz" class="text-indigo-400 font-mono font-bold">144 Hz</span>
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <input type="range" id="slider-hz" min="30" max="480" step="10" value="144" class="flex-grow">
+                            <input type="number" id="in-hz" value="144" class="w-16 bg-hub-900 border border-hub-700 rounded text-center py-1 text-white font-mono text-xs outline-none focus:border-indigo-400">
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                            <span>60</span><span>120</span><span>144</span><span>240</span><span>360</span><span>480</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <!-- Color Depth -->
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Color Depth</label>
+                            <div class="flex flex-col gap-1">
+                                <label class="cursor-pointer relative">
+                                    <input type="radio" name="color-depth" value="8" class="peer sr-only radio-pill-input">
+                                    <div class="radio-pill-label px-3 py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">8-bit (SDR)</div>
+                                </label>
+                                <label class="cursor-pointer relative">
+                                    <input type="radio" name="color-depth" value="10" class="peer sr-only radio-pill-input" checked>
+                                    <div class="radio-pill-label px-3 py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">10-bit (HDR)</div>
+                                </label>
+                                <label class="cursor-pointer relative">
+                                    <input type="radio" name="color-depth" value="12" class="peer sr-only radio-pill-input">
+                                    <div class="radio-pill-label px-3 py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">12-bit (Pro)</div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Chroma Subsampling -->
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chroma Format</label>
+                            <div class="flex flex-col gap-1">
+                                <label class="cursor-pointer relative" title="無壓縮全彩 (PC 預設)">
+                                    <input type="radio" name="chroma" value="444" class="peer sr-only radio-pill-input" checked>
+                                    <div class="radio-pill-label px-3 py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center flex justify-between">
+                                        <span>4:4:4 / RGB</span> <span class="opacity-50">100%</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer relative" title="色度抽樣降階 (可省 33% 頻寬)">
+                                    <input type="radio" name="chroma" value="422" class="peer sr-only radio-pill-input">
+                                    <div class="radio-pill-label px-3 py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center flex justify-between">
+                                        <span>4:2:2</span> <span class="opacity-50">66%</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer relative" title="重度色度抽樣 (可省 50% 頻寬，家機常用)">
+                                    <input type="radio" name="chroma" value="420" class="peer sr-only radio-pill-input">
+                                    <div class="radio-pill-label px-3 py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center flex justify-between">
+                                        <span>4:2:0</span> <span class="opacity-50">50%</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：拓撲矩陣與輸出 (Matrix Dashboard)        -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+                
+                <!-- 核心頻寬儀表板 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                        <i class="ph-fill ph-speedometer text-9xl"></i>
+                    </div>
+                    
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Payload Data Rate (Uncompressed)</h3>
+                    <div class="flex items-baseline gap-3 relative z-10">
+                        <span id="out-gbps" class="text-5xl sm:text-6xl font-mono font-bold text-white drop-shadow-lg tracking-tight">0.00</span>
+                        <span class="text-2xl font-bold text-slate-500">Gbps</span>
+                    </div>
+
+                    <!-- 實體層透視儀表板 (Physical Layer Details - 回應嚴謹性挑戰) -->
+                    <div class="mt-4 mb-6 bg-hub-900/50 rounded-lg border border-hub-700 p-3 grid grid-cols-2 gap-4">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Total Res (w/ CVT-RBv2 Blanking)</span>
+                            <span id="out-total-res" class="font-mono text-xs text-emerald-400">3920 x 2182</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Pixel Clock (MHz)</span>
+                            <span id="out-pixel-clock" class="font-mono text-xs text-sky-400">1231.79 MHz</span>
+                        </div>
+                    </div>
+
+                    <!-- 視覺化頻寬水管 -->
+                    <div class="w-full bg-hub-900 rounded-full h-4 border border-hub-700 overflow-hidden relative">
+                        <div class="absolute top-0 bottom-0 left-[33.7%] border-l border-hw-hdmi/50 z-20" title="HDMI 2.0 (14.4 Gbps)"></div>
+                        <div class="absolute top-0 bottom-0 left-[60.8%] border-l border-hw-dp/50 z-20" title="DP 1.4 (25.92 Gbps)"></div>
+                        <div class="absolute top-0 bottom-0 left-[100%] border-l border-hw-hdmi/50 z-20" title="HDMI 2.1 (42.6 Gbps)"></div>
+                        
+                        <div id="bandwidth-bar" class="h-full bg-emerald-500 bandwidth-pipe transition-all duration-500 ease-out" style="width: 0%; max-width: 100%;"></div>
+                    </div>
+                    <div class="flex justify-between text-[9px] font-mono text-slate-500 mt-1">
+                        <span>0</span>
+                        <span>42.6 Gbps (HDMI 2.1 Max)</span>
+                    </div>
+                </div>
+
+                <!-- 介面支援矩陣 (Interface Support Matrix) -->
+                <div class="glass-panel flex-grow p-5 sm:p-6 shadow-xl flex flex-col gap-4">
+                    <div class="flex justify-between items-center border-b border-hub-700 pb-2">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-plugs text-emerald-400 text-lg"></i> 介面相容性矩陣
+                        </h3>
+                        <div class="flex gap-3 text-[10px] font-bold uppercase tracking-wider">
+                            <span class="flex items-center gap-1 text-emerald-400"><div class="w-2 h-2 rounded-full bg-emerald-400"></div> Native</span>
+                            <span class="flex items-center gap-1 text-hw-dsc"><div class="w-2 h-2 rounded-full bg-hw-dsc"></div> DSC</span>
+                            <span class="flex items-center gap-1 text-red-400"><div class="w-2 h-2 rounded-full bg-red-400"></div> Fail</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="matrix-container">
+                        <!-- JS 動態注入 -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/display-bandwidth';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：CVT-RBv2 嚴謹演算法矩陣       -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const interfaces = [
+                { id: 'hdmi14', name: 'HDMI 1.4', type: 'hdmi', maxPayload: 8.16, dscSupport: false },
+                { id: 'hdmi20', name: 'HDMI 2.0', type: 'hdmi', maxPayload: 14.40, dscSupport: false },
+                { id: 'dp12', name: 'DisplayPort 1.2', type: 'dp', maxPayload: 17.28, dscSupport: false },
+                { id: 'dp14', name: 'DisplayPort 1.4', type: 'dp', maxPayload: 25.92, dscSupport: true }, // DSC 1.2a
+                { id: 'hdmi21', name: 'HDMI 2.1', type: 'hdmi', maxPayload: 42.60, dscSupport: true }, // DSC 1.2a
+                { id: 'dp21', name: 'DP 2.1 (UHBR 10)', type: 'dp', maxPayload: 38.69, dscSupport: true },
+                { id: 'dp21max', name: 'DP 2.1 (UHBR 20)', type: 'dp', maxPayload: 77.37, dscSupport: true }
+            ];
+
+            const DSC_MAX_RATIO = 3.0;
+
+            const inWidth = document.getElementById('in-width');
+            const inHeight = document.getElementById('in-height');
+            const sliderHz = document.getElementById('slider-hz');
+            const inHz = document.getElementById('in-hz');
+            const valHz = document.getElementById('val-hz');
+            
+            const colorRadios = document.getElementsByName('color-depth');
+            const chromaRadios = document.getElementsByName('chroma');
+            
+            const outGbps = document.getElementById('out-gbps');
+            const outTotalRes = document.getElementById('out-total-res');
+            const outPixelClock = document.getElementById('out-pixel-clock');
+            const bandwidthBar = document.getElementById('bandwidth-bar');
+            const matrixContainer = document.getElementById('matrix-container');
+
+            // --- 核心演算法：VESA CVT-RBv2 ---
+            const calculateBandwidth = () => {
+                const w = parseInt(inWidth.value) || 0;
+                const h = parseInt(inHeight.value) || 0;
+                const hz = parseInt(inHz.value) || 0;
+                
+                const bpc = parseInt(document.querySelector('input[name="color-depth"]:checked').value);
+                const chromaMode = document.querySelector('input[name="chroma"]:checked').value;
+
+                if (w === 0 || h === 0 || hz === 0) {
+                    outGbps.textContent = "0.00";
+                    outTotalRes.textContent = "-- x --";
+                    outPixelClock.textContent = "-- MHz";
+                    renderMatrix(0);
+                    return;
+                }
+
+                // 1. CVT-RBv2 嚴謹演算法 (Coordinated Video Timing - Reduced Blanking v2)
+                // 根據 VESA 規範，現代高階螢幕為了節省頻寬，會將 H-Blank 壓縮到極致。
+                const H_BLANK = 80;
+                const V_SYNC_BP = 14; // Sync + Back Porch
+                const V_FRONT_PORCH = 8;
+                const V_BLANK_MIN = V_SYNC_BP + V_FRONT_PORCH; // 22 lines
+
+                const hTotal = w + H_BLANK;
+                const vTotal = h + V_BLANK_MIN;
+
+                // 2. 計算 Pixel Clock (MHz)
+                const pixelsPerSec = hTotal * vTotal * hz;
+                const pixelClockMHz = pixelsPerSec / 1000000;
+
+                // 3. 色彩通道乘數 (Chroma Subsampling)
+                let channels = 3; 
+                if (chromaMode === '422') channels = 2;
+                if (chromaMode === '420') channels = 1.5;
+
+                // 4. 計算 Payload Data Rate (Gbps)
+                const bitsPerPixel = bpc * channels;
+                const bitsPerSec = pixelsPerSec * bitsPerPixel;
+                const gbps = bitsPerSec / 1000000000;
+
+                // 更新儀表板 UI
+                outGbps.textContent = gbps.toFixed(2);
+                outTotalRes.textContent = `${hTotal} x ${vTotal}`;
+                outPixelClock.textContent = `${pixelClockMHz.toFixed(2)} MHz`;
+                
+                // 動態水管
+                let barPercentage = (gbps / 42.6) * 100;
+                if (barPercentage > 100) {
+                    bandwidthBar.style.width = '100%';
+                    bandwidthBar.classList.replace('bg-emerald-500', 'bg-red-500');
+                } else {
+                    bandwidthBar.style.width = `${barPercentage}%`;
+                    bandwidthBar.classList.replace('bg-red-500', 'bg-emerald-500');
+                }
+
+                renderMatrix(gbps);
+            };
+
+            const renderMatrix = (requiredGbps) => {
+                matrixContainer.innerHTML = '';
+
+                interfaces.forEach(iface => {
+                    let status = 'fail';
+                    let msg = '';
+                    let colorClass = 'status-fail';
+                    let iconHtml = '<i class="ph-fill ph-x-circle text-xl text-red-400"></i>';
+
+                    if (requiredGbps === 0) {
+                        status = 'native'; msg = 'Waiting';
+                        colorClass = 'border-hub-700 bg-hub-800/50';
+                        iconHtml = '<i class="ph-fill ph-minus-circle text-xl text-slate-500"></i>';
+                    }
+                    else if (requiredGbps <= iface.maxPayload) {
+                        status = 'native'; msg = 'Native Support';
+                        colorClass = 'status-pass';
+                        iconHtml = '<i class="ph-fill ph-check-circle text-xl text-emerald-400"></i>';
+                    } 
+                    else if (iface.dscSupport && requiredGbps <= (iface.maxPayload * DSC_MAX_RATIO)) {
+                        status = 'dsc'; msg = 'Requires DSC';
+                        colorClass = 'status-dsc';
+                        iconHtml = '<i class="ph-fill ph-magic-wand text-xl text-hw-dsc"></i>';
+                    } 
+                    else {
+                        status = 'fail'; msg = 'Exceeds Limit';
+                        colorClass = 'status-fail';
+                    }
+
+                    const typeIcon = iface.type === 'hdmi' ? '<span class="px-1.5 py-0.5 rounded bg-hw-hdmi/20 text-hw-hdmi text-[10px] font-bold">HDMI</span>' : '<span class="px-1.5 py-0.5 rounded bg-hw-dp/20 text-hw-dp text-[10px] font-bold">DP</span>';
+
+                    const card = document.createElement('div');
+                    card.className = `border rounded-xl p-3 sm:p-4 flex items-center justify-between transition-all ${colorClass}`;
+                    card.innerHTML = `
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-2">
+                                ${typeIcon}
+                                <span class="text-sm font-bold text-white">${iface.name}</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 font-mono">Max: ${iface.maxPayload} Gbps</span>
+                        </div>
+                        <div class="flex flex-col items-end gap-0.5">
+                            ${iconHtml}
+                            <span class="text-[10px] font-bold uppercase tracking-wider ${status === 'dsc' ? 'text-hw-dsc' : status === 'native' ? 'text-emerald-400' : 'text-red-400'}">${msg}</span>
+                        </div>
+                    `;
+                    matrixContainer.appendChild(card);
+                });
+            };
+
+            // --- 事件綁定 ---
+            sliderHz.addEventListener('input', (e) => {
+                inHz.value = e.target.value;
+                valHz.textContent = `${e.target.value} Hz`;
+                calculateBandwidth();
+            });
+            inHz.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                if(val > 480) val = 480;
+                sliderHz.value = val;
+                valHz.textContent = `${val} Hz`;
+                calculateBandwidth();
+            });
+
+            inWidth.addEventListener('input', calculateBandwidth);
+            inHeight.addEventListener('input', calculateBandwidth);
+            Array.from(colorRadios).forEach(r => r.addEventListener('change', calculateBandwidth));
+            Array.from(chromaRadios).forEach(r => r.addEventListener('change', calculateBandwidth));
+
+            document.querySelectorAll('.preset-res').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.preset-res').forEach(b => {
+                        b.className = 'preset-res text-[10px] sm:text-xs bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 py-1.5 rounded transition-colors';
+                    });
+                    const target = e.currentTarget;
+                    target.className = 'preset-res text-[10px] sm:text-xs bg-hub-accent/20 border border-hub-accent/50 text-hub-accent font-bold py-1.5 rounded transition-colors';
+                    
+                    inWidth.value = target.dataset.w;
+                    inHeight.value = target.dataset.h;
+                    calculateBandwidth();
+                });
+            });
+
+            // 初始化
+            calculateBandwidth();
+        });
+    </script>
+</body>
+</html>

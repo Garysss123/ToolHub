@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 列印 E-step / Rotation Distance 校準計算機 | ToolHub</title>
+    <meta name="description" content="專業的 3D 打印機擠出機校準工具。完美支援 Marlin (E-steps) 與 Klipper (Rotation Distance) 雙系統演算法。提供即時 G-Code 指令生成，確保物理擠出的絕對精準度。">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        print: {
+                            marlin: '#10b981', // Emerald
+                            klipper: '#3b82f6', // Blue
+                            filament: '#f59e0b' // Amber
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 韌體切換開關 (Radio Pills) */
+        .fw-radio:checked + .fw-label {
+            font-weight: bold;
+        }
+        #fw-marlin:checked + .fw-label {
+            background-color: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+        #fw-klipper:checked + .fw-label {
+            background-color: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
+
+        /* G-Code 高亮 */
+        .gcode-cmd { color: #38bdf8; font-weight: bold; }
+        .gcode-param { color: #34d399; }
+        .gcode-comment { color: #64748b; font-style: italic; }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-amber-950/30 border border-amber-900/50 text-xs text-amber-400 shadow-inner">
+                <i class="ph-fill ph-printer mr-1.5 text-sm"></i>
+                實體流體推進校準矩陣已上線
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Extrusion Kinematics <span class="text-transparent bg-clip-text bg-gradient-to-r from-print-marlin to-print-klipper">Calibrator</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                解決 3D 打印物理擠出誤差的終極儀表板。完美適配 Marlin (E-Steps) 與 Klipper (Rotation Distance) 雙架構，即時推演補償參數並動態生成 G-Code 控制指令。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ========================================== -->
+            <!-- 左側：物理量測與演算法輸入 (Physical Inputs)   -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+                
+                <!-- 韌體維度切換 (Firmware Universe Switcher) -->
+                <div class="glass-panel p-2 flex rounded-xl shadow-xl border border-hub-700/50">
+                    <label class="flex-1 cursor-pointer relative">
+                        <input type="radio" name="firmware" id="fw-marlin" value="marlin" class="fw-radio hidden" checked>
+                        <div class="fw-label py-3 text-center rounded-lg text-sm text-slate-400 border border-transparent transition-all flex items-center justify-center gap-2">
+                            <i class="ph-fill ph-code"></i> Marlin / RepRap (E-Steps)
+                        </div>
+                    </label>
+                    <label class="flex-1 cursor-pointer relative">
+                        <input type="radio" name="firmware" id="fw-klipper" value="klipper" class="fw-radio hidden">
+                        <div class="fw-label py-3 text-center rounded-lg text-sm text-slate-400 border border-transparent transition-all flex items-center justify-center gap-2">
+                            <i class="ph-fill ph-rocket"></i> Klipper (Rotation Dist.)
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 核心參數採集區 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+                    
+                    <!-- Step 1: 當前硬體步進值 -->
+                    <div class="space-y-3 relative z-10">
+                        <div class="flex justify-between items-end border-b border-hub-700 pb-2">
+                            <label class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="bg-hub-700 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span>
+                                <span id="label-current-val">Current E-Steps</span>
+                            </label>
+                            <span class="text-[10px] text-slate-500 font-mono" id="hint-current-cmd">查看指令: M503</span>
+                        </div>
+                        <div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-print-filament transition-colors">
+                            <input type="number" id="in-current" value="93.0" step="any" min="0" class="w-full bg-transparent px-4 py-3 text-white font-mono text-lg outline-none">
+                            <span class="px-4 py-3 bg-hub-800 text-slate-400 font-bold border-l border-hub-700 font-mono text-sm" id="unit-current">steps/mm</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: 物理推演設定 -->
+                    <div class="space-y-3 relative z-10">
+                        <div class="flex justify-between items-end border-b border-hub-700 pb-2">
+                            <label class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="bg-hub-700 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span>
+                                測試擠出長度
+                            </label>
+                            <span class="text-[10px] text-slate-500">標準基準長度</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase">標記長度 (Marked)</span>
+                                <div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden">
+                                    <input type="number" id="in-mark" value="120" min="0" class="w-full bg-transparent px-3 py-2 text-slate-300 font-mono text-sm outline-none">
+                                    <span class="px-2 py-2 bg-hub-800 text-slate-500 font-mono text-xs border-l border-hub-700">mm</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[10px] text-print-filament font-bold uppercase drop-shadow">目標擠出 (Requested)</span>
+                                <div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-print-filament transition-colors shadow-[0_0_10px_rgba(245,158,11,0.1)]">
+                                    <input type="number" id="in-request" value="100" min="0" class="w-full bg-transparent px-3 py-2 text-print-filament font-mono text-sm font-bold outline-none">
+                                    <span class="px-2 py-2 bg-hub-800 text-slate-500 font-mono text-xs border-l border-hub-700">mm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: 實測結果輸入 -->
+                    <div class="space-y-3 relative z-10 bg-hub-800/30 p-4 rounded-xl border border-hub-700/50">
+                        <div class="flex justify-between items-end border-b border-hub-700 pb-2">
+                            <label class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="bg-hub-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_5px_rgba(255,255,255,0.5)]">3</span>
+                                輸入剩餘測量值
+                            </label>
+                            <span class="text-[10px] text-slate-400">擠出後到標記點的距離</span>
+                        </div>
+                        <div class="flex bg-hub-900 border-2 border-hub-700 rounded-xl overflow-hidden focus-within:border-sky-400 transition-colors shadow-inner">
+                            <input type="number" id="in-remain" placeholder="例如: 22.5" step="any" min="0" class="w-full bg-transparent px-4 py-4 text-sky-300 font-mono text-2xl outline-none">
+                            <span class="px-4 py-4 bg-hub-800 text-slate-400 font-bold border-l border-hub-700 font-mono">mm</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs mt-2">
+                            <span class="text-slate-500">系統推算實際擠出量 (Actual)：</span>
+                            <span id="calc-actual-extruded" class="font-mono font-bold text-white bg-hub-900 px-2 py-0.5 rounded border border-hub-700">-- mm</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：校準結果與 G-Code 終端 (Result & G-Code) -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+                
+                <!-- 核心運算結果儀表板 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden flex flex-col justify-center min-h-[180px] border-l-4 border-hub-700 transition-colors" id="result-card">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-target text-9xl"></i>
+                    </div>
+
+                    <div class="relative z-10 flex flex-col items-start w-full">
+                        <div class="w-full flex justify-between items-end mb-2">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                <i class="ph-fill ph-check-circle text-emerald-400 hidden" id="icon-perfect"></i> 
+                                <i class="ph-fill ph-wrench text-amber-400 hidden" id="icon-adjust"></i>
+                                <span id="label-new-val">New Value</span>
+                            </h3>
+                            <span id="status-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">Waiting</span>
+                        </div>
+                        <div class="flex items-baseline gap-3">
+                            <span id="out-new-val" class="text-5xl sm:text-7xl font-mono font-bold text-white drop-shadow-lg tracking-tight">--</span>
+                            <span id="out-new-unit" class="text-xl font-bold text-slate-500 font-mono"></span>
+                        </div>
+                        <div class="mt-3 flex gap-2 text-[10px] font-mono text-slate-400 bg-hub-900/50 px-3 py-1.5 rounded border border-hub-700 w-full overflow-hidden">
+                            <span class="shrink-0 text-slate-500">Formula:</span>
+                            <span id="out-formula" class="truncate">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- G-Code 控制台同步產生器 -->
+                <div class="glass-panel flex flex-col overflow-hidden shadow-xl border border-hub-700/50">
+                    <div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center z-10">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-terminal-window text-sky-400 text-lg"></i>
+                            <h3 class="text-sm font-bold text-white tracking-widest uppercase">G-Code Terminal (Auto-Gen)</h3>
+                        </div>
+                        <button onclick="copyToClipboard('gcode-output', 'G-Code 指令')" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors bg-hub-800 px-2 py-1 rounded border border-hub-700">
+                            <i class="ph ph-copy"></i> Copy All
+                        </button>
+                    </div>
+
+                    <!-- G-Code 顯示區 -->
+                    <div class="bg-[#0a0f18] p-4 sm:p-5 overflow-y-auto font-mono text-xs sm:text-sm leading-loose relative min-h-[160px] max-h-[220px]" id="gcode-container">
+                        <!-- G-Code 內容由 JS 動態渲染並高亮 -->
+                    </div>
+                </div>
+
+                <!-- 專家提示區塊 (Expert Tips Matrix) -->
+                <div class="flex flex-col gap-3">
+                    <div class="bg-amber-900/10 border border-amber-900/50 rounded-xl p-4 text-xs text-amber-500/80 leading-relaxed flex gap-3 shadow-inner">
+                        <i class="ph-fill ph-warning-circle text-amber-500 text-xl shrink-0 mt-0.5"></i>
+                        <p>
+                            <strong class="text-amber-400">物理層防禦建議：</strong> 為了獲得絕對精確的機械步進值，建議<strong>拔除遠端擠出機的鐵氟龍管 (Bowden tube)</strong>，或在熱端未安裝噴嘴時進行空載擠出，以排除熱端背壓 (Backpressure) 與耗材滑差造成的非線性干擾。
+                        </p>
+                    </div>
+
+                    <!-- The Killer Feature: 維度收斂提示 -->
+                    <div class="bg-sky-900/10 border border-sky-900/50 rounded-xl p-4 text-xs text-sky-400/80 leading-relaxed flex gap-3 shadow-inner">
+                        <i class="ph-fill ph-cube text-sky-400 text-xl shrink-0 mt-0.5"></i>
+                        <p>
+                            <strong class="text-sky-300">一維至三維的維度收斂：</strong> ⚠️ 注意：E-Step 僅校準步進馬達的<strong>一維進料長度</strong>。若完成校準後仍發生過擠或欠擠現象，請使用卡尺測量您線材的實際物理直徑，並於切片軟體中微調擠出乘數（Flow Rate / Extrusion Multiplier），以確保<strong>三維擠出體積的絕對精準</strong>。
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 動態載入：頁尾 -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/estep-calibrator'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：流體推進校準與 G-Code 引擎   -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            window.showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            window.copyToClipboard = (elementId, name) => {
+                const text = document.getElementById(elementId).innerText;
+                if (!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(`${name} 已複製`);
+                }).catch(() => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("Copy");
+                    textArea.remove();
+                    showToast(`${name} 已複製`);
+                });
+            };
+
+            // --- DOM Elements ---
+            const fwRadios = document.getElementsByName('firmware');
+            
+            const labelCurrentVal = document.getElementById('label-current-val');
+            const hintCurrentCmd = document.getElementById('hint-current-cmd');
+            const unitCurrent = document.getElementById('unit-current');
+            const inCurrent = document.getElementById('in-current');
+            
+            const inMark = document.getElementById('in-mark');
+            const inRequest = document.getElementById('in-request');
+            const inRemain = document.getElementById('in-remain');
+            const calcActualExtruded = document.getElementById('calc-actual-extruded');
+
+            const resultCard = document.getElementById('result-card');
+            const labelNewVal = document.getElementById('label-new-val');
+            const outNewVal = document.getElementById('out-new-val');
+            const outNewUnit = document.getElementById('out-new-unit');
+            const outFormula = document.getElementById('out-formula');
+            const statusBadge = document.getElementById('status-badge');
+            const iconPerfect = document.getElementById('icon-perfect');
+            const iconAdjust = document.getElementById('icon-adjust');
+
+            let currentFw = 'marlin'; 
+
+            const triggerPop = (el) => {
+                el.classList.remove('animate-pop');
+                void el.offsetWidth;
+                el.classList.add('animate-pop');
+            };
+
+            const switchFirmware = () => {
+                currentFw = document.querySelector('input[name="firmware"]:checked').value;
+                
+                if (currentFw === 'marlin') {
+                    labelCurrentVal.textContent = 'Current E-Steps';
+                    hintCurrentCmd.textContent = '查看指令: M503';
+                    unitCurrent.textContent = 'steps/mm';
+                    outNewUnit.textContent = 'steps/mm';
+                    labelNewVal.textContent = 'New E-Steps';
+                    if (inCurrent.value === '22.5' || inCurrent.value === '') inCurrent.value = '93.0'; 
+                    
+                    resultCard.classList.remove('border-print-klipper');
+                    resultCard.classList.add('border-print-marlin');
+                } else {
+                    labelCurrentVal.textContent = 'Current Rotation Dist.';
+                    hintCurrentCmd.textContent = '查看 printer.cfg';
+                    unitCurrent.textContent = 'mm/rev';
+                    outNewUnit.textContent = 'mm/rev';
+                    labelNewVal.textContent = 'New Rotation Distance';
+                    if (inCurrent.value === '93.0' || inCurrent.value === '') inCurrent.value = '22.5'; 
+                    
+                    resultCard.classList.add('border-print-klipper');
+                    resultCard.classList.remove('border-print-marlin');
+                }
+                calculateMatrix();
+            };
+
+            const calculateMatrix = () => {
+                const currentVal = parseFloat(inCurrent.value);
+                const mark = parseFloat(inMark.value) || 0;
+                const req = parseFloat(inRequest.value) || 0;
+                const remainStr = inRemain.value.trim();
+
+                generateGCode(currentVal, req, null, currentFw);
+
+                if (!remainStr || isNaN(parseFloat(remainStr)) || !currentVal || req <= 0) {
+                    outNewVal.textContent = '--';
+                    outFormula.textContent = '--';
+                    calcActualExtruded.textContent = '-- mm';
+                    calcActualExtruded.className = 'font-mono font-bold text-slate-500 bg-hub-900 px-2 py-0.5 rounded border border-hub-700';
+                    
+                    statusBadge.textContent = 'Waiting';
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                    iconPerfect.classList.add('hidden'); iconAdjust.classList.add('hidden');
+                    return;
+                }
+
+                const remain = parseFloat(remainStr);
+                if (remain > mark) {
+                    showToast('物理錯誤：剩餘長度不可能大於標記長度', true);
+                    return;
+                }
+
+                const actual = mark - remain;
+                calcActualExtruded.textContent = `${actual.toFixed(2)} mm`;
+                
+                if (Math.abs(actual - req) < 0.1) {
+                    calcActualExtruded.className = 'font-mono font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded border border-emerald-500/50';
+                    statusBadge.textContent = 'Perfectly Calibrated';
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]';
+                    iconPerfect.classList.remove('hidden'); iconAdjust.classList.add('hidden');
+                } else {
+                    calcActualExtruded.className = 'font-mono font-bold text-print-filament bg-amber-900/30 px-2 py-0.5 rounded border border-amber-500/50';
+                    statusBadge.textContent = 'Needs Adjustment';
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-900/50 text-amber-400 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]';
+                    iconAdjust.classList.remove('hidden'); iconPerfect.classList.add('hidden');
+                }
+
+                let newVal = 0;
+                let formulaStr = '';
+
+                if (actual > 0) {
+                    if (currentFw === 'marlin') {
+                        newVal = (req / actual) * currentVal;
+                        formulaStr = `(${req} / ${actual}) × ${currentVal}`;
+                    } else {
+                        newVal = (actual / req) * currentVal;
+                        formulaStr = `(${actual} / ${req}) × ${currentVal}`;
+                    }
+
+                    outNewVal.textContent = newVal.toFixed(3); 
+                    outFormula.textContent = formulaStr;
+                    triggerPop(outNewVal);
+                    
+                    generateGCode(currentVal, req, newVal.toFixed(3), currentFw);
+                } else {
+                    outNewVal.textContent = 'ERR';
+                    outFormula.textContent = 'Division by zero (Actual is 0)';
+                }
+            };
+
+            const generateGCode = (currentVal, req, newVal, fw) => {
+                let html = '';
+                
+                const hlCmd = (cmd) => `<span class="gcode-cmd">${cmd}</span>`;
+                const hlParam = (param) => `<span class="gcode-param">${param}</span>`;
+                const hlComment = (comment) => `<span class="gcode-comment">${comment}</span>`;
+                
+                html += hlComment('; --- [Step 1] Preparation (準備階段) ---') + '\n';
+                html += `${hlCmd('M83')}                               ${hlComment('; Set extruder to relative mode (設定擠出機為相對模式)')}\n`;
+                html += `${hlCmd('M104')} ${hlParam('S200')}                         ${hlComment('; Heat hotend to 200C (加熱噴嘴至 200度)')}\n`;
+                html += `${hlCmd('M109')} ${hlParam('S200')}                         ${hlComment('; Wait for hotend temp (等待加熱完成)')}\n\n`;
+                
+                html += hlComment('; --- [Step 2] Execution (測量擠出) ---') + '\n';
+                html += hlComment('; 在擠出機入口處的耗材上，用奇異筆畫下距離入口 120mm 的記號') + '\n';
+                html += `${hlCmd('G1')} ${hlParam(`E${req}`)} ${hlParam('F100')}                      ${hlComment('; Extrude requested mm at slow speed (以 F100 慢速擠出指定長度)')}\n`;
+                html += hlComment('; 擠出停止後，用尺測量記號到擠出機入口的剩餘距離。填入左側步驟 3') + '\n\n';
+
+                if (newVal !== null) {
+                    html += hlComment('; --- [Step 3] Apply & Save (套用與寫入) ---') + '\n';
+                    if (fw === 'marlin') {
+                        html += `${hlCmd('M92')} ${hlParam(`E${newVal}`)}                       ${hlComment('; Set new E-steps in RAM (將新數值寫入記憶體)')}\n`;
+                        html += `${hlCmd('M500')}                              ${hlComment('; Save to EEPROM (永久保存至主機板)')}\n`;
+                    } else {
+                        html += hlComment('; Klipper 不透過終端機保存步進值。') + '\n';
+                        html += hlComment('; 請打開你的 printer.cfg 檔案') + '\n';
+                        html += hlComment('; 找到 [extruder] 區塊') + '\n';
+                        html += hlComment(`; 將 rotation_distance 修改為：${newVal}`) + '\n';
+                        html += hlComment('; 然後存檔並執行 FIRMWARE_RESTART') + '\n';
+                    }
+                } else {
+                    html += hlComment('; --- [Step 3] Apply & Save ---') + '\n';
+                    html += hlComment('; 等待填入實測數值以生成寫入指令...') + '\n';
+                }
+
+                const container = document.getElementById('gcode-container');
+                container.innerHTML = `<pre id="gcode-output" class="w-full">${html}</pre>`;
+            };
+
+            Array.from(fwRadios).forEach(r => r.addEventListener('change', switchFirmware));
+            [inCurrent, inMark, inRequest, inRemain].forEach(el => {
+                el.addEventListener('input', calculateMatrix);
+            });
+
+            switchFirmware();
+        });
+    </script>
+</body>
+</html>

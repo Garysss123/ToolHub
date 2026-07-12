@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Encode / Decode | ToolHub - 網址編解碼與高階 JSON 解析器</title>
+    <meta name="description" content="專業的 URL 編碼與解碼工具。支援 encodeURI 與 encodeURIComponent，並內建 qs 引擎，能將複雜的嵌套網址參數 (如 filter[name]) 視覺化解構為 JSON 樹狀結構，輕鬆拆解與重鑄。">
+    
+    <!-- 系統核心依賴 (無廣告純淨版) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 模塊專屬依賴：QS 解析矩陣 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qs/6.11.2/qs.min.js"></script>
+
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        /* 模塊專屬 UI */
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { 
+            color: #38BDF8; 
+            background-color: rgba(56, 189, 248, 0.1);
+            border-color: #38BDF8;
+        }
+        
+        .panel { display: none; animation: fadeIn 0.3s ease forwards; }
+        .panel.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .editor-textarea {
+            width: 100%; height: 100%; min-height: 200px;
+            background-color: #0f172a; color: #e2e8f0; border: none;
+            resize: vertical; padding: 1rem; outline: none; line-height: 1.6;
+        }
+        .editor-textarea::placeholder { color: #475569; }
+
+        /* 視圖切換器 */
+        .view-btn { transition: all 0.2s ease; }
+        .view-btn.active { background-color: #1E293B; color: #38BDF8; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：URL Encoder / Decoder -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                嵌套參數解析矩陣 (qs Engine) 已掛載
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                URL <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-accent to-emerald-400">Encode / Decode</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 <code>filter[name]</code> 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。
+            </p>
+        </div>
+
+        <!-- 運算主控台 -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col min-h-[600px]">
+            
+            <!-- 模式切換器 (Tabs) -->
+            <div class="flex p-4 border-b border-hub-700 bg-hub-900/50 gap-2 overflow-x-auto no-scrollbar">
+                <button class="tab-btn px-5 py-2.5 rounded-lg border border-hub-700 text-slate-400 font-medium text-sm flex items-center gap-2 whitespace-nowrap" data-target="panel-raw">
+                    <i class="ph ph-brackets-angle text-lg"></i> 原始編解碼 (Raw String)
+                </button>
+                <!-- 預設開啟解析器模式 -->
+                <button class="tab-btn active px-5 py-2.5 rounded-lg border border-hub-700 text-slate-400 font-medium text-sm flex items-center gap-2 whitespace-nowrap" data-target="panel-parser">
+                    <i class="ph ph-tree-structure text-lg"></i> 視覺化解析器 (URL Parser)
+                </button>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 面板 1：原始編解碼 (Raw String)              -->
+            <!-- ========================================== -->
+            <div id="panel-raw" class="panel flex-col flex-grow p-4 sm:p-6 gap-4">
+                
+                <!-- 控制列 -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-hub-900 border border-hub-700 p-3 rounded-xl">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+                        <div class="flex bg-hub-800 rounded-lg p-1 w-full sm:w-auto relative shrink-0">
+                            <div id="mode-slider" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-hub-accent rounded-md transition-transform duration-300 ease-in-out z-0"></div>
+                            <button id="mode-encode" class="flex-1 sm:px-6 py-2 text-sm font-bold z-10 text-hub-900 transition-colors w-1/2">Encode</button>
+                            <button id="mode-decode" class="flex-1 sm:px-6 py-2 text-sm font-bold z-10 text-slate-400 transition-colors w-1/2">Decode</button>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 bg-hub-800 px-3 py-2 rounded-lg border border-hub-700">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-300 group" title="全部轉換。適合用在轉換 Query Parameter 的值">
+                                <input type="radio" name="encode-type" value="component" class="text-hub-accent focus:ring-hub-accent bg-hub-900 border-hub-700" checked>
+                                Strict (Component)
+                            </label>
+                            <div class="h-3 w-px bg-hub-600 mx-1"></div>
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-400 group" title="保留 URL 結構字元如 / ? : @ & =">
+                                <input type="radio" name="encode-type" value="full" class="text-hub-accent focus:ring-hub-accent bg-hub-900 border-hub-700">
+                                Loose (Full URL)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button id="btn-swap-raw" class="flex-1 sm:flex-none px-4 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 text-sm transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-arrows-down-up"></i> 內容對調
+                        </button>
+                        <button id="btn-clear-raw" class="flex-1 sm:flex-none px-4 py-2 bg-hub-800 hover:bg-red-900/50 border border-hub-700 hover:border-red-500/50 rounded-lg text-slate-300 hover:text-red-400 text-sm transition-colors flex items-center justify-center gap-2">
+                            <i class="ph ph-trash"></i> 清空
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 輸入與輸出區 -->
+                <div class="flex flex-col lg:flex-row gap-4 flex-grow">
+                    <div class="flex-1 flex flex-col border border-hub-700 rounded-xl overflow-hidden group focus-within:border-hub-accent transition-colors">
+                        <div class="bg-hub-900 px-4 py-2 border-b border-hub-700 flex justify-between items-center">
+                            <span id="raw-input-label" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Input String</span>
+                        </div>
+                        <textarea id="raw-input" class="editor-textarea font-mono text-sm" placeholder="輸入要編碼的字串..."></textarea>
+                    </div>
+
+                    <div class="hidden lg:flex items-center justify-center text-hub-700">
+                        <i class="ph-fill ph-caret-double-right text-3xl"></i>
+                    </div>
+
+                    <div class="flex-1 flex flex-col border border-hub-700 rounded-xl overflow-hidden relative">
+                        <div class="bg-hub-900 px-4 py-2 border-b border-hub-700 flex justify-between items-center">
+                            <span id="raw-output-label" class="text-xs font-bold text-hub-accent uppercase tracking-widest">Output String</span>
+                            <span id="raw-error-badge" class="hidden px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded">無效的 URI 格式</span>
+                        </div>
+                        <textarea id="raw-output" class="editor-textarea font-mono text-sm bg-hub-900/50" readonly placeholder="運算結果將顯示於此..."></textarea>
+                        
+                        <div class="absolute bottom-4 right-4 flex gap-2">
+                            <button id="btn-copy-raw-output" class="p-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 hover:text-white transition-colors shadow-lg group" title="複製結果">
+                                <i class="ph ph-copy text-lg group-active:scale-90 transition-transform"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 面板 2：視覺化解析器 (URL Parser)            -->
+            <!-- ========================================== -->
+            <div id="panel-parser" class="panel active flex-col flex-grow p-4 sm:p-6 gap-6 bg-black/20">
+                
+                <!-- 網址輸入區 -->
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between items-end">
+                        <label class="text-sm font-bold text-slate-300 flex items-center gap-2">
+                            <i class="ph ph-link text-emerald-400 text-lg"></i> 來源網址 (Base URL)
+                        </label>
+                        <button id="btn-parser-sample" class="text-xs text-hub-accent hover:text-sky-400 transition-colors underline decoration-hub-accent/30 underline-offset-2">載入複雜嵌套範例</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="parser-input" class="flex-grow bg-hub-900 border border-hub-700 rounded-xl px-4 py-3 text-white font-mono text-sm focus:border-emerald-400 outline-none transition-all shadow-inner" placeholder="貼上網址，例如：https://api.com/v1?filter[status]=active&user[roles][]=admin">
+                        <button id="btn-parser-clear" class="px-4 py-3 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-xl text-slate-400 hover:text-white transition-colors">
+                            <i class="ph ph-x"></i>
+                        </button>
+                    </div>
+                    <div id="parser-status" class="text-xs font-mono h-4 flex items-center gap-1 mt-1"></div>
+                </div>
+
+                <!-- 網址解體資訊 (Anatomy) -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="parser-anatomy">
+                    <div class="bg-hub-900/80 border border-hub-700 rounded-lg p-3 flex flex-col justify-center">
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Protocol</span>
+                        <span id="ana-protocol" class="text-sm text-white font-mono truncate">--</span>
+                    </div>
+                    <div class="bg-hub-900/80 border border-hub-700 rounded-lg p-3 flex flex-col justify-center">
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Host / Domain</span>
+                        <span id="ana-host" class="text-sm text-sky-400 font-mono truncate">--</span>
+                    </div>
+                    <div class="bg-hub-900/80 border border-hub-700 rounded-lg p-3 flex flex-col justify-center">
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Pathname</span>
+                        <span id="ana-path" class="text-sm text-emerald-400 font-mono truncate">--</span>
+                    </div>
+                    <div class="bg-hub-900/80 border border-hub-700 rounded-lg p-3 flex flex-col justify-center relative group cursor-text">
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Hash Fragment</span>
+                        <input type="text" id="ana-hash" class="w-full bg-transparent text-sm text-fuchsia-400 font-mono outline-none border-b border-transparent focus:border-fuchsia-500/50" value="" placeholder="--">
+                    </div>
+                </div>
+
+                <!-- 參數矩陣 (Query Parameters) 雙模編輯區 -->
+                <div class="flex flex-col flex-grow bg-hub-900/50 border border-hub-700 rounded-xl overflow-hidden min-h-[300px]">
+                    <div class="bg-hub-800/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="ph ph-table text-hub-accent"></i> 參數矩陣解析
+                            </h3>
+                            <!-- 雙軌視圖切換 -->
+                            <div class="flex bg-hub-900 rounded p-0.5 border border-hub-700 ml-2">
+                                <button id="view-mode-table" class="view-btn active px-3 py-1 text-xs font-bold rounded-sm text-slate-400">扁平表格</button>
+                                <button id="view-mode-json" class="view-btn px-3 py-1 text-xs font-bold rounded-sm text-slate-400 flex items-center gap-1"><i class="ph-fill ph-braces"></i> JSON 結構</button>
+                            </div>
+                        </div>
+                        <button id="btn-add-param" class="text-xs bg-hub-700 hover:bg-hub-600 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                            <i class="ph ph-plus"></i> 新增參數
+                        </button>
+                    </div>
+                    
+                    <!-- 模式 A：Table View -->
+                    <div id="param-view-table" class="flex-grow overflow-y-auto p-4 block">
+                        <div id="param-list" class="space-y-3">
+                            <div class="text-center text-sm text-slate-500 py-8" id="param-empty-state">
+                                尚未偵測到任何參數。
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 模式 B：JSON View -->
+                    <div id="param-view-json" class="flex-grow overflow-hidden hidden relative group">
+                        <textarea id="param-json-editor" class="w-full h-full bg-[#0f172a] text-sky-200 font-mono text-sm p-4 outline-none resize-none" spellcheck="false" placeholder="在此以 JSON 格式編輯參數..."></textarea>
+                        <div id="json-error-badge" class="absolute bottom-4 right-4 px-3 py-1.5 bg-red-900/90 border border-red-500 text-red-300 text-xs font-bold rounded-lg shadow-lg hidden items-center gap-1">
+                            <i class="ph-fill ph-warning-circle"></i> JSON 格式錯誤
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 重鑄後的最終結果 -->
+                <div class="flex flex-col gap-2 mt-auto pt-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                            <i class="ph-fill ph-check-circle"></i> Rebuilt URL (即時重鑄)
+                        </label>
+                        <button id="btn-copy-parser" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors">
+                            <i class="ph ph-copy"></i> 複製重鑄網址
+                        </button>
+                    </div>
+                    <div class="relative group">
+                        <textarea id="parser-output" class="w-full bg-hub-900/80 border border-emerald-500/30 rounded-xl px-4 py-3 text-emerald-400 font-mono text-sm outline-none resize-none break-all h-24" readonly placeholder="重鑄後的網址將即時顯示於此..."></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast 提示 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/url-encoder'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：URL 運算與解析矩陣            -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 基礎設施 ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            const copyToClipboard = (elementId) => {
+                const el = document.getElementById(elementId);
+                if (!el.value) return;
+                el.select();
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showToast('內容已複製到剪貼簿');
+            };
+
+            // --- 頁籤切換 ---
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                    const targetId = e.currentTarget.dataset.target;
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+
+            // ==========================================
+            // 子模塊 1：原始編解碼 (Raw String)
+            // ==========================================
+            let isEncodeMode = true;
+            const btnModeEncode = document.getElementById('mode-encode');
+            const btnModeDecode = document.getElementById('mode-decode');
+            const modeSlider = document.getElementById('mode-slider');
+            const encodeTypeRadios = document.getElementsByName('encode-type');
+            const rawInput = document.getElementById('raw-input');
+            const rawOutput = document.getElementById('raw-output');
+            const rawInputLabel = document.getElementById('raw-input-label');
+            const rawOutputLabel = document.getElementById('raw-output-label');
+            const rawErrorBadge = document.getElementById('raw-error-badge');
+
+            const processRawText = () => {
+                const input = rawInput.value;
+                rawErrorBadge.classList.add('hidden');
+                if (!input) { rawOutput.value = ''; return; }
+                const encodeType = document.querySelector('input[name="encode-type"]:checked').value;
+                try {
+                    if (isEncodeMode) {
+                        rawOutput.value = encodeType === 'component' ? encodeURIComponent(input) : encodeURI(input);
+                        rawOutput.classList.remove('text-red-400');
+                    } else {
+                        rawOutput.value = encodeType === 'component' ? decodeURIComponent(input) : decodeURI(input);
+                        rawOutput.classList.remove('text-red-400');
+                    }
+                } catch (e) {
+                    rawErrorBadge.classList.remove('hidden');
+                    rawOutput.value = '解析錯誤：Malformed URI sequence (包含無效的編碼字元)';
+                    rawOutput.classList.add('text-red-400');
+                }
+            };
+
+            const setMode = (encode) => {
+                isEncodeMode = encode;
+                if (encode) {
+                    modeSlider.style.transform = 'translateX(0)';
+                    btnModeEncode.classList.replace('text-slate-400', 'text-hub-900');
+                    btnModeDecode.classList.replace('text-hub-900', 'text-slate-400');
+                    rawInputLabel.textContent = 'Input String (Raw)';
+                    rawOutputLabel.textContent = 'Encoded Output';
+                } else {
+                    modeSlider.style.transform = 'translateX(100%)';
+                    modeSlider.style.marginLeft = '4px';
+                    btnModeDecode.classList.replace('text-slate-400', 'text-hub-900');
+                    btnModeEncode.classList.replace('text-hub-900', 'text-slate-400');
+                    rawInputLabel.textContent = 'Input String (Encoded)';
+                    rawOutputLabel.textContent = 'Decoded Output';
+                }
+                processRawText();
+            };
+
+            btnModeEncode.addEventListener('click', () => setMode(true));
+            btnModeDecode.addEventListener('click', () => setMode(false));
+            rawInput.addEventListener('input', processRawText);
+            Array.from(encodeTypeRadios).forEach(radio => radio.addEventListener('change', processRawText));
+            document.getElementById('btn-swap-raw').addEventListener('click', () => { rawInput.value = rawOutput.value; setMode(!isEncodeMode); });
+            document.getElementById('btn-clear-raw').addEventListener('click', () => { rawInput.value = ''; processRawText(); });
+            document.getElementById('btn-copy-raw-output').addEventListener('click', () => { if (rawErrorBadge.classList.contains('hidden')) copyToClipboard('raw-output'); });
+
+
+            // ==========================================
+            // 子模塊 2：視覺化解析器 (URL Parser - qs 增強版)
+            // ==========================================
+            const parserInput = document.getElementById('parser-input');
+            const parserStatus = document.getElementById('parser-status');
+            const anaProtocol = document.getElementById('ana-protocol');
+            const anaHost = document.getElementById('ana-host');
+            const anaPath = document.getElementById('ana-path');
+            const anaHash = document.getElementById('ana-hash');
+            
+            const paramList = document.getElementById('param-list');
+            const paramEmptyState = document.getElementById('param-empty-state');
+            const parserOutput = document.getElementById('parser-output');
+            
+            const viewModeTable = document.getElementById('view-mode-table');
+            const viewModeJson = document.getElementById('view-mode-json');
+            const paramViewTable = document.getElementById('param-view-table');
+            const paramViewJson = document.getElementById('param-view-json');
+            const paramJsonEditor = document.getElementById('param-json-editor');
+            const jsonErrorBadge = document.getElementById('json-error-badge');
+            const btnAddParam = document.getElementById('btn-add-param');
+
+            let currentUrlObj = null;
+            let currentQueryStr = ""; // 儲存當前最新的 search 參數部分 (包含 ?)
+            let paramsFlatArray = []; // 用於 Table View 的扁平陣列
+            let paramIdCounter = 0;
+            let currentViewMode = 'table'; // 'table' or 'json'
+
+            // --- 視圖切換 ---
+            const switchViewMode = (mode) => {
+                currentViewMode = mode;
+                if (mode === 'table') {
+                    viewModeTable.classList.add('active'); viewModeTable.classList.remove('bg-transparent');
+                    viewModeJson.classList.remove('active'); viewModeJson.classList.add('bg-transparent');
+                    paramViewTable.style.display = 'block';
+                    paramViewJson.style.display = 'none';
+                    btnAddParam.style.display = 'flex';
+                } else {
+                    viewModeJson.classList.add('active'); viewModeJson.classList.remove('bg-transparent');
+                    viewModeTable.classList.remove('active'); viewModeTable.classList.add('bg-transparent');
+                    paramViewTable.style.display = 'none';
+                    paramViewJson.style.display = 'block';
+                    btnAddParam.style.display = 'none'; // JSON 模式隱藏新增按鈕，直接在文字框打
+                }
+            };
+            viewModeTable.addEventListener('click', () => switchViewMode('table'));
+            viewModeJson.addEventListener('click', () => switchViewMode('json'));
+
+            // --- 引擎：全域狀態重鑄 URL ---
+            const renderFinalOutput = () => {
+                if (!currentUrlObj) { parserOutput.value = ''; return; }
+                try {
+                    const newUrl = new URL(currentUrlObj.origin + currentUrlObj.pathname);
+                    const hashVal = anaHash.value.trim();
+                    if (hashVal) newUrl.hash = hashVal.startsWith('#') ? hashVal : `#${hashVal}`;
+                    
+                    newUrl.search = currentQueryStr; // 將我們計算好的 Query 字串掛載回去
+                    
+                    parserOutput.value = newUrl.toString();
+                    parserOutput.classList.remove('border-red-500/30', 'text-red-400');
+                    parserOutput.classList.add('border-emerald-500/30', 'text-emerald-400');
+                } catch (e) {
+                    parserOutput.value = '重鑄錯誤';
+                }
+            };
+
+            // --- 引擎：Table 渲染與同步 ---
+            const renderTable = () => {
+                paramList.innerHTML = '';
+                if (paramsFlatArray.length === 0) {
+                    paramList.appendChild(paramEmptyState);
+                    paramEmptyState.style.display = 'block';
+                } else {
+                    paramEmptyState.style.display = 'none';
+                    paramsFlatArray.forEach(p => {
+                        const row = document.createElement('div');
+                        row.className = `flex items-center gap-2 p-2 rounded-lg border ${p.enabled ? 'border-hub-700 bg-hub-800/50' : 'border-hub-800 bg-hub-900/30 opacity-50'} transition-all`;
+                        row.innerHTML = `
+                            <input type="checkbox" class="param-toggle rounded border-slate-600 text-hub-accent focus:ring-0 bg-hub-900 cursor-pointer ml-1" data-id="${p.id}" ${p.enabled ? 'checked' : ''} title="啟用/停用">
+                            <input type="text" class="param-key flex-1 bg-hub-900 border border-hub-700 rounded-md px-3 py-1.5 text-slate-300 font-mono text-sm outline-none focus:border-hub-accent" data-id="${p.id}" value="${p.key}" placeholder="Key (如 filter[name])">
+                            <span class="text-slate-600 font-bold">=</span>
+                            <input type="text" class="param-val flex-[2] bg-hub-900 border border-hub-700 rounded-md px-3 py-1.5 text-sky-300 font-mono text-sm outline-none focus:border-hub-accent" data-id="${p.id}" value="${p.value}" placeholder="Value">
+                            <button class="param-del p-1.5 text-slate-500 hover:text-red-400 transition-colors bg-hub-900 rounded-md border border-hub-700" data-id="${p.id}"><i class="ph ph-trash text-sm pointer-events-none"></i></button>
+                        `;
+                        paramList.appendChild(row);
+                    });
+                }
+            };
+
+            const buildQueryFromTable = () => {
+                const params = new URLSearchParams();
+                paramsFlatArray.forEach(p => {
+                    if (p.enabled && p.key.trim() !== '') {
+                        params.append(p.key.trim(), p.value);
+                    }
+                });
+                currentQueryStr = params.toString();
+                if(currentQueryStr) currentQueryStr = '?' + currentQueryStr;
+            };
+
+            const syncJsonFromQuery = () => {
+                if (!window.Qs) return;
+                // 使用 Qs 將 query string 轉換為嵌套物件
+                const parsedObj = Qs.parse(currentQueryStr, { ignoreQueryPrefix: true });
+                paramJsonEditor.value = JSON.stringify(parsedObj, null, 2);
+                jsonErrorBadge.classList.remove('flex'); jsonErrorBadge.classList.add('hidden');
+            };
+
+            // --- 引擎：JSON 渲染與同步 ---
+            paramJsonEditor.addEventListener('input', () => {
+                if (currentViewMode !== 'json') return;
+                try {
+                    const parsedJson = JSON.parse(paramJsonEditor.value);
+                    jsonErrorBadge.classList.remove('flex'); jsonErrorBadge.classList.add('hidden');
+                    
+                    // 使用 Qs.stringify 支援括號陣列格式 (如 tags[]=1&tags[]=2)
+                    currentQueryStr = Qs.stringify(parsedJson, { arrayFormat: 'brackets', encodeValuesOnly: true });
+                    if(currentQueryStr) currentQueryStr = '?' + currentQueryStr;
+                    
+                    // 同步回扁平陣列以供 Table 使用
+                    const tempParams = new URLSearchParams(currentQueryStr);
+                    paramsFlatArray = []; paramIdCounter = 0;
+                    for (const [key, value] of tempParams.entries()) {
+                        paramsFlatArray.push({ id: paramIdCounter++, key, value, enabled: true });
+                    }
+                    renderTable();
+                    renderFinalOutput();
+                } catch (e) {
+                    jsonErrorBadge.classList.add('flex'); jsonErrorBadge.classList.remove('hidden');
+                }
+            });
+
+            // --- 主入口：解析網址字串 ---
+            const parseUrl = () => {
+                let rawStr = parserInput.value.trim();
+                if (!rawStr) {
+                    parserStatus.innerHTML = '';
+                    anaProtocol.textContent = '--'; anaHost.textContent = '--'; anaPath.textContent = '--'; anaHash.value = '';
+                    paramsFlatArray = []; paramJsonEditor.value = '{}'; currentUrlObj = null; currentQueryStr = "";
+                    renderTable(); renderFinalOutput();
+                    return;
+                }
+
+                if (!rawStr.startsWith('http://') && !rawStr.startsWith('https://') && !rawStr.startsWith('ftp://')) {
+                    rawStr = 'https://' + rawStr;
+                }
+
+                try {
+                    const url = new URL(rawStr);
+                    currentUrlObj = url;
+                    currentQueryStr = url.search;
+                    
+                    anaProtocol.textContent = url.protocol;
+                    anaHost.textContent = url.host;
+                    anaPath.textContent = url.pathname;
+                    anaHash.value = url.hash;
+
+                    // 解析至 Table
+                    paramsFlatArray = []; paramIdCounter = 0;
+                    for (const [key, value] of url.searchParams.entries()) {
+                        paramsFlatArray.push({ id: paramIdCounter++, key, value, enabled: true });
+                    }
+                    
+                    parserStatus.innerHTML = '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> 解析成功</span>';
+                    
+                    renderTable();
+                    syncJsonFromQuery(); // 同步至 JSON
+                    renderFinalOutput();
+                } catch (e) {
+                    parserStatus.innerHTML = '<span class="text-red-400"><i class="ph-fill ph-warning-circle"></i> 無效的網址格式</span>';
+                    currentUrlObj = null;
+                }
+            };
+
+            // --- 綁定事件 ---
+            parserInput.addEventListener('input', parseUrl);
+            document.getElementById('btn-parser-clear').addEventListener('click', () => { parserInput.value = ''; parseUrl(); });
+            anaHash.addEventListener('input', renderFinalOutput);
+
+            // 範例載入
+            document.getElementById('btn-parser-sample').addEventListener('click', () => {
+                parserInput.value = 'https://api.toolhub.com/v1/users?filter[status]=active&filter[role][]=admin&filter[role][]=editor&sort=-created_at#top';
+                parseUrl();
+                switchViewMode('json'); // 載入範例直接切換到 JSON 視圖展現威力
+            });
+
+            // Table 互動代理
+            document.getElementById('btn-add-param').addEventListener('click', () => {
+                if (!currentUrlObj) { parserInput.value = 'https://example.com'; parseUrl(); }
+                paramsFlatArray.push({ id: paramIdCounter++, key: '', value: '', enabled: true });
+                renderTable();
+                setTimeout(() => {
+                    const inputs = paramList.querySelectorAll('.param-key');
+                    if (inputs.length > 0) inputs[inputs.length - 1].focus();
+                }, 50);
+            });
+
+            paramList.addEventListener('input', (e) => {
+                if (e.target.classList.contains('param-key') || e.target.classList.contains('param-val')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const param = paramsFlatArray.find(p => p.id === id);
+                    if (param) {
+                        if (e.target.classList.contains('param-key')) param.key = e.target.value;
+                        if (e.target.classList.contains('param-val')) param.value = e.target.value;
+                        buildQueryFromTable();
+                        syncJsonFromQuery();
+                        renderFinalOutput();
+                    }
+                }
+            });
+
+            paramList.addEventListener('change', (e) => {
+                if (e.target.classList.contains('param-toggle')) {
+                    const id = parseInt(e.target.dataset.id);
+                    const param = paramsFlatArray.find(p => p.id === id);
+                    if (param) {
+                        param.enabled = e.target.checked;
+                        renderTable(); // 需重新 render 套用透明度樣式
+                        buildQueryFromTable();
+                        syncJsonFromQuery();
+                        renderFinalOutput();
+                    }
+                }
+            });
+
+            paramList.addEventListener('click', (e) => {
+                const btn = e.target.closest('.param-del');
+                if (btn) {
+                    const id = parseInt(btn.dataset.id);
+                    paramsFlatArray = paramsFlatArray.filter(p => p.id !== id);
+                    renderTable();
+                    buildQueryFromTable();
+                    syncJsonFromQuery();
+                    renderFinalOutput();
+                }
+            });
+
+            document.getElementById('btn-copy-parser').addEventListener('click', () => copyToClipboard('parser-output'));
+
+            // 允許 Tab 鍵在 JSON 編輯器中縮排
+            paramJsonEditor.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 2;
+                    // 觸發 input 事件以同步
+                    const event = new Event('input', { bubbles: true });
+                    this.dispatchEvent(event);
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP 足跡與純淨度觀測儀 (Digital Footprint & IP Scanner) | ToolHub</title>
+    <meta name="description" content="專業級線上 IP 查詢與網路純淨度檢測工具。即時分析您的 IP 位址、地理位置、ISP，並精準偵測是否使用 VPN、Proxy、Tor 或是資料中心節點。支援全域 IP 查詢、網域解析與瀏覽器硬體指紋分析。">
+    
+    <!-- 基地專屬徽章 -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        ip: {
+                            safe: '#10b981',    // Emerald
+                            warn: '#f59e0b',    // Amber
+                            danger: '#ef4444',  // Red
+                            radar: '#0ea5e9'    // Light Blue
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 雷達掃描動畫 */
+        .radar-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            overflow: hidden;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.05) 0%, transparent 70%);
+        }
+        .radar-container::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100%; height: 100%;
+            background: conic-gradient(from 0deg, transparent 70%, rgba(14, 165, 233, 0.4) 100%);
+            transform-origin: 0 0;
+            animation: radar-spin 4s linear infinite;
+        }
+        @keyframes radar-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .radar-grid {
+            position: absolute; inset: 0;
+            background-image: 
+                radial-gradient(circle, rgba(14, 165, 233, 0.2) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: center;
+        }
+
+        /* 半圓形儀表板 (Gauge) */
+        .gauge-svg {
+            transform: rotate(-180deg);
+            width: 100%;
+            max-width: 200px;
+            overflow: visible;
+        }
+        .gauge-bg {
+            fill: none; stroke: #1e293b; stroke-width: 10; stroke-linecap: round;
+        }
+        .gauge-fill {
+            fill: none; stroke-width: 10; stroke-linecap: round;
+            stroke-dasharray: 283; 
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), stroke 0.5s;
+        }
+
+        /* 資料卡片光暈 */
+        .data-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .data-card:hover {
+            border-color: #334155;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transform: translateY(-2px);
+        }
+        .data-card::after {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 2px; height: 100%;
+            background: #38bdf8;
+        }
+
+        /* 威脅標籤 */
+        .threat-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            letter-spacing: 0.05em;
+        }
+        .threat-safe { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .threat-warn { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .threat-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* Loading 骨架 */
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header & Sidebar -->
+    <div id="component-header" class="shrink-0"></div>
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Digital Footprint Matrix -->
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out] flex flex-col">
+        
+        <!-- SEO 友善標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2 shrink-0">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-sky-950/30 border border-sky-900/50 text-xs text-sky-400 shadow-inner">
+                <i class="ph-fill ph-radar mr-1.5 text-sm animate-pulse"></i>
+                網路情報與純淨度觀測陣列
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                IP 足跡與純淨度觀測儀 <span class="text-transparent bg-clip-text bg-gradient-to-r from-ip-radar to-indigo-400">Scanner</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                精準解析 IP 物理座標與 ISP 節點。內建深度威脅情報，瞬間辨識 VPN、Proxy 與資料中心偽裝。支援全域 IP 查詢、網域解析與瀏覽器硬體指紋檢測。
+            </p>
+        </div>
+
+        <!-- 頂部：全域查詢列 -->
+        <div class="max-w-3xl mx-auto w-full mb-8">
+            <div class="relative group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="ph-bold ph-magnifying-glass text-slate-400 group-focus-within:text-ip-radar transition-colors"></i>
+                </div>
+                <input type="text" id="in-target-ip" class="w-full bg-hub-900/80 border border-hub-700 focus:border-ip-radar rounded-2xl pl-11 pr-32 py-4 text-white font-mono text-sm sm:text-base outline-none shadow-xl transition-all" placeholder="輸入要觀測的 IP 或網域 (留空為本機 IP)...">
+                <div class="absolute inset-y-0 right-2 flex items-center">
+                    <button id="btn-scan" class="bg-hub-800 hover:bg-ip-radar border border-hub-700 hover:border-ip-radar text-slate-300 hover:text-hub-900 font-bold rounded-xl px-4 py-2 text-sm transition-all shadow-md">
+                        執行掃描
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心資料儀表板 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
+
+            <!-- ========================================== -->
+            <!-- 左側：主識別與威脅儀表板 (Identity & Threat) -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- 主 IP 卡片 -->
+                <div class="glass-panel p-6 sm:p-8 flex flex-col items-center justify-center shadow-xl border border-hub-700 relative overflow-hidden min-h-[320px]">
+                    <!-- 背景雷達 -->
+                    <div class="absolute inset-0 opacity-20 pointer-events-none">
+                        <div class="radar-container"></div>
+                        <div class="radar-grid"></div>
+                    </div>
+
+                    <div class="relative z-10 text-center w-full flex flex-col items-center">
+                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 justify-center">
+                            <i class="ph-fill ph-crosshair text-ip-radar"></i> 目標網路節點 (Target IP)
+                        </h2>
+                        
+                        <!-- IP 顯示 -->
+                        <div class="relative inline-block mb-6">
+                            <span id="out-ip" class="text-4xl sm:text-5xl font-mono font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] tracking-tight">
+                                <div class="skeleton w-64 h-12 mx-auto"></div>
+                            </span>
+                            <button id="btn-copy-ip" class="absolute -right-8 top-1/2 -translate-y-1/2 text-slate-500 hover:text-ip-radar transition-colors" title="複製 IP">
+                                <i class="ph-bold ph-copy text-xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- 純淨度儀表板 (Risk Gauge) -->
+                        <div class="relative w-48 h-24 mb-4 mt-2">
+                            <svg viewBox="0 0 100 50" class="gauge-svg absolute inset-0">
+                                <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                                <path id="risk-gauge" class="gauge-fill" d="M 10 50 A 40 40 0 0 1 90 50" stroke="#10b981" />
+                            </svg>
+                            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-center translate-y-1/4">
+                                <span class="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider">網路風險指數</span>
+                                <span id="out-risk-score" class="text-3xl font-black font-mono text-ip-safe drop-shadow-md">0</span>
+                                <span class="text-xs text-slate-500 font-mono">/100</span>
+                            </div>
+                        </div>
+
+                        <div id="out-risk-status" class="text-sm font-bold text-ip-safe mt-2 bg-ip-safe/10 border border-ip-safe/30 px-4 py-1.5 rounded-full inline-block">
+                            <div class="skeleton w-24 h-4"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 威脅情報矩陣 (Threat Matrix) -->
+                <div class="glass-panel p-6 shadow-xl border border-hub-700">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                        <i class="ph-fill ph-shield-warning text-ip-warn text-lg"></i> 深度威脅情報 (Purity Analysis)
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800 flex flex-col items-center justify-center gap-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">VPN 節點</span>
+                            <span id="flag-vpn"><div class="skeleton w-16 h-6 rounded-full"></div></span>
+                        </div>
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800 flex flex-col items-center justify-center gap-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Proxy 代理</span>
+                            <span id="flag-proxy"><div class="skeleton w-16 h-6 rounded-full"></div></span>
+                        </div>
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800 flex flex-col items-center justify-center gap-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Tor 洋蔥網路</span>
+                            <span id="flag-tor"><div class="skeleton w-16 h-6 rounded-full"></div></span>
+                        </div>
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800 flex flex-col items-center justify-center gap-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">機房 / 主機託管</span>
+                            <span id="flag-hosting"><div class="skeleton w-16 h-6 rounded-full"></div></span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 右側：拓撲資料與指紋 (Topology & Fingerprint) -->
+            <!-- ========================================== -->
+            <div class="lg:col-span-7 flex flex-col gap-6 h-full">
+                
+                <!-- 地理與路由拓撲 (Geo & Network) -->
+                <div class="glass-panel p-6 shadow-xl border border-hub-700 flex-grow">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-5">
+                        <i class="ph-fill ph-globe-hemisphere-west text-indigo-400 text-lg"></i> 物理與路由拓撲 (Geo & Network)
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="data-card">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">國家 / 區域 (Country)</span>
+                            <div class="text-sm font-bold text-white flex items-center gap-2" id="out-country"><div class="skeleton w-32 h-5"></div></div>
+                        </div>
+                        <div class="data-card">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">城市 (City)</span>
+                            <div class="text-sm font-bold text-white" id="out-city"><div class="skeleton w-24 h-5"></div></div>
+                        </div>
+                        <div class="data-card">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">經緯度座標 (Coordinates)</span>
+                            <div class="text-sm font-mono text-slate-300" id="out-ll"><div class="skeleton w-36 h-5"></div></div>
+                        </div>
+                        <div class="data-card">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">時區 (Timezone)</span>
+                            <div class="text-sm font-mono text-slate-300" id="out-tz"><div class="skeleton w-24 h-5"></div></div>
+                        </div>
+                        <div class="data-card sm:col-span-2">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">網路服務供應商 (ISP & Organization)</span>
+                            <div class="text-sm font-bold text-white mb-1" id="out-isp"><div class="skeleton w-48 h-5 mb-1"></div></div>
+                            <div class="text-xs font-mono text-slate-400" id="out-asn"><div class="skeleton w-20 h-4"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 本機硬體指紋 (Browser Fingerprint) -->
+                <div class="glass-panel p-6 shadow-xl border border-hub-700">
+                    <div class="flex justify-between items-center border-b border-hub-700 pb-3 mb-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-fingerprint text-fuchsia-400 text-lg"></i> 終端硬體指紋 (Local Fingerprint)
+                        </h3>
+                        <span class="text-[10px] font-mono text-slate-500 bg-hub-900 px-2 py-0.5 rounded border border-hub-800">僅本機檢測</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                        當您在網路上航行時，除了 IP 位址，您的瀏覽器同時向世界洩漏了以下硬體參數，這構成了獨一無二的數位指紋。
+                    </p>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase block mb-1">作業系統 (OS)</span>
+                            <span class="text-xs font-bold text-slate-300" id="fp-os">--</span>
+                        </div>
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase block mb-1">瀏覽器引擎</span>
+                            <span class="text-xs font-bold text-slate-300" id="fp-browser">--</span>
+                        </div>
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase block mb-1">螢幕解析度</span>
+                            <span class="text-xs font-mono text-slate-300" id="fp-screen">--</span>
+                        </div>
+                        <div class="bg-hub-900/50 p-3 rounded-lg border border-hub-800">
+                            <span class="text-[9px] font-bold text-slate-500 uppercase block mb-1">邏輯核心數</span>
+                            <span class="text-xs font-mono text-slate-300" id="fp-cores">--</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 動態載入：頁尾 -->
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/ip-scanner'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 核心業務邏輯：防禦性情報 API 與硬體指紋陣列 -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 3500); // 延長報錯顯示時間
+            };
+
+            // --- DOM Elements ---
+            const inTargetIp = document.getElementById('in-target-ip');
+            const btnScan = document.getElementById('btn-scan');
+            const btnCopyIp = document.getElementById('btn-copy-ip');
+            
+            // Outputs
+            const outIp = document.getElementById('out-ip');
+            const outRiskScore = document.getElementById('out-risk-score');
+            const outRiskStatus = document.getElementById('out-risk-status');
+            const riskGauge = document.getElementById('risk-gauge');
+            
+            const flagVpn = document.getElementById('flag-vpn');
+            const flagProxy = document.getElementById('flag-proxy');
+            const flagTor = document.getElementById('flag-tor');
+            const flagHosting = document.getElementById('flag-hosting');
+            
+            const outCountry = document.getElementById('out-country');
+            const outCity = document.getElementById('out-city');
+            const outLl = document.getElementById('out-ll');
+            const outTz = document.getElementById('out-tz');
+            const outIsp = document.getElementById('out-isp');
+            const outAsn = document.getElementById('out-asn');
+
+            // --- 實用函式 ---
+            const extractDomainOrIP = (input) => {
+                let text = input.trim();
+                if (!text) return '';
+                text = text.replace(/^https?:\/\//, '');
+                text = text.split('/')[0];
+                return text;
+            };
+
+            const isIP = (str) => /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,5}(:[0-9a-fA-F]{1,4}){1,2})|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/.test(str);
+
+            const getFlagBadge = (isTrue, isDanger = true) => {
+                if (isTrue) {
+                    const colorClass = isDanger ? 'threat-danger' : 'threat-warn';
+                    const icon = isDanger ? 'ph-warning-circle' : 'ph-info';
+                    return `<span class="threat-badge ${colorClass}"><i class="ph-bold ${icon}"></i> 偵測到</span>`;
+                } else {
+                    return `<span class="threat-badge threat-safe"><i class="ph-bold ph-check-circle"></i> 未發現</span>`;
+                }
+            };
+
+            // --- ⚠️ 核心防禦：安全解析與 API 切換 (Safe Parse Engine) ---
+            const fetchIpInfo = async (target = '') => {
+                try {
+                    btnScan.disabled = true;
+                    btnScan.innerHTML = '<i class="ph-bold ph-spinner-gap animate-spin"></i> 掃描與解析中';
+
+                    const cleanTarget = extractDomainOrIP(target);
+                    let finalIP = cleanTarget;
+
+                    // DoH 網域解析黑科技
+                    if (cleanTarget && !isIP(cleanTarget)) {
+                        try {
+                            const dnsRes = await fetch(`https://dns.google/resolve?name=${cleanTarget}&type=A`);
+                            const dnsText = await dnsRes.text();
+                            const dnsData = JSON.parse(dnsText);
+                            if (dnsData.Answer && dnsData.Answer.length > 0) {
+                                finalIP = dnsData.Answer[0].data;
+                            } else {
+                                throw new Error(`無法解析網域 ${cleanTarget}`);
+                            }
+                        } catch (e) {
+                            throw new Error(`DNS 解析失敗，請確認網域是否正確`);
+                        }
+                    }
+
+                    // 採用極度穩定、無 CORS 限制、抗 Cloudflare 的 ipapi.is 引擎
+                    const apiUrl = finalIP ? `https://api.ipapi.is/?q=${finalIP}` : 'https://api.ipapi.is/';
+                    const response = await fetch(apiUrl);
+                    const rawText = await response.text();
+                    
+                    let data;
+                    try {
+                        // 防禦性解析：如果伺服器回傳 HTML 阻擋頁面，這裡會報錯並被 catch 攔截
+                        data = JSON.parse(rawText);
+                    } catch (parseError) {
+                        console.error("Raw Blocked Response:", rawText.substring(0, 100) + "...");
+                        throw new Error('API 遭到安全政策阻擋 (WAF Intercepted)');
+                    }
+
+                    if (data.error) {
+                        throw new Error(data.error || '無法取得情報資料');
+                    }
+
+                    renderDashboard(data);
+                    
+                } catch (err) {
+                    console.error("Scanner Error:", err);
+                    showToast(err.message, true);
+                    
+                    // 優雅的錯誤降級顯示
+                    outIp.innerHTML = '<span class="text-2xl sm:text-3xl text-red-400 font-bold tracking-wider">Scan Failed</span>';
+                    outRiskScore.textContent = '0';
+                    riskGauge.style.strokeDashoffset = 283;
+                    riskGauge.style.stroke = '#475569';
+                    
+                    outRiskStatus.className = `text-sm font-bold mt-2 px-4 py-1.5 rounded-full inline-block border text-slate-500 bg-slate-800 border-slate-700 animate-pop`;
+                    outRiskStatus.innerHTML = `<i class="ph-fill ph-warning-circle mr-1"></i> 掃描失敗：${err.message}`;
+
+                    // 清空其餘欄位
+                    [outCountry, outCity, outLl, outTz, outIsp, outAsn].forEach(el => el.innerHTML = '--');
+                    [flagVpn, flagProxy, flagTor, flagHosting].forEach(el => el.innerHTML = '<span class="threat-badge bg-slate-800 text-slate-500 border-slate-700">未知</span>');
+
+                } finally {
+                    btnScan.disabled = false;
+                    btnScan.innerHTML = '執行掃描';
+                }
+            };
+
+            // --- 量子威脅分數演算法 (Threat Scoring Matrix for ipapi.is) ---
+            const renderDashboard = (data) => {
+                outIp.textContent = data.ip;
+                
+                // 1. 情報解析與風險計算 (適配 ipapi.is 結構)
+                const is_vpn = data.is_vpn || false;
+                const is_proxy = data.is_proxy || false;
+                const is_tor = data.is_tor || false;
+                const is_hosting = data.is_datacenter || false;
+
+                let riskScore = 0;
+                if (is_tor) riskScore += 90;
+                if (is_proxy) riskScore += 75;
+                if (is_vpn) riskScore += 60;
+                if (is_hosting) riskScore += 30; 
+
+                // 基礎分數微調
+                riskScore = Math.min(100, riskScore + Math.floor(Math.random() * 5));
+                if (!is_tor && !is_proxy && !is_vpn && !is_hosting) {
+                    riskScore = Math.floor(Math.random() * 15); // 家用純淨 IP
+                }
+
+                // 2. 渲染儀表板動畫
+                const dashOffset = 283 - (riskScore / 100) * 283;
+                riskGauge.style.strokeDashoffset = dashOffset;
+
+                // 顏色與狀態判定
+                outRiskScore.textContent = riskScore;
+                let colorHex, statusText, statusClass;
+                
+                if (riskScore >= 70) {
+                    colorHex = '#ef4444'; 
+                    statusText = '危險節點 (High Risk)';
+                    statusClass = 'text-ip-danger bg-ip-danger/10 border-ip-danger/30';
+                } else if (riskScore >= 30) {
+                    colorHex = '#f59e0b'; 
+                    statusText = '可疑跳板 (Suspicious)';
+                    statusClass = 'text-ip-warn bg-ip-warn/10 border-ip-warn/30';
+                } else {
+                    colorHex = '#10b981'; 
+                    statusText = '純淨節點 (Clean IP)';
+                    statusClass = 'text-ip-safe bg-ip-safe/10 border-ip-safe/30';
+                }
+
+                riskGauge.style.stroke = colorHex;
+                outRiskScore.style.color = colorHex;
+                outRiskStatus.className = `text-sm font-bold mt-2 px-4 py-1.5 rounded-full inline-block border ${statusClass} animate-pop`;
+                outRiskStatus.innerHTML = `<i class="ph-fill ph-warning-circle mr-1"></i> ${statusText}`;
+
+                // 3. 渲染威脅標籤
+                flagVpn.innerHTML = getFlagBadge(is_vpn, true);
+                flagProxy.innerHTML = getFlagBadge(is_proxy, true);
+                flagTor.innerHTML = getFlagBadge(is_tor, true);
+                flagHosting.innerHTML = getFlagBadge(is_hosting, false); 
+
+                // 4. 渲染拓撲資料
+                const loc = data.location || {};
+                const comp = data.company || {};
+                const asn = data.asn || {};
+                
+                const flagUrl = loc.country_code ? `https://flagcdn.com/w40/${loc.country_code.toLowerCase()}.png` : '';
+                
+                outCountry.innerHTML = `${flagUrl ? `<img src="${flagUrl}" class="w-6 h-auto rounded-sm border border-hub-700">` : ''} ${loc.country || 'Unknown'} (${loc.country_code || '?'})`;
+                outCity.textContent = `${loc.city || 'Unknown'}, ${loc.state || 'Unknown'}`;
+                outLl.textContent = `${loc.latitude || '0'}, ${loc.longitude || '0'}`;
+                outTz.textContent = loc.timezone || 'Unknown';
+                
+                outIsp.textContent = comp.name || 'Unknown ISP';
+                outAsn.textContent = `ASN: ${asn.asn || '?'} (${asn.org || 'Unknown Org'})`;
+            };
+
+            // --- 終端硬體指紋擷取 (Browser Fingerprinting) ---
+            const renderFingerprint = () => {
+                const getOS = () => {
+                    const userAgent = window.navigator.userAgent, platform = window.navigator.platform, macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'], windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'], iosPlatforms = ['iPhone', 'iPad', 'iPod'];
+                    if (macosPlatforms.indexOf(platform) !== -1) return 'Mac OS';
+                    if (iosPlatforms.indexOf(platform) !== -1) return 'iOS';
+                    if (windowsPlatforms.indexOf(platform) !== -1) return 'Windows';
+                    if (/Android/.test(userAgent)) return 'Android';
+                    if (!os && /Linux/.test(platform)) return 'Linux';
+                    return 'Unknown OS';
+                };
+
+                const getBrowser = () => {
+                    const ua = navigator.userAgent;
+                    if(ua.includes("Firefox") && !ua.includes("Seamonkey")) return "Firefox";
+                    if(ua.includes("Seamonkey")) return "Seamonkey";
+                    if(ua.includes("Chrome") && !ua.includes("Chromium") && !ua.includes("Edg")) return "Chrome";
+                    if(ua.includes("Chromium")) return "Chromium";
+                    if(ua.includes("Safari") && !ua.includes("Chrome")) return "Safari";
+                    if(ua.includes("Edg")) return "Edge";
+                    return "Other Browser";
+                };
+
+                document.getElementById('fp-os').textContent = getOS();
+                document.getElementById('fp-browser').textContent = getBrowser();
+                document.getElementById('fp-screen').textContent = `${window.screen.width} x ${window.screen.height}`;
+                document.getElementById('fp-cores').textContent = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Cores` : 'Unknown';
+            };
+
+
+            // --- 事件綁定 ---
+            btnScan.addEventListener('click', () => {
+                fetchIpInfo(inTargetIp.value);
+            });
+
+            inTargetIp.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') fetchIpInfo(inTargetIp.value);
+            });
+
+            btnCopyIp.addEventListener('click', () => {
+                const ipText = outIp.textContent;
+                if (!ipText || ipText.includes('Failed')) return;
+                
+                navigator.clipboard.writeText(ipText).then(() => {
+                    showToast(`IP ${ipText} 已複製`);
+                }).catch(() => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = ipText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("Copy");
+                    textArea.remove();
+                    showToast(`IP ${ipText} 已複製`);
+                });
+            });
+
+            // 啟動初始化
+            renderFingerprint();
+            fetchIpInfo(); 
+
+        });
+    </script>
+</body>
+</html>

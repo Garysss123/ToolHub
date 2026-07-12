@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Formatter & Validator | ToolHub - 免費線上 JSON 格式化與校驗工具</title>
+    <meta name="description" content="專業級 JSON 處理引擎。提供即時格式化 (Format)、微縮化 (Minify)、語法校驗 (Validate) 與錯誤追溯功能。支援檔案拖曳與本機端安全運算，保障您的資料隱私。">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+   
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        /* 編輯器專屬樣式 */
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.5rem;
+            outline: none;
+            line-height: 1.6;
+            tab-size: 2;
+        }
+
+        .editor-textarea::placeholder {
+            color: #475569;
+        }
+
+        /* 拖曳狀態的視覺反饋 */
+        .drag-active {
+            box-shadow: inset 0 0 0 2px #38BDF8;
+            background-color: rgba(56, 189, 248, 0.05);
+        }
+
+        /* 狀態指示燈動畫 */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：JSON Formatter -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                資料結構解析矩陣已上線
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                JSON <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-accent to-emerald-400">Formatter & Validator</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                專業級資料處理引擎。提供即時格式化、微縮化與精準錯誤追溯。支援拖曳讀取，純前端運算確保機密 API 數據不外洩。
+            </p>
+        </div>
+
+        <!-- 運算主控台 -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+            
+            <!-- 頂部工具列 (Toolbar) -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-hub-900/80 border-b border-hub-700 p-4 gap-4">
+                
+                <!-- 左側：主要操作按鈕 -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-format" class="px-4 py-2 bg-hub-accent hover:bg-sky-400 text-hub-900 font-bold rounded-lg text-sm transition-all flex items-center gap-2 shadow-lg shadow-sky-900/20 active:scale-[0.98]">
+                        <i class="ph ph-text-align-left text-lg"></i> 格式化 (Format)
+                    </button>
+                    <button id="btn-minify" class="px-4 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-sm transition-all flex items-center gap-2 active:scale-[0.98]">
+                        <i class="ph ph-arrows-in-line-horizontal text-lg"></i> 微縮化 (Minify)
+                    </button>
+                    <button id="btn-validate" class="px-4 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-sm transition-all flex items-center gap-2 active:scale-[0.98]">
+                        <i class="ph ph-check-square-offset text-lg"></i> 僅校驗 (Validate)
+                    </button>
+                </div>
+
+                <!-- 右側：輔助控制與設定 -->
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto border-t sm:border-t-0 border-hub-700 pt-3 sm:pt-0">
+                    <div class="flex items-center bg-hub-900 border border-hub-700 rounded-lg px-2 py-1">
+                        <i class="ph ph-text-indent text-slate-400 mr-2 text-lg"></i>
+                        <select id="indent-select" class="bg-transparent text-slate-300 text-sm outline-none cursor-pointer">
+                            <option value="2">2 Spaces</option>
+                            <option value="4">4 Spaces</option>
+                            <option value="tab">Tab</option>
+                        </select>
+                    </div>
+                    <div class="h-6 w-px bg-hub-700 hidden sm:block"></div>
+                    <button id="btn-sample" class="text-sm text-slate-400 hover:text-hub-accent transition-colors flex items-center gap-1" title="載入範例資料">
+                        <i class="ph ph-lightbulb"></i> 範例
+                    </button>
+                    <button id="btn-clear" class="text-sm text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1" title="清空編輯器">
+                        <i class="ph ph-trash"></i> 清空
+                    </button>
+                </div>
+            </div>
+
+            <!-- 編輯器區域 (Editor) -->
+            <div class="relative flex-grow flex flex-col group" id="editor-container">
+                <textarea 
+                    id="json-input" 
+                    class="editor-textarea font-mono text-sm sm:text-base" 
+                    placeholder="在此貼上您的 JSON 代碼，或直接將 .json 檔案拖曳至此..."
+                    spellcheck="false"
+                ></textarea>
+                
+                <!-- 拖曳提示覆蓋層 -->
+                <div id="drag-overlay" class="absolute inset-0 bg-hub-accent/10 backdrop-blur-[2px] hidden flex-col items-center justify-center border-2 border-dashed border-hub-accent pointer-events-none z-10">
+                    <i class="ph ph-file-arrow-down text-5xl text-hub-accent mb-2 animate-bounce"></i>
+                    <span class="text-hub-accent font-bold tracking-widest uppercase">DROP FILE TO LOAD</span>
+                </div>
+            </div>
+
+            <!-- 錯誤提示區塊 (動態顯示) -->
+            <div id="error-panel" class="hidden bg-red-950/40 border-t border-red-900/50 p-4">
+                <div class="flex items-start gap-3">
+                    <i class="ph-fill ph-warning-circle text-red-500 text-xl mt-0.5"></i>
+                    <div>
+                        <h4 class="text-red-400 font-bold text-sm tracking-wide">解析錯誤 (Invalid JSON)</h4>
+                        <p id="error-message" class="text-red-300/80 text-sm font-mono mt-1 break-all"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部狀態列與輸出 (Status Bar & Export) -->
+            <div class="bg-hub-900 border-t border-hub-700 p-3 sm:px-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                
+                <!-- 狀態指示器 -->
+                <div class="flex items-center gap-4 text-xs font-mono">
+                    <div class="flex items-center gap-1.5" id="status-indicator">
+                        <div class="w-2.5 h-2.5 rounded-full bg-slate-500" id="status-dot"></div>
+                        <span id="status-text" class="text-slate-400 uppercase tracking-wider">Ready</span>
+                    </div>
+                    <div class="h-3 w-px bg-hub-700"></div>
+                    <span class="text-slate-500" id="size-indicator">0 Bytes</span>
+                </div>
+
+                <!-- 匯出操作 -->
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button id="btn-copy" class="flex-1 sm:flex-none px-4 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
+                        <i class="ph ph-copy"></i> 複製代碼
+                    </button>
+                    <button id="btn-download" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/50 text-emerald-400 font-medium rounded-lg text-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
+                        <i class="ph ph-download-simple"></i> 儲存 .json
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 全域 Toast 提示 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <!-- ⚠️ 廣告已全權交由 Footer 水合派發，不再於此處實體掛載 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理        -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/json-formatter';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：JSON 運算矩陣                 -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM 節點映射
+            const jsonInput = document.getElementById('json-input');
+            const indentSelect = document.getElementById('indent-select');
+            
+            const btnFormat = document.getElementById('btn-format');
+            const btnMinify = document.getElementById('btn-minify');
+            const btnValidate = document.getElementById('btn-validate');
+            const btnClear = document.getElementById('btn-clear');
+            const btnSample = document.getElementById('btn-sample');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+
+            const errorPanel = document.getElementById('error-panel');
+            const errorMessage = document.getElementById('error-message');
+            
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const sizeIndicator = document.getElementById('size-indicator');
+            
+            const editorContainer = document.getElementById('editor-container');
+            const dragOverlay = document.getElementById('drag-overlay');
+
+            // --- 工具函數：字節大小計算 ---
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            // --- 狀態控制：更新狀態列 ---
+            const updateStats = () => {
+                const text = jsonInput.value;
+                const bytes = new Blob([text]).size;
+                sizeIndicator.textContent = formatBytes(bytes);
+                
+                if (text.trim() === '') {
+                    setStatus('idle');
+                }
+            };
+
+            const setStatus = (state) => {
+                errorPanel.classList.add('hidden'); // 預設隱藏錯誤
+                
+                switch(state) {
+                    case 'idle':
+                        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+                        statusText.textContent = 'Ready';
+                        statusText.className = 'text-slate-400 uppercase tracking-wider';
+                        break;
+                    case 'valid':
+                        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 status-pulse';
+                        statusText.textContent = 'Valid JSON';
+                        statusText.className = 'text-emerald-400 uppercase tracking-wider font-bold';
+                        break;
+                    case 'invalid':
+                        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500 status-pulse';
+                        statusText.textContent = 'Invalid JSON';
+                        statusText.className = 'text-red-400 uppercase tracking-wider font-bold';
+                        errorPanel.classList.remove('hidden');
+                        break;
+                }
+            };
+
+            // --- Toast 提示器 ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                
+                document.getElementById('toast-msg').textContent = msg;
+                
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- 核心邏輯：解析與運算 ---
+            const getIndent = () => {
+                const val = indentSelect.value;
+                if (val === 'tab') return '\t';
+                return parseInt(val); // 2 or 4
+            };
+
+            const processJson = (action) => {
+                const rawData = jsonInput.value.trim();
+                if (!rawData) {
+                    showToast('請先輸入 JSON 內容', true);
+                    return;
+                }
+
+                try {
+                    // 核心校驗：嘗試解析
+                    const parsedData = JSON.parse(rawData);
+                    
+                    // 根據動作處理輸出
+                    if (action === 'format') {
+                        jsonInput.value = JSON.stringify(parsedData, null, getIndent());
+                        showToast('格式化完成');
+                    } else if (action === 'minify') {
+                        jsonInput.value = JSON.stringify(parsedData);
+                        showToast('微縮化完成');
+                    } else if (action === 'validate') {
+                        showToast('驗證通過，這是一個標準的 JSON');
+                    }
+                    
+                    setStatus('valid');
+                    updateStats();
+                    
+                } catch (error) {
+                    // 錯誤追溯：擷取 JS 引擎的報錯資訊
+                    setStatus('invalid');
+                    errorMessage.textContent = error.message;
+                    showToast('JSON 解析失敗，請檢查語法', true);
+                }
+            };
+
+            // --- 綁定事件監聽 ---
+            btnFormat.addEventListener('click', () => processJson('format'));
+            btnMinify.addEventListener('click', () => processJson('minify'));
+            btnValidate.addEventListener('click', () => processJson('validate'));
+            
+            // 即時監控輸入
+            jsonInput.addEventListener('input', () => {
+                updateStats();
+                // 如果內容清空，移除錯誤提示
+                if (jsonInput.value.trim() === '') setStatus('idle');
+            });
+
+            btnClear.addEventListener('click', () => {
+                jsonInput.value = '';
+                setStatus('idle');
+                updateStats();
+            });
+
+            btnSample.addEventListener('click', () => {
+                const sample = {
+                    "system": "ToolHub",
+                    "module": "JSON Formatter",
+                    "status": "online",
+                    "version": 1.0,
+                    "features": ["Format", "Minify", "Validate", "Export"],
+                    "isAwesome": true,
+                    "settings": {
+                        "theme": "dark",
+                        "edgeComputing": true
+                    }
+                };
+                jsonInput.value = JSON.stringify(sample);
+                processJson('format'); // 載入後自動排版
+            });
+
+            // --- 匯出功能 ---
+            btnCopy.addEventListener('click', () => {
+                if (!jsonInput.value.trim()) return showToast('沒有可以複製的內容', true);
+                jsonInput.select();
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showToast('已複製到剪貼簿');
+            });
+
+            btnDownload.addEventListener('click', () => {
+                const content = jsonInput.value.trim();
+                if (!content) return showToast('沒有可以下載的內容', true);
+                
+                // 強制驗證，確保下載的不是壞掉的格式 (除非使用者堅持，但預設防禦)
+                try {
+                    JSON.parse(content);
+                } catch (e) {
+                    if(!confirm('當前 JSON 格式有錯誤，確定仍要下載嗎？')) return;
+                }
+
+                const blob = new Blob([content], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_JSON_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            // --- 高階體驗：檔案拖曳支援 (File Drag & Drop) ---
+            editorContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                jsonInput.classList.add('drag-active');
+                dragOverlay.classList.remove('hidden');
+                dragOverlay.classList.add('flex');
+            });
+
+            const removeDragState = () => {
+                jsonInput.classList.remove('drag-active');
+                dragOverlay.classList.add('hidden');
+                dragOverlay.classList.remove('flex');
+            };
+
+            editorContainer.addEventListener('dragleave', removeDragState);
+            
+            editorContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                removeDragState();
+                
+                if (e.dataTransfer.files.length) {
+                    const file = e.dataTransfer.files[0];
+                    // 防禦：僅允許讀取文字檔或 JSON
+                    if (file.type === "application/json" || file.type.startsWith("text/") || file.name.endsWith('.json')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            jsonInput.value = event.target.result;
+                            updateStats();
+                            processJson('format'); // 載入後嘗試自動排版
+                        };
+                        reader.readAsText(file);
+                    } else {
+                        showToast('請拖曳有效的 .json 檔案', true);
+                    }
+                }
+            });
+            
+            // 允許 Tab 鍵在 textarea 內縮排 (預設會切換焦點，我們覆寫它)
+            jsonInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    
+                    const indentStr = getIndent() === '\t' ? '\t' : ' '.repeat(getIndent());
+                    
+                    this.value = this.value.substring(0, start) + indentStr + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + indentStr.length;
+                    updateStats();
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

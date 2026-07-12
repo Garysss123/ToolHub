@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regex Tester 正則表達式測試器 | ToolHub - 具備 ReDoS 隔離防禦</title>
+    <meta name="description" content="專業的線上 Regex 測試工具。提供即時語法高亮、捕獲群組深度解析，並內建 Web Worker 隔離引擎與逾時阻斷機制，完美防禦 ReDoS (災難性回溯) 導致的瀏覽器崩潰。">
+    
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script>
+        // 融合系統核心色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        regex: {
+                            match1: 'rgba(56, 189, 248, 0.3)',
+                            match2: 'rgba(192, 132, 252, 0.3)',
+                            text: '#e2e8f0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        .flag-btn { transition: all 0.2s ease; user-select: none; }
+        .flag-btn.active { background-color: #38BDF8; color: #0B1120; border-color: #38BDF8; font-weight: bold; }
+
+        /* 雙層高亮引擎樣式 */
+        .editor-container { position: relative; width: 100%; flex-grow: 1; background-color: #0f172a; border-radius: 0.5rem; overflow: hidden; }
+        .editor-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 1rem; font-family: "Fira Code", monospace; font-size: 0.875rem; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; }
+        #highlight-layer { color: transparent; z-index: 1; }
+        mark.match-0 { background-color: rgba(56, 189, 248, 0.35); border-radius: 2px; color: transparent; }
+        mark.match-1 { background-color: rgba(192, 132, 252, 0.35); border-radius: 2px; color: transparent; }
+        #test-string-input { z-index: 2; background: transparent; color: #e2e8f0; border: none; outline: none; resize: none; caret-color: #38BDF8; }
+        #test-string-input::placeholder { color: #475569; }
+
+        .side-tab { transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .side-tab.active { border-color: #38BDF8; color: #38BDF8; background: rgba(56,189,248,0.05); }
+        .side-panel { display: none; animation: fadeIn 0.2s ease-out forwards; }
+        .side-panel.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 運算中的閃爍動畫 */
+        @keyframes computing-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; color: #38BDF8; } }
+        .is-computing { animation: computing-pulse 0.5s infinite; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative font-sans">
+
+    <!-- 1. 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 2. 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. 核心模塊：Regex Tester -->
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- 模塊標題區 -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-emerald-950/50 border border-emerald-900/50 text-xs text-emerald-400 shadow-inner">
+                <i class="ph-fill ph-shield-check mr-1.5 text-sm"></i> Web Worker 隔離防禦引擎已啟動
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Regex <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-fuchsia-500">Tester & Builder</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                搭載異步隔離機制的正則測試器。完美阻斷 Catastrophic Backtracking (災難性回溯)，即使輸入惡意正則也不會凍結您的瀏覽器。
+            </p>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6 min-h-[600px]">
+            
+            <!-- 左側：輸入與測試矩陣 -->
+            <div class="w-full lg:w-2/3 flex flex-col gap-4">
+                
+                <!-- Regex 輸入區 -->
+                <div class="glass-panel p-4 sm:p-6 flex flex-col gap-3 shadow-xl relative overflow-hidden group focus-within:border-hub-accent transition-colors border border-hub-700" id="regex-container">
+                    <label class="text-xs font-bold text-hub-accent uppercase tracking-widest flex justify-between items-center">
+                        <span>Regular Expression</span>
+                        <span id="regex-status" class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Ready</span>
+                    </label>
+                    
+                    <div class="flex items-center bg-hub-900 border border-hub-700 rounded-lg overflow-hidden group-focus-within:border-hub-accent transition-colors relative">
+                        <span class="px-3 text-slate-500 font-mono text-xl font-light">/</span>
+                        <input type="text" id="regex-input" class="flex-grow bg-transparent text-white font-mono text-base py-3 outline-none" placeholder="例如：(?<domain>[a-z0-9]+)\.com 或測試 (a+)+$" value="([a-zA-Z0-9._-]+)@([a-zA-Z0-9._-]+)\.([a-zA-Z0-9_-]+)">
+                        <span class="px-3 text-slate-500 font-mono text-xl font-light border-r border-hub-700">/</span>
+                        
+                        <div class="flex bg-hub-900 text-slate-400 font-mono text-sm h-full" id="flag-container">
+                            <button class="flag-btn active px-2.5 h-full hover:bg-hub-800 border-r border-hub-700" data-flag="g" title="Global (尋找所有匹配)">g</button>
+                            <button class="flag-btn active px-2.5 h-full hover:bg-hub-800 border-r border-hub-700" data-flag="i" title="Case Insensitive (忽略大小寫)">i</button>
+                            <button class="flag-btn px-2.5 h-full hover:bg-hub-800 border-r border-hub-700" data-flag="m" title="Multiline (多行模式)">m</button>
+                            <button class="flag-btn px-2.5 h-full hover:bg-hub-800" data-flag="s" title="DotAll (. 匹配換行符)">s</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 測試字串區 -->
+                <div class="glass-panel p-4 sm:p-6 flex flex-col gap-3 shadow-xl flex-grow">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Test String</label>
+                        <span id="match-count" class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-900/50 text-sky-400 border border-sky-500/30 transition-all">0 Matches</span>
+                    </div>
+                    
+                    <div class="editor-container border border-hub-700">
+                        <div id="highlight-layer" class="editor-layer"></div>
+                        <textarea id="test-string-input" class="editor-layer w-full h-full" spellcheck="false" placeholder="在此輸入或貼上要測試的文本...">請聯絡 support@toolhub.com 或是 admin@example.co.uk 取得協助。
+試著在上方輸入 (a+)+$ 並在此輸入 aaaaaaaaaaaaaaaaaaaaaX 測試 ReDoS 防禦。</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：側邊欄 -->
+            <div class="w-full lg:w-1/3 glass-panel flex flex-col overflow-hidden shadow-xl">
+                
+                <div class="flex bg-hub-900/80 border-b border-hub-700 overflow-x-auto no-scrollbar">
+                    <button class="side-tab active flex-1 py-3 text-xs font-bold uppercase tracking-wider text-slate-400" data-target="tab-match">群組萃取</button>
+                    <button class="side-tab flex-1 py-3 text-xs font-bold uppercase tracking-wider text-slate-400" data-target="tab-replace">置換測試</button>
+                    <button class="side-tab flex-1 py-3 text-xs font-bold uppercase tracking-wider text-slate-400" data-target="tab-lib">兵器庫</button>
+                </div>
+
+                <div class="flex-grow overflow-y-auto relative bg-hub-900/30">
+                    <!-- Tab: 群組萃取 -->
+                    <div id="tab-match" class="side-panel active p-4 space-y-4">
+                        <div id="match-list-container" class="space-y-4">
+                            <div class="text-center text-sm text-slate-500 py-8">正在等待運算...</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: 置換測試 -->
+                    <div id="tab-replace" class="side-panel p-4 flex flex-col h-full gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                <i class="ph-fill ph-swap text-fuchsia-400"></i> Replacement String
+                            </label>
+                            <input type="text" id="replace-input" class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-fuchsia-500 outline-none transition-all" placeholder="例如: [隱藏] 或 $1@domain.com">
+                        </div>
+                        <div class="flex flex-col gap-2 flex-grow">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Result</label>
+                                <button id="btn-copy-replace" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"><i class="ph ph-copy"></i> Copy</button>
+                            </div>
+                            <div class="relative flex-grow">
+                                <textarea id="replace-output" class="w-full h-full absolute inset-0 bg-hub-900/80 border border-hub-700 rounded-lg px-3 py-2 text-slate-300 font-mono text-sm outline-none resize-none" readonly placeholder="置換結果將顯示於此..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: 兵器庫 -->
+                    <div id="tab-lib" class="side-panel p-4">
+                        <p class="text-xs text-slate-400 mb-4">點擊直接載入常用的標準正則表達式。</p>
+                        <div class="space-y-2" id="regex-library">
+                            <button class="lib-btn w-full text-left bg-hub-800 hover:bg-hub-700 border border-hub-700 p-3 rounded-lg transition-colors group" data-regex="^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$" data-flags="gm">
+                                <div class="text-sm font-bold text-white group-hover:text-hub-accent">Email Address</div>
+                                <div class="text-[10px] font-mono text-slate-500 mt-1 truncate">^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$</div>
+                            </button>
+                            <button class="lib-btn w-full text-left bg-hub-800 hover:bg-hub-700 border border-hub-700 p-3 rounded-lg transition-colors group" data-regex="(a+)+$" data-flags="g">
+                                <div class="text-sm font-bold text-red-400 group-hover:text-red-300 flex items-center gap-1"><i class="ph-fill ph-warning"></i> ReDoS 測試炸彈</div>
+                                <div class="text-[10px] font-mono text-slate-500 mt-1 truncate">會導致無限回溯的經典正則，請配合 aaaaaaaaaX 測試。</div>
+                            </button>
+                            <button class="lib-btn w-full text-left bg-hub-800 hover:bg-hub-700 border border-hub-700 p-3 rounded-lg transition-colors group" data-regex="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" data-flags="gm">
+                                <div class="text-sm font-bold text-white group-hover:text-hub-accent">IPv4 Address</div>
+                                <div class="text-[10px] font-mono text-slate-500 mt-1 truncate">^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)...</div>
+                            </button>
+                            <button class="lib-btn w-full text-left bg-hub-800 hover:bg-hub-700 border border-hub-700 p-3 rounded-lg transition-colors group" data-regex="(?<protocol>https?:\/\/)?(?<domain>[\da-z\.-]+)\.(?<tld>[a-z\.]{2,6})(?<path>[\/\w \.-]*)*\/?$" data-flags="gm">
+                                <div class="text-sm font-bold text-white group-hover:text-hub-accent">URL (具名群組)</div>
+                                <div class="text-[10px] font-mono text-slate-500 mt-1 truncate">展示 ?&lt;name&gt; 捕獲群組功能</div>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i> 
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. 動態載入：頁尾 (Footer) -->
+    <div id="component-footer"></div>
+
+    <!-- 系統級中樞腳本略 -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/regex-tester';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：Web Worker 隔離引擎           -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- UI 與 Toast ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            const escapeHtml = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+            // --- DOM 映射 ---
+            const regexInput = document.getElementById('regex-input');
+            const regexContainer = document.getElementById('regex-container');
+            const flagBtns = document.querySelectorAll('.flag-btn');
+            const regexStatus = document.getElementById('regex-status');
+            const matchCountBadge = document.getElementById('match-count');
+            
+            const testStringInput = document.getElementById('test-string-input');
+            const highlightLayer = document.getElementById('highlight-layer');
+            const matchListContainer = document.getElementById('match-list-container');
+            const replaceInput = document.getElementById('replace-input');
+            const replaceOutput = document.getElementById('replace-output');
+
+            // --- Tabs 邏輯 ---
+            document.querySelectorAll('.side-tab').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.side-tab').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(e.currentTarget.dataset.target).classList.add('active');
+                });
+            });
+
+            // --- Worker 腳本 (Blob 生成) ---
+            // 這是一段會在另一個執行緒中跑的程式碼。不能存取 DOM。
+            const workerCode = `
+                self.onmessage = function(e) {
+                    const { pattern, flags, testStr, replacePattern } = e.data;
+                    
+                    try {
+                        const isGlobal = flags.includes('g');
+                        // 為了能用 matchAll 拿到 index 和 groups，底層強制加上 g，但根據使用者的設定決定迴圈次數
+                        const engineFlags = isGlobal ? flags : flags + 'g'; 
+                        const regex = new RegExp(pattern, engineFlags);
+
+                        // 防止匹配空字串的無窮迴圈
+                        if (regex.test("")) {
+                            self.postMessage({ error: "EmptyMatch", message: "此表達式會匹配空字串，已暫停運算。" });
+                            return;
+                        }
+
+                        // 執行匹配
+                        const matches = [];
+                        const matchIterator = testStr.matchAll(regex);
+                        let count = 0;
+                        
+                        for (const match of matchIterator) {
+                            // 序列化 Match 物件以便透過 postMessage 傳遞 (無法傳遞原生的 RegExpStringIterator 產出物)
+                            const serializedMatch = {
+                                0: match[0],
+                                index: match.index,
+                                groups: match.groups,
+                                length: match.length
+                            };
+                            for(let i=1; i<match.length; i++) {
+                                serializedMatch[i] = match[i];
+                            }
+                            
+                            matches.push(serializedMatch);
+                            count++;
+                            
+                            if (!isGlobal) break; // 如果不是 global，抓到一個就停
+                            if (count >= 5000) break; // 絕對的安全上限防禦
+                        }
+
+                        // 執行替換
+                        const replaced = testStr.replace(new RegExp(pattern, flags), replacePattern);
+
+                        self.postMessage({ success: true, matches, replaced });
+
+                    } catch (err) {
+                        self.postMessage({ error: "SyntaxError", message: err.message });
+                    }
+                };
+            `;
+            
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+
+            // --- 主執行緒管理變數 ---
+            let regexWorker = null;
+            let timeoutId = null;
+
+            // 終止 Worker 函數
+            const terminateWorker = () => {
+                if (regexWorker) {
+                    regexWorker.terminate();
+                    regexWorker = null;
+                }
+                clearTimeout(timeoutId);
+            };
+
+            // 渲染錯誤狀態
+            const renderError = (type, message) => {
+                regexContainer.classList.remove('border-hub-700');
+                regexContainer.classList.add('border-red-500/50');
+                
+                if (type === 'ReDoS') {
+                    regexStatus.innerHTML = '<i class="ph-fill ph-warning"></i> ReDoS 阻斷';
+                    regexStatus.className = 'text-red-400 font-bold flex items-center gap-1 animate-pulse';
+                    matchCountBadge.textContent = 'Terminated';
+                    matchCountBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-red-900/50 text-red-400 border border-red-500/30';
+                    matchListContainer.innerHTML = `<div class="text-center text-sm py-8"><span class="text-red-400 font-bold block mb-2"><i class="ph-fill ph-skull"></i> 災難性回溯 (Catastrophic Backtracking)</span>偵測到極度耗時的運算，為保護瀏覽器，Web Worker 已強制終止。</div>`;
+                } else if (type === 'EmptyMatch') {
+                    regexStatus.innerHTML = '<i class="ph-fill ph-warning-circle"></i> 警告';
+                    regexStatus.className = 'text-amber-400 flex items-center gap-1';
+                    matchCountBadge.textContent = 'Zero-Length';
+                    matchCountBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-900/50 text-amber-400 border border-amber-500/30';
+                    matchListContainer.innerHTML = `<div class="text-center text-sm text-amber-400/80 py-8">${message}</div>`;
+                } else {
+                    regexStatus.innerHTML = '<i class="ph-fill ph-x-circle"></i> 語法錯誤';
+                    regexStatus.className = 'text-red-400 flex items-center gap-1';
+                    matchCountBadge.textContent = 'Error';
+                    matchCountBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-500 border border-slate-700';
+                    matchListContainer.innerHTML = '<div class="text-center text-sm text-red-400/80 py-8">正則表達式語法錯誤</div>';
+                }
+                
+                highlightLayer.innerHTML = escapeHtml(testStringInput.value); // 還原純文字
+                replaceOutput.value = testStringInput.value;
+            };
+
+            // 渲染成功結果
+            const renderSuccess = (matches, replacedStr, testStr) => {
+                regexContainer.classList.remove('border-red-500/50');
+                regexContainer.classList.add('border-hub-700');
+                regexStatus.innerHTML = '<i class="ph-fill ph-check-circle"></i> Valid';
+                regexStatus.className = 'text-emerald-400 flex items-center gap-1';
+
+                // 1. 渲染高亮層
+                let highlightedHtml = '';
+                let lastIndex = 0;
+                let colorToggle = 0;
+
+                matches.forEach(match => {
+                    const start = match.index;
+                    const matchText = match[0];
+                    const end = start + matchText.length;
+                    
+                    highlightedHtml += escapeHtml(testStr.substring(lastIndex, start));
+                    highlightedHtml += `<mark class="match-${colorToggle}">${escapeHtml(matchText)}</mark>`;
+                    
+                    lastIndex = end;
+                    colorToggle = 1 - colorToggle;
+                });
+                highlightedHtml += escapeHtml(testStr.substring(lastIndex));
+                highlightLayer.innerHTML = highlightedHtml;
+
+                // 2. 更新 Badge
+                matchCountBadge.textContent = `${matches.length}${matches.length >= 5000 ? '+' : ''} Matches`;
+                if (matches.length > 0) {
+                    matchCountBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-sky-900/50 text-sky-400 border border-sky-500/30 shadow-[0_0_5px_rgba(56,189,248,0.2)]';
+                } else {
+                    matchCountBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700';
+                }
+
+                // 3. 渲染群組清單
+                if (matches.length === 0) {
+                    matchListContainer.innerHTML = '<div class="text-center text-sm text-slate-500 py-8">未找到符合的結果。</div>';
+                } else {
+                    let listHtml = '';
+                    matches.forEach((match, index) => {
+                        let groupHtml = '';
+                        if (match.length > 1 || match.groups) {
+                            groupHtml += `<div class="mt-2 space-y-1.5 border-l-2 border-hub-700 pl-3">`;
+                            for (let i = 1; i < match.length; i++) {
+                                const val = match[i] !== undefined ? escapeHtml(match[i]) : '<span class="text-slate-500 italic">undefined</span>';
+                                groupHtml += `
+                                    <div class="flex flex-col">
+                                        <span class="text-[10px] text-fuchsia-400 font-bold uppercase tracking-wider">Group ${i}</span>
+                                        <span class="text-sm font-mono text-slate-300 break-all">${val}</span>
+                                    </div>
+                                `;
+                            }
+                            if (match.groups) {
+                                for (const [key, value] of Object.entries(match.groups)) {
+                                    const val = value !== undefined ? escapeHtml(value) : '<span class="text-slate-500 italic">undefined</span>';
+                                    groupHtml += `
+                                        <div class="flex flex-col mt-1">
+                                            <span class="text-[10px] text-emerald-400 font-bold tracking-wider">Group &lt;${escapeHtml(key)}&gt;</span>
+                                            <span class="text-sm font-mono text-slate-300 break-all">${val}</span>
+                                        </div>
+                                    `;
+                                }
+                            }
+                            groupHtml += `</div>`;
+                        } else {
+                            groupHtml = `<div class="mt-2 text-xs text-slate-500 italic border-l-2 border-hub-700 pl-3">No capture groups.</div>`;
+                        }
+
+                        listHtml += `
+                            <div class="bg-hub-800/50 border border-hub-700 rounded-lg p-3 hover:border-sky-500/50 transition-colors">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="text-[10px] font-bold text-slate-400 bg-hub-900 px-1.5 py-0.5 rounded">Match ${index + 1}</span>
+                                    <span class="text-[10px] font-mono text-slate-500">Index: ${match.index} - ${match.index + match[0].length}</span>
+                                </div>
+                                <div class="font-mono text-sm text-white break-all bg-hub-900/50 px-2 py-1 rounded border border-hub-700/50">${escapeHtml(match[0])}</div>
+                                ${groupHtml}
+                            </div>
+                        `;
+                    });
+                    matchListContainer.innerHTML = listHtml;
+                }
+
+                // 4. 更新替換結果
+                replaceOutput.value = replacedStr;
+            };
+
+            // --- 觸發引擎 (Debounced) ---
+            let debounceTimer;
+            const dispatchToWorker = () => {
+                clearTimeout(debounceTimer);
+                
+                const pattern = regexInput.value;
+                const flags = Array.from(flagBtns).filter(btn => btn.classList.contains('active')).map(btn => btn.dataset.flag).join('');
+                const testStr = testStringInput.value;
+                const replacePattern = replaceInput.value;
+
+                if (!pattern) {
+                    renderError('Empty', '');
+                    return;
+                }
+
+                regexStatus.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> Computing';
+                regexStatus.className = 'text-sky-400 flex items-center gap-1';
+
+                debounceTimer = setTimeout(() => {
+                    terminateWorker(); // 殺死舊的
+                    
+                    // 建立新的 Worker
+                    regexWorker = new Worker(workerUrl);
+                    
+                    // 設定 ReDoS 暴力終止機制 (限制 250ms)
+                    timeoutId = setTimeout(() => {
+                        terminateWorker();
+                        renderError('ReDoS');
+                    }, 250); // 250毫秒的生死界線
+
+                    // 接收結果
+                    regexWorker.onmessage = (e) => {
+                        terminateWorker(); // 收到結果就關閉計時器與 Worker
+                        const res = e.data;
+                        
+                        if (res.error) {
+                            renderError(res.error, res.message);
+                        } else {
+                            renderSuccess(res.matches, res.replaced, testStr);
+                        }
+                    };
+
+                    // 發送任務
+                    regexWorker.postMessage({ pattern, flags, testStr, replacePattern });
+
+                }, 150); // 輸入防抖
+            };
+
+            // --- 事件綁定 ---
+            regexInput.addEventListener('input', dispatchToWorker);
+            testStringInput.addEventListener('input', dispatchToWorker);
+            replaceInput.addEventListener('input', dispatchToWorker);
+            flagBtns.forEach(btn => btn.addEventListener('click', () => { btn.classList.toggle('active'); dispatchToWorker(); }));
+            
+            // 同步捲動 (Sync Scroll for Overlay)
+            testStringInput.addEventListener('scroll', () => {
+                highlightLayer.scrollTop = testStringInput.scrollTop;
+                highlightLayer.scrollLeft = testStringInput.scrollLeft;
+            });
+
+            document.getElementById('btn-copy-replace').addEventListener('click', () => {
+                if (!replaceOutput.value) return;
+                replaceOutput.select();
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showToast('已複製置換結果');
+            });
+
+            // 兵器庫 (Regex Library)
+            document.querySelectorAll('.lib-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetBtn = e.currentTarget;
+                    const regex = targetBtn.dataset.regex;
+                    const flags = targetBtn.dataset.flags;
+                    
+                    regexInput.value = regex;
+                    
+                    flagBtns.forEach(fb => fb.classList.remove('active'));
+                    for (let char of flags) {
+                        const fb = Array.from(flagBtns).find(b => b.dataset.flag === char);
+                        if (fb) fb.classList.add('active');
+                    }
+                    
+                    document.querySelector('.side-tab[data-target="tab-match"]').click();
+                    dispatchToWorker();
+                    
+                    if(targetBtn.textContent.includes('ReDoS')) {
+                        showToast('警告：已載入 ReDoS 測試炸彈', true);
+                    } else {
+                        showToast('已載入正則表達式');
+                    }
+                });
+            });
+
+            // 初始化執行
+            dispatchToWorker();
+        });
+    </script>
+</body>
+</html>
