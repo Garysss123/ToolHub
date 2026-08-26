@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Contrast Checker - WCAG AA & AAA 無障礙對比度檢查 | ToolHub</title>
+    <meta name="description" content="免費線上色彩對比度檢查工具。依據 WCAG 2.1 標準，即時檢測前景色與背景色的對比度，評估 AA / AAA 無障礙規範符合情況，提供改善建議。">
+    <meta name="keywords" content="Color Contrast Checker, 色彩對比度, WCAG, AA, AAA, 無障礙, Accessibility, 對比度檢查, 顏色對比, ToolHub">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Color Contrast Checker - WCAG AA & AAA 無障礙對比度檢查">
+    <meta property="og:description" content="即時檢測前景與背景色彩對比度，依據 WCAG 2.1 標準評估 AA/AAA 無障礙規範符合情況。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/color-contrast-checker/">
+    <meta property="og:image" content="https://toolhuben.com/og-color-contrast.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Color Contrast Checker - WCAG AA & AAA 無障礙對比度檢查">
+    <meta name="twitter:description" content="即時檢測前景與背景色彩對比度，依據 WCAG 2.1 標準評估 AA/AAA 無障礙規範符合情況。">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://toolhuben.com/color-contrast-checker/">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Core Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .section-title {
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.75rem;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none; border: none;
+            width: 100%; height: 100%;
+            border-radius: 8px; cursor: pointer;
+            padding: 0; background: none;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #1E293B; border-radius: 8px; }
+
+        .num-input {
+            background: #0f172a; border: 1px solid #1E293B;
+            border-radius: 0.5rem; padding: 0.25rem 0.5rem;
+            font-size: 0.8125rem; color: #E2E8F0; font-family: 'Fira Code', monospace;
+            text-align: center; outline: none; width: 100%;
+        }
+        .num-input:focus { border-color: #818CF8; }
+        .num-input.error { border-color: #EF4444; box-shadow: 0 0 0 1px rgba(239,68,68,0.3); }
+
+        .action-btn {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;
+            font-size: 0.75rem; font-weight: 500; transition: all 0.2s;
+            border: 1px solid #1E293B; color: #94A3B8; background: rgba(15,23,42,0.4);
+        }
+        .action-btn:hover { border-color: #334155; color: #E2E8F0; }
+        .action-btn.primary {
+            background: rgba(129,140,248,0.1); border-color: rgba(129,140,248,0.3); color: #818CF8;
+        }
+        .action-btn.primary:hover { background: rgba(129,140,248,0.2); }
+        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .faq-item details summary {
+            cursor: pointer; font-weight: 500; font-size: 0.9375rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item details summary::-webkit-details-marker { display: none; }
+        .faq-item details summary::after { content: '+'; font-size: 1.25rem; color: #818CF8; transition: transform 0.2s; }
+        .faq-item details[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; font-size: 0.875rem; }
+        .faq-answer code { color: #818CF8; font-family: 'Fira Code', monospace; font-size: 0.75rem; }
+
+        .toast {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            background: #1E293B; color: #E2E8F0; padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500;
+            border: 1px solid #334155; z-index: 100;
+            opacity: 0; transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .wcag-pass { color: #10B981; }
+        .wcag-fail { color: #EF4444; }
+        .ratio-ring { transition: stroke-dashoffset 0.5s ease; }
+        .preview-section { transition: all 0.3s ease; }
+
+        .suggestion-item {
+            padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            border: 1px solid #1E293B; margin-bottom: 0.5rem;
+            font-size: 0.8125rem; color: #94A3B8;
+            display: flex; align-items: flex-start; gap: 0.5rem;
+        }
+        .suggestion-item:last-child { margin-bottom: 0; }
+        .suggestion-item svg { flex-shrink: 0; margin-top: 2px; }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            padding: 0.25rem 0.625rem; border-radius: 9999px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+
+        .tab-btn {
+            padding: 0.4rem 0.75rem; border-radius: 0.5rem 0.5rem 0 0; cursor: pointer;
+            font-size: 0.7rem; font-weight: 500; transition: all 0.2s;
+            border-bottom: 2px solid transparent; color: #94A3B8; background: transparent;
+        }
+        .tab-btn:hover { color: #E2E8F0; }
+        .tab-btn.active { color: #818CF8; border-bottom-color: #818CF8; background: rgba(129,140,248,0.05); }
+    </style>
+
+    <script>
+        tailwind.config = {
+            theme: { extend: {
+                colors: { hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8', contrast: '#818CF8' } },
+                fontFamily: { sans: ['"Noto Sans TC"','ui-sans-serif','system-ui','sans-serif'], mono: ['"Fira Code"','ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','monospace'] }
+            } }
+        };
+    </script>
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Color Contrast Checker - 色彩對比度檢查工具",
+        "description": "免費線上色彩對比度檢查工具。依據 WCAG 2.1 標準，即時檢測前景色與背景色的對比度，評估 AA / AAA 無障礙規範符合情況，提供改善建議。",
+        "url": "https://toolhuben.com/color-contrast-checker/",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Organization", "name": "ToolHub" }
+    }
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/color-contrast-checker/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/color-contrast-checker/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/color-contrast-checker/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen font-sans" style="--classic-accent:#818CF8;--classic-accent-rgb:129,140,248" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+    <div id="toast" class="toast"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+            <a href="/" class="hover:text-hub-accent transition-colors">首頁</a>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            <span class="text-slate-300">Color Contrast Checker</span>
+        </nav>
+
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-contrast mb-3">
+                <span class="w-1.5 h-1.5 bg-hub-contrast rounded-full animate-pulse"></span>
+                無障礙工具
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2">
+                Color Contrast <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">對比度檢查</span>
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+                依據 WCAG 2.1 標準，即時檢測前景色與背景色的對比度。
+                <br class="hidden sm:block">
+                確保您的設計符合 AA / AAA 無障礙規範。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- ==================== LEFT COLUMN ==================== -->
+            <div class="lg:col-span-5 space-y-5">
+
+                <!-- History / Actions -->
+                <div class="glass-panel p-3">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex gap-1">
+                            <button id="btn-undo" class="action-btn flex items-center gap-1.5" title="復原（上一步）" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg> 復原
+                            </button>
+                            <button id="btn-redo" class="action-btn flex items-center gap-1.5" title="重做（下一步）" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg> 重做
+                            </button>
+                        </div>
+                        <div class="flex gap-1">
+                            <button id="btn-swap" class="action-btn flex items-center gap-1.5" title="交換前景與背景色">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+                                交換
+                            </button>
+                            <button id="btn-random" class="action-btn flex items-center gap-1.5" title="隨機產生配色">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 2l20 20"/></svg>
+                                隨機
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Foreground Color -->
+                <div class="glass-panel p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-3 h-3 rounded-full" style="background:#000;border:1px solid #334155"></span>
+                        <div class="section-title mb-0">前景色（文字顏色）</div>
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-16 h-12 rounded-lg overflow-hidden border border-hub-700 flex-shrink-0" id="fg-swatch">
+                            <input type="color" id="fg-picker" value="#1e293b">
+                        </div>
+                        <div class="flex-1 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 w-8 shrink-0">HEX</span>
+                                <input type="text" id="fg-hex" class="num-input" value="#1e293b" maxlength="7" autocomplete="off">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 w-8 shrink-0">RGB</span>
+                                <input type="text" id="fg-rgb" class="num-input" value="30, 41, 59" autocomplete="off">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 w-8 shrink-0">HSL</span>
+                                <input type="text" id="fg-hsl" class="num-input" value="217, 33%, 17%" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Background Color -->
+                <div class="glass-panel p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-3 h-3 rounded-full" style="background:#fff;border:1px solid #334155"></span>
+                        <div class="section-title mb-0">背景色</div>
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-16 h-12 rounded-lg overflow-hidden border border-hub-700 flex-shrink-0" id="bg-swatch">
+                            <input type="color" id="bg-picker" value="#f8fafc">
+                        </div>
+                        <div class="flex-1 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 w-8 shrink-0">HEX</span>
+                                <input type="text" id="bg-hex" class="num-input" value="#f8fafc" maxlength="7" autocomplete="off">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 w-8 shrink-0">RGB</span>
+                                <input type="text" id="bg-rgb" class="num-input" value="248, 250, 252" autocomplete="off">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500 w-8 shrink-0">HSL</span>
+                                <input type="text" id="bg-hsl" class="num-input" value="210, 40%, 98%" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Copy Buttons -->
+                <div class="glass-panel p-3">
+                    <div class="flex flex-wrap gap-2">
+                        <button id="copy-hex-fg" class="action-btn flex items-center gap-1.5 text-xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            複製前景 HEX
+                        </button>
+                        <button id="copy-hex-bg" class="action-btn flex items-center gap-1.5 text-xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            複製背景 HEX
+                        </button>
+                        <button id="copy-rgb" class="action-btn flex items-center gap-1.5 text-xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            複製 RGB
+                        </button>
+                        <button id="copy-ratio" class="action-btn flex items-center gap-1.5 text-xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            複製對比度
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 text-center">
+                    <div class="text-xs text-slate-500 mb-2">快速選色</div>
+                    <div class="flex flex-wrap gap-2 justify-center" id="quick-colors">
+                        <button class="quick-color" data-color="#000000" style="width:28px;height:28px;border-radius:6px;background:#000000;border:2px solid #334155;cursor:pointer" title="#000000"></button>
+                        <button class="quick-color" data-color="#ffffff" style="width:28px;height:28px;border-radius:6px;background:#ffffff;border:2px solid #334155;cursor:pointer" title="#ffffff"></button>
+                        <button class="quick-color" data-color="#ef4444" style="width:28px;height:28px;border-radius:6px;background:#ef4444;border:2px solid #334155;cursor:pointer" title="#ef4444"></button>
+                        <button class="quick-color" data-color="#f97316" style="width:28px;height:28px;border-radius:6px;background:#f97316;border:2px solid #334155;cursor:pointer" title="#f97316"></button>
+                        <button class="quick-color" data-color="#eab308" style="width:28px;height:28px;border-radius:6px;background:#eab308;border:2px solid #334155;cursor:pointer" title="#eab308"></button>
+                        <button class="quick-color" data-color="#22c55e" style="width:28px;height:28px;border-radius:6px;background:#22c55e;border:2px solid #334155;cursor:pointer" title="#22c55e"></button>
+                        <button class="quick-color" data-color="#3b82f6" style="width:28px;height:28px;border-radius:6px;background:#3b82f6;border:2px solid #334155;cursor:pointer" title="#3b82f6"></button>
+                        <button class="quick-color" data-color="#8b5cf6" style="width:28px;height:28px;border-radius:6px;background:#8b5cf6;border:2px solid #334155;cursor:pointer" title="#8b5cf6"></button>
+                        <button class="quick-color" data-color="#ec4899" style="width:28px;height:28px;border-radius:6px;background:#ec4899;border:2px solid #334155;cursor:pointer" title="#ec4899"></button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== RIGHT COLUMN ==================== -->
+            <div class="lg:col-span-7 space-y-5">
+
+                <!-- Preview Panel -->
+                <div class="glass-panel p-5" id="preview-panel">
+                    <div class="section-title">即時預覽</div>
+                    <div id="preview-area" class="rounded-xl p-6 space-y-4 transition-all duration-300" style="background:#f8fafc">
+                        <h2 id="preview-heading" class="text-2xl font-bold transition-all duration-300" style="color:#1e293b">這是預覽標題</h2>
+                        <p id="preview-body" class="text-base leading-relaxed transition-all duration-300" style="color:#1e293b">
+                            這是一般文字內容的預覽範例。WCAG 2.1 建議一般文字至少需要 4.5:1 的對比度，大型文字（18pt 以上或 14pt 粗體以上）則至少需要 3:1 的對比度。
+                        </p>
+                        <div class="flex flex-wrap gap-3">
+                            <button id="preview-btn" class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-300" style="background:#1e293b;color:#f8fafc;border:none">按鈕範例</button>
+                            <button id="preview-btn-secondary" class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-300" style="background:transparent;color:#1e293b;border:2px solid #1e293b">次要按鈕</button>
+                        </div>
+                        <div class="rounded-xl p-4 transition-all duration-300" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.1)">
+                            <div class="flex items-center gap-3">
+                                <div id="preview-card-icon" class="w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold transition-all duration-300" style="background:#1e293b;color:#f8fafc">T</div>
+                                <div>
+                                    <div id="preview-card-title" class="text-sm font-semibold transition-all duration-300" style="color:#1e293b">卡片標題</div>
+                                    <div id="preview-card-desc" class="text-xs transition-all duration-300" style="color:#1e293b;opacity:0.7">卡片描述文字範例</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contrast Ratio -->
+                <div class="glass-panel p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="section-title mb-0">對比度 (Contrast Ratio)</div>
+                        <div class="flex items-center gap-1 text-xs text-slate-500">
+                            <span class="w-3 h-3 rounded-full inline-block" id="ratio-dot-fg" style="background:#1e293b"></span>
+                            <span>前景</span>
+                            <span class="mx-1">/</span>
+                            <span class="w-3 h-3 rounded-full inline-block" id="ratio-dot-bg" style="background:#f8fafc"></span>
+                            <span>背景</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center gap-6">
+                        <div class="relative w-28 h-28">
+                            <svg class="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
+                                <circle cx="60" cy="60" r="52" fill="none" stroke="#1E293B" stroke-width="8"/>
+                                <circle id="ratio-circle" cx="60" cy="60" r="52" fill="none" stroke="#818CF8" stroke-width="8" stroke-linecap="round"
+                                    stroke-dasharray="326.7" stroke-dashoffset="163.4" class="ratio-ring"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="ratio-value" class="text-3xl font-bold text-white">7.23</span>
+                                <span class="text-xs text-slate-500">: 1</span>
+                            </div>
+                        </div>
+                        <div class="space-y-1 text-center">
+                            <div class="text-sm text-slate-400">WCAG 評級</div>
+                            <div id="wcag-rating" class="text-lg font-bold text-hub-contrast">AA</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WCAG Results -->
+                <div class="glass-panel p-5">
+                    <div class="section-title mb-4">WCAG 2.1 符合性評估</div>
+                    <div class="grid grid-cols-2 gap-3" id="wcag-results">
+                        <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700/50">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-white">AA 一般文字</span>
+                                <span id="wcag-aa-normal" class="status-badge wcag-pass bg-emerald-500/10 border border-emerald-500/20">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                                    通過
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500">需 ≥ 4.5 : 1</div>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700/50">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-white">AAA 一般文字</span>
+                                <span id="wcag-aaa-normal" class="status-badge wcag-pass bg-emerald-500/10 border border-emerald-500/20">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                                    通過
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500">需 ≥ 7.0 : 1</div>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700/50">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-white">AA 大型文字</span>
+                                <span id="wcag-aa-large" class="status-badge wcag-pass bg-emerald-500/10 border border-emerald-500/20">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                                    通過
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500">需 ≥ 3.0 : 1</div>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700/50">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-white">AAA 大型文字</span>
+                                <span id="wcag-aaa-large" class="status-badge wcag-pass bg-emerald-500/10 border border-emerald-500/20">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                                    通過
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500">需 ≥ 4.5 : 1</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accessibility Suggestions -->
+                <div class="glass-panel p-5">
+                    <div class="section-title mb-3">無障礙改善建議</div>
+                    <div id="suggestions-container">
+                        <div class="text-sm text-slate-500 text-center py-3">當前配色符合 WCAG 規範，無需改善。</div>
+                    </div>
+                </div>
+
+                <!-- Ad Unit -->
+                <div class="glass-panel p-4 text-center">
+                    <div class="text-xs text-slate-600 mb-2">廣告</div>
+                    <div class="bg-hub-900/50 rounded-lg h-24 flex items-center justify-center text-slate-700 text-sm">Google AdSense 廣告區塊</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SEO Article -->
+        <article class="glass-panel p-6 sm:p-8 mt-8">
+            <h2 class="text-2xl font-bold text-white mb-4">什麼是 Color Contrast Checker？</h2>
+            <p class="text-slate-400 leading-relaxed mb-6">
+                <strong class="text-white">Color Contrast Checker（色彩對比度檢查工具）</strong>是一款專為網頁設計師、前端開發者與無障礙專家打造的免費線上工具。它能快速計算兩種顏色之間的對比度，並依據 <strong class="text-white">WCAG 2.1</strong>（Web Content Accessibility Guidelines）標準評估是否符合 AA 與 AAA 無障礙規範。
+            </p>
+
+            <h3 class="text-xl font-bold text-white mb-3">什麼是 WCAG 對比度？</h3>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                WCAG 2.1 定義了色彩對比度的計算方式，透過相對亮度（Relative Luminance）公式來計算前景色與背景色的對比比值。對比度越高，文字越容易閱讀，特別是對於視力較弱的使用者。
+            </p>
+            <ul class="list-disc list-inside text-slate-400 leading-relaxed mb-6 space-y-1 text-sm">
+                <li><strong class="text-white">AA 標準：</strong>一般文字需 ≥ 4.5:1，大型文字（18pt 或 14pt 粗體）需 ≥ 3:1</li>
+                <li><strong class="text-white">AAA 標準：</strong>一般文字需 ≥ 7:1，大型文字需 ≥ 4.5:1</li>
+            </ul>
+
+            <h3 class="text-xl font-bold text-white mb-3">為什麼對比度很重要？</h3>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                良好的色彩對比度不僅能提升所有使用者的閱讀體驗，更是無障礙網頁設計的關鍵要素。全球約有 2.17 億人有中度至重度視力障礙，確保足夠的對比度可以讓您的網站更具包容性，同時也能避免潛在的法律風險。
+            </p>
+
+            <h3 class="text-xl font-bold text-white mb-3">如何使用此工具？</h3>
+            <p class="text-slate-400 leading-relaxed mb-4">
+                使用方式非常簡單：在左側分別設定<strong class="text-white">前景色（文字顏色）</strong>與<strong class="text-white">背景色</strong>，您可以透過顏色選擇器、直接輸入 HEX、RGB 或 HSL 值來調整顏色。右側會立即顯示即時預覽、對比度數值與 WCAG 評估結果。如果配色未通過標準，我們也會提供具體的改善建議。
+            </p>
+
+            <h3 class="text-xl font-bold text-white mb-3">對比度的計算方式</h3>
+            <p class="text-slate-400 leading-relaxed">
+                對比度是根據 WCAG 2.1 規範的相對亮度公式計算：<code class="text-hub-contrast font-mono text-sm">L = 0.2126 × R + 0.7152 × G + 0.0722 × B</code>，其中 R、G、B 為經過 Gamma 校正的 sRGB 值。對比度比值 = <code class="text-hub-contrast font-mono text-sm">(L₁ + 0.05) / (L₂ + 0.05)</code>，其中 L₁ 為較亮的顏色，L₂ 為較暗的顏色。
+            </p>
+        </article>
+
+        <!-- FAQ Section -->
+        <div class="glass-panel p-6 sm:p-8 mt-6">
+            <h2 class="text-2xl font-bold text-white mb-6">常見問題 (FAQ)</h2>
+            <div class="space-y-2 divide-y divide-hub-700/50" id="faq-container">
+                <div class="faq-item">
+                    <details>
+                        <summary>什麼是 WCAG？</summary>
+                        <div class="faq-answer">WCAG（Web Content Accessibility Guidelines）是 W3C 制定的網頁內容無障礙指南，提供了一系列讓身心障礙者更容易使用網頁內容的建議標準。目前主流版本為 WCAG 2.1，涵蓋了對比度、導航、語義等多個面向。</div>
+                    </details>
+                </div>
+                <div class="faq-item">
+                    <details>
+                        <summary>AA 和 AAA 有什麼區別？</summary>
+                        <div class="faq-answer">AA 是基本無障礙標準，多數國家和組織的法律要求（如 ADA、Section 508）至少達到 AA 等級。AAA 則是更高級的無障礙標準，要求更嚴格的對比度門檻（一般文字 ≥ 7:1），並非所有網站都能在整個網站中達到 AAA，但應盡可能朝此目標努力。</div>
+                    </details>
+                </div>
+                <div class="faq-item">
+                    <details>
+                        <summary>什麼是「大型文字」？</summary>
+                        <div class="faq-answer">根據 WCAG 定義，大型文字是指「18pt（約 24px）以上」或「14pt（約 18.67px）粗體以上」的文字。由於大型文字面積較大，閱讀門檻較低，因此對比度要求相對寬鬆（AA 只需 ≥ 3:1）。</div>
+                    </details>
+                </div>
+                <div class="faq-item">
+                    <details>
+                        <summary>這個工具是否支援 Color Blind 模擬？</summary>
+                        <div class="faq-answer">目前這個版本的 Color Contrast Checker 主要專注於對比度計算與 WCAG 評估。未來更新將考慮加入色盲模擬功能，協助設計者建立對所有使用者都友好的配色方案。</div>
+                    </details>
+                </div>
+                <div class="faq-item">
+                    <details>
+                        <summary>如何改善色彩對比度？</summary>
+                        <div class="faq-answer">若對比度不足，建議：① 加深文字的顏色（如從淺灰改為深灰或黑色）；② 調亮背景色（如從深色改為淺色）；③ 增加文字的字重（bold）或字級（font-size）；④ 避免在背景上使用過於複雜的漸層或圖案。本工具的改善建議區會根據您的配色提供具體建議。</div>
+                    </details>
+                </div>
+                <div class="faq-item">
+                    <details>
+                        <summary>對比度越高越好嗎？</summary>
+                        <div class="faq-answer">一般來說，較高的對比度確實能提升可讀性，但過高的對比度（如純黑 #000 配純白 #FFF，對比度 21:1）在長時間閱讀下可能會造成眼睛疲勞。對大多數內容來說 7:1 到 15:1 之間的對比度是最舒適的範圍。</div>
+                    </details>
+                </div>
+                <div class="faq-item">
+                    <details>
+                        <summary>這個工具會保存我的資料嗎？</summary>
+                        <div class="faq-answer">完全不會！所有顏色計算都在您的瀏覽器中進行，您的任何操作資料都不會傳送到任何伺服器。此工具不需要網路連線即可運作（除了首次載入資源外），您可以完全離線使用。</div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <!-- Browser Compatibility -->
+        <div class="glass-panel p-6 sm:p-8 mt-6">
+            <h2 class="text-xl font-bold text-white mb-4">瀏覽器相容性</h2>
+            <p class="text-sm text-slate-400 leading-relaxed mb-4">
+                本工具使用標準 Web API（HTML5、CSS3、ES6+），支援所有現代瀏覽器：
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div class="bg-hub-900/50 rounded-xl p-3 text-center border border-hub-700/50">
+                    <div class="text-lg mb-1">🌐</div>
+                    <div class="text-white font-medium">Chrome</div>
+                    <div class="text-xs text-slate-500">最新版</div>
+                </div>
+                <div class="bg-hub-900/50 rounded-xl p-3 text-center border border-hub-700/50">
+                    <div class="text-lg mb-1">🦊</div>
+                    <div class="text-white font-medium">Firefox</div>
+                    <div class="text-xs text-slate-500">最新版</div>
+                </div>
+                <div class="bg-hub-900/50 rounded-xl p-3 text-center border border-hub-700/50">
+                    <div class="text-lg mb-1">🍏</div>
+                    <div class="text-white font-medium">Safari</div>
+                    <div class="text-xs text-slate-500">最新版</div>
+                </div>
+                <div class="bg-hub-900/50 rounded-xl p-3 text-center border border-hub-700/50">
+                    <div class="text-lg mb-1">🔷</div>
+                    <div class="text-white font-medium">Edge</div>
+                    <div class="text-xs text-slate-500">最新版</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacy -->
+        <div class="glass-panel p-6 mt-6">
+            <h2 class="text-xl font-bold text-white mb-4">隱私說明</h2>
+            <p class="text-sm text-slate-400 leading-relaxed">此工具完全在您的瀏覽器中執行。您輸入的任何顏色都不會傳送到任何伺服器。我們不會對這個工具使用 Cookie 或追蹤功能。</p>
+        </div>
+
+    </main>
+
+    <div id="component-footer"></div>
+
+    <!-- Bootstrap -->
+    <script>
+    async function loadComponent(id, path) {
+        try {
+            const r = await fetch(path);
+            const html = await r.text();
+            const c = document.getElementById(id);
+            if (c) {
+                c.innerHTML = html;
+                Array.from(c.querySelectorAll('script')).forEach(s => {
+                    const ns = document.createElement('script');
+                    Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(s.innerHTML));
+                    s.parentNode.replaceChild(ns, s);
+                });
+            }
+        } catch(e) {}
+    }
+    function setupSidebar() {
+        document.body.addEventListener('click', (e) => {
+            const triggers = ['#sidebar-trigger-btn','#sidebar-close-btn','#sidebar-overlay'];
+            const target = triggers.reduce((r, sel) => r || e.target.closest(sel), null);
+            if (!target) return;
+            const container = document.getElementById('sidebar-container');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (!container) return;
+            const closed = container.classList.contains('translate-x-full');
+            if (target.id !== 'sidebar-trigger-btn' || closed) {
+                container.classList.add('translate-x-full');
+                if (overlay) { overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0'); setTimeout(() => overlay.classList.add('pointer-events-none'), 300); }
+            } else { window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar')); }
+        });
+        const path = '/color-contrast-checker';
+        const n = p => p.replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';
+        document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+            const h = item.getAttribute('href');
+            if (!h) return;
+            const ip = n(h);
+            if (ip !== '/' && path === ip) {
+                item.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50');
+                item.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                const icon = item.querySelector('svg');
+                if (icon) icon.classList.add('text-[#3ebcf0]');
+            }
+        });
+    }
+    async function initSystem() {
+        await Promise.all([loadComponent('component-header','/components/header.html'),loadComponent('component-sidebar','/components/sidebar.html'),loadComponent('component-footer','/components/footer.html')]);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        setupSidebar();
+        document.dispatchEvent(new Event('toolhub-ready'));
+    }
+    document.addEventListener('DOMContentLoaded', initSystem);
+    </script>
+
+    <!-- App Engine -->
+    <script>
+    (function() {
+        'use strict';
+
+        const $ = id => document.getElementById(id);
+        const toastEl = $('toast');
+        let toastTimer = null;
+        function showToast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800); }
+
+        // ---- Color Conversion Utilities ----
+
+        function hexToRgb(hex) {
+            hex = hex.replace('#','');
+            if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+            const v = parseInt(hex, 16);
+            if (isNaN(v)) return null;
+            return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+        }
+
+        function rgbToHex(r, g, b) {
+            return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r,g,b), min = Math.min(r,g,b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+        }
+
+        function hslToRgb(h, s, l) {
+            h = h / 360; s = s / 100; l = l / 100;
+            if (s === 0) { const v = Math.round(l * 255); return { r: v, g: v, b: v }; }
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            return {
+                r: Math.round(hue2rgb(p, q, h + 1/3) * 255),
+                g: Math.round(hue2rgb(p, q, h) * 255),
+                b: Math.round(hue2rgb(p, q, h - 1/3) * 255)
+            };
+        }
+
+        function parseRgb(str) {
+            const m = str.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+            if (!m) return null;
+            const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+            if (isNaN(r)||isNaN(g)||isNaN(b)) return null;
+            return { r, g, b };
+        }
+
+        function parseHsl(str) {
+            const m = str.match(/(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%/);
+            if (!m) return null;
+            const h = parseInt(m[1]), s = parseInt(m[2]), l = parseInt(m[3]);
+            if (isNaN(h)||isNaN(s)||isNaN(l)) return null;
+            return { h, s, l };
+        }
+
+        function formatHsl(h, s, l) {
+            return `${h}, ${s}%, ${l}%`;
+        }
+
+        function formatRgb(r, g, b) {
+            return `${r}, ${g}, ${b}`;
+        }
+
+        // ---- Luminance & Contrast ----
+
+        function linearize(channel) {
+            const c = channel / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        function getLuminance(r, g, b) {
+            return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+        }
+
+        function getContrastRatio(hex1, hex2) {
+            const c1 = hexToRgb(hex1), c2 = hexToRgb(hex2);
+            if (!c1 || !c2) return 0;
+            const l1 = getLuminance(c1.r, c1.g, c1.b);
+            const l2 = getLuminance(c2.r, c2.g, c2.b);
+            const lighter = Math.max(l1, l2);
+            const darker = Math.min(l1, l2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        function evaluateWCAG(ratio) {
+            return {
+                aaNormal: ratio >= 4.5,
+                aaaNormal: ratio >= 7.0,
+                aaLarge: ratio >= 3.0,
+                aaaLarge: ratio >= 4.5
+            };
+        }
+
+        function getRating(ratio) {
+            if (ratio >= 7) return 'AAA';
+            if (ratio >= 4.5) return 'AA';
+            if (ratio >= 3) return 'AA (僅大文字)';
+            return '未通過';
+        }
+
+        // ---- State & History ----
+
+        let history = [];
+        let historyIndex = -1;
+        const MAX_HISTORY = 30;
+
+        function pushState(fg, bg) {
+            history = history.slice(0, historyIndex + 1);
+            history.push({ fg, bg });
+            if (history.length > MAX_HISTORY) history.shift();
+            historyIndex = history.length - 1;
+            updateHistoryButtons();
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                const state = history[historyIndex];
+                applyColors(state.fg, state.bg, false);
+                updateHistoryButtons();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                const state = history[historyIndex];
+                applyColors(state.fg, state.bg, false);
+                updateHistoryButtons();
+            }
+        }
+
+        function updateHistoryButtons() {
+            $('btn-undo').disabled = historyIndex <= 0;
+            $('btn-redo').disabled = historyIndex >= history.length - 1;
+        }
+
+        // ---- Apply Colors ----
+
+        let updating = false;
+        let fgHex = '#1e293b';
+        let bgHex = '#f8fafc';
+
+        function applyColors(newFgHex, newBgHex, saveHistory = true) {
+            if (updating) return;
+            updating = true;
+
+            fgHex = newFgHex;
+            bgHex = newBgHex;
+
+            // Update all inputs
+            const fgRgb = hexToRgb(fgHex);
+            const fgHsl = fgRgb ? rgbToHsl(fgRgb.r, fgRgb.g, fgRgb.b) : null;
+            const bgRgb = hexToRgb(bgHex);
+            const bgHsl = bgRgb ? rgbToHsl(bgRgb.r, bgRgb.g, bgRgb.b) : null;
+
+            $('fg-picker').value = fgHex;
+            $('fg-hex').value = fgHex;
+            $('fg-hex').classList.remove('error');
+            if (fgRgb) {
+                $('fg-rgb').value = formatRgb(fgRgb.r, fgRgb.g, fgRgb.b);
+                $('fg-rgb').classList.remove('error');
+            }
+            if (fgHsl) {
+                $('fg-hsl').value = formatHsl(fgHsl.h, fgHsl.s, fgHsl.l);
+                $('fg-hsl').classList.remove('error');
+            }
+
+            $('bg-picker').value = bgHex;
+            $('bg-hex').value = bgHex;
+            $('bg-hex').classList.remove('error');
+            if (bgRgb) {
+                $('bg-rgb').value = formatRgb(bgRgb.r, bgRgb.g, bgRgb.b);
+                $('bg-rgb').classList.remove('error');
+            }
+            if (bgHsl) {
+                $('bg-hsl').value = formatHsl(bgHsl.h, bgHsl.s, bgHsl.l);
+                $('bg-hsl').classList.remove('error');
+            }
+
+            // Update color dots
+            $('ratio-dot-fg').style.background = fgHex;
+            $('ratio-dot-bg').style.background = bgHex;
+
+            updatePreview();
+            updateResults();
+
+            if (saveHistory) pushState(fgHex, bgHex);
+            updating = false;
+        }
+
+        // ---- Update Preview ----
+
+        function updatePreview() {
+            const area = $('preview-area');
+            area.style.background = bgHex;
+
+            const elements = ['preview-heading', 'preview-body'];
+            elements.forEach(id => {
+                const el = $(id);
+                if (el) el.style.color = fgHex;
+            });
+
+            const btn = $('preview-btn');
+            btn.style.background = fgHex;
+            btn.style.color = bgHex;
+
+            // Secondary button & card
+            const secondaryBtn = $('preview-btn-secondary');
+            if (secondaryBtn) {
+                secondaryBtn.style.color = fgHex;
+                secondaryBtn.style.borderColor = fgHex;
+            }
+            const cardIcon = $('preview-card-icon');
+            if (cardIcon) {
+                cardIcon.style.background = fgHex;
+                cardIcon.style.color = bgHex;
+            }
+            const cardTitle = $('preview-card-title');
+            if (cardTitle) cardTitle.style.color = fgHex;
+            const cardDesc = $('preview-card-desc');
+            if (cardDesc) cardDesc.style.color = fgHex;
+        }
+
+        // ---- Update Results ----
+
+        function updateResults() {
+            const ratio = getContrastRatio(fgHex, bgHex);
+            const wcag = evaluateWCAG(ratio);
+            const rating = getRating(ratio);
+
+            $('ratio-value').textContent = ratio.toFixed(2);
+            $('wcag-rating').textContent = rating;
+
+            // Update circle
+            const maxOffset = 326.7;
+            const progress = Math.min(ratio / 21, 1);
+            const offset = maxOffset * (1 - progress);
+            $('ratio-circle').style.strokeDashoffset = offset;
+
+            // Update circle color based on rating
+            if (ratio >= 7) $('ratio-circle').style.stroke = '#10B981';
+            else if (ratio >= 4.5) $('ratio-circle').style.stroke = '#818CF8';
+            else if (ratio >= 3) $('ratio-circle').style.stroke = '#F59E0B';
+            else $('ratio-circle').style.stroke = '#EF4444';
+
+            // WCAG badges
+            updateWcagBadge('wcag-aa-normal', wcag.aaNormal);
+            updateWcagBadge('wcag-aaa-normal', wcag.aaaNormal);
+            updateWcagBadge('wcag-aa-large', wcag.aaLarge);
+            updateWcagBadge('wcag-aaa-large', wcag.aaaLarge);
+
+            updateSuggestions(ratio);
+        }
+
+        function updateWcagBadge(id, pass) {
+            const el = $(id);
+            if (!el) return;
+            el.className = 'status-badge ' + (pass ? 'wcag-pass bg-emerald-500/10 border border-emerald-500/20' : 'wcag-fail bg-red-500/10 border border-red-500/20');
+            el.innerHTML = pass
+                ? '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg> 通過'
+                : '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg> 未通過';
+        }
+
+        function updateSuggestions(ratio) {
+            const container = $('suggestions-container');
+            const fgRgb = hexToRgb(fgHex);
+            if (!fgRgb) return;
+
+            if (ratio >= 7) {
+                container.innerHTML = '<div class="text-sm text-emerald-400 text-center py-2"><svg class="w-5 h-5 inline-block mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> 當前配色符合 WCAG AAA 最高標準，非常適合無障礙設計。</div>';
+                return;
+            }
+
+            const suggestions = [];
+
+            if (ratio < 3) {
+                suggestions.push('對比度嚴重不足，建議大幅加深文字顏色或大幅調亮背景色。');
+            }
+
+            const fgBrightness = (fgRgb.r * 299 + fgRgb.g * 587 + fgRgb.b * 114) / 1000;
+            const bgRgb = hexToRgb(bgHex);
+            const bgBrightness = bgRgb ? (bgRgb.r * 299 + bgRgb.g * 587 + bgRgb.b * 114) / 1000 : 128;
+
+            if (fgBrightness > bgBrightness) {
+                // Text is lighter than bg — need to darken bg or lighten text more
+                if (fgBrightness < 200) {
+                    suggestions.push('建議提高文字顏色的亮度，使其與背景差異更大。');
+                }
+                if (bgBrightness > 50) {
+                    suggestions.push('建議降低背景色的亮度（調暗背景），以增加與文字的對比。');
+                }
+            } else {
+                // Text is darker than bg — standard case
+                if (fgBrightness > 100) {
+                    suggestions.push('建議加深文字顏色，例如使用接近黑色的深色調。');
+                }
+                if (bgBrightness < 200) {
+                    suggestions.push('建議調亮背景色，例如使用接近白色的淺色調。');
+                }
+            }
+
+            if (ratio < 4.5 && ratio >= 3) {
+                suggestions.push('當前對比度僅適合大型文字（≥ 18pt 或 ≥ 14pt 粗體），一般文字建議進一步調整。');
+            }
+
+            if (suggestions.length === 0) {
+                suggestions.push('請嘗試調整顏色選擇，使文字與背景有更大的亮度差異。');
+            }
+
+            container.innerHTML = suggestions.map(s =>
+                `<div class="suggestion-item">
+                    <svg class="w-4 h-4 text-hub-contrast shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>${s}</span>
+                </div>`
+            ).join('');
+        }
+
+        // ---- Input Handlers ----
+
+        function handleColorInput(type) {
+            const prefix = type === 'fg' ? 'fg' : 'bg';
+            const picker = $(`${prefix}-picker`);
+            const hexInput = $(`${prefix}-hex`);
+            const rgbInput = $(`${prefix}-rgb`);
+            const hslInput = $(`${prefix}-hsl`);
+
+            function fromHex(hex) {
+                hex = hex.trim();
+                if (!/^#[0-9a-fA-F]{3,6}$/.test(hex)) {
+                    // Try adding #
+                    if (/^[0-9a-fA-F]{3,6}$/.test(hex)) hex = '#' + hex;
+                    else return null;
+                }
+                const rgb = hexToRgb(hex);
+                if (!rgb) return null;
+                return { hex, ...rgb };
+            }
+
+            function fromRgb(str) {
+                const rgb = parseRgb(str);
+                if (!rgb) return null;
+                const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                return { hex, ...rgb };
+            }
+
+            function fromHsl(str) {
+                const hsl = parseHsl(str);
+                if (!hsl) return null;
+                const rgb = hslToRgb(hsl.h, hsl.s, hsl.l);
+                const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                return { hex, ...rgb };
+            }
+
+            // Pickers
+            picker.addEventListener('input', () => {
+                const newHex = picker.value;
+                if (type === 'fg') applyColors(newHex, bgHex);
+                else applyColors(fgHex, newHex);
+            });
+
+            function validateFromHex() {
+                hexInput.classList.remove('error');
+                const result = fromHex(hexInput.value);
+                if (!result) { hexInput.classList.add('error'); return false; }
+                if (type === 'fg') applyColors(result.hex, bgHex);
+                else applyColors(fgHex, result.hex);
+                return true;
+            }
+
+            function validateFromRgb() {
+                rgbInput.classList.remove('error');
+                const result = fromRgb(rgbInput.value);
+                if (!result) { rgbInput.classList.add('error'); return false; }
+                if (type === 'fg') applyColors(result.hex, bgHex);
+                else applyColors(fgHex, result.hex);
+                return true;
+            }
+
+            function validateFromHsl() {
+                hslInput.classList.remove('error');
+                const result = fromHsl(hslInput.value);
+                if (!result) { hslInput.classList.add('error'); return false; }
+                if (type === 'fg') applyColors(result.hex, bgHex);
+                else applyColors(fgHex, result.hex);
+                return true;
+            }
+
+            hexInput.addEventListener('change', validateFromHex);
+            rgbInput.addEventListener('change', validateFromRgb);
+            hslInput.addEventListener('change', validateFromHsl);
+
+            // Also update on Enter key
+            [hexInput, rgbInput, hslInput].forEach(inp => {
+                inp.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        inp.blur();
+                    }
+                });
+            });
+        }
+
+        // ---- Quick Colors ----
+
+        function initQuickColors() {
+            document.querySelectorAll('.quick-color').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const color = btn.dataset.color;
+                    applyColors(color, bgHex);
+                });
+            });
+        }
+
+        // ---- Copy Functions ----
+
+        function initCopy() {
+            $('copy-hex-fg').addEventListener('click', () => {
+                navigator.clipboard.writeText(fgHex).then(() => showToast('已複製前景色 HEX：' + fgHex));
+            });
+            $('copy-hex-bg').addEventListener('click', () => {
+                navigator.clipboard.writeText(bgHex).then(() => showToast('已複製背景色 HEX：' + bgHex));
+            });
+            $('copy-rgb').addEventListener('click', () => {
+                const fgRgb = hexToRgb(fgHex);
+                const bgRgb = hexToRgb(bgHex);
+                if (fgRgb && bgRgb) {
+                    const text = `前景: rgb(${fgRgb.r}, ${fgRgb.g}, ${fgRgb.b})\n背景: rgb(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b})`;
+                    navigator.clipboard.writeText(text).then(() => showToast('已複製 RGB 色值'));
+                }
+            });
+            $('copy-ratio').addEventListener('click', () => {
+                const ratio = getContrastRatio(fgHex, bgHex);
+                const wcag = evaluateWCAG(ratio);
+                const text = `對比度: ${ratio.toFixed(2)}:1\nAA 一般: ${wcag.aaNormal ? '通過' : '未通過'}\nAAA 一般: ${wcag.aaaNormal ? '通過' : '未通過'}\nAA 大文字: ${wcag.aaLarge ? '通過' : '未通過'}\nAAA 大文字: ${wcag.aaaLarge ? '通過' : '未通過'}`;
+                navigator.clipboard.writeText(text).then(() => showToast('已複製對比度結果'));
+            });
+        }
+
+        // ---- Swap & Random ----
+
+        function initActions() {
+            $('btn-swap').addEventListener('click', () => {
+                applyColors(bgHex, fgHex);
+                showToast('已交換前景與背景色');
+            });
+
+            $('btn-random').addEventListener('click', () => {
+                const randomHex = () => '#' + Array.from({length:6}, () => '0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+                let newFg, newBg;
+                // Ensure minimum contrast
+                let ratio = 0;
+                do {
+                    newFg = randomHex();
+                    newBg = randomHex();
+                    ratio = getContrastRatio(newFg, newBg);
+                } while (ratio < 4.5);
+                applyColors(newFg, newBg);
+                showToast('已產生隨機配色');
+            });
+
+            $('btn-undo').addEventListener('click', undo);
+            $('btn-redo').addEventListener('click', redo);
+        }
+
+        // ---- Initialize ----
+
+        function init() {
+            handleColorInput('fg');
+            handleColorInput('bg');
+            initQuickColors();
+            initCopy();
+            initActions();
+
+            // Initial state
+            pushState(fgHex, bgHex);
+            updateResults();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+    })();
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

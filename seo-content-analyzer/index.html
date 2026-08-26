@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Content Analyzer | ToolHub - SEO 內容分析工具</title>
+    <meta name="description" content="免費線上 SEO 內容分析工具。貼上文章或網頁內容，立即分析字數、關鍵字密度、可讀性評分、內容品質與 SEO 表現，提供專業改善建議。">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        content: {
+                            primary: '#F97316',
+                            green: '#10B981',
+                            amber: '#F59E0B',
+                            red: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F97316; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        .content-input {
+            background-color: #0B1120;
+            border: 1px solid #1E293B;
+            color: #CBD5E1;
+        }
+        .content-input:focus {
+            border-color: #F97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+            outline: none;
+        }
+
+        .tab-btn-active {
+            background-color: rgba(249, 115, 22, 0.12);
+            border-color: rgba(249, 115, 22, 0.3);
+            color: #F97316;
+        }
+
+        .badge-optimal { background-color: rgba(16, 185, 129, 0.12); border-color: #10B981; color: #10B981; }
+        .badge-warn { background-color: rgba(245, 158, 11, 0.12); border-color: #F59E0B; color: #F59E0B; }
+        .badge-issue { background-color: rgba(239, 68, 68, 0.12); border-color: #EF4444; color: #EF4444; }
+
+        .score-ring-fill {
+            transition: stroke-dashoffset 1.2s ease-out;
+        }
+
+        .sub-score-bar {
+            transition: width 0.8s ease-out;
+        }
+
+        .suggestion-high { border-left: 3px solid #EF4444; }
+        .suggestion-medium { border-left: 3px solid #F59E0B; }
+        .suggestion-low { border-left: 3px solid #3B82F6; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slideUp 0.4s ease-out both; }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 8px rgba(249, 115, 22, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
+        }
+        .analyzing-pulse { animation: pulse-glow 1s ease-in-out infinite; }
+
+        .stat-card {
+            background-color: rgba(11, 17, 32, 0.6);
+            border: 1px solid rgba(30, 41, 59, 0.6);
+            border-radius: 0.75rem;
+        }
+        .stat-card:hover {
+            border-color: rgba(249, 115, 22, 0.3);
+            transition: border-color 0.3s;
+        }
+
+        .keyword-bar {
+            height: 20px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #F97316, #FB923C);
+            transition: width 0.6s ease-out;
+        }
+
+        .health-Excellent { color: #10B981; }
+        .health-Good { color: #22C55E; }
+        .health-Fair { color: #F59E0B; }
+        .health-Poor { color: #EF4444; }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/seo-content-analyzer/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/seo-content-analyzer/">
+    <meta property="og:title" content="SEO Content Analyzer">
+    <meta property="og:description" content="免費線上 SEO 內容分析工具。貼上文章或網頁內容，立即分析字數、關鍵字密度、可讀性評分、內容品質與 SEO 表現，提供專業改善建議。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SEO Content Analyzer">
+    <meta name="twitter:description" content="免費線上 SEO 內容分析工具。貼上文章或網頁內容，立即分析字數、關鍵字密度、可讀性評分、內容品質與 SEO 表現，提供專業改善建議。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"SEO Content Analyzer","url":"https://toolhuben.com/seo-content-analyzer/","description":"免費線上 SEO 內容分析工具。貼上文章或網頁內容，立即分析字數、關鍵字密度、可讀性評分、內容品質與 SEO 表現，提供專業改善建議。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"SEO Content Analyzer","item":"https://toolhuben.com/seo-content-analyzer/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/seo-content-analyzer/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/seo-content-analyzer/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/seo-content-analyzer/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#F97316;--classic-accent-rgb:249,115,22" data-tool-visual data-classic-tool data-classic-layout="neon">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ===================== HERO ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-orange-950/30 border border-orange-900/50 text-xs text-orange-400 shadow-inner">
+                <i class="ph-fill ph-file-text mr-1.5 text-sm"></i>
+                SEO 內容分析引擎
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                SEO <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500">Content Analyzer</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                貼上文章、網頁內容或 HTML，立即分析內容品質、可讀性、關鍵字密度與 SEO 表現，<br class="hidden sm:block">取得專業改善建議與完整內容分析報告。
+            </p>
+        </div>
+
+        <!-- ===================== INPUT SECTION ===================== -->
+        <div class="glass-panel p-5 sm:p-6 mb-6 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="ph ph-pencil-line text-orange-400 text-lg"></i> 輸入內容
+                </h3>
+                <span id="mode-badge" class="text-[10px] font-mono px-2 py-1 rounded-full bg-slate-800 text-slate-500 border border-slate-700">自動偵測模式</span>
+            </div>
+
+            <textarea id="input-content" rows="10"
+                class="content-input w-full rounded-lg px-4 py-3 font-mono text-xs leading-relaxed outline-none resize-y transition-colors placeholder:text-slate-600"
+                placeholder="貼上文章內容（支援純文字、Markdown 或 HTML）&#10;&#10;範例：&#10;# 標題&#10;&#10;這是文章內容。SEO 內容分析工具可以幫助你...&#10;&#10;## 子標題&#10;更多內容在這裡..."></textarea>
+
+            <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input id="input-keyword" type="text"
+                    class="content-input w-full rounded-lg px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-slate-600"
+                    placeholder="輸入目標關鍵字（選擇性，用於密度分析）">
+                <button id="btn-analyze"
+                    class="sm:col-span-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold text-base rounded-lg shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-magnifying-glass text-lg"></i> 開始分析
+                </button>
+            </div>
+
+            <div class="flex gap-3 mt-3">
+                <button id="btn-sample"
+                    class="flex-1 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-white font-medium text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                    <i class="ph ph-file-text"></i> 載入範例文章
+                </button>
+                <button id="btn-clear"
+                    class="flex-1 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-500 hover:text-slate-300 font-medium text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                    <i class="ph ph-trash"></i> 清除
+                </button>
+            </div>
+        </div>
+
+        <!-- ===================== RESULTS DASHBOARD ===================== -->
+        <div id="results-section" class="hidden space-y-6">
+
+            <!-- Score Dashboard -->
+            <div class="glass-panel p-5 sm:p-6 shadow-2xl relative overflow-hidden border border-hub-700">
+                <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                    <i class="ph-fill ph-chart-pie-slice text-9xl"></i>
+                </div>
+
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 relative z-10">
+                    內容評分儀表板
+                </h3>
+
+                <div class="relative z-10 mt-4 grid grid-cols-1 sm:grid-cols-5 gap-6">
+                    <!-- Score Ring -->
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="relative w-28 h-28">
+                            <svg class="w-full h-full" viewBox="0 0 120 120">
+                                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(30,41,59,0.6)" stroke-width="10"/>
+                                <circle id="score-ring" cx="60" cy="60" r="52" fill="none" stroke="#F97316" stroke-width="10"
+                                    stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                                    transform="rotate(-90 60 60)" class="score-ring-fill"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="out-score" class="text-3xl font-extrabold text-white font-mono">--</span>
+                                <span class="text-[10px] text-slate-500">/ 100</span>
+                            </div>
+                        </div>
+                        <span id="out-score-label" class="text-xs font-medium mt-1">等待分析</span>
+                    </div>
+
+                    <!-- Sub Scores -->
+                    <div class="sm:col-span-4 space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-300"><i class="ph ph-book-open-text text-orange-400 mr-1"></i>可讀性 Readability</span>
+                                <span class="text-white font-mono font-bold" id="out-readability">0</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-hub-700/60 rounded-full overflow-hidden">
+                                <div id="bar-readability" class="sub-score-bar h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#F97316,#FB923C)"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-300"><i class="ph ph-file-text text-amber-400 mr-1"></i>內容品質 Content Quality</span>
+                                <span class="text-white font-mono font-bold" id="out-quality">0</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-hub-700/60 rounded-full overflow-hidden">
+                                <div id="bar-quality" class="sub-score-bar h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#F59E0B,#FBBF24)"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-300"><i class="ph ph-currency-circle-dollar text-emerald-400 mr-1"></i>關鍵字優化 Keyword Optimization</span>
+                                <span class="text-white font-mono font-bold" id="out-keyword">--</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-hub-700/60 rounded-full overflow-hidden">
+                                <div id="bar-keyword" class="sub-score-bar h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#10B981,#34D399)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health Status -->
+                <div id="health-bar" class="mt-4 pt-4 border-t border-hub-700 relative z-10 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span id="health-icon" class="text-lg">⚡</span>
+                        <span id="health-label" class="text-sm font-medium text-slate-400">健康狀態</span>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs">
+                        <span class="text-slate-500">通過率</span>
+                        <div class="w-32 h-1.5 bg-hub-700/60 rounded-full overflow-hidden">
+                            <div id="out-pass-bar" class="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style="width:0%"></div>
+                        </div>
+                        <span id="out-pass-rate" class="font-mono text-white font-bold">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="glass-panel p-5 sm:p-6 shadow-xl border border-hub-700">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 mb-4">
+                    <i class="ph ph-chart-bar text-orange-400 mr-1"></i> 內容統計
+                </h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">字數</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-words">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">中文字 + 英文詞</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">段落數</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-paragraphs">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">段落</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">句子數</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-sentences">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">句子</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">閱讀時間</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-reading">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">分鐘</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">平均句長</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-sentence-len">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">字/句</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">中文字數</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-chinese">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">漢字</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">英文字詞</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-english">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">英文詞</div>
+                    </div>
+                    <div class="stat-card p-3 sm:p-4 text-center">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">字元數</div>
+                        <div class="text-xl sm:text-2xl font-bold font-mono text-white" id="stat-chars">0</div>
+                        <div class="text-[10px] text-slate-600 mt-1">含空格</div>
+                    </div>
+                </div>
+
+                <!-- HTML-specific stats -->
+                <div id="html-stats" class="hidden mt-4 pt-4 border-t border-hub-700">
+                    <h4 class="text-xs font-medium text-slate-500 mb-3">HTML 模式統計</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="stat-card p-3 text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">H1 標題</div>
+                            <div class="text-lg font-bold font-mono text-white" id="stat-h1">0</div>
+                        </div>
+                        <div class="stat-card p-3 text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">H2 標題</div>
+                            <div class="text-lg font-bold font-mono text-white" id="stat-h2">0</div>
+                        </div>
+                        <div class="stat-card p-3 text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">H3 標題</div>
+                            <div class="text-lg font-bold font-mono text-white" id="stat-h3">0</div>
+                        </div>
+                        <div class="stat-card p-3 text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">圖片數</div>
+                            <div class="text-lg font-bold font-mono text-white" id="stat-images">0</div>
+                        </div>
+                        <div class="stat-card p-3 text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">內部連結</div>
+                            <div class="text-lg font-bold font-mono text-white" id="stat-internal-links">0</div>
+                        </div>
+                        <div class="stat-card p-3 text-center">
+                            <div class="text-[10px] text-slate-500 mb-1">外部連結</div>
+                            <div class="text-lg font-bold font-mono text-white" id="stat-external-links">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyword Analysis -->
+            <div class="glass-panel p-5 sm:p-6 shadow-xl border border-hub-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 flex-1">
+                        <i class="ph ph-keyboard text-orange-400 mr-1"></i> 關鍵字分析
+                    </h3>
+                    <span id="keyword-density-label" class="text-[10px] text-slate-500">密度：--</span>
+                </div>
+
+                <!-- Keyword density detail -->
+                <div id="keyword-detail" class="hidden mb-4 p-3 bg-hub-900/50 rounded-lg border border-hub-700/60">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-slate-400">目標關鍵字：</span>
+                            <span id="kw-target" class="text-sm font-bold text-orange-400 font-mono"></span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-500">出現次數</span>
+                            <span id="kw-occurrences" class="text-lg font-bold font-mono text-white ml-2">0</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2">
+                        <span class="text-[10px] text-slate-500 shrink-0">密度</span>
+                        <div class="flex-1 h-2 bg-hub-700/60 rounded-full overflow-hidden">
+                            <div id="kw-density-bar" class="h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#F97316,#EF4444)"></div>
+                        </div>
+                        <span id="kw-density-pct" class="text-xs font-mono font-bold text-white">0%</span>
+                    </div>
+                    <div id="kw-assessment" class="mt-1 text-[10px] text-slate-500"></div>
+                </div>
+
+                <!-- Top Keywords -->
+                <div>
+                    <h4 class="text-xs font-medium text-slate-500 mb-3">熱門關鍵字 Top 15</h4>
+                    <div id="keyword-chart" class="space-y-1.5">
+                        <div class="text-center py-6 text-slate-500 text-xs">
+                            <i class="ph ph-magnifying-glass text-2xl block mb-1 opacity-30"></i>
+                            分析後將顯示熱門關鍵字
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Improvement Suggestions -->
+            <div id="suggestions-panel" class="glass-panel p-5 sm:p-6 shadow-xl border border-hub-700 hidden">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 mb-4">
+                    <i class="ph ph-lightbulb text-orange-400 mr-1"></i> 改善建議
+                </h3>
+                <div id="suggestions-list" class="space-y-2"></div>
+            </div>
+
+        </div><!-- end results-section -->
+
+        <!-- ===================== FAQ ===================== -->
+        <div class="mt-10 glass-panel p-6 shadow-xl">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                <i class="ph ph-question text-orange-400 text-lg"></i> 常見問題
+            </h3>
+            <div class="space-y-3">
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>什麼是 SEO Content Analyzer？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            SEO Content Analyzer（SEO 內容分析器）是一個免費的線上工具，讓你可以貼上文章或網頁內容，自動分析內容品質、可讀性與 SEO 表現。工具會計算字數、關鍵字密度、句子結構、閱讀時間等指標，並提供具體的改善建議。所有分析都在瀏覽器中完成，無需上傳資料，保障你的內容隱私。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>關鍵字密度多少才算理想？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            一般建議關鍵字密度維持在 <strong class="text-orange-400">0.5%～2.5%</strong> 之間。低於 0.5% 表示關鍵字使用不足，搜尋引擎可能無法有效判斷頁面主題。高於 5% 則可能被視為關鍵字填充（Keyword Stuffing），有被搜尋引擎懲罰的風險。理想的作法是在文章中自然地融入關鍵字，特別是在標題、H1、第一段和 H2 子標題中適度出現。請記住，內容的相關性和品質遠比關鍵字密度重要。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>文章長度對 SEO 的影響有多大？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            內容長度是 SEO 排名的重要因素之一。根據多項研究，排名前十的搜尋結果平均內容長度在 <strong class="text-orange-400">1500～2500 字</strong> 之間。較長的內容通常能更全面地涵蓋主題，提供更多價值給讀者，也更容易獲得外部連結。然而，這並不意味著應該為了增加字數而填充無意義的內容。重點是提供完整且有價值的資訊，品質永遠比數量重要。一般建議文章至少達到 800 字以上，才能獲得基本的 SEO 效果。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>如何提升文章的可讀性？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            提升可讀性的關鍵技巧：<br>
+                            ① <strong class="text-orange-400">控制句子長度</strong>：每個句子維持在 15～25 字，避免過長的複雜句。<br>
+                            ② <strong class="text-orange-400">適當分段</strong>：每個段落 3～5 句話，讓內容更有呼吸空間。<br>
+                            ③ <strong class="text-orange-400">使用子標題</strong>：每 300～500 字使用一個 H2 標題，幫助讀者快速掃讀。<br>
+                            ④ <strong class="text-orange-400">加入列表與粗體</strong>：使用項目符號列表和粗體文字強調重點，提升掃讀性。<br>
+                            ⑤ <strong class="text-orange-400">使用簡潔語言</strong>：避免過多的專業術語，必要時提供解釋。<br>
+                            ⑥ <strong class="text-orange-400">加入圖片與多媒體</strong>：視覺元素能打破文字單調，提升閱讀體驗。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>什麼是 Keyword Stuffing？該如何避免？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            Keyword Stuffing（關鍵字填充）是指在內容中過度重複使用目標關鍵字，試圖操控搜尋排名的不自然做法。搜尋引擎（如 Google）會將關鍵字填充視為黑帽 SEO 行為，可能導致排名下降甚至被從搜尋結果中移除。避免 Keyword Stuffing 的方法：<br>
+                            ① <strong class="text-orange-400">使用同義詞與相關詞</strong>：自然變換用詞，而非重複同一關鍵字。<br>
+                            ② <strong class="text-orange-400">專注於主題涵蓋</strong>：確保內容全面且有價值，而非針對關鍵字撰寫。<br>
+                            ③ <strong class="text-orange-400">關鍵字密度控制在 2.5% 以下</strong>：超過此門檻就需要檢查是否過度使用了。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>為什麼需要分析標題層級（H1/H2/H3）？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            標題層級（Heading Structure）是 SEO 內容優化的重要元素。H1 標題告訴搜尋引擎頁面的核心主題，每頁應該只有一個 H1。H2 標題用於組織主要章節，H3 則用於子章節。一個良好的標題結構不僅幫助搜尋引擎理解內容層次，還能提升使用者體驗，讓讀者更容易掃讀和找到所需資訊。理想的內容應該有 1 個 H1 和多個 H2（視內容長度而定，一般每 300～500 字至少一個 H2），並在必要時使用 H3 細分。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>內部連結和外部連結對 SEO 有多重要？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            連結策略是 SEO 內容行銷中不可或缺的一環。<strong class="text-orange-400">內部連結</strong>幫助搜尋引擎了解網站結構，將權重傳遞到重要頁面，同時延長使用者在站內的停留時間。建議每篇文章至少有 2～3 個相關的內部連結。<strong class="text-orange-400">外部連結</strong>（連到其他權威網站）能增加內容的可信度與參考價值，搜尋引擎也會更信任你的內容。適當引用權威來源不僅對 SEO 有益，也能為讀者提供更多有價值的資源。理想情況下，每篇文章應該包含 1～3 個外部連結。
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ===================== SEO KNOWLEDGE ARTICLES ===================== -->
+        <div class="mt-8 glass-panel p-6 shadow-xl">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                <i class="ph ph-book-open text-orange-400 text-lg"></i> SEO 內容知識庫
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                <article class="bg-hub-900/50 rounded-lg border border-hub-700/60 p-4 hover:border-orange-500/30 transition-colors" itemscope itemtype="https://schema.org/Article">
+                    <span class="text-[10px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">SEO 基礎</span>
+                    <h4 class="text-sm font-bold text-white mt-2 mb-1" itemprop="headline">Keyword Density 是什麼？</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" itemprop="description">
+                        關鍵字密度（Keyword Density）是指目標關鍵字在文章中出現的頻率，計算方式為關鍵字出現次數 × 關鍵字長度 ÷ 總字數 × 100%。理想密度為 0.5%～2.5%，過高可能被視為關鍵字填充，過低則無法有效傳達頁面主題。建議在 H1、H2 和第一段中自然融入關鍵字。
+                    </p>
+                </article>
+
+                <article class="bg-hub-900/50 rounded-lg border border-hub-700/60 p-4 hover:border-orange-500/30 transition-colors" itemscope itemtype="https://schema.org/Article">
+                    <span class="text-[10px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">內容策略</span>
+                    <h4 class="text-sm font-bold text-white mt-2 mb-1" itemprop="headline">理想文章長度是多少？</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" itemprop="description">
+                        根據 SEO 研究，排名前十的搜尋結果平均長度約為 1500～2500 字。但「理想長度」取決於主題和搜尋意圖。重點是提供完整且有價值的資訊，而非追求字數。一般建議文章至少 800 字，涵蓋主題的主要面向。對於深度內容，2000 字以上能更全面地滿足使用者需求，也更容易獲得外部連結。
+                    </p>
+                </article>
+
+                <article class="bg-hub-900/50 rounded-lg border border-hub-700/60 p-4 hover:border-orange-500/30 transition-colors" itemscope itemtype="https://schema.org/Article">
+                    <span class="text-[10px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">可讀性</span>
+                    <h4 class="text-sm font-bold text-white mt-2 mb-1" itemprop="headline">如何提升內容可讀性？</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" itemprop="description">
+                        提升可讀性的六大技巧：控制句子長度（15～25 字為佳）、適當分段（每段 3～5 句）、使用子標題組織結構（每 300～500 字一個 H2）、加入列表與粗體強調重點、使用簡潔語言避免過多術語、以及加入圖片與多媒體元素。良好的可讀性不僅改善使用者體驗，也能降低跳出率並提升搜尋排名。
+                    </p>
+                </article>
+
+                <article class="bg-hub-900/50 rounded-lg border border-hub-700/60 p-4 hover:border-orange-500/30 transition-colors" itemscope itemtype="https://schema.org/Article">
+                    <span class="text-[10px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">SEO 技巧</span>
+                    <h4 class="text-sm font-bold text-white mt-2 mb-1" itemprop="headline">如何避免 Keyword Stuffing？</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" itemprop="description">
+                        避免關鍵字填充的最佳方法是回歸內容本質：為使用者而寫，而非為搜尋引擎而寫。使用同義詞和相關詞彙自然替換，專注於主題的全面涵蓋而非關鍵字的重複出現。寫完後檢查關鍵字密度是否超過 2.5%，並確保關鍵字在標題、H1 和第一段中的出現方式聽起來自然流暢。
+                    </p>
+                </article>
+
+                <article class="bg-hub-900/50 rounded-lg border border-hub-700/60 p-4 hover:border-orange-500/30 transition-colors" itemscope itemtype="https://schema.org/Article">
+                    <span class="text-[10px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">內容優化</span>
+                    <h4 class="text-sm font-bold text-white mt-2 mb-1" itemprop="headline">Heading 結構對 SEO 的影響</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" itemprop="description">
+                        良好的 Heading 結構（H1 → H2 → H3）能幫助搜尋引擎理解內容的層次與重點。H1 應該包含主要關鍵字並準確描述頁面主題（每頁僅一個）。H2 用於組織主要章節，理想情況下每 300～500 字至少使用一個 H2。H3 則用於細分 H2 下的子主題。清晰的標題層級結構能顯著提升內容的 SEO 表現與使用者體驗。
+                    </p>
+                </article>
+
+                <article class="bg-hub-900/50 rounded-lg border border-hub-700/60 p-4 hover:border-orange-500/30 transition-colors" itemscope itemtype="https://schema.org/Article">
+                    <span class="text-[10px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">進階知識</span>
+                    <h4 class="text-sm font-bold text-white mt-2 mb-1" itemprop="headline">內容品質 vs 內容長度</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed" itemprop="description">
+                        SEO 內容行銷的核心原則是「品質優先於數量」。長內容之所以排名較好，不是因為字數多，而是因為較長的內容通常能提供更完整的資訊。一篇 500 字的精華文章如果完全滿足使用者需求，可能比一篇 2000 字的填充文章更有效。重點在於全面回答使用者的問題，涵蓋所有相關面向，並提供獨特的價值見解。
+                    </p>
+                </article>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+        <div id="toast-inner" class="pointer-events-auto px-5 py-3 rounded-xl shadow-2xl text-sm font-medium backdrop-blur transition-all duration-300 opacity-0 translate-y-4"
+             style="background: rgba(21,31,50,0.95); border: 1px solid #1E293B; color: #E2E8F0;">
+        </div>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- ==================== SYSTEM BOOTSTRAP ==================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/seo-content-analyzer';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html'),
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupSidebarActiveState();
+        }
+
+        initializeSystem();
+    </script>
+
+    <!-- ==================== TOOL LOGIC ==================== -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ─── DOM REFS ───
+            const inputContent = document.getElementById('input-content');
+            const inputKeyword = document.getElementById('input-keyword');
+            const btnAnalyze = document.getElementById('btn-analyze');
+            const btnSample = document.getElementById('btn-sample');
+            const btnClear = document.getElementById('btn-clear');
+            const resultsSection = document.getElementById('results-section');
+            const modeBadge = document.getElementById('mode-badge');
+
+            const scoreRing = document.getElementById('score-ring');
+            const outScore = document.getElementById('out-score');
+            const outScoreLabel = document.getElementById('out-score-label');
+            const outReadability = document.getElementById('out-readability');
+            const barReadability = document.getElementById('bar-readability');
+            const outQuality = document.getElementById('out-quality');
+            const barQuality = document.getElementById('bar-quality');
+            const outKeyword = document.getElementById('out-keyword');
+            const barKeyword = document.getElementById('bar-keyword');
+            const healthIcon = document.getElementById('health-icon');
+            const healthLabel = document.getElementById('health-label');
+            const outPassBar = document.getElementById('out-pass-bar');
+            const outPassRate = document.getElementById('out-pass-rate');
+
+            const statWords = document.getElementById('stat-words');
+            const statParagraphs = document.getElementById('stat-paragraphs');
+            const statSentences = document.getElementById('stat-sentences');
+            const statReading = document.getElementById('stat-reading');
+            const statSentenceLen = document.getElementById('stat-sentence-len');
+            const statChinese = document.getElementById('stat-chinese');
+            const statEnglish = document.getElementById('stat-english');
+            const statChars = document.getElementById('stat-chars');
+            const htmlStats = document.getElementById('html-stats');
+            const statH1 = document.getElementById('stat-h1');
+            const statH2 = document.getElementById('stat-h2');
+            const statH3 = document.getElementById('stat-h3');
+            const statImages = document.getElementById('stat-images');
+            const statInternalLinks = document.getElementById('stat-internal-links');
+            const statExternalLinks = document.getElementById('stat-external-links');
+
+            const keywordChart = document.getElementById('keyword-chart');
+            const keywordDensityLabel = document.getElementById('keyword-density-label');
+            const keywordDetail = document.getElementById('keyword-detail');
+            const kwTarget = document.getElementById('kw-target');
+            const kwOccurrences = document.getElementById('kw-occurrences');
+            const kwDensityBar = document.getElementById('kw-density-bar');
+            const kwDensityPct = document.getElementById('kw-density-pct');
+            const kwAssessment = document.getElementById('kw-assessment');
+
+            const suggestionsPanel = document.getElementById('suggestions-panel');
+            const suggestionsList = document.getElementById('suggestions-list');
+
+            const innerToast = document.getElementById('toast-inner');
+
+            // ─── UTILITY ───
+            function escapeRegex(str) {
+                return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            function showToast(msg) {
+                innerToast.textContent = msg;
+                innerToast.style.opacity = '1';
+                innerToast.style.transform = 'translateY(0)';
+                setTimeout(() => {
+                    innerToast.style.opacity = '0';
+                    innerToast.style.transform = 'translateY(10px)';
+                }, 2200);
+            }
+
+            // ─── MODE DETECTION ───
+            function detectMode(content) {
+                const t = content.trim();
+                if (!t) return 'text';
+
+                // Check HTML: has typical HTML tags
+                if (/<(!DOCTYPE|html|head|body|div|span|p|h[1-6]|a\s|img|ul|ol|li|table|form|input|button|meta|link|script|style|title)/i.test(t)) {
+                    return 'html';
+                }
+
+                // Check Markdown: headings, lists, links, bold/italic, code fences
+                if (/^#{1,6}\s/m.test(t) || /^(\*{1,3}|-|\+|\d+\.)\s/m.test(t) || /\[.+\]\(.+\)/.test(t) || /\*\*.+\*\*/.test(t) || /```/.test(t)) {
+                    return 'markdown';
+                }
+
+                return 'text';
+            }
+
+            function updateModeBadge(mode) {
+                const labels = { html: 'HTML 模式', markdown: 'Markdown 模式', text: '純文字模式' };
+                const colors = { html: 'text-orange-400 bg-orange-500/10 border-orange-500/20', markdown: 'text-amber-400 bg-amber-500/10 border-amber-500/20', text: 'text-slate-400 bg-slate-800 border-slate-700' };
+                modeBadge.textContent = labels[mode] || '純文字模式';
+                modeBadge.className = `text-[10px] font-mono px-2 py-1 rounded-full border ${colors[mode] || colors.text}`;
+            }
+
+            // ─── TEXT EXTRACTION ───
+            function extractText(content, mode) {
+                if (mode === 'html') {
+                    const p = new DOMParser().parseFromString(content, 'text/html');
+                    return p.body ? p.body.textContent || '' : '';
+                }
+                if (mode === 'markdown') {
+                    return content
+                        .replace(/^#{1,6}\s+/gm, '')
+                        .replace(/(\*{1,3}|_{1,3})/g, '')
+                        .replace(/`{1,3}[^`]*`{1,3}/g, '')
+                        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+                        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+                        .replace(/>\s+/g, '')
+                        .replace(/[-*+]\s+/g, '')
+                        .replace(/\|/g, ' ')
+                        .replace(/^(\d+)\.\s+/gm, '$1. ')
+                        .replace(/~~/g, '')
+                        .replace(/```[\s\S]*?```/g, '')
+                        .trim();
+                }
+                return content;
+            }
+
+            // ─── HTML FEATURES EXTRACTION ───
+            function extractHTMLFeatures(content) {
+                const result = { h1: 0, h2: 0, h3: 0, internalLinks: 0, externalLinks: 0, images: 0 };
+                try {
+                    const p = new DOMParser().parseFromString(content, 'text/html');
+                    const body = p.body || p;
+                    result.h1 = body.querySelectorAll('h1').length;
+                    result.h2 = body.querySelectorAll('h2').length;
+                    result.h3 = body.querySelectorAll('h3').length;
+                    result.images = body.querySelectorAll('img').length;
+
+                    body.querySelectorAll('a[href]').forEach(a => {
+                        const href = a.getAttribute('href').trim();
+                        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+                        if (href.startsWith('http') && !href.includes(window.location.hostname)) {
+                            result.externalLinks++;
+                        } else {
+                            result.internalLinks++;
+                        }
+                    });
+                } catch(e) {}
+                return result;
+            }
+
+            // ─── MARKDOWN FEATURES ───
+            function extractMarkdownFeatures(content) {
+                const result = { h1: 0, h2: 0, h3: 0, links: 0, images: 0 };
+                result.h1 = (content.match(/^#\s[^#]/gm) || []).length;
+                result.h2 = (content.match(/^##\s[^#]/gm) || []).length;
+                result.h3 = (content.match(/^###\s[^#]/gm) || []).length;
+                result.images = (content.match(/!\[.*?\]\(.*?\)/g) || []).length;
+                result.links = (content.match(/\[.*?\]\(https?:\/\/.*?\)/g) || []).length;
+                return result;
+            }
+
+            // ─── TEXT STATS ───
+            function analyzeTextStats(text) {
+                const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+                const paraCount = paragraphs.length || 1;
+
+                // Split into sentences by Chinese/English sentence endings
+                const sentences = text.split(/[。！？\n.!?]+/).filter(s => s.trim().length > 0);
+                const sentenceCount = sentences.length || 1;
+
+                // Chinese characters
+                const chineseChars = (text.match(/[一-鿿]/g) || []).length;
+
+                // English words
+                const englishWords = (text.match(/[a-zA-Z]+/g) || []).length;
+                const englishWordCount = englishWords;
+
+                // Numbers as tokens
+                const numbers = (text.match(/\d+/g) || []).length;
+
+                // Total "word count" for Chinese SEO (Chinese chars + English words + numbers)
+                const wordCount = chineseChars + englishWordCount + numbers;
+
+                const avgSentenceLength = sentenceCount > 0 ? (wordCount / sentenceCount) : 0;
+
+                // Reading time: ~200 chars/min for Chinese mixed text
+                const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
+                const charCount = text.replace(/\s/g, '').length;
+
+                return { wordCount, paraCount, sentenceCount, avgSentenceLength, readingTime, chineseChars, englishWordCount, charCount, paragraphs, sentences };
+            }
+
+            // ─── KEYWORD ANALYSIS ───
+            function extractKeywords(text, count) {
+                count = count || 15;
+                const clean = text.toLowerCase();
+                const freq = {};
+
+                // Chinese unigrams (single characters)
+                const chars = clean.match(/[一-鿿]/g) || [];
+                // Chinese bigrams
+                const bigrams = [];
+                for (let i = 0; i < chars.length - 1; i++) {
+                    bigrams.push(chars[i] + chars[i+1]);
+                }
+
+                // English words
+                const words = clean.match(/[a-z]+/g) || [];
+
+                // Common Chinese stop words to filter
+                const stopChars = new Set('的了是在我有和就也这不大人一个上中下会可对为与到要很没有吧吗啊呢都' +
+                    '着被把让从以于向因为所以如果虽然但是而且或者而是并且不仅然后还是只是可是' +
+                    '不过无论不管除非只要假如要是关于除了按照根据经过通过趁着沿着往朝' +
+                    '从自从到在当于向跟同与及以及除了此外另外总之例如比如比方说' +
+                    '些每各某该哪这那这些那些什么哪里谁怎么怎样多么等等' +
+                    '之其该此彼何哪那儿这儿哪里那里');
+
+                // Count Chinese bigrams (skip stop chars)
+                bigrams.forEach(b => {
+                    if (!stopChars.has(b[0]) && !stopChars.has(b[1])) {
+                        freq[b] = (freq[b] || 0) + 1;
+                    }
+                });
+
+                // Count English words (skip short/common words)
+                const stopWords = new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had',
+                    'do','does','did','will','would','can','could','may','might','shall','should','to','of','in','for',
+                    'on','with','at','by','from','as','into','through','during','before','after','above','below',
+                    'between','out','off','over','under','again','further','then','once','here','there','when',
+                    'where','why','how','all','each','every','both','few','more','most','other','some','such',
+                    'no','nor','not','only','own','same','so','than','too','very','just','because','and','but',
+                    'or','if','while','about','this','that','these','those','it','its','we','our','you','your']);
+                words.forEach(w => {
+                    if (w.length > 2 && !stopWords.has(w)) {
+                        freq[w] = (freq[w] || 0) + 1;
+                    }
+                });
+
+                // Sort and take top N
+                const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+                const total = Object.values(freq).reduce((s, v) => s + v, 0) || 1;
+
+                return sorted.slice(0, count).map(([word, count]) => ({
+                    word,
+                    count,
+                    density: (count / total * 100)
+                }));
+            }
+
+            function calculateKeywordDensity(text, keyword) {
+                if (!keyword || !keyword.trim()) return null;
+
+                const kw = keyword.trim().toLowerCase();
+                const cleanText = text.toLowerCase();
+
+                // Count occurrences (handle both Chinese and English keywords)
+                let occurrences;
+                if (/^[一-鿿]+$/.test(kw)) {
+                    // Chinese keyword: count as substring
+                    occurrences = (cleanText.match(new RegExp(escapeRegex(kw), 'g')) || []).length;
+                } else {
+                    occurrences = (cleanText.match(new RegExp('\\b' + escapeRegex(kw) + '\\b', 'g')) || []).length;
+                }
+
+                const totalChars = (text.match(/[一-鿿\w]/g) || []).length;
+                const density = totalChars > 0 ? (occurrences * kw.length / totalChars) * 100 : 0;
+
+                return { occurrences, density };
+            }
+
+            // ─── SCORING ───
+            function calculateReadability(stats) {
+                let score = 0;
+
+                // Average sentence length (40 pts) — ideal 12-18
+                const asl = stats.avgSentenceLength;
+                if (asl < 6) score += 15;
+                else if (asl < 10) score += 25;
+                else if (asl < 14) score += 35;
+                else if (asl < 20) score += 40; // ideal
+                else if (asl < 26) score += 30;
+                else if (asl < 34) score += 20;
+                else score += 10;
+
+                // Paragraph count (25 pts) — proportional to article length
+                const expectedParas = Math.max(3, Math.round(stats.wordCount / 150));
+                const paraRatio = stats.paraCount / expectedParas;
+                if (paraRatio > 1.5) score += 15;  // more paragraphs = more scannable
+                else if (paraRatio > 0.7) score += 25; // good
+                else if (paraRatio > 0.4) score += 18;
+                else score += 10;
+
+                // Avg paragraph sentences (20 pts) — ideal 3-6 sentences per paragraph
+                const avgParaSentences = stats.sentenceCount / Math.max(stats.paraCount, 1);
+                if (avgParaSentences < 2) score += 10;
+                else if (avgParaSentences < 4) score += 16;
+                else if (avgParaSentences < 7) score += 20; // ideal
+                else if (avgParaSentences < 10) score += 14;
+                else score += 8;
+
+                // Content length bonus (15 pts)
+                if (stats.wordCount >= 2000) score += 15;
+                else if (stats.wordCount >= 1200) score += 12;
+                else if (stats.wordCount >= 600) score += 8;
+                else if (stats.wordCount >= 300) score += 5;
+                else score += 2;
+
+                return Math.min(100, Math.round(score));
+            }
+
+            function calculateContentQuality(stats, htmlFeatures, mdFeatures) {
+                let score = 0;
+
+                // Word count (25 pts)
+                const wc = stats.wordCount;
+                if (wc < 200) score += 5;
+                else if (wc < 400) score += 12;
+                else if (wc < 800) score += 18;
+                else if (wc < 1500) score += 22;
+                else if (wc < 2500) score += 25;
+                else score += 22;
+
+                // H1 presence (15 pts)
+                const h1 = htmlFeatures ? htmlFeatures.h1 : (mdFeatures ? mdFeatures.h1 : 0);
+                if (h1 >= 1) score += 15;
+                else if (h1 === 0) score += 0;
+
+                // H2 count (20 pts)
+                const h2 = htmlFeatures ? htmlFeatures.h2 : (mdFeatures ? mdFeatures.h2 : 0);
+                if (h2 >= 5) score += 20;
+                else if (h2 >= 3) score += 16;
+                else if (h2 >= 1) score += 10;
+                else score += 0;
+
+                // H3 count (5 pts)
+                const h3 = htmlFeatures ? htmlFeatures.h3 : (mdFeatures ? mdFeatures.h3 : 0);
+                if (h3 > 0) score += 5;
+
+                // Links (20 pts)
+                let links = 0;
+                if (htmlFeatures) {
+                    links = htmlFeatures.internalLinks + htmlFeatures.externalLinks;
+                } else if (mdFeatures) {
+                    links = mdFeatures.links;
+                }
+                if (links >= 5) score += 20;
+                else if (links >= 3) score += 15;
+                else if (links >= 1) score += 8;
+                else score += 0;
+
+                // Images (10 pts)
+                const imgs = htmlFeatures ? htmlFeatures.images : (mdFeatures ? mdFeatures.images : 0);
+                if (imgs >= 3) score += 10;
+                else if (imgs >= 1) score += 6;
+                else score += 0;
+
+                // Paragraph count quality (5 pts)
+                if (stats.paraCount >= 5) score += 5;
+                else if (stats.paraCount >= 3) score += 3;
+
+                return Math.min(100, Math.round(score));
+            }
+
+            function calculateKeywordOptimization(text, keyword, kwResult) {
+                if (!keyword || !keyword.trim() || !kwResult) return null;
+
+                let score = 0;
+                const kw = keyword.trim().toLowerCase();
+                const cleanText = text.toLowerCase();
+                const density = kwResult.density;
+
+                // Density score (40 pts)
+                if (density < 0.1) score += 5;
+                else if (density < 0.3) score += 15;
+                else if (density < 0.5) score += 25;
+                else if (density < 1.0) score += 32;
+                else if (density < 2.5) score += 40; // ideal
+                else if (density < 4.0) score += 30;
+                else if (density < 6.0) score += 18;
+                else if (density < 10.0) score += 8;
+                else score += 2;
+
+                // Keyword in first line/heading (20 pts)
+                const firstLine = text.split('\n')[0] || '';
+                if (firstLine.toLowerCase().includes(kw)) score += 20;
+
+                // Keyword in first paragraph (15 pts)
+                const firstPara = text.split(/\n\s*\n/)[0] || '';
+                if (firstPara.toLowerCase().includes(kw)) score += 15;
+
+                // Keyword prominence — earlier is better (15 pts)
+                const firstPos = cleanText.indexOf(kw);
+                if (firstPos >= 0) {
+                    const ratio = firstPos / Math.max(cleanText.length, 1);
+                    if (ratio < 0.05) score += 15;
+                    else if (ratio < 0.1) score += 12;
+                    else if (ratio < 0.2) score += 8;
+                    else if (ratio < 0.3) score += 5;
+                    else score += 2;
+                }
+
+                // Keyword spread across sections (10 pts)
+                const sections = text.split(/\n\s*\n/).filter(s => s.trim().length > 0);
+                const sectionsWithKw = sections.filter(s => s.toLowerCase().includes(kw)).length;
+                const coverage = sectionsWithKw / Math.max(sections.length, 1);
+                if (coverage > 0.5) score += 10;
+                else if (coverage > 0.3) score += 6;
+                else if (coverage > 0.1) score += 3;
+
+                return Math.min(100, Math.round(score));
+            }
+
+            // ─── SUGGESTIONS ───
+            function generateSuggestions(stats, htmlFeatures, mdFeatures, scores, kwResult, mode) {
+                const suggestions = [];
+
+                // 1. Content too short
+                if (stats.wordCount < 300) {
+                    suggestions.push({ type: 'high', msg: `文章過短（${stats.wordCount} 字），建議至少 800 字以獲得基本的 SEO 效果。`, icon: 'ph-warning-circle' });
+                } else if (stats.wordCount < 600) {
+                    suggestions.push({ type: 'medium', msg: `文章偏短（${stats.wordCount} 字），建議擴充至 1500～2500 字以涵蓋更完整的資訊。`, icon: 'ph-warning-circle' });
+                } else if (stats.wordCount < 1200) {
+                    suggestions.push({ type: 'low', msg: `文章長度適中（${stats.wordCount} 字），若能擴充至 1500 字以上將有更好的 SEO 表現。`, icon: 'ph-info' });
+                }
+
+                // 2. Paragraph too long
+                if (stats.paragraphs && stats.paragraphs.length > 0) {
+                    const longParas = stats.paragraphs.filter(p => {
+                        const sentences = p.split(/[。！？\n.!?]+/).filter(s => s.trim().length > 0);
+                        return sentences.length > 8;
+                    }).length;
+                    if (longParas > 0) {
+                        suggestions.push({ type: 'high', msg: `發現 ${longParas} 個段落過長（超過 8 句），建議將長段落拆分為 3～5 句的短段落，提升可讀性。`, icon: 'ph-warning-circle' });
+                    }
+                }
+
+                // 3. Not enough H2 headings
+                let h2 = 0;
+                if (mode === 'html' && htmlFeatures) h2 = htmlFeatures.h2;
+                else if (mode === 'markdown' && mdFeatures) h2 = mdFeatures.h2;
+                if (stats.wordCount > 600 && h2 < 2) {
+                    suggestions.push({ type: 'high', msg: `H2 子標題不足（${h2} 個），建議每 300～500 字使用一個 H2 標題，改善內容結構與可讀性。`, icon: 'ph-warning-circle' });
+                } else if (stats.wordCount > 1200 && h2 < 4) {
+                    suggestions.push({ type: 'medium', msg: `H2 子標題偏少（${h2} 個），建議增加更多章節劃分，讓內容層次更清楚。`, icon: 'ph-info' });
+                }
+
+                // 4. Missing H1
+                let h1 = 0;
+                if (mode === 'html' && htmlFeatures) h1 = htmlFeatures.h1;
+                else if (mode === 'markdown' && mdFeatures) h1 = mdFeatures.h1;
+                if (mode !== 'text' && h1 === 0) {
+                    suggestions.push({ type: 'high', msg: '缺少 H1 標題，建議加入一個包含主要關鍵字的 H1 標題，讓搜尋引擎了解頁面主題。', icon: 'ph-warning-circle' });
+                } else if (mode !== 'text' && h1 > 1) {
+                    suggestions.push({ type: 'medium', msg: `頁面有 ${h1} 個 H1 標題，建議每頁僅使用一個 H1 以維持清晰的標題層級。`, icon: 'ph-info' });
+                }
+
+                // 5. Keyword density issues
+                if (kwResult && inputKeyword.value.trim()) {
+                    const d = kwResult.density;
+                    if (d > 8) {
+                        suggestions.push({ type: 'high', msg: `關鍵字「${inputKeyword.value.trim()}」密度過高（${d.toFixed(1)}%），可能被視為關鍵字填充（Keyword Stuffing），建議降低使用頻率。`, icon: 'ph-warning-circle' });
+                    } else if (d > 4) {
+                        suggestions.push({ type: 'medium', msg: `關鍵字「${inputKeyword.value.trim()}」密度偏高（${d.toFixed(1)}%），建議適度減少或使用同義詞替代。`, icon: 'ph-info' });
+                    } else if (d < 0.3) {
+                        suggestions.push({ type: 'medium', msg: `關鍵字「${inputKeyword.value.trim()}」密度偏低（${d.toFixed(1)}%），建議在內容中自然地增加關鍵字的出現頻率。`, icon: 'ph-info' });
+                    }
+                }
+
+                // 6. Not enough external links
+                let extLinks = 0, intLinks = 0;
+                if (htmlFeatures) { extLinks = htmlFeatures.externalLinks; intLinks = htmlFeatures.internalLinks; }
+                if (mode === 'html' && stats.wordCount > 500 && extLinks === 0) {
+                    suggestions.push({ type: 'medium', msg: '缺少外部連結，建議引用權威來源的資料，增加內容可信度與 SEO 價值。', icon: 'ph-info' });
+                }
+                if (mode === 'html' && stats.wordCount > 500 && intLinks === 0) {
+                    suggestions.push({ type: 'medium', msg: '缺少內部連結，建議連結到站內相關文章，幫助搜尋引擎了解網站結構。', icon: 'ph-info' });
+                }
+
+                // 7. Missing images
+                let imgs = 0;
+                if (htmlFeatures) imgs = htmlFeatures.images;
+                else if (mdFeatures) imgs = mdFeatures.images;
+                if (mode !== 'text' && stats.wordCount > 500 && imgs === 0) {
+                    suggestions.push({ type: 'medium', msg: '缺少圖片，建議加入相關圖片並填寫 ALT 文字，提升使用者體驗與圖片搜尋流量。', icon: 'ph-info' });
+                }
+
+                // 8. Sentences too long
+                if (stats.avgSentenceLength > 30) {
+                    suggestions.push({ type: 'medium', msg: `平均句長偏長（${stats.avgSentenceLength.toFixed(1)} 字），建議將過長的句子拆分，每句維持在 15～25 字。`, icon: 'ph-info' });
+                }
+
+                // 9. Too few paragraphs
+                if (stats.paraCount < 3 && stats.wordCount > 200) {
+                    suggestions.push({ type: 'low', msg: '段落數量偏少，建議增加分段，讓內容更容易閱讀與掃讀。', icon: 'ph-info' });
+                }
+
+                // 10. Low readability
+                if (scores.readability < 50) {
+                    suggestions.push({ type: 'high', msg: '可讀性評分偏低（${scores.readability}），建議善用子標題、列表、短句和分段來提升內容的可讀性。', icon: 'ph-warning-circle' });
+                }
+
+                return suggestions;
+            }
+
+            // ─── RENDER FUNCTIONS ───
+
+            function renderScoreRing(score) {
+                const circ = 2 * Math.PI * 52;
+                const offset = circ - (score / 100) * circ;
+                scoreRing.style.strokeDashoffset = offset;
+                outScore.textContent = score;
+
+                const labels = [
+                    { min: 90, icon: '🌟', text: 'Excellent 優秀內容', cls: 'health-Excellent' },
+                    { min: 70, icon: '👍', text: 'Good 良好內容', cls: 'health-Good' },
+                    { min: 50, icon: '🔶', text: 'Fair 尚可改善', cls: 'health-Fair' },
+                    { min: 0, icon: '🔴', text: 'Poor 急需改善', cls: 'health-Poor' },
+                ];
+                const label = labels.find(l => score >= l.min) || labels[labels.length - 1];
+                outScoreLabel.textContent = label.text;
+                outScoreLabel.className = `text-xs font-medium mt-1 ${label.cls}`;
+                healthIcon.textContent = label.icon;
+                healthLabel.textContent = label.text;
+                healthLabel.className = `text-sm font-medium ${label.cls}`;
+            }
+
+            function renderSubScores(readability, quality, keywordOpt) {
+                outReadability.textContent = readability;
+                barReadability.style.width = readability + '%';
+
+                outQuality.textContent = quality;
+                barQuality.style.width = quality + '%';
+
+                if (keywordOpt !== null) {
+                    outKeyword.textContent = keywordOpt;
+                    barKeyword.style.width = keywordOpt + '%';
+                } else {
+                    outKeyword.textContent = 'N/A';
+                    outKeyword.className = 'text-white font-mono font-bold text-slate-500';
+                    barKeyword.style.width = '0%';
+                }
+            }
+
+            function renderStats(stats, htmlFeatures, mdFeatures, mode) {
+                statWords.textContent = stats.wordCount.toLocaleString();
+                statParagraphs.textContent = stats.paraCount;
+                statSentences.textContent = stats.sentenceCount;
+                statReading.textContent = stats.readingTime;
+                statSentenceLen.textContent = stats.avgSentenceLength.toFixed(1);
+                statChinese.textContent = stats.chineseChars.toLocaleString();
+                statEnglish.textContent = stats.englishWordCount;
+                statChars.textContent = stats.charCount.toLocaleString();
+
+                if (mode === 'html' && htmlFeatures) {
+                    htmlStats.classList.remove('hidden');
+                    statH1.textContent = htmlFeatures.h1;
+                    statH2.textContent = htmlFeatures.h2;
+                    statH3.textContent = htmlFeatures.h3;
+                    statImages.textContent = htmlFeatures.images;
+                    statInternalLinks.textContent = htmlFeatures.internalLinks;
+                    statExternalLinks.textContent = htmlFeatures.externalLinks;
+                } else if (mode === 'markdown' && mdFeatures) {
+                    htmlStats.classList.remove('hidden');
+                    statH1.textContent = mdFeatures.h1;
+                    statH2.textContent = mdFeatures.h2;
+                    statH3.textContent = mdFeatures.h3;
+                    statImages.textContent = mdFeatures.images;
+                    statInternalLinks.textContent = '--';
+                    statExternalLinks.textContent = mdFeatures.links;
+                } else {
+                    htmlStats.classList.add('hidden');
+                }
+            }
+
+            function renderKeywordChart(keywords, kwResult, keyword) {
+                if (keywords.length === 0) {
+                    keywordChart.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">無足夠關鍵字資料</div>';
+                    return;
+                }
+
+                const maxCount = keywords[0]?.count || 1;
+                let html = '';
+                keywords.forEach((kw, i) => {
+                    const pct = (kw.count / maxCount) * 100;
+                    const rankClass = i < 3 ? 'text-orange-400' : i < 7 ? 'text-amber-400' : 'text-slate-400';
+                    html += `
+                        <div class="flex items-center gap-2 ${i > 0 ? 'mt-1.5' : ''}">
+                            <span class="text-[10px] font-mono w-5 text-right shrink-0 ${rankClass}">${i + 1}</span>
+                            <span class="text-xs text-slate-300 w-20 sm:w-28 truncate shrink-0" title="${kw.word}">${kw.word}</span>
+                            <div class="flex-1 h-4 bg-hub-700/60 rounded-sm overflow-hidden">
+                                <div class="keyword-bar" style="width:${pct}%"></div>
+                            </div>
+                            <span class="text-[10px] font-mono text-slate-500 w-10 text-right shrink-0">${kw.count}</span>
+                        </div>
+                    `;
+                });
+                keywordChart.innerHTML = html;
+
+                // Keyword density detail
+                if (keyword && keyword.trim() && kwResult) {
+                    keywordDetail.classList.remove('hidden');
+                    kwTarget.textContent = keyword.trim();
+                    kwOccurrences.textContent = kwResult.occurrences;
+
+                    const d = kwResult.density;
+                    kwDensityPct.textContent = d.toFixed(2) + '%';
+
+                    // Cap bar at 10% for visual purposes
+                    const barPct = Math.min(100, (d / 10) * 100);
+                    kwDensityBar.style.width = barPct + '%';
+
+                    let assessment = '';
+                    let assessmentCls = 'text-slate-500';
+                    if (d < 0.3) { assessment = '⚠️ 關鍵字密度偏低，建議適度增加使用頻率'; assessmentCls = 'text-amber-400'; }
+                    else if (d < 0.5) { assessment = '🔶 關鍵字密度略低，可考慮稍微增加'; assessmentCls = 'text-amber-400'; }
+                    else if (d < 2.5) { assessment = '✅ 關鍵字密度理想，維持此頻率'; assessmentCls = 'text-green-400'; }
+                    else if (d < 4.0) { assessment = '🔶 關鍵字密度略高，注意不要過度使用'; assessmentCls = 'text-amber-400'; }
+                    else if (d < 8.0) { assessment = '⚠️ 關鍵字密度偏高，建議減少或使用同義詞'; assessmentCls = 'text-orange-400'; }
+                    else { assessment = '❌ 關鍵字密度過高，可能被視為關鍵字填充！'; assessmentCls = 'text-red-400'; }
+
+                    kwAssessment.textContent = assessment;
+                    kwAssessment.className = `mt-1 text-[10px] ${assessmentCls}`;
+                    keywordDensityLabel.textContent = `密度：${d.toFixed(2)}%`;
+                    keywordDensityLabel.className = `text-[10px] ${assessmentCls}`;
+                } else {
+                    keywordDetail.classList.add('hidden');
+                    keywordDensityLabel.textContent = '密度：--';
+                    keywordDensityLabel.className = 'text-[10px] text-slate-500';
+                }
+            }
+
+            function renderSuggestions(suggestions) {
+                if (suggestions.length === 0) {
+                    suggestionsPanel.classList.add('hidden');
+                    return;
+                }
+
+                suggestionsPanel.classList.remove('hidden');
+                suggestionsList.innerHTML = '';
+
+                suggestions.forEach(s => {
+                    const borderCls = s.type === 'high' ? 'suggestion-high' : s.type === 'medium' ? 'suggestion-medium' : 'suggestion-low';
+                    const iconColor = s.type === 'high' ? 'text-red-400' : s.type === 'medium' ? 'text-amber-400' : 'text-blue-400';
+                    const label = s.type === 'high' ? '高優先' : s.type === 'medium' ? '中優先' : '低優先';
+
+                    const div = document.createElement('div');
+                    div.className = `flex items-start gap-3 bg-hub-900/50 rounded-lg border border-hub-700/60 p-3 ${borderCls}`;
+                    div.innerHTML = `
+                        <i class="ph ${s.icon} text-base ${iconColor} mt-0.5 shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-slate-300 leading-relaxed">${s.msg}</p>
+                        </div>
+                        <span class="text-[9px] font-medium px-1.5 py-0.5 rounded shrink-0 ${s.type === 'high' ? 'bg-red-500/10 text-red-400' : s.type === 'medium' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}">${label}</span>
+                    `;
+                    suggestionsList.appendChild(div);
+                });
+            }
+
+            // ─── MAIN ANALYZE ───
+            function analyze() {
+                const content = inputContent.value;
+                if (!content.trim()) {
+                    showToast('請先輸入要分析的內容');
+                    return;
+                }
+
+                // Detect mode
+                const mode = detectMode(content);
+                updateModeBadge(mode);
+
+                // Show results section
+                resultsSection.classList.remove('hidden');
+
+                // Extract text
+                const text = extractText(content, mode);
+
+                // Stats
+                const stats = analyzeTextStats(text);
+
+                // HTML/Markdown features
+                let htmlFeatures = null, mdFeatures = null;
+                if (mode === 'html') htmlFeatures = extractHTMLFeatures(content);
+                else if (mode === 'markdown') mdFeatures = extractMarkdownFeatures(content);
+
+                // Keywords
+                const keywords = extractKeywords(text, 15);
+                const keyword = inputKeyword.value.trim();
+                const kwResult = keyword ? calculateKeywordDensity(text, keyword) : null;
+
+                // Scores
+                const readability = calculateReadability(stats);
+                const quality = calculateContentQuality(stats, htmlFeatures, mdFeatures);
+                const keywordOpt = calculateKeywordOptimization(text, keyword, kwResult);
+
+                const overall = keywordOpt !== null
+                    ? Math.round(readability * 0.35 + quality * 0.35 + keywordOpt * 0.30)
+                    : Math.round(readability * 0.40 + quality * 0.60);
+
+                // Suggestions
+                const suggestions = generateSuggestions(stats, htmlFeatures, mdFeatures, { readability, quality, keywordOpt }, kwResult, mode);
+
+                // Render
+                renderScoreRing(overall);
+                renderSubScores(readability, quality, keywordOpt);
+                renderStats(stats, htmlFeatures, mdFeatures, mode);
+                renderKeywordChart(keywords, kwResult, keyword);
+                renderSuggestions(suggestions);
+
+                // Pass rate
+                const passRate = Math.round(((overall > 50 ? 1 : 0) + (readability > 50 ? 1 : 0) + (quality > 50 ? 1 : 0) + (keywordOpt !== null ? (keywordOpt > 50 ? 1 : 0) : 1)) / (keywordOpt !== null ? 4 : 3) * 100);
+                outPassBar.style.width = passRate + '%';
+                outPassRate.textContent = passRate + '%';
+
+                // Scroll to results on mobile
+                if (window.innerWidth < 768) {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                showToast(`分析完成！綜合評分：${overall}/100`);
+            }
+
+            // ─── SAMPLE CONTENT ───
+            function loadSample() {
+                inputContent.value = `<article>
+    <h1>SEO 內容行銷完整指南：提升網站排名的關鍵策略</h1>
+    <p>在數位行銷的世界中，SEO 內容行銷是提升網站排名最有效的方式之一。本文將深入探討如何透過高品質的內容來吸引搜尋引擎與使用者，並提供具體可行的優化策略。</p>
+
+    <h2>什麼是 SEO 內容行銷？</h2>
+    <p>SEO 內容行銷是一種結合搜尋引擎優化與內容行銷的策略性方法。它的核心在於創造有價值的內容，同時確保這些內容符合搜尋引擎的排名因素。透過這種方式，網站不僅能吸引目標受眾，還能獲得更好的搜尋排名。</p>
+    <p>具體來說，SEO 內容行銷涵蓋了關鍵字研究、內容規劃、文章撰寫、內部連結建立以及成效追蹤等多個面向。每一個環節都需要仔細規劃與執行，才能達到最佳效果。</p>
+
+    <h2>為什麼內容品質對 SEO 如此重要？</h2>
+    <p>Google 的搜尋演算法越來越重視內容品質。高品質的內容不僅能提升使用者體驗，還能增加網站的可信度與權威性。研究顯示，內容品質是影響搜尋排名的前三名因素之一。</p>
+    <p>當使用者透過搜尋引擎找到你的網站時，他們期望獲得有價值的資訊。如果你的內容能夠滿足他們的需求，他們就會停留更久、瀏覽更多頁面，這些行為訊號會正面影響你的搜尋排名。</p>
+    <p>此外，高品質的內容也更容易獲得外部連結，進一步提升網站的權威度。這也是為什麼許多成功的 SEO 策略都將內容行銷放在首要位置。</p>
+
+    <h2>如何進行關鍵字研究？</h2>
+    <p>關鍵字研究是 SEO 內容行銷的基礎。以下是進行關鍵字研究的主要步驟：</p>
+    <p>首先，使用關鍵字研究工具如 Google Keyword Planner、Ahrefs 或 SEMrush 來找出與你的主題相關的關鍵字。這些工具能提供搜尋量、競爭程度等有價值的數據。</p>
+    <p>其次，分析搜尋意圖。了解使用者搜尋特定關鍵字時的真實需求，是創造有效內容的關鍵。搜尋意圖通常分為資訊型、導航型、交易型和商業型四種。</p>
+    <p>最後，選擇適合的關鍵字並規劃內容主題。理想的關鍵字應該具有合理的搜尋量、適中的競爭程度，並且與你的業務目標一致。</p>
+
+    <h2>內容結構優化技巧</h2>
+    <p>良好的內容結構不僅能提升可讀性，還能幫助搜尋引擎更好地理解你的內容。以下是一些實用的優化技巧：</p>
+    <p>使用清晰的標題層級。H1 標題應該包含主要關鍵字並準確描述內容主題。H2 和 H3 標題則用於組織內容的不同章節，讓文章結構更清楚。</p>
+    <p>段落長度控制在 3～5 句話以內。過長的段落會降低可讀性，特別是在行動裝置上。適當使用空白和分段，讓內容更容易閱讀。</p>
+    <p>加入列表和粗體文字。無序列表和有序列表能讓重點更突出，粗體文字則可以強調關鍵詞彙。這些元素都能提升內容的掃讀性。</p>
+
+    <h2>內部連結與外部連結策略</h2>
+    <p>連結策略是 SEO 內容行銷中不可或缺的一環。有效的內部連結可以幫助搜尋引擎了解網站結構，同時將權重傳遞到重要頁面。</p>
+    <p>在撰寫內容時，自然地加入相關的內部連結。例如，當提到特定主題時，連結到站內相關的文章或產品頁面。這不僅能提升 SEO，還能增加使用者停留時間。</p>
+    <p>外部連結同樣重要。引用權威來源的資料不僅能增加內容的可信度，還能為使用者提供更多有價值的資源。當你連結到高品質的外部網站時，搜尋引擎也會更信任你的內容。</p>
+
+    <h2>圖片與多媒體優化</h2>
+    <p>圖片和其他多媒體元素能顯著提升內容的吸引力與使用者體驗。然而，使用圖片時務必加入描述性的 ALT 文字，這不僅幫助視障使用者，也能讓搜尋引擎更好地索引圖片。此外，壓縮圖片檔案大小可以提升頁面載入速度。</p>
+    <p>影片內容也是提升 SEO 的有效方式。將相關的 YouTube 影片嵌入文章中，可以增加使用者在頁面上的停留時間。確保為影片加入標題和描述，並使用結構化資料標記。</p>
+
+    <h2>追蹤與分析 SEO 成效</h2>
+    <p>持續追蹤和分析 SEO 成效是內容行銷成功的關鍵。透過 Google Search Console 和 Google Analytics 等工具，你可以了解內容的表現並持續優化。</p>
+    <p>關注以下關鍵指標：有機流量、跳出率、平均停留時間、頁面排名變化以及轉換率。這些數據能幫助你了解哪些內容策略有效，哪些需要調整。</p>
+    <p>定期檢視和更新既有內容也很重要。搜尋引擎偏愛新鮮且有價值的內容，因此定期更新舊文章可以維持或提升它們的搜尋排名。</p>
+</article>`;
+                inputKeyword.value = 'SEO 內容行銷';
+                showToast('已載入範例文章（HTML 模式）');
+            }
+
+            // ─── EVENT LISTENERS ───
+            btnAnalyze.addEventListener('click', analyze);
+
+            btnSample.addEventListener('click', loadSample);
+
+            btnClear.addEventListener('click', () => {
+                inputContent.value = '';
+                inputKeyword.value = '';
+                resultsSection.classList.add('hidden');
+                modeBadge.textContent = '自動偵測模式';
+                modeBadge.className = 'text-[10px] font-mono px-2 py-1 rounded-full bg-slate-800 text-slate-500 border border-slate-700';
+                outScore.textContent = '--';
+                outScoreLabel.textContent = '等待分析';
+                outScoreLabel.className = 'text-xs font-medium text-slate-500 mt-1';
+                outReadability.textContent = '0';
+                outQuality.textContent = '0';
+                outKeyword.textContent = '--';
+                barReadability.style.width = '0%';
+                barQuality.style.width = '0%';
+                barKeyword.style.width = '0%';
+                scoreRing.style.strokeDashoffset = 326.7;
+                healthIcon.textContent = '⚡';
+                healthLabel.textContent = '健康狀態';
+                healthLabel.className = 'text-sm font-medium text-slate-400';
+                outPassBar.style.width = '0%';
+                outPassRate.textContent = '0%';
+                keywordChart.innerHTML = '<div class="text-center py-6 text-slate-500 text-xs"><i class="ph ph-magnifying-glass text-2xl block mb-1 opacity-30"></i>分析後將顯示熱門關鍵字</div>';
+                keywordDetail.classList.add('hidden');
+                keywordDensityLabel.textContent = '密度：--';
+                keywordDensityLabel.className = 'text-[10px] text-slate-500';
+                suggestionsPanel.classList.add('hidden');
+                showToast('已清除');
+            });
+
+            // Auto-detect mode on input
+            inputContent.addEventListener('input', () => {
+                const content = inputContent.value;
+                if (content.trim()) {
+                    const mode = detectMode(content);
+                    updateModeBadge(mode);
+                } else {
+                    modeBadge.textContent = '自動偵測模式';
+                    modeBadge.className = 'text-[10px] font-mono px-2 py-1 rounded-full bg-slate-800 text-slate-500 border border-slate-700';
+                }
+            });
+
+            // Enter key to analyze
+            inputContent.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    analyze();
+                }
+            });
+
+            // ─── FAQ ───
+            document.querySelectorAll('.faq-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const content = btn.nextElementSibling;
+                    const chevron = btn.querySelector('.ph-caret-down');
+                    const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+                    content.style.maxHeight = isOpen ? '0px' : content.scrollHeight + 'px';
+                    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+            });
+
+        })();
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

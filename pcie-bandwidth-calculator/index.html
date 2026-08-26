@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCIe 頻寬計算器 | ToolHub - PCI Express 世代頻寬比較與瓶頸分析</title>
+    <meta name="description" content="精準計算 PCIe 各世代 (1.0~6.0) 與 Lane 數的實際頻寬 (GB/s)，支援雙配置比較。內建 GPU/SSD/NIC 常見硬體快速選擇，提供效能瓶頸分析、視覺化圖表與實用知識百科。">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        pcie: {
+                            primary: '#84CC16',
+                            accent: '#65A30D',
+                            dark: '#4D7C0F',
+                            a: '#84CC16',
+                            b: '#F472B6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #84CC16; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        .bar-animate { transition: width 0.6s ease-out; }
+
+        .pill-option { transition: all 0.2s ease; }
+
+        .segmented-control label { cursor: pointer; }
+        .segmented-control input:checked + span {
+            background-color: #84CC16;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(132, 204, 22, 0.25);
+        }
+
+        .preset-chip {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .preset-chip:hover {
+            transform: translateY(-1px);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.25s ease;
+            opacity: 0;
+        }
+        .faq-answer.open {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        @keyframes ping-slow {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0.4; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        .ping-slow { animation: ping-slow 2s ease-in-out infinite; }
+
+        .gen-bar {
+            transition: all 0.4s ease-out;
+            position: relative;
+        }
+        .gen-bar:hover {
+            filter: brightness(1.3);
+        }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 12px 24px;
+            color: #E2E8F0;
+            font-size: 14px;
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/pcie-bandwidth-calculator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/pcie-bandwidth-calculator/">
+    <meta property="og:title" content="PCIe 頻寬計算器">
+    <meta property="og:description" content="精準計算 PCIe 各世代 (1.0~6.0) 與 Lane 數的實際頻寬 (GB/s)，支援雙配置比較。內建 GPU/SSD/NIC 常見硬體快速選擇，提供效能瓶頸分析、視覺化圖表與實用知識百科。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="PCIe 頻寬計算器">
+    <meta name="twitter:description" content="精準計算 PCIe 各世代 (1.0~6.0) 與 Lane 數的實際頻寬 (GB/s)，支援雙配置比較。內建 GPU/SSD/NIC 常見硬體快速選擇，提供效能瓶頸分析、視覺化圖表與實用知識百科。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"PCIe 頻寬計算器","url":"https://toolhuben.com/pcie-bandwidth-calculator/","description":"精準計算 PCIe 各世代 (1.0~6.0) 與 Lane 數的實際頻寬 (GB/s)，支援雙配置比較。內建 GPU/SSD/NIC 常見硬體快速選擇，提供效能瓶頸分析、視覺化圖表與實用知識百科。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"PCIe 頻寬計算器","item":"https://toolhuben.com/pcie-bandwidth-calculator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/pcie-bandwidth-calculator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/pcie-bandwidth-calculator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/pcie-bandwidth-calculator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body style="--classic-accent:#84CC16;--classic-accent-rgb:132,204,22" data-tool-visual data-classic-tool data-classic-layout="blueprint">
+
+    <!-- Header & Sidebar 動態載入 -->
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="flex-grow pt-16 sm:pt-20 pb-16 px-3 sm:px-6 relative z-10">
+        <div class="max-w-6xl mx-auto">
+
+            <!-- ===== 頁面標題區 ===== -->
+            <div class="fade-in-section mb-6 sm:mb-8">
+                <div class="flex items-center gap-2 sm:gap-3 mb-3">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-medium rounded-full border bg-lime-500/10 text-lime-400 border-lime-500/20">
+                        <i class="ph-fill ph-gauge"></i> 硬體工具
+                    </span>
+                    <span class="text-xs text-slate-500 font-mono">pcie-bandwidth</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-2">
+                    PCIe Bandwidth
+                    <span class="bg-gradient-to-r from-lime-400 to-green-500 bg-clip-text text-transparent">頻寬計算器</span>
+                </h1>
+                <p class="text-sm sm:text-base text-slate-400 max-w-3xl leading-relaxed">
+                    比較不同 PCIe 世代與 Lane 數的實際頻寬，快速了解 GPU、SSD、網卡等擴充卡是否會遭遇效能瓶頸。
+                    支援 PCIe 1.0 至 6.0 完整世代，一鍵帶入常見硬體配置。
+                </p>
+            </div>
+
+            <!-- ===== 主要內容：左 5 / 右 7 ===== -->
+            <div class="grid lg:grid-cols-12 gap-4 sm:gap-6">
+
+                <!-- ========== 左側面板 (配置輸入) ========== -->
+                <div class="lg:col-span-5 space-y-4 sm:space-y-5">
+
+                    <!-- === 配置 A === -->
+                    <div class="glass-panel p-4 sm:p-5 border-lime-500/20">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-2.5 h-2.5 rounded-full bg-pcie-a"></span>
+                            <h2 class="text-base sm:text-lg font-bold text-white">配置 A</h2>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- PCIe 世代選擇 (A) -->
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1.5 font-medium">PCIe 世代</label>
+                                <div class="flex flex-wrap gap-1.5" id="gen-a">
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genA" value="1" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">1.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genA" value="2" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">2.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genA" value="3" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">3.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genA" value="4" class="hidden" onchange="calculate()" checked>
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">4.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genA" value="5" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">5.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genA" value="6" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">6.0</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Lane 數量 (A) -->
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1.5 font-medium">Lane 數量</label>
+                                <div class="flex flex-wrap gap-1.5" id="lane-a">
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneA" value="1" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">x1</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneA" value="2" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">x2</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneA" value="4" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">x4</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneA" value="8" class="hidden" onchange="calculate()" checked>
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">x8</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneA" value="16" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-lime-500/30">x16</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- === 配置 B === -->
+                    <div class="glass-panel p-4 sm:p-5 border-pink-500/20">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-2.5 h-2.5 rounded-full bg-pcie-b"></span>
+                            <h2 class="text-base sm:text-lg font-bold text-white">配置 B</h2>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- PCIe 世代選擇 (B) -->
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1.5 font-medium">PCIe 世代</label>
+                                <div class="flex flex-wrap gap-1.5" id="gen-b">
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genB" value="1" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">1.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genB" value="2" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">2.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genB" value="3" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">3.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genB" value="4" class="hidden" onchange="calculate()" checked>
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">4.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genB" value="5" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">5.0</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="genB" value="6" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">6.0</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Lane 數量 (B) -->
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1.5 font-medium">Lane 數量</label>
+                                <div class="flex flex-wrap gap-1.5" id="lane-b">
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneB" value="1" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">x1</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneB" value="2" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">x2</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneB" value="4" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">x4</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneB" value="8" class="hidden" onchange="calculate()">
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">x8</span>
+                                    </label>
+                                    <label class="segmented-control">
+                                        <input type="radio" name="laneB" value="16" class="hidden" onchange="calculate()" checked>
+                                        <span class="pill-option inline-block px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">x16</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- === 常見硬體快速選擇 === -->
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-pcie-primary"></i>
+                            快速填入硬體配置
+                        </h3>
+
+                        <!-- 填入目標切換 A/B -->
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-xs text-slate-500">填入目標：</span>
+                            <div class="flex bg-hub-800 rounded-lg p-0.5 border border-hub-700">
+                                <button id="target-a-btn" class="px-3 py-1 text-xs rounded-md font-medium transition-all bg-pcie-primary text-white shadow-sm" onclick="setTarget('A')">配置 A</button>
+                                <button id="target-b-btn" class="px-3 py-1 text-xs rounded-md font-medium transition-all text-slate-400 hover:text-white" onclick="setTarget('B')">配置 B</button>
+                            </div>
+                            <span id="target-label" class="text-xs text-pcie-primary font-mono">A</span>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2" id="preset-container">
+                            <!-- Presets rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- === 常見情境比較 === -->
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <i data-lucide="git-compare" class="w-4 h-4 text-pcie-primary"></i>
+                            常見情境比較
+                        </h3>
+                        <div class="flex flex-wrap gap-2" id="scenario-container">
+                            <!-- Scenarios rendered by JS -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ========== 右側面板 (結果) ========== -->
+                <div class="lg:col-span-7 space-y-4 sm:space-y-5">
+
+                    <!-- === 比較結果 === -->
+                    <div class="glass-panel p-4 sm:p-6" id="result-panel">
+                        <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-pcie-primary"></i>
+                            頻寬比較結果
+                        </h2>
+
+                        <!-- 頻寬摘要 -->
+                        <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+                            <!-- 配置 A 摘要 -->
+                            <div class="bg-hub-800/60 rounded-xl p-4 border border-lime-500/10" id="result-a">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-pcie-a"></span>
+                                    <span class="text-xs font-medium text-slate-400">配置 A</span>
+                                    <span id="config-a-label" class="text-xs font-mono text-lime-400">PCIe 4.0 x8</span>
+                                </div>
+                                <div class="text-2xl sm:text-3xl font-bold font-mono text-lime-400" id="uni-a">7.88</div>
+                                <div class="text-xs text-slate-500 mt-0.5">GB/s 單向頻寬</div>
+                                <div class="text-sm font-mono text-slate-400 mt-1">雙向 <span id="bi-a">15.76</span> GB/s</div>
+                                <div class="text-xs text-slate-500 mt-0.5">每 Lane <span id="per-lane-a">0.98</span> GB/s</div>
+                            </div>
+
+                            <!-- 配置 B 摘要 -->
+                            <div class="bg-hub-800/60 rounded-xl p-4 border border-pink-500/10" id="result-b">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-pcie-b"></span>
+                                    <span class="text-xs font-medium text-slate-400">配置 B</span>
+                                    <span id="config-b-label" class="text-xs font-mono text-pink-400">PCIe 4.0 x16</span>
+                                </div>
+                                <div class="text-2xl sm:text-3xl font-bold font-mono text-pink-400" id="uni-b">15.76</div>
+                                <div class="text-xs text-slate-500 mt-0.5">GB/s 單向頻寬</div>
+                                <div class="text-sm font-mono text-slate-400 mt-1">雙向 <span id="bi-b">31.52</span> GB/s</div>
+                                <div class="text-xs text-slate-500 mt-0.5">每 Lane <span id="per-lane-b">0.98</span> GB/s</div>
+                            </div>
+                        </div>
+
+                        <!-- 比較結論 -->
+                        <div id="comparison-text" class="bg-hub-800/40 rounded-xl p-4 mb-4 text-sm leading-relaxed border border-slate-700/30 text-slate-300">
+                            計算中...
+                        </div>
+
+                        <!-- 視覺化長條圖 -->
+                        <div class="space-y-3 mb-4">
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-pcie-a"></span> 配置 A <span id="bar-label-a" class="font-mono text-lime-400">PCIe 4.0 x8</span></span>
+                                    <span class="font-mono" id="bar-value-a">7.88 GB/s</span>
+                                </div>
+                                <div class="h-3 sm:h-4 bg-hub-700/50 rounded-full overflow-hidden">
+                                    <div id="bar-a" class="h-full rounded-full bar-animate bg-gradient-to-r from-lime-500 to-green-400" style="width:50%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-pcie-b"></span> 配置 B <span id="bar-label-b" class="font-mono text-pink-400">PCIe 4.0 x16</span></span>
+                                    <span class="font-mono" id="bar-value-b">15.76 GB/s</span>
+                                </div>
+                                <div class="h-3 sm:h-4 bg-hub-700/50 rounded-full overflow-hidden">
+                                    <div id="bar-b" class="h-full rounded-full bar-animate bg-gradient-to-r from-pink-500 to-rose-400" style="width:100%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 世代示意比較圖 -->
+                        <div class="bg-hub-800/40 rounded-xl p-4 border border-slate-700/30">
+                            <h4 class="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">⚡ 世代頻寬演進圖</h4>
+                            <div class="space-y-2" id="gen-chart">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono text-slate-600 w-14 shrink-0">PCIe 1.0</span>
+                                    <div class="flex-1 h-5 bg-hub-700/50 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-slate-600/50 gen-bar" style="width:1.6%"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-slate-500 w-16 text-right">0.25 GB/s</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono text-slate-600 w-14 shrink-0">PCIe 2.0</span>
+                                    <div class="flex-1 h-5 bg-hub-700/50 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-blue-600/60 gen-bar" style="width:3.2%"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-slate-500 w-16 text-right">0.50 GB/s</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono text-slate-600 w-14 shrink-0">PCIe 3.0</span>
+                                    <div class="flex-1 h-5 bg-hub-700/50 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-cyan-600/60 gen-bar" style="width:6.3%"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-slate-500 w-16 text-right">0.98 GB/s</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono text-slate-500 w-14 shrink-0">PCIe 4.0</span>
+                                    <div class="flex-1 h-5 bg-hub-700/50 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-green-600/60 gen-bar" style="width:12.5%"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-slate-400 w-16 text-right">1.97 GB/s</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono text-lime-400 w-14 shrink-0 font-semibold">PCIe 5.0</span>
+                                    <div class="flex-1 h-5 bg-hub-700/50 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-lime-600/70 gen-bar" style="width:25%"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-lime-400 w-16 text-right font-semibold">3.94 GB/s</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono text-amber-400 w-14 shrink-0">PCIe 6.0</span>
+                                    <div class="flex-1 h-5 bg-hub-700/50 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-amber-600/60 gen-bar" style="width:50%"></div>
+                                    </div>
+                                    <span class="text-xs font-mono text-amber-400 w-16 text-right">7.88 GB/s</span>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-slate-600 mt-2">* 以 PCIe 5.0 x16 單向頻寬 (63.0 GB/s) 為 100% 基準</p>
+                        </div>
+                    </div>
+
+                    <!-- === 實際影響分析 (Bottleneck Analysis) === -->
+                    <div class="glass-panel p-4 sm:p-6">
+                        <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-pcie-primary"></i>
+                            實際影響分析
+                        </h2>
+                        <p class="text-xs text-slate-500 mb-3">根據配置 A 的頻寬，分析常見硬體是否會遭遇效能瓶頸</p>
+                        <div id="bottleneck-container" class="space-y-2">
+                            <!-- Generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- === 常用場景對照表 === -->
+                    <div class="glass-panel p-4 sm:p-6">
+                        <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="info" class="w-5 h-5 text-pcie-primary"></i>
+                            頻寬應用場景對照
+                        </h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-hub-800/50 rounded-xl p-3 border border-slate-700/30">
+                                <div class="text-xs text-slate-400 mb-1">🎮 遊戲 GPU</div>
+                                <div class="text-sm font-mono font-bold text-white">≥ PCIe 3.0 x16</div>
+                                <div class="text-xs text-slate-500">約 15.75 GB/s 單向</div>
+                            </div>
+                            <div class="bg-hub-800/50 rounded-xl p-3 border border-slate-700/30">
+                                <div class="text-xs text-slate-400 mb-1">💾 高速 NVMe SSD</div>
+                                <div class="text-sm font-mono font-bold text-white">≥ PCIe 4.0 x4</div>
+                                <div class="text-xs text-slate-500">約 7.88 GB/s 單向</div>
+                            </div>
+                            <div class="bg-hub-800/50 rounded-xl p-3 border border-slate-700/30">
+                                <div class="text-xs text-slate-400 mb-1">🌐 10GbE 網卡</div>
+                                <div class="text-sm font-mono font-bold text-white">≥ PCIe 3.0 x1</div>
+                                <div class="text-xs text-slate-500">約 0.98 GB/s 單向</div>
+                            </div>
+                            <div class="bg-hub-800/50 rounded-xl p-3 border border-slate-700/30">
+                                <div class="text-xs text-slate-400 mb-1">🤖 AI 加速卡</div>
+                                <div class="text-sm font-mono font-bold text-white">≥ PCIe 5.0 x16</div>
+                                <div class="text-xs text-slate-500">約 63 GB/s 單向</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== 情境比較表 (全寬) ===== -->
+            <div class="mt-6 sm:mt-8 glass-panel p-4 sm:p-6 overflow-x-auto">
+                <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="table" class="w-5 h-5 text-pcie-primary"></i>
+                    PCIe 世代 x Lane 頻寬速查表
+                </h2>
+                <table class="w-full text-xs sm:text-sm text-left">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-700/50">
+                            <th class="py-2 pr-3 font-medium">Lane</th>
+                            <th class="py-2 px-3 font-medium">PCIe 1.0</th>
+                            <th class="py-2 px-3 font-medium">PCIe 2.0</th>
+                            <th class="py-2 px-3 font-medium">PCIe 3.0</th>
+                            <th class="py-2 px-3 font-medium">PCIe 4.0</th>
+                            <th class="py-2 px-3 font-medium">PCIe 5.0</th>
+                            <th class="py-2 px-3 font-medium text-amber-400">PCIe 6.0</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bw-table-body">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ===== 知識卡 & FAQ (全寬) ===== -->
+            <div class="mt-6 sm:mt-8 grid lg:grid-cols-2 gap-4 sm:gap-6">
+
+                <!-- 知識卡 -->
+                <div class="space-y-4">
+                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-5 h-5 text-pcie-primary"></i>
+                        PCIe 知識百科
+                    </h2>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">🔌 PCIe 是什麼？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            PCIe（Peripheral Component Interconnect Express）是電腦內部的高速序列匯流排標準，用於連接主機板與各類擴充卡，
+                            如顯示卡、SSD、網卡、影像擷取卡等。自 2003 年推出以來歷經多代演進，每一代傳輸速率翻倍。
+                            不同於舊式的 PCI 並列匯流排，PCIe 採用序列點對點連接，每個裝置都有專屬通道，不會共用頻寬。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">🔗 PCIe Lane 是什麼？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            Lane（通道）是 PCIe 最基本的傳輸單元，每條 Lane 由兩組差分訊號對組成（一組發送、一組接收），
+                            可同時進行雙向傳輸。常見的 Lane 配置為 x1、x4、x8、x16，數字代表通道數量。
+                            例如 x16 代表 16 條 Lane 並聯，可提供 16 倍的頻寬。CPU 通常提供 16~28 條直連 Lane，
+                            其餘透過晶片組擴展。更多 Lane 數 = 更高頻寬，但也佔用更多實體接腳與 PCB 空間。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">📊 PCIe 世代差異</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            每一代 PCIe 的傳輸率約為前一代的兩倍。PCIe 1.0 每 Lane 僅 2.5 GT/s（0.25 GB/s），
+                            PCIe 5.0 已達到 32 GT/s（3.94 GB/s），而 PCIe 6.0 更進一步提升至 64 GT/s（7.88 GB/s）。
+                            值得注意的是 PCIe 1.0/2.0 採用 8b/10b 編碼（效率 80%），而 PCIe 3.0 起改用 128b/130b 編碼（效率約 98.46%），
+                            這也是 3.0 相比 2.0 頻寬躍進超過兩倍的原因。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">🎯 PCIe x8 和 x16 差在哪？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            x16 提供 16 條 Lane，頻寬是 x8 的 2 倍。對高階顯示卡（如 RTX 4090/5090），
+                            x8 模式可能成為輕微瓶頸，但多數中階 GPU 在 x8 下幾乎無感。
+                            實測顯示，遊戲場景中 PCIe 4.0 x8 與 x16 的效能差異通常在 1~3% 內。
+                            不過對 AI 訓練、影片剪輯等工作站應用，x16 能提供更充裕的資料吞吐空間。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">⚡ PCIe 會影響 GPU 效能嗎？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            一般情況下影響不大。以 RTX 4090 為例，在 PCIe 3.0 x16（≈15.75 GB/s）與 PCIe 4.0 x16（≈31.5 GB/s）之間，
+                            遊戲幀數差異大多在 5% 以內。但如果使用 PCIe 3.0 x8（≈7.88 GB/s），則可能出現 10~20% 的效能下降，
+                            尤其在 4K 解像度下更明顯。PCIe 5.0 x16 對當前 GPU 來說頻寬仍相當充裕，幾乎不存在瓶頸。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">🆙 PCIe Gen5 值得升級嗎？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            取決於用途。對 Gen5 NVMe SSD 用戶，升級至 PCIe 5.0 可釋放高達 15.8 GB/s 的儲存頻寬，
+                            順序讀寫速度翻倍，大檔傳輸與影片編輯體驗明顯提升。對遊戲玩家，目前 PCIe 4.0 x16 的頻寬仍足夠，
+                            短期內升級需求不高。但若考慮未來的高階 GPU 與 AI 加速卡，PCIe 5.0 能提供更佳的未來相容性。
+                            建議新組裝的中高階電腦可直接選購支援 PCIe 5.0 的主機板。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ -->
+                <div class="space-y-4">
+                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-pcie-primary"></i>
+                        常見問題 FAQ
+                    </h2>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">PCIe 4.0 顯示卡可以插在 PCIe 3.0 插槽嗎？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">可以，PCIe 完全向下相容。將 PCIe 4.0 顯示卡安裝在 PCIe 3.0 插槽上可正常使用，但速度會降為 PCIe 3.0 模式。對多數遊戲影響不大（約 1~5% 效能損失），但若搭配高階 GPU 可能出現輕微瓶頸。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">PCIe 5.0 SSD 插在 PCIe 4.0 插槽會怎樣？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">可正常使用，但速度受限於 PCIe 4.0 的頻寬上限（約 7.88 GB/s），無法發揮 PCIe 5.0 SSD 的全部效能（約 15.8 GB/s）。不過日常使用與遊戲載入速度差異可能不易察覺，只有在大量順序讀寫時才會感受到差距。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">PCIe x8 會不會影響遊戲效能？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">對中階顯示卡（如 RTX 4060、RX 7600），PCIe 4.0 x8 在遊戲中幾乎沒有影響。對 RTX 4090 等級的高階卡，PCIe 4.0 x8 的效能損失約 2~5%，PCIe 3.0 x8 則可能達 10~15%。如果主機板只有 x8 插槽，建議確認顯示卡等級與 PCIe 世代。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">什麼是 PCIe 通道直連 CPU？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">直連 CPU 是指 PCIe Lane 直接從 CPU 引出，不經過晶片組（PCH），因此延遲更低、頻寬更完整。桌上型消費級 CPU 通常提供 16~28 條直連 Lane，主要分配給第一根 x16 顯示卡插槽。其餘 PCIe 插槽則由晶片組擴展，共享晶片組到 CPU 的 DMI 匯流排頻寬。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">PCIe 轉接卡會影響效能嗎？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">高品質的 PCIe 轉接卡（如 M.2 NVMe 轉 PCIe 轉卡）通常不會造成明顯效能損失。但若使用延長線（Riser Cable），品質好壞影響較大。PCIe 4.0/5.0 對訊號完整性要求更高，建議使用符合對應世代規格的延長線，否則可能出現降速或不穩定情況。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">PCIe 6.0 什麼時候推出？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">PCIe 6.0 標準已於 2022 年正式發布，傳輸率達 64 GT/s，並引入 PAM-4 調變技術與 FEC（前向錯誤修正）。首批支援 PCIe 6.0 的企業級產品預計 2025~2026 年間問世，消費級平台則可能等到 2027~2028 年。PCIe 6.0 主要鎖定 AI/ML、資料中心、高效能運算（HPC）等領域。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">如何查看主機板的 PCIe 版本？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">可以使用 CPU-Z（Windows，在「Mainboard」頁籤查看）、GPU-Z（顯示當前 GPU 插槽運作模式），或 Linux 下使用 <code class="text-lime-400 bg-hub-900 px-1 rounded text-xs">lspci -vvv</code> 指令。也可直接查詢主機板規格書，確認型號後於官網查看。實體插槽旁通常也會標示 Gen 圖示。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <div id="component-footer"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ===== 載入元件 =====
+        function loadComponent(id, path) {
+            fetch(path)
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById(id).innerHTML = html;
+                    // 重新執行 script
+                    document.querySelectorAll('#' + id + ' script').forEach(s => {
+                        const newScript = document.createElement('script');
+                        Array.from(s.attributes).forEach(a => newScript.setAttribute(a.name, a.value));
+                        newScript.textContent = s.textContent;
+                        s.parentNode.replaceChild(newScript, s);
+                    });
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+        }
+        loadComponent('component-header', '/components/header.html');
+        loadComponent('component-sidebar', '/components/sidebar.html');
+        loadComponent('component-footer', '/components/footer.html');
+
+        // ===== Sidebar Active State (backward compat) =====
+        function setupSidebarActiveState() {
+            const currentPath = '/pcie-bandwidth-calculator';
+            document.querySelectorAll('.nav-item').forEach(el => {
+                const href = el.getAttribute('href');
+                if (href && (href === currentPath || href === currentPath + '/')) {
+                    el.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    el.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = el.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                    const parentGroup = el.closest('.nav-group');
+                    if (parentGroup) {
+                        const content = parentGroup.querySelector('.group-content');
+                        const chevron = parentGroup.querySelector('.chevron');
+                        if (content) { content.style.maxHeight = content.scrollHeight + 'px'; }
+                        if (chevron) { chevron.classList.add('rotate-180'); }
+                    }
+                }
+            });
+        }
+        setTimeout(setupSidebarActiveState, 500);
+
+        // ===== Toast =====
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._hide);
+            t._hide = setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        // ===== PCIe Data =====
+        const PCIE_DATA = {
+            1: { gt: 2.5,   label: 'PCIe 1.0', encoding: '8b/10b', eff: 0.8,     color: 'slate' },
+            2: { gt: 5.0,   label: 'PCIe 2.0', encoding: '8b/10b', eff: 0.8,     color: 'blue' },
+            3: { gt: 8.0,   label: 'PCIe 3.0', encoding: '128b/130b', eff: 0.984615, color: 'cyan' },
+            4: { gt: 16.0,  label: 'PCIe 4.0', encoding: '128b/130b', eff: 0.984615, color: 'green' },
+            5: { gt: 32.0,  label: 'PCIe 5.0', encoding: '128b/130b', eff: 0.984615, color: 'lime' },
+            6: { gt: 64.0,  label: 'PCIe 6.0', encoding: '128b/130b', eff: 0.984615, color: 'amber' },
+        };
+
+        function calcBW(gen, lanes) {
+            const d = PCIE_DATA[gen];
+            const uniPerLane = d.gt * d.eff / 8;
+            const uniTotal = uniPerLane * lanes;
+            const biTotal = uniTotal * 2;
+            return { uniPerLane, uniTotal, biTotal, genLabel: d.label, gen };
+        }
+
+        // ===== Preset Hardware =====
+        const PRESETS = [
+            { label: 'RTX 3060',  gen: 4, lanes: 8,  icon: 'ph-fill ph-gpu' },
+            { label: 'RTX 4070',  gen: 4, lanes: 16, icon: 'ph-fill ph-gpu' },
+            { label: 'RTX 4090',  gen: 4, lanes: 16, icon: 'ph-fill ph-gpu' },
+            { label: 'RTX 5090',  gen: 5, lanes: 16, icon: 'ph-fill ph-gpu' },
+            { label: 'Gen4 NVMe', gen: 4, lanes: 4,  icon: 'ph-fill ph-hard-drives' },
+            { label: 'Gen5 NVMe', gen: 5, lanes: 4,  icon: 'ph-fill ph-hard-drives' },
+            { label: '10GbE NIC', gen: 3, lanes: 4,  icon: 'ph-fill ph-network' },
+            { label: 'AI 加速卡', gen: 5, lanes: 16, icon: 'ph-fill ph-cpu' },
+        ];
+
+        // ===== Bottleneck Devices =====
+        const BOTTLENECK_DEVICES = [
+            { name: 'RTX 5090',  minBW: 28, icon: '🎮', note: 'NVIDIA 旗艦 GPU', severity: 'high' },
+            { name: 'RTX 4090',  minBW: 16, icon: '🎮', note: 'NVIDIA 高階 GPU', severity: 'high' },
+            { name: 'RTX 4070',  minBW: 8,  icon: '🎮', note: 'NVIDIA 中階 GPU', severity: 'mid' },
+            { name: 'RTX 3060',  minBW: 4,  icon: '🎮', note: 'NVIDIA 入門 GPU', severity: 'low' },
+            { name: 'Gen5 NVMe', minBW: 12, icon: '💾', note: 'PCIe 5.0 SSD', severity: 'high' },
+            { name: 'Gen4 NVMe', minBW: 6,  icon: '💾', note: 'PCIe 4.0 SSD', severity: 'mid' },
+            { name: '10GbE NIC', minBW: 1.2, icon: '🌐', note: '高速網卡', severity: 'low' },
+            { name: 'AI 加速卡',  minBW: 28, icon: '🧠', note: '深度學習', severity: 'high' },
+        ];
+
+        // ===== Scenarios =====
+        const SCENARIOS = [
+            { label: 'PCIe 3.0 x16 vs 4.0 x8', a: { gen: 3, lanes: 16 }, b: { gen: 4, lanes: 8 } },
+            { label: 'Gen4 NVMe vs Gen5 NVMe', a: { gen: 4, lanes: 4 },  b: { gen: 5, lanes: 4 } },
+            { label: 'AI GPU 世代比較',         a: { gen: 4, lanes: 16 }, b: { gen: 5, lanes: 16 } },
+            { label: 'GPU x8 vs x16',           a: { gen: 4, lanes: 8 },  b: { gen: 4, lanes: 16 } },
+            { label: 'PCIe 4.0 vs 5.0 x8',      a: { gen: 4, lanes: 8 },  b: { gen: 5, lanes: 8 } },
+            { label: '入門 vs 旗艦 GPU 插槽',    a: { gen: 4, lanes: 8 },  b: { gen: 5, lanes: 16 } },
+        ];
+
+        // ===== State =====
+        let target = 'A';
+
+        function getSelectedGen(side) {
+            const radios = document.querySelectorAll(`input[name="gen${side}"]`);
+            for (const r of radios) if (r.checked) return parseInt(r.value);
+            return 4;
+        }
+        function getSelectedLanes(side) {
+            const radios = document.querySelectorAll(`input[name="lane${side}"]`);
+            for (const r of radios) if (r.checked) return parseInt(r.value);
+            return 8;
+        }
+
+        function setTarget(t) {
+            target = t;
+            document.querySelectorAll('#target-a-btn, #target-b-btn').forEach(b => {
+                b.classList.remove('bg-pcie-primary', 'text-white', 'shadow-sm');
+                b.classList.add('text-slate-400');
+            });
+            const btn = document.getElementById('target-' + t.toLowerCase() + '-btn');
+            if (btn) {
+                btn.classList.remove('text-slate-400');
+                btn.classList.add('bg-pcie-primary', 'text-white', 'shadow-sm');
+            }
+            document.getElementById('target-label').textContent = t;
+        }
+
+        function fillPreset(gen, lanes) {
+            const side = target;
+            const genRadios = document.querySelectorAll(`input[name="gen${side}"]`);
+            for (const r of genRadios) { r.checked = (parseInt(r.value) === gen); }
+            const laneRadios = document.querySelectorAll(`input[name="lane${side}"]`);
+            for (const r of laneRadios) { r.checked = (parseInt(r.value) === lanes); }
+            showToast(`已填入配置 ${side}：${PCIE_DATA[gen].label} x${lanes}`);
+            calculate();
+        }
+
+        function fillScenario(scenario) {
+            // Set A
+            let genRadios = document.querySelectorAll('input[name="genA"]');
+            for (const r of genRadios) r.checked = (parseInt(r.value) === scenario.a.gen);
+            let laneRadios = document.querySelectorAll('input[name="laneA"]');
+            for (const r of laneRadios) r.checked = (parseInt(r.value) === scenario.a.lanes);
+            // Set B
+            genRadios = document.querySelectorAll('input[name="genB"]');
+            for (const r of genRadios) r.checked = (parseInt(r.value) === scenario.b.gen);
+            laneRadios = document.querySelectorAll('input[name="laneB"]');
+            for (const r of laneRadios) r.checked = (parseInt(r.value) === scenario.b.lanes);
+            showToast('已載入情境比較');
+            calculate();
+        }
+
+        // ===== Main Calculate =====
+        function calculate() {
+            const genA = getSelectedGen('A');
+            const lanesA = getSelectedLanes('A');
+            const genB = getSelectedGen('B');
+            const lanesB = getSelectedLanes('B');
+
+            const bwA = calcBW(genA, lanesA);
+            const bwB = calcBW(genB, lanesB);
+
+            // Update labels
+            document.getElementById('config-a-label').textContent = `${PCIE_DATA[genA].label} x${lanesA}`;
+            document.getElementById('config-b-label').textContent = `${PCIE_DATA[genB].label} x${lanesB}`;
+            document.getElementById('bar-label-a').textContent = `${PCIE_DATA[genA].label} x${lanesA}`;
+            document.getElementById('bar-label-b').textContent = `${PCIE_DATA[genB].label} x${lanesB}`;
+
+            // Update numbers
+            document.getElementById('uni-a').textContent = bwA.uniTotal.toFixed(2);
+            document.getElementById('bi-a').textContent = bwA.biTotal.toFixed(2);
+            document.getElementById('per-lane-a').textContent = bwA.uniPerLane.toFixed(2);
+            document.getElementById('uni-b').textContent = bwB.uniTotal.toFixed(2);
+            document.getElementById('bi-b').textContent = bwB.biTotal.toFixed(2);
+            document.getElementById('per-lane-b').textContent = bwB.uniPerLane.toFixed(2);
+
+            // Bar values
+            document.getElementById('bar-value-a').textContent = bwA.uniTotal.toFixed(2) + ' GB/s';
+            document.getElementById('bar-value-b').textContent = bwB.uniTotal.toFixed(2) + ' GB/s';
+
+            // Bars: higher bandwidth = 100%
+            const maxBW = Math.max(bwA.uniTotal, bwB.uniTotal);
+            if (maxBW > 0) {
+                document.getElementById('bar-a').style.width = (bwA.uniTotal / maxBW * 100) + '%';
+                document.getElementById('bar-b').style.width = (bwB.uniTotal / maxBW * 100) + '%';
+            }
+
+            // Comparison text
+            compareConfigs(bwA, bwB);
+
+            // Bottleneck analysis (based on config A)
+            renderBottleneck(bwA.uniTotal);
+
+            // Animate
+            document.getElementById('result-panel').classList.remove('animate-pop');
+            void document.getElementById('result-panel').offsetWidth;
+            document.getElementById('result-panel').classList.add('animate-pop');
+        }
+
+        function compareConfigs(a, b) {
+            const el = document.getElementById('comparison-text');
+            const pct = a.uniTotal > b.uniTotal
+                ? ((a.uniTotal - b.uniTotal) / b.uniTotal * 100)
+                : ((b.uniTotal - a.uniTotal) / a.uniTotal * 100);
+
+            const genRatio = a.gen === b.gen ? '同為' : '';
+            let equivNote = '';
+            // Check if they're equivalent (close bandwidths)
+            if (Math.abs(a.uniTotal - b.uniTotal) < 0.5) {
+                equivNote = `兩者頻寬幾乎相同。${getEquivNote(a.gen, a.uniTotal, b.gen, b.uniTotal)}`;
+                el.innerHTML = `🔄 <strong>配置 A 與 B 頻寬相近</strong>（差異約 ${pct.toFixed(1)}%）<br><span class="text-slate-400 text-xs">${equivNote}</span>`;
+            } else if (a.uniTotal > b.uniTotal) {
+                const suggestion = getSuggestion(a, b);
+                el.innerHTML = `✅ <strong>配置 A 頻寬更高</strong>，比配置 B 快約 <strong class="text-lime-400">${pct.toFixed(1)}%</strong><br>
+                    <span class="text-slate-400 text-xs">${PCIE_DATA[a.gen].label} x${a.lanes} → ${bwToText(a.uniTotal)} vs ${PCIE_DATA[b.gen].label} x${b.lanes} → ${bwToText(b.uniTotal)}</span>
+                    <span class="block mt-1 text-xs text-slate-500">${suggestion}</span>`;
+            } else {
+                const suggestion = getSuggestion(b, a);
+                el.innerHTML = `✅ <strong>配置 B 頻寬更高</strong>，比配置 A 快約 <strong class="text-pink-400">${pct.toFixed(1)}%</strong><br>
+                    <span class="text-slate-400 text-xs">${PCIE_DATA[b.gen].label} x${b.lanes} → ${bwToText(b.uniTotal)} vs ${PCIE_DATA[a.gen].label} x${a.lanes} → ${bwToText(a.uniTotal)}</span>
+                    <span class="block mt-1 text-xs text-slate-500">${suggestion}</span>`;
+            }
+        }
+
+        function getEquivNote(genA, bwA, genB, bwB) {
+            // Notable equivalences
+            if (genA === 3 && genB === 4) return 'PCIe 3.0 x16 ≈ PCIe 4.0 x8（頻寬相同）';
+            if (genA === 4 && genB === 3) return 'PCIe 4.0 x8 ≈ PCIe 3.0 x16（頻寬相同）';
+            if (genA === 4 && genB === 5) return 'PCIe 4.0 x16 ≈ PCIe 5.0 x8（頻寬相同）';
+            if (genA === 5 && genB === 4) return 'PCIe 5.0 x8 ≈ PCIe 4.0 x16（頻寬相同）';
+            if (genA === 5 && genB === 6) return 'PCIe 5.0 x16 ≈ PCIe 6.0 x8（頻寬相同）';
+            if (genA === 6 && genB === 5) return 'PCIe 6.0 x8 ≈ PCIe 5.0 x16（頻寬相同）';
+            return '';
+        }
+
+        function getSuggestion(winner, loser) {
+            const wBW = winner.uniTotal;
+            if (wBW >= 32) return '🚀 極高頻寬，適合高階 GPU、AI 加速卡、HPC 等頻寬密集型應用';
+            if (wBW >= 16) return '🎮 高頻寬，適合高階顯示卡與工作站應用，幾乎無瓶頸';
+            if (wBW >= 8) return '💻 中高頻寬，適合中階 GPU 與 Gen4 NVMe SSD，多數場景流暢';
+            if (wBW >= 4) return '📁 中頻寬，適合入門 GPU 與 Gen3 NVMe SSD，日常使用無虞';
+            if (wBW >= 2) return '🌐 適合高速網卡與一般擴充卡';
+            return '🔌 適合低速周邊裝置';
+        }
+
+        function bwToText(bw) {
+            if (bw >= 1000) return (bw / 1000).toFixed(2) + ' TB/s';
+            if (bw >= 1) return bw.toFixed(2) + ' GB/s';
+            return (bw * 1000).toFixed(0) + ' MB/s';
+        }
+
+        // ===== Bottleneck Analysis =====
+        function renderBottleneck(uniBW) {
+            const container = document.getElementById('bottleneck-container');
+            let html = '';
+            for (const dev of BOTTLENECK_DEVICES) {
+                const ratio = uniBW / dev.minBW;
+                let icon, label, color;
+                if (uniBW >= dev.minBW * 2) {
+                    icon = '🟢'; label = '頻寬充裕'; color = 'text-emerald-400';
+                } else if (uniBW >= dev.minBW) {
+                    icon = '🟡'; label = '足夠使用'; color = 'text-yellow-400';
+                } else if (uniBW >= dev.minBW * 0.6) {
+                    icon = '🟠'; label = '輕微瓶頸'; color = 'text-orange-400';
+                } else {
+                    icon = '🔴'; label = '明顯瓶頸'; color = 'text-red-400';
+                }
+                html += `<div class="flex items-center justify-between bg-hub-800/40 rounded-lg px-3 py-2.5 border border-slate-700/30">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-sm">${dev.icon}</span>
+                        <div>
+                            <div class="text-xs sm:text-sm font-medium text-white">${dev.name}</div>
+                            <div class="text-[10px] sm:text-xs text-slate-500">需要 ${dev.minBW} GB/s · ${dev.note}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-mono font-bold ${color}">${label}</div>
+                        <div class="text-[10px] text-slate-600">${ratio.toFixed(1)}x</div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // ===== Render Presets =====
+        function renderPresets() {
+            const container = document.getElementById('preset-container');
+            container.innerHTML = PRESETS.map(p =>
+                `<button onclick="fillPreset(${p.gen}, ${p.lanes})" class="preset-chip px-2.5 py-1.5 text-xs rounded-lg bg-hub-800 border border-hub-700 text-slate-300 hover:border-lime-500/30 hover:bg-hub-700/80 flex items-center gap-1.5 whitespace-nowrap">
+                    <i class="${p.icon} text-pcie-primary text-[10px]"></i> ${p.label}
+                </button>`
+            ).join('');
+        }
+
+        // ===== Render Scenarios =====
+        function renderScenarios() {
+            const container = document.getElementById('scenario-container');
+            container.innerHTML = SCENARIOS.map(s =>
+                `<button onclick='fillScenario(${JSON.stringify(s).replace(/'/g, "&#39;")})' class="preset-chip px-2.5 py-1.5 text-xs rounded-lg bg-hub-800 border border-hub-700 text-slate-300 hover:border-lime-500/30 hover:bg-hub-700/80 whitespace-nowrap">
+                    🔄 ${s.label}
+                </button>`
+            ).join('');
+        }
+
+        // ===== Render BW Table =====
+        function renderBWTable() {
+            const tbody = document.getElementById('bw-table-body');
+            const lanes = [1, 2, 4, 8, 16];
+            const gens = [1, 2, 3, 4, 5, 6];
+            let html = '';
+            for (const l of lanes) {
+                html += `<tr class="border-b border-slate-700/30">`;
+                html += `<td class="py-2 pr-3 font-mono font-medium text-slate-300">x${l}</td>`;
+                for (const g of gens) {
+                    const bw = calcBW(g, l);
+                    const isHighlight = (g === getSelectedGen('A') && l === getSelectedLanes('A'));
+                    const cls = isHighlight ? 'text-lime-400 font-bold' : 'text-slate-400';
+                    html += `<td class="py-2 px-3 font-mono text-xs ${cls}">${bw.uniTotal.toFixed(2)} GB/s</td>`;
+                }
+                html += `</tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // ===== FAQ Toggle =====
+        window.toggleFaq = function(btn) {
+            const answer = btn.parentElement.querySelector('.faq-answer');
+            const chevron = btn.querySelector('svg');
+            if (!answer) return;
+            const isOpen = answer.classList.contains('open');
+            // Close all
+            document.querySelectorAll('.faq-answer.open').forEach(a => {
+                a.classList.remove('open');
+                const c = a.parentElement.querySelector('button svg');
+                if (c) c.style.transform = 'rotate(0deg)';
+            });
+            if (!isOpen) {
+                answer.classList.add('open');
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            }
+        };
+
+        // ===== Init =====
+        renderPresets();
+        renderScenarios();
+        renderBWTable();
+        calculate();
+
+        // Re-render table on gen/lane changes via mutation observer (simplified: recalc on any click)
+        document.addEventListener('change', function(e) {
+            if (e.target.name && e.target.name.startsWith('gen')) {
+                renderBWTable();
+            }
+            if (e.target.name && e.target.name.startsWith('lane')) {
+                renderBWTable();
+            }
+        });
+
+        // Re-init Lucide icons after DOM updates
+        setInterval(() => {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }, 1000);
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

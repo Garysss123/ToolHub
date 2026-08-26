@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Text Compare | Free Online Tool - ToolHub</title>
+<meta content="Free online Text Compare text comparison tool. Supports three comparison modes: character, single word and line, real-time Diff difference marking, similarity score, Unified Diff and Side-by-Side viewing. Suitable for comparison of program code, configuration files, AI output and general text." name="description"/>
+<meta content="Text Compare, 文字比較, Diff 工具, 差異比對, 文字比對, Git Diff, 程式碼比較, 相似度分析, 文字差異, 線上比較工具" name="keywords"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        /* 文字編輯器通用樣式 */
+        .diff-editor {
+            font-family: 'Fira Code', 'Noto Sans TC', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            tab-size: 4;
+            resize: none;
+            transition: border-color 0.2s ease;
+        }
+        .diff-editor:focus {
+            border-color: #38BDF8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+        }
+
+        /* 比較模式按鈕 */
+        .mode-btn {
+            transition: all 0.2s ease;
+        }
+        .mode-btn.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.05));
+            border-color: #38BDF8;
+            color: #38BDF8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+
+        .view-btn {
+            transition: all 0.2s ease;
+        }
+        .view-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+        }
+
+        .option-checkbox:checked + .option-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+        }
+
+        /* Diff 結果行樣式 */
+        .diff-line-add {
+            background-color: rgba(16, 185, 129, 0.12);
+            border-left: 3px solid #10B981;
+        }
+        .diff-line-del {
+            background-color: rgba(239, 68, 68, 0.12);
+            border-left: 3px solid #EF4444;
+        }
+        .diff-line-mod {
+            background-color: rgba(245, 158, 11, 0.12);
+            border-left: 3px solid #F59E0B;
+        }
+        .diff-line-eq {
+            border-left: 3px solid transparent;
+        }
+
+        /* Unified diff 行內高亮 */
+        .diff-inline-add {
+            background-color: rgba(16, 185, 129, 0.3);
+            border-radius: 2px;
+        }
+        .diff-inline-del {
+            background-color: rgba(239, 68, 68, 0.3);
+            border-radius: 2px;
+        }
+        .diff-inline-mod {
+            background-color: rgba(245, 158, 11, 0.3);
+            border-radius: 2px;
+        }
+
+        /* 相似度圓環 */
+        .score-ring {
+            transform: rotate(-90deg);
+        }
+        .score-ring circle {
+            transition: stroke-dashoffset 0.8s ease;
+        }
+
+        /* 自訂滾動條 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 4px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+
+        @media (max-width: 640px) {
+            .diff-editor {
+                font-size: 12px;
+            }
+            .glass-panel { padding: 1rem; }
+        }
+
+        /* Diff 結果區域行號 */
+        .line-num {
+            color: #475569;
+            user-select: none;
+            text-align: right;
+            padding-right: 12px;
+            min-width: 36px;
+            font-size: 11px;
+        }
+
+        /* 統計卡動畫 */
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/text-compare/" property="og:url"/>
+<meta content="Text Compare | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free online Text Compare text comparison tool. Supports three comparison modes: character, single word and line, real-time Diff difference marking, similarity score, Unified Diff and Side-by-Side viewing. Suitable for comparison of program code, configuration files, AI output and general text." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Text Compare | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free online Text Compare text comparison tool. Supports three comparison modes: character, single word and line, real-time Diff difference marking, similarity score, Unified Diff and Side-by-Side viewing. Suitable for comparison of program code, configuration files, AI output and general text." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Text Compare","url":"https://toolhuben.com/en/text-compare/","description":"Free online Text Compare text comparison tool. Supports three comparison modes: character, single word and line, real-time Diff difference marking, similarity score, Unified Diff and Side-by-Side viewing. Suitable for comparison of program code, configuration files, AI output and general text.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Text Compare","item":"https://toolhuben.com/en/text-compare/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/text-compare/" rel="canonical"/><link href="https://toolhuben.com/text-compare/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/text-compare/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/text-compare/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","共":"total","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","字符":"character","尚無結果可複製":"There are no results to copy yet","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清除所有文字":"All text cleared","建立理念":"Our Founding Idea","建議":"Recommendation","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","顯示":"Showing","（空白）":"(blank)","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","!\\`); return true; } function calculateSum(a, b) { const result = a + b; console.log(\"Total: \" + result); return result; } function calculateProduct(a, b) { return a * b; } // 主程式 const users = [\"Alice\", \"Bob\", \"Charlie\"]; for (const user of users) { greet(user, \"Mr.\"); }":"!\\`); return true; } function calculateSum(a, b) { const result = a + b; console.log(\"Total: \" + result); return result; } function calculateProduct(a, b) { return a * b; } // Main program const users = [\"Alice\", \"Bob\", \"Charlie\"]; for (const user of users) { greet(user, \"Mr.\"); }","--- Diff 結果 ---":"--- Diff results ---","======================================== Text Compare 差異報告 ======================================== 產生時間:":"======================================== Text Compare Difference Report ======================================== Generation time:","Diff 報告已下載":"Diff report downloaded","function greet(name) { console.log(\"Hello, \" + name + \"!\"); return true; } function calculateSum(a, b) { const result = a + b; console.log(\"Sum: \" + result); return result; } // 主程式 const users = [\"Alice\", \"Bob\"]; for (const user of users) { greet(user); }":"function greet(name) { console.log(\"Hello, \" + name + \"!\"); return true; } function calculateSum(a, b) { const result = a + b; console.log(\"Sum: \" + result); return result; } // Main program const users = [\"Alice\", \"Bob\"]; for (const user of users) { greet(user); }","個差異區塊":"difference blocks","兩段文字完全相同":"The two paragraphs are exactly the same","字符) ---":"characters) ---","尚無結果可下載":"No results available to download yet","已交換 Text A 與 Text B":"Text A and Text B swapped","已複製 Diff 結果到剪貼簿":"Diff results copied to clipboard","已載入範例資料（程式碼比較示範）":"Sample data loaded (code comparison demonstration)","檢視模式:":"View mode:","比較模式:":"Compare mode:","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","相似度:":"Similarity:","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="glass" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- ===================== Hero ===================== -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-sky-950/30 border border-sky-900/50 text-xs text-sky-400 shadow-inner">
+<i class="ph-fill ph-file-diff mr-1.5 text-sm"></i>
+                Diff difference comparison engine has been started
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Text Compare <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-400">text comparison tool</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                Quickly compare the differences between two pieces of text, supporting three comparison modes: character, single word, line, and Unified Diff view. Suitable for comparison and analysis of program code, configuration files, AI output and general text.
+            </p>
+</div>
+<!-- ===================== 比較模式與檢視模式選擇 ===================== -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+<!-- 比較模式 -->
+<div class="flex items-center gap-2 flex-wrap">
+<span class="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">compare mode</span>
+<button class="mode-btn active px-3 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all" data-mode="char">
+<i class="ph-fill ph-text-aa mr-1"></i>character
+                </button>
+<button class="mode-btn px-3 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all" data-mode="word">
+<i class="ph-fill ph-words mr-1"></i>single word
+                </button>
+<button class="mode-btn px-3 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all" data-mode="line">
+<i class="ph-fill ph-text-indent mr-1"></i>OK
+                </button>
+</div>
+<!-- 檢視模式 -->
+<div class="flex items-center gap-2 flex-wrap">
+<span class="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">View mode</span>
+<button class="view-btn active px-3 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all" data-view="side">
+<i class="ph-fill ph-sidebar mr-1"></i>Compare left and right
+                </button>
+<button class="view-btn px-3 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all" data-view="unified">
+<i class="ph-fill ph-code mr-1"></i>Unified Diff
+                </button>
+</div>
+</div>
+<!-- ===================== 選項列 ===================== -->
+<div class="flex flex-wrap items-center gap-2 mb-4">
+<span class="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">Options</span>
+<label class="cursor-pointer">
+<input class="sr-only option-checkbox" id="opt-ignore-case" type="checkbox"/>
+<span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">Ignore case</span>
+</label>
+<label class="cursor-pointer">
+<input class="sr-only option-checkbox" id="opt-ignore-whitespace" type="checkbox"/>
+<span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">ignore whitespace</span>
+</label>
+<label class="cursor-pointer">
+<input class="sr-only option-checkbox" id="opt-ignore-empty" type="checkbox"/>
+<span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">ignore empty lines</span>
+</label>
+<select class="bg-hub-900 border border-hub-700 rounded-lg px-2.5 py-1 text-xs text-slate-400 outline-none focus:border-sky-500 transition-colors cursor-pointer" id="opt-line-ending">
+<option value="none">Keep line breaks</option>
+<option value="lf">LF (Unix)</option>
+<option value="crlf">CRLF (Windows)</option>
+</select>
+</div>
+<!-- ===================== 主要編輯區域 ===================== -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5" id="editor-area">
+<!-- Text A -->
+<div class="glass-panel p-4 flex flex-col shadow-xl">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-file-text text-sky-400"></i> Text A
+                    </h3>
+<span class="text-[10px] text-slate-500 font-mono" id="chars-a">0 characters</span>
+</div>
+<textarea class="diff-editor w-full bg-hub-900/50 border border-hub-700 rounded-lg p-3 text-slate-200 outline-none flex-grow min-h-[200px] sm:min-h-[300px] custom-scrollbar" id="text-a" placeholder="Enter first paragraph of text here..." spellcheck="false"></textarea>
+</div>
+<!-- Text B -->
+<div class="glass-panel p-4 flex flex-col shadow-xl">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-file-text text-blue-400"></i> Text B
+                    </h3>
+<span class="text-[10px] text-slate-500 font-mono" id="chars-b">0 characters</span>
+</div>
+<textarea class="diff-editor w-full bg-hub-900/50 border border-hub-700 rounded-lg p-3 text-slate-200 outline-none flex-grow min-h-[200px] sm:min-h-[300px] custom-scrollbar" id="text-b" placeholder="Enter second paragraph of text here..." spellcheck="false"></textarea>
+</div>
+</div>
+<!-- ===================== 操作按鈕列 ===================== -->
+<div class="flex flex-wrap items-center justify-center gap-2 mb-6">
+<button class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all flex items-center gap-1.5" id="btn-swap">
+<i class="ph-fill ph-arrows-left-right"></i> Exchange
+            </button>
+<button class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all flex items-center gap-1.5" id="btn-sample">
+<i class="ph-fill ph-file-plus"></i> Sample data
+            </button>
+<button class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-red-500/50 hover:text-red-400 transition-all flex items-center gap-1.5" id="btn-clear">
+<i class="ph-fill ph-trash"></i> Clear
+            </button>
+<button class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all flex items-center gap-1.5" id="btn-copy">
+<i class="ph-fill ph-copy"></i> Copy results
+            </button>
+<button class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-sky-500/50 hover:text-sky-300 transition-all flex items-center gap-1.5" id="btn-download">
+<i class="ph-fill ph-download"></i> Download report
+            </button>
+</div>
+<!-- ===================== 相似度評分卡片 ===================== -->
+<div class="glass-panel p-5 sm:p-6 mb-6 shadow-xl hidden" id="similarity-card">
+<div class="flex flex-col sm:flex-row items-center gap-6">
+<!-- 圓環評分 -->
+<div class="relative flex-shrink-0">
+<svg class="score-ring w-20 h-20 sm:w-24 sm:h-24" viewbox="0 0 120 120">
+<circle cx="60" cy="60" fill="none" r="52" stroke="#1E293B" stroke-width="8"></circle>
+<circle cx="60" cy="60" fill="none" id="score-circle" r="52" stroke="#38BDF8" stroke-dasharray="326.73" stroke-dashoffset="326.73" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-xl sm:text-2xl font-bold font-mono text-white" id="score-text">0%</span>
+</div>
+</div>
+<!-- 統計資訊 -->
+<div class="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+<div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+<span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Add new row</span>
+<p class="font-mono text-lg font-bold text-diff-add mt-1" id="stat-added">0</p>
+</div>
+<div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+<span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Delete row</span>
+<p class="font-mono text-lg font-bold text-diff-del mt-1" id="stat-deleted">0</p>
+</div>
+<div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+<span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Modify row</span>
+<p class="font-mono text-lg font-bold text-diff-mod mt-1" id="stat-modified">0</p>
+</div>
+<div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+<span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total number of rows</span>
+<p class="font-mono text-lg font-bold text-white mt-1" id="stat-total">0</p>
+</div>
+</div>
+</div>
+</div>
+<!-- ===================== Diff 結果區域 ===================== -->
+<div class="glass-panel p-4 sm:p-5 shadow-xl hidden" id="diff-result">
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-diff text-sky-400"></i> Diff difference results
+                </h3>
+<span class="text-[10px] text-slate-500" id="diff-summary-label"></span>
+</div>
+<div class="overflow-x-auto custom-scrollbar font-mono text-sm leading-relaxed" id="diff-content"></div>
+</div>
+<!-- ===================== SEO 知識區 ===================== -->
+<div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+<div class="border-b border-hub-700 pb-2 mb-6">
+<h2 class="text-xl font-bold text-white tracking-wide">Text Compare Complete Guide to Text Comparison</h2>
+<p class="text-slate-500 text-sm mt-1">Gain an in-depth understanding of text comparison principles, Diff algorithms and usage scenarios</p>
+</div>
+<!-- 什麼是 Text Compare -->
+<div class="glass-panel p-6 shadow-xl">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+<i class="ph-fill ph-question text-sky-400"></i> What is Text Compare?
+                </h3>
+<p class="text-slate-400 text-sm leading-relaxed">
+                    Text Compare is a tool used to compare the differences between two pieces of text. It can quickly find the similarities and differences between the texts. Whether it's code version control, file modification tracking, AI output comparison, or simple content proofreading, text comparison tools can help you identify changes at a glance.
+                </p>
+<p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    Compared with manual line-by-line comparison, the Text Compare tool can automatically identify added, deleted, and modified content and highlight them in different colors, greatly improving efficiency and accuracy. This tool supports <strong class="text-white">Character</strong>、<strong class="text-white">Word</strong> and <strong class="text-white">Line</strong> Three comparison granularities meet the needs of different scenarios.
+                </p>
+</div>
+<!-- Diff 是什麼 -->
+<div class="glass-panel p-6 shadow-xl">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+<i class="ph-fill ph-arrows-down-up text-sky-400"></i> What is Diff?
+                </h3>
+<p class="text-slate-400 text-sm leading-relaxed">
+<strong class="text-white">Diff</strong>(abbreviation for Difference) refers to the process and results of calculating the difference between two text files or content. The output of Diff usually shows which lines have been added, deleted or modified, and is a core technology in version control systems (such as Git) and code review processes.
+                </p>
+<p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    A standard Diff output contains the following elements:
+                </p>
+<ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+<li><strong class="text-diff-add">Added</strong>: Marked in green, it indicates content that appears in the second paragraph of text but not in the first paragraph.</li>
+<li><strong class="text-diff-del">Deleted</strong>: In red, content that was present in the first paragraph of text but was removed in the second paragraph.</li>
+<li><strong class="text-diff-mod">Modified</strong>: Marked in yellow, it means that the content has changed but has not been completely added or deleted.</li>
+<li><strong class="text-white">Equal</strong>: The unchanged part, used as the baseline context for comparison.</li>
+</ul>
+</div>
+<!-- Git Diff 原理 -->
+<div class="glass-panel p-6 shadow-xl">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+<i class="ph-fill ph-git-branch text-sky-400"></i> Git Diff principle
+                </h3>
+<p class="text-slate-400 text-sm leading-relaxed">
+                    Git's Diff function is based on <strong class="text-white">Myers difference algorithm</strong>(Proposed by Eugene W. Myers in 1986), this is an algorithm that can find the longest common subsequence (LCS) between two sequences in O(ND) time complexity.
+                </p>
+<p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    The core idea of Myers algorithm is in a <strong class="text-white">Edit Graph</strong> Find the shortest path in:
+                </p>
+<ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+<li>Consider the two paragraphs of text as the X-axis and Y-axis of the two-dimensional grid.</li>
+<li>When the characters in the two positions are the same, they can be moved diagonally (no editing times are consumed).</li>
+<li>The goal of the algorithm is to find a path from the origin (0,0) to (N,M) that has the most diagonal movement (i.e., the most common parts).</li>
+<li>The "off-diagonal movement" corresponding to this path is the required editing operation (add or delete).</li>
+</ul>
+<p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    The output format of Git Diff is also this tool <strong class="text-white">Unified Diff</strong> The basis of the pattern. Unified Diff with <code class="text-sky-400">---</code> and <code class="text-sky-400">+++</code> Mark the file name with <code class="text-sky-400">@@ ... @@</code> Mark the changed location with <code class="text-green-400">+</code>(new) and <code class="text-red-400">-</code> The (delete) prefix indicates the type of change for each row.
+                </p>
+</div>
+<!-- 什麼情況適合使用 -->
+<div class="glass-panel p-6 shadow-xl">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+<i class="ph-fill ph-check-circle text-sky-400"></i> When is it appropriate to use the text comparison tool?
+                </h3>
+<p class="text-slate-400 text-sm leading-relaxed">
+                    The text comparison tool is particularly useful in the following scenarios:
+                </p>
+<ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-3 list-disc list-inside">
+<li><strong class="text-white">Code version comparison</strong>: Compare different versions of source code to quickly locate modification points. Very helpful for Code Review and Debug.</li>
+<li><strong class="text-white">Profile comparison</strong>: Compare the differences between the two configuration files (such as JSON, YAML, ini) before and after to avoid mistaken changes or omission of key configurations.</li>
+<li><strong class="text-white">AI output quality verification</strong>: Compare the output results of AI models under different prompts, or compare the response differences of the same prompt in different models to find the optimal results.</li>
+<li><strong class="text-white">Document revision tracking</strong>: Track the modification history of contracts, reports, articles and other documents, and clearly display the specific content of each edit.</li>
+<li><strong class="text-white">Content plagiarism detection</strong>: Quickly compare the similarity between two paragraphs of text to help determine whether there is plagiarism or unauthorized quotation in the content.</li>
+<li><strong class="text-white">Data migration verification</strong>: After database migration or format conversion, compare the data content before and after conversion to ensure the correctness and completeness of the conversion.</li>
+<li><strong class="text-white">Localization and translation proofreading</strong>: Compare the original text and the translated text to check whether there are missing, repeated or inconsistent paragraphs.</li>
+</ul>
+</div>
+<!-- 相似度計算方式 -->
+<div class="glass-panel p-6 shadow-xl">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+<i class="ph-fill ph-percent text-sky-400"></i> How is similarity calculated?
+                </h3>
+<p class="text-slate-400 text-sm leading-relaxed">
+                    Similarity Score is a quantitative indicator of how similar two pieces of text are, ranging from 0% (completely different) to 100% (exactly the same). This tool calculates using the following formula:
+                </p>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4 my-3 font-mono text-xs text-slate-300 leading-relaxed">
+                    Similarity = (number of common characters × 2) ÷ (length of Text A + length of Text B) × 100%
+                </div>
+<p class="text-slate-400 text-sm leading-relaxed">
+                    Where "number of common characters" is based on <strong class="text-white">Longest common subsequence (LCS)</strong> Calculated by algorithm. LCS refers to the longest subsequence that appears in both sequences and maintains the original order. The longer the LCS, the more common parts the two paragraphs have in common, and the higher the similarity.
+                </p>
+<p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    In line comparison mode, the similarity is calculated in "line" units; in character comparison mode, it is calculated in "character" units, providing a more refined similarity evaluation.
+                </p>
+</div>
+<!-- FAQ -->
+<div class="glass-panel p-6 shadow-xl">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+<i class="ph-fill ph-question-mark text-sky-400"></i> Text Compare FAQ
+                </h3>
+<div class="space-y-4" itemscope="" itemtype="https://schema.org/FAQPage">
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<h4 class="text-sm font-bold text-white mb-2" itemprop="name">Q1: What are the differences between the three comparison modes: character, single word, and line?</h4>
+<div itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+<strong class="text-white">Character Compare</strong>: Compare on a per-character basis, suitable for pinpointing spelling differences or minor text changes.<br/>
+<strong class="text-white">Word Compare</strong>: Comparison is done in units of words, suitable for comparing differences at the sentence or paragraph level, such as before and after the article is modified.<br/>
+<strong class="text-white">Line Compare</strong>: Compare each line of text as a unit, the behavior mode closest to Git Diff, suitable for version comparison of program code and structured text.<br/>
+                                It is recommended to choose the most appropriate granularity based on your usage scenario: if you need to be precise down to letters, choose "Character", if you want to compare article paragraphs, choose "Single Word", and for code version control, choose "Line".
+                            </p>
+</div>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<h4 class="text-sm font-bold text-white mb-2" itemprop="name">Q2: What is the difference between Side-by-Side and Unified Diff viewing modes?</h4>
+<div itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+<strong class="text-white">Side-by-Side (left-right comparison)</strong>: Display two pieces of text side by side, with Text A on the left and Text B on the right, with the difference lines highlighted in color. This mode is intuitive and easy to understand, and conforms to traditional text comparison usage habits.<br/>
+<strong class="text-white">Unified Diff</strong>: Combine two paragraphs of text into a unified view to <code class="text-red-400">-</code> The prefix indicates deleted lines,<code class="text-green-400">+</code> The prefix marks the new line and ends with <code class="text-sky-400">@@</code> The block header indicates the location of the change. This is the format closest to the output of the Git Diff command and is loved by developers.<br/>
+                                It is recommended to use Side-by-Side mode for desktop environments. Unified Diff mode on mobile devices provides a better reading experience on narrow screens. This tool will automatically switch to a suitable display mode on the mobile phone.
+                            </p>
+</div>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<h4 class="text-sm font-bold text-white mb-2" itemprop="name">Q3: What are the functions of "Ignore case", "Ignore blanks" and "Ignore blank lines" in the options?</h4>
+<div itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+<strong class="text-white">Ignore Case</strong>: When comparing, the case of English letters is not distinguished, and "Hello" and "hello" will be regarded as the same. Suitable for comparing case-insensitive content.<br/>
+<strong class="text-white">Ignore Whitespace</strong>: Ignore differences in all whitespace characters (spaces, tabs, etc.) when comparing. Suitable for comparing program codes because differences in indentation styles do not affect logic.<br/>
+<strong class="text-white">Ignore Empty Lines</strong>: Do not treat empty lines as valid differences when comparing. If two paragraphs of text differ only in the number of blank lines, they will be treated as identical when this option is enabled.<br/>
+                                These options can be used in combination to help you filter out uninteresting differences and focus on substantive changes.
+                            </p>
+</div>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<h4 class="text-sm font-bold text-white mb-2" itemprop="name">Q4: What does the similarity score (Similarity) of text comparison represent?</h4>
+<div itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                A similarity score is a 0% to 100% metric that quantifies how similar two pieces of text are. 100% means the two paragraphs are identical, 0% means they have nothing in common. The calculation is based on the Longest Common Subsequence (LCS):<br/>
+                                Similarity = (2 × LCS length) ÷ (Text A length + Text B length) × 100%<br/>
+                                Generally speaking, a similarity above 90% means there are only minor differences; a similarity between 70% and 90% means there are some modifications; a similarity below 70% means there are major changes. Please note that the similarity is for reference only, and actual differences still require Diff viewing to confirm the specific changes.
+                            </p>
+</div>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<h4 class="text-sm font-bold text-white mb-2" itemprop="name">Q5: Will text content be uploaded to the server? Is privacy safe?</h4>
+<div itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                Not at all. This tool is<strong class="text-white">Pure front-end application</strong>, all text comparisons, difference calculations and similarity analysis are done locally in your browser, no data is sent to the server. You can confidently compare any confidential content, including source code, business documents or personal data. This tool works even when offline.
+                            </p>
+</div>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<h4 class="text-sm font-bold text-white mb-2" itemprop="name">Q6: How to export the difference report? What formats are supported?</h4>
+<div itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                You can use "<strong class="text-white">Copy results</strong> button to copy the Diff results to the clipboard, or via<strong class="text-white">Download report</strong>” button to download the difference report as a plain text file (.txt). The downloaded report contains the full Unified Diff format output, including archive headers, block position markers, and diff line content, suitable for saving or sharing with your team. Side-by-Side mode diff results are automatically converted to human-readable markup format when copied.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">Complete</span>
+</div>
+<!-- 頁尾 -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- 系統引導程式                               -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/text-compare';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => { container.classList.remove('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full'); overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 核心業務邏輯：Text Compare Diff 引擎       -->
+<!-- ========================================== -->
+<script>
+        // ============================================================
+        // 1. LCS (Longest Common Subsequence) Diff 演算法
+        // ============================================================
+
+        // 計算 LCS 表 (DP)
+        function computeLCSTable(a, b) {
+            const m = a.length;
+            const n = b.length;
+            const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    if (a[i - 1] === b[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+            return dp;
+        }
+
+        // 從 LCS 表回溯，產生 diff 操作序列
+        function backtrackDiff(dp, a, b) {
+            const ops = [];
+            let i = a.length;
+            let j = b.length;
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+                    ops.push({ type: 'equal', value: a[i - 1] });
+                    i--; j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                    ops.push({ type: 'add', value: b[j - 1] });
+                    j--;
+                } else {
+                    ops.push({ type: 'del', value: a[i - 1] });
+                    i--;
+                }
+            }
+            return ops.reverse();
+        }
+
+        // 產生最終 diff (陣列格式)
+        function computeDiff(a, b) {
+            const dp = computeLCSTable(a, b);
+            return backtrackDiff(dp, a, b);
+        }
+
+        // 合併相鄰的相同類型操作（用於字元/單字模式）
+        function mergeAdjacent(ops) {
+            if (ops.length === 0) return [];
+            const merged = [Object.assign({}, ops[0])];
+            for (let i = 1; i < ops.length; i++) {
+                const last = merged[merged.length - 1];
+                if (last.type === ops[i].type) {
+                    last.value += ops[i].value;
+                } else {
+                    merged.push(Object.assign({}, ops[i]));
+                }
+            }
+            return merged;
+        }
+
+        // 行模式：合併相鄰相同類型的行
+        function mergeAdjacentLines(ops) {
+            if (ops.length === 0) return [];
+            const merged = [Object.assign({}, ops[0])];
+            for (let i = 1; i < ops.length; i++) {
+                const last = merged[merged.length - 1];
+                if (last.type === ops[i].type) {
+                    if (Array.isArray(last.value)) {
+                        last.value = last.value.concat(ops[i].value);
+                    } else {
+                        last.value = [last.value, ops[i].value].flat();
+                    }
+                } else {
+                    merged.push(Object.assign({}, ops[i]));
+                }
+            }
+            return merged;
+        }
+
+        // ============================================================
+        // 2. 文字前處理
+        // ============================================================
+
+        function preprocessText(text, options) {
+            let processed = text;
+
+            if (options.ignoreCase) {
+                processed = processed.toLowerCase();
+            }
+
+            if (options.lineEnding === 'lf') {
+                processed = processed.replace(/\r\n/g, '\n');
+            } else if (options.lineEnding === 'crlf') {
+                processed = processed.replace(/\n/g, '\r\n');
+            }
+
+            if (options.ignoreEmpty) {
+                const lines = processed.split('\n');
+                processed = lines.filter(line => line.trim() !== '').join('\n');
+            }
+
+            if (options.ignoreWhitespace) {
+                processed = processed.replace(/\s+/g, '');
+            }
+
+            return processed;
+        }
+
+        // ============================================================
+        // 3. 三種比較模式
+        // ============================================================
+
+        function compareChar(textA, textB, options) {
+            const a = preprocessText(textA, options);
+            const b = preprocessText(textB, options);
+            if (a === b) return { ops: [{ type: 'equal', value: a }], lcsLen: a.length, changes: { add: 0, del: 0, mod: 0 } };
+
+            const ops = computeDiff([...a], [...b]);
+            const merged = mergeAdjacent(ops);
+
+            let lcsLen = 0;
+            let add = 0, del = 0, mod = 0;
+            for (const op of merged) {
+                if (op.type === 'equal') lcsLen += op.value.length;
+                else if (op.type === 'add') add += op.value.length;
+                else if (op.type === 'del') del += op.value.length;
+            }
+            mod = Math.min(add, del);
+            add -= mod;
+            del -= mod;
+
+            return { ops: merged, lcsLen, changes: { add, del, mod } };
+        }
+
+        function compareWord(textA, textB, options) {
+            const a = preprocessText(textA, options);
+            const b = preprocessText(textB, options);
+
+            // 分詞：以空白和非空白為單位
+            const wordsA = a.match(/\S+\s*/g) || [];
+            const wordsB = b.match(/\S+\s*/g) || [];
+
+            if (a === b) return {
+                ops: [{ type: 'equal', value: a }],
+                lcsLen: Math.max(a.length, 1),
+                changes: { add: 0, del: 0, mod: 0 }
+            };
+
+            const ops = computeDiff(wordsA, wordsB);
+            const merged = mergeAdjacent(ops);
+
+            let lcsLen = 0;
+            let add = 0, del = 0, mod = 0;
+            for (const op of merged) {
+                const val = Array.isArray(op.value) ? op.value.join('') : op.value;
+                if (op.type === 'equal') lcsLen += val.length;
+                else if (op.type === 'add') add++;
+                else if (op.type === 'del') del++;
+            }
+            mod = Math.min(add, del);
+            add -= mod;
+            del -= mod;
+
+            return { ops: merged, lcsLen, changes: { add, del, mod } };
+        }
+
+        function compareLine(textA, textB, options) {
+            const a = preprocessText(textA, options);
+            const b = preprocessText(textB, options);
+
+            const linesA = a.split('\n');
+            const linesB = b.split('\n');
+
+            if (a === b) {
+                const total = Math.max(linesA.length, linesB.length);
+                return {
+                    ops: [{ type: 'equal', value: linesA }],
+                    lcsLen: a.length,
+                    changes: { add: 0, del: 0, mod: 0 },
+                    lineStats: { total, add: 0, del: 0, mod: 0 }
+                };
+            }
+
+            const ops = computeDiff(linesA, linesB);
+            const merged = mergeAdjacentLines(ops);
+
+            let lcsLen = 0;
+            let add = 0, del = 0, mod = 0;
+            let totalLines = 0;
+            for (const op of merged) {
+                const lines = Array.isArray(op.value) ? op.value : [op.value];
+                const charLen = lines.reduce((s, l) => s + l.length, 0);
+                if (op.type === 'equal') {
+                    lcsLen += charLen;
+                    totalLines += lines.length;
+                } else if (op.type === 'add') {
+                    add += lines.length;
+                    totalLines += lines.length;
+                } else if (op.type === 'del') {
+                    del += lines.length;
+                    totalLines += Math.max(totalLines, lines.length);
+                }
+            }
+
+            // 計算修改行：用 LCS 重新比對新增行和刪除行的內容
+            const addLines = [];
+            const delLines = [];
+            for (const op of merged) {
+                const lines = Array.isArray(op.value) ? op.value : [op.value];
+                if (op.type === 'add') addLines.push(...lines);
+                else if (op.type === 'del') delLines.push(...lines);
+            }
+
+            // 對新增行和刪除行做字元比對，判斷是純新增/刪除還是修改
+            let pureAdd = 0, pureDel = 0;
+            const minLen = Math.min(addLines.length, delLines.length);
+            for (let i = 0; i < minLen; i++) {
+                const al = addLines[i];
+                const dl = delLines[i];
+                if (al !== dl) {
+                    mod++;
+                }
+            }
+            if (addLines.length > minLen) pureAdd += addLines.length - minLen;
+            if (delLines.length > minLen) pureDel += delLines.length - minLen;
+
+            const finalTotal = Math.max(linesA.length, linesB.length);
+
+            return {
+                ops: merged,
+                lcsLen,
+                changes: { add: pureAdd, del: pureDel, mod },
+                lineStats: { total: finalTotal, add: pureAdd, del: pureDel, mod }
+            };
+        }
+
+        // ============================================================
+        // 4. 相似度計算
+        // ============================================================
+
+        function computeSimilarity(textA, textB, lcsLen) {
+            const totalLen = textA.length + textB.length;
+            if (totalLen === 0) return 100;
+            return Math.round((lcsLen * 2) / totalLen * 100);
+        }
+
+        // ============================================================
+        // 5. 渲染引擎
+        // ============================================================
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderSideBySide(ops, _, mode) {
+            if (mode === 'line') {
+                return renderLineSideBySide(ops);
+            } else {
+                return renderCharWordSideBySide(ops);
+            }
+        }
+
+        function renderCharWordSideBySide(ops) {
+            // 左側（Text A）：只顯示 equal 和 del
+            // 右側（Text B）：只顯示 equal 和 add
+            let leftHtml = '';
+            let rightHtml = '';
+
+            for (const op of ops) {
+                const val = Array.isArray(op.value) ? op.value.join('') : op.value;
+                if (op.type === 'equal') {
+                    leftHtml += escapeHtml(val);
+                    rightHtml += escapeHtml(val);
+                } else if (op.type === 'del') {
+                    leftHtml += `<span class="diff-inline-del">${escapeHtml(val)}</span>`;
+                } else if (op.type === 'add') {
+                    rightHtml += `<span class="diff-inline-add">${escapeHtml(val)}</span>`;
+                }
+            }
+
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3 overflow-x-auto custom-scrollbar">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2">Text A</div>
+                        <div class="font-mono text-sm leading-relaxed whitespace-pre-wrap break-all">${leftHtml || '<span class="text-slate-600">（空白）</span>'}</div>
+                    </div>
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3 overflow-x-auto custom-scrollbar">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2">Text B</div>
+                        <div class="font-mono text-sm leading-relaxed whitespace-pre-wrap break-all">${rightHtml || '<span class="text-slate-600">（空白）</span>'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDiffText(ops) {
+            let html = '';
+            for (const op of ops) {
+                const val = Array.isArray(op.value) ? op.value.join('') : op.value;
+                if (op.type === 'equal') {
+                    html += escapeHtml(val);
+                } else if (op.type === 'add') {
+                    html += `<span class="diff-inline-add">${escapeHtml(val)}</span>`;
+                } else if (op.type === 'del') {
+                    html += `<span class="diff-inline-del">${escapeHtml(val)}</span>`;
+                }
+            }
+            return html || '<span class="text-slate-600">（空白）</span>';
+        }
+
+        function renderLineSideBySide(ops) {
+            let leftHtml = '';
+            let rightHtml = '';
+            let leftNum = 1, rightNum = 1;
+
+            for (const op of ops) {
+                const lines = Array.isArray(op.value) ? op.value : [op.value];
+                if (op.type === 'equal') {
+                    for (const line of lines) {
+                        leftHtml += `<div class="diff-line-eq flex"><span class="line-num">${leftNum++}</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                        rightHtml += `<div class="diff-line-eq flex"><span class="line-num">${rightNum++}</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                    }
+                } else if (op.type === 'add') {
+                    for (const line of lines) {
+                        leftHtml += `<div class="diff-line-eq flex"><span class="line-num"> </span><span class="flex-1 px-2 text-slate-600">—</span></div>`;
+                        rightHtml += `<div class="diff-line-add flex"><span class="line-num">${rightNum++}</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                    }
+                } else if (op.type === 'del') {
+                    for (const line of lines) {
+                        leftHtml += `<div class="diff-line-del flex"><span class="line-num">${leftNum++}</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                        rightHtml += `<div class="diff-line-eq flex"><span class="line-num"> </span><span class="flex-1 px-2 text-slate-600">—</span></div>`;
+                    }
+                }
+            }
+
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 overflow-x-auto custom-scrollbar font-mono text-sm">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider p-2 border-b border-hub-700 sticky top-0 bg-hub-800/80 backdrop-blur">Text A</div>
+                        <div class="p-1">${leftHtml}</div>
+                    </div>
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 overflow-x-auto custom-scrollbar font-mono text-sm">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider p-2 border-b border-hub-700 sticky top-0 bg-hub-800/80 backdrop-blur">Text B</div>
+                        <div class="p-1">${rightHtml}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderUnifiedDiff(ops, mode) {
+            if (mode === 'line') {
+                return renderUnifiedLineDiff(ops);
+            } else {
+                return renderUnifiedCharWordDiff(ops);
+            }
+        }
+
+        function renderUnifiedCharWordDiff(ops) {
+            let html = '';
+
+            // 顯示 Text A 的刪除部分（- 前綴）
+            let delHtml = '';
+            let addHtml = '';
+            let eqHtml = '';
+
+            for (const op of ops) {
+                const val = Array.isArray(op.value) ? op.value.join('') : op.value;
+                if (op.type === 'equal') {
+                    eqHtml += escapeHtml(val);
+                } else if (op.type === 'del') {
+                    delHtml += `<span class="diff-inline-del">${escapeHtml(val)}</span>`;
+                } else if (op.type === 'add') {
+                    addHtml += `<span class="diff-inline-add">${escapeHtml(val)}</span>`;
+                }
+            }
+
+            html += `<div class="bg-hub-900/50 rounded-lg border border-hub-700 overflow-x-auto custom-scrollbar font-mono text-sm p-1">`;
+
+            if (delHtml) {
+                html += `<div class="diff-line-del flex"><span class="line-num text-red-400 flex-shrink-0 w-6">-</span><span class="flex-1 px-2">${delHtml}</span></div>`;
+            }
+            if (addHtml) {
+                html += `<div class="diff-line-add flex"><span class="line-num text-green-400 flex-shrink-0 w-6">+</span><span class="flex-1 px-2">${addHtml}</span></div>`;
+            }
+            if (eqHtml && !delHtml && !addHtml) {
+                html += `<div class="diff-line-eq flex"><span class="flex-1 px-2">${eqHtml}</span></div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        function renderUnifiedLineDiff(ops) {
+            let html = '';
+            let leftNum = 1, rightNum = 1;
+            let totalLines = 0;
+
+            // 先計算總行數
+            for (const op of ops) {
+                const lines = Array.isArray(op.value) ? op.value : [op.value];
+                totalLines += lines.length;
+            }
+
+            html += `<div class="bg-hub-900/50 rounded-lg border border-hub-700 overflow-x-auto custom-scrollbar font-mono text-sm p-1">`;
+
+            // @@ 標頭
+            // 計算第一個變更的位置
+            let firstChangeLine = 1;
+            for (const op of ops) {
+                if (op.type !== 'equal') break;
+                const lines = Array.isArray(op.value) ? op.value : [op.value];
+                firstChangeLine += lines.length;
+            }
+            html += `<div class="flex px-2 py-1 text-xs text-sky-400 bg-sky-950/20 border-b border-hub-700 font-bold">@@ -${firstChangeLine},${totalLines} +${firstChangeLine},${totalLines} @@</div>`;
+
+            for (const op of ops) {
+                const lines = Array.isArray(op.value) ? op.value : [op.value];
+                if (op.type === 'equal') {
+                    for (const line of lines) {
+                        html += `<div class="diff-line-eq flex"><span class="line-num text-slate-600 w-8 flex-shrink-0">${leftNum}</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                        leftNum++; rightNum++;
+                    }
+                } else if (op.type === 'add') {
+                    for (const line of lines) {
+                        html += `<div class="diff-line-add flex"><span class="line-num text-green-400 w-8 flex-shrink-0">+</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                        rightNum++;
+                    }
+                } else if (op.type === 'del') {
+                    for (const line of lines) {
+                        html += `<div class="diff-line-del flex"><span class="line-num text-red-400 w-8 flex-shrink-0">-</span><span class="flex-1 px-2">${escapeHtml(line)}</span></div>`;
+                        leftNum++;
+                    }
+                }
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // ============================================================
+        // 6. 主要比較函數
+        // ============================================================
+
+        function performDiff() {
+            const textA = document.getElementById('text-a').value || '';
+            const textB = document.getElementById('text-b').value || '';
+
+            // 更新字符計數
+            document.getElementById('chars-a').textContent = textA.length + ' 字符';
+            document.getElementById('chars-b').textContent = textB.length + ' 字符';
+
+            // 如果兩邊都空白，隱藏結果
+            if (!textA && !textB) {
+                document.getElementById('similarity-card').classList.add('hidden');
+                document.getElementById('diff-result').classList.add('hidden');
+                return;
+            }
+
+            // 取得選項
+            const mode = document.querySelector('.mode-btn.active').dataset.mode;
+            const viewMode = document.querySelector('.view-btn.active').dataset.view;
+            const options = {
+                ignoreCase: document.getElementById('opt-ignore-case').checked,
+                ignoreWhitespace: document.getElementById('opt-ignore-whitespace').checked,
+                ignoreEmpty: document.getElementById('opt-ignore-empty').checked,
+                lineEnding: document.getElementById('opt-line-ending').value,
+            };
+
+            // 執行比較
+            let result;
+            switch (mode) {
+                case 'char':
+                    result = compareChar(textA, textB, options);
+                    break;
+                case 'word':
+                    result = compareWord(textA, textB, options);
+                    break;
+                case 'line':
+                    result = compareLine(textA, textB, options);
+                    break;
+                default:
+                    result = compareChar(textA, textB, options);
+            }
+
+            // 計算相似度
+            const processedA = preprocessText(textA, options);
+            const processedB = preprocessText(textB, options);
+            const similarity = computeSimilarity(processedA, processedB, result.lcsLen);
+
+            // 更新相似度卡片
+            updateSimilarityCard(similarity, result, mode);
+
+            // 更新 Diff 結果
+            updateDiffResult(result, mode, viewMode);
+        }
+
+        function updateSimilarityCard(similarity, result, mode) {
+            const card = document.getElementById('similarity-card');
+            card.classList.remove('hidden');
+
+            // 圓環
+            const circle = document.getElementById('score-circle');
+            const circumference = 326.73;
+            const offset = circumference - (similarity / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // 顏色
+            let color = '#EF4444';
+            if (similarity >= 90) color = '#10B981';
+            else if (similarity >= 70) color = '#38BDF8';
+            else if (similarity >= 50) color = '#F59E0B';
+            circle.style.stroke = color;
+
+            // 文字
+            document.getElementById('score-text').textContent = similarity + '%';
+            document.getElementById('score-text').style.color = color;
+
+            // 統計
+            const stats = result.lineStats || result.changes;
+            document.getElementById('stat-added').textContent = stats.add || 0;
+            document.getElementById('stat-deleted').textContent = stats.del || 0;
+            document.getElementById('stat-modified').textContent = stats.mod || 0;
+            document.getElementById('stat-total').textContent = stats.total || (stats.add + stats.del + stats.mod) || 0;
+
+            // 動畫
+            const el = document.getElementById('score-text');
+            el.classList.remove('animate-pop');
+            void el.offsetWidth;
+            el.classList.add('animate-pop');
+        }
+
+        function updateDiffResult(result, mode, viewMode) {
+            const container = document.getElementById('diff-result');
+            const content = document.getElementById('diff-content');
+
+            container.classList.remove('hidden');
+
+            const noDiff = result.ops.length === 1 && result.ops[0].type === 'equal';
+            if (noDiff) {
+                document.getElementById('diff-summary-label').textContent = '兩段文字完全相同';
+                if (viewMode === 'side') {
+                    content.innerHTML = renderSideBySide(result.ops, null, mode);
+                } else {
+                    content.innerHTML = renderUnifiedDiff(result.ops, mode);
+                }
+                return;
+            }
+
+            let totalChanges = 0;
+            for (const op of result.ops) {
+                if (op.type !== 'equal') totalChanges++;
+            }
+            document.getElementById('diff-summary-label').textContent = `共 ${totalChanges} 個差異區塊`;
+
+            if (viewMode === 'side') {
+                content.innerHTML = renderSideBySide(result.ops, null, mode);
+            } else {
+                content.innerHTML = renderUnifiedDiff(result.ops, mode);
+            }
+        }
+
+        // ============================================================
+        // 7. 工具函數
+        // ============================================================
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-msg').textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // ============================================================
+        // 8. 事件綁定
+        // ============================================================
+
+        // 即時比較
+        document.getElementById('text-a').addEventListener('input', performDiff);
+        document.getElementById('text-b').addEventListener('input', performDiff);
+
+        // 比較模式切換
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400');
+                });
+                btn.classList.add('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+                btn.classList.remove('bg-hub-900', 'text-slate-400');
+                performDiff();
+            });
+        });
+
+        // 檢視模式切換
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400');
+                });
+                btn.classList.add('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+                btn.classList.remove('bg-hub-900', 'text-slate-400');
+                performDiff();
+            });
+        });
+
+        // 選項變更
+        document.querySelectorAll('#opt-ignore-case, #opt-ignore-whitespace, #opt-ignore-empty').forEach(el => {
+            el.addEventListener('change', performDiff);
+        });
+        document.getElementById('opt-line-ending').addEventListener('change', performDiff);
+
+        // 交換
+        document.getElementById('btn-swap').addEventListener('click', () => {
+            const a = document.getElementById('text-a');
+            const b = document.getElementById('text-b');
+            const temp = a.value;
+            a.value = b.value;
+            b.value = temp;
+            performDiff();
+            showToast('已交換 Text A 與 Text B', false);
+        });
+
+        // 清除
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            document.getElementById('text-a').value = '';
+            document.getElementById('text-b').value = '';
+            performDiff();
+            showToast('已清除所有文字', false);
+        });
+
+        // 範例資料
+        document.getElementById('btn-sample').addEventListener('click', () => {
+            document.getElementById('text-a').value =
+`function greet(name) {
+    console.log("Hello, " + name + "!");
+    return true;
+}
+
+function calculateSum(a, b) {
+    const result = a + b;
+    console.log("Sum: " + result);
+    return result;
+}
+
+// 主程式
+const users = ["Alice", "Bob"];
+for (const user of users) {
+    greet(user);
+}`;
+            document.getElementById('text-b').value =
+`function greet(name, title) {
+    console.log(\`Hello, \${title} \${name}!\`);
+    return true;
+}
+
+function calculateSum(a, b) {
+    const result = a + b;
+    console.log("Total: " + result);
+    return result;
+}
+
+function calculateProduct(a, b) {
+    return a * b;
+}
+
+// 主程式
+const users = ["Alice", "Bob", "Charlie"];
+for (const user of users) {
+    greet(user, "Mr.");
+}`;
+            // 切換到行模式以獲得最佳示範效果
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.classList.remove('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+                b.classList.add('bg-hub-900', 'text-slate-400');
+            });
+            const lineBtn = document.querySelector('[data-mode="line"]');
+            lineBtn.classList.add('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+            lineBtn.classList.remove('bg-hub-900', 'text-slate-400');
+            performDiff();
+            showToast('已載入範例資料（程式碼比較示範）', false);
+        });
+
+        // 複製結果
+        document.getElementById('btn-copy').addEventListener('click', () => {
+            const diffContent = document.getElementById('diff-content');
+            const text = diffContent.textContent || diffContent.innerText;
+            if (!text.trim()) {
+                showToast('尚無結果可複製', true);
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已複製 Diff 結果到剪貼簿', false);
+            }).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('已複製 Diff 結果到剪貼簿', false);
+            });
+        });
+
+        // 下載報告
+        document.getElementById('btn-download').addEventListener('click', () => {
+            const diffContent = document.getElementById('diff-content');
+            const text = diffContent.textContent || diffContent.innerText;
+            if (!text.trim()) {
+                showToast('尚無結果可下載', true);
+                return;
+            }
+
+            const textA = document.getElementById('text-a').value || '';
+            const textB = document.getElementById('text-b').value || '';
+            const mode = document.querySelector('.mode-btn.active').dataset.mode;
+            const viewMode = document.querySelector('.view-btn.active').dataset.view;
+            const similarity = document.getElementById('score-text').textContent;
+
+            const report =
+`========================================
+Text Compare 差異報告
+========================================
+產生時間: ${new Date().toLocaleString('zh-TW')}
+比較模式: ${mode === 'char' ? '字元' : mode === 'word' ? '單字' : '行'}
+檢視模式: ${viewMode === 'side' ? '左右比對' : 'Unified Diff'}
+相似度: ${similarity}
+
+--- Text A (${textA.length} 字符) ---
+${textA}
+
+--- Text B (${textB.length} 字符) ---
+${textB}
+
+--- Diff 結果 ---
+${text}
+========================================
+`;
+
+            const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `text-compare-diff-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast('Diff 報告已下載', false);
+        });
+
+        // ============================================================
+        // 9. 初始化
+        // ============================================================
+
+        function initApp() {
+            // 預設 active 樣式
+            const defaultMode = document.querySelector('[data-mode="char"]');
+            defaultMode.classList.add('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+            defaultMode.classList.remove('bg-hub-900', 'text-slate-400');
+
+            const defaultView = document.querySelector('[data-view="side"]');
+            defaultView.classList.add('active', 'bg-sky-900/20', 'border-sky-500', 'text-sky-300');
+            defaultView.classList.remove('bg-hub-900', 'text-slate-400');
+        }
+
+        // initApp 將在系統初始化完成後呼叫
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

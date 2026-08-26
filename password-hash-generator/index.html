@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Hash Generator & Verifier / 密碼雜湊產生與驗證 | ToolHub</title>
+    <meta name="description" content="專注於密碼雜湊（Password Hash）的產生與驗證工具。支援 bcrypt、Argon2id、PBKDF2，含 Salt 產生、Cost 設定、驗證比對與效能基準測試。">
+    <meta name="keywords" content="Password Hash, bcrypt, Argon2id, PBKDF2, Salt, 密碼雜湊, Hash, 驗證, 密碼安全, Cost Factor, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' },
+                        ph: { red: '#EF4444', orange: '#F59E0B', green: '#10B981', blue: '#3B82F6', purple: '#8B5CF6' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel { background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5); }
+
+        .field-input { background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.625rem 1rem; font-size: 0.875rem;
+            transition: border-color 0.2s; }
+        .field-input:focus { outline: none; border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .field-input::placeholder { color: #475569; }
+        .field-select { background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem; cursor: pointer; }
+        .field-select:focus { outline: none; border-color: #38BDF8; }
+
+        .info-row { display: flex; align-items: flex-start; padding: 0.625rem 0;
+            border-bottom: 1px solid rgba(30,41,59,0.5); gap: 1rem; }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .label { font-size: 0.75rem; color: #64748B; flex-shrink: 0; min-width: 5rem; }
+        .info-row .value { font-size: 0.8125rem; color: #E2E8F0; word-break: break-all; font-family: '"Fira Code"', ui-monospace, monospace; }
+
+        .algo-card { padding: 0.75rem; border-radius: 0.75rem; cursor: pointer;
+            border: 1px solid #1E293B; transition: all 0.2s; }
+        .algo-card:hover { border-color: #334155; }
+        .algo-card.active { border-color: #38BDF8; background: rgba(56,189,248,0.06); }
+
+        .cost-chip { display: inline-flex; align-items: center; justify-content: center;
+            min-width: 2.5rem; height: 2.5rem; border-radius: 0.5rem;
+            border: 1px solid #1E293B; cursor: pointer; font-size: 0.8125rem; font-weight: 500;
+            transition: all 0.15s; color: #94A3B8; }
+        .cost-chip:hover { border-color: #38BDF8; color: #E2E8F0; }
+        .cost-chip.active { border-color: #38BDF8; background: rgba(56,189,248,0.12); color: #38BDF8; }
+
+        .bench-bar { height: 6px; border-radius: 3px; background: #1E293B; overflow: hidden; }
+        .bench-bar .fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .bench-spinner { display: inline-block; width: 1rem; height: 1rem;
+            border: 2px solid rgba(56,189,248,0.2); border-top-color: #38BDF8;
+            border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .faq-item summary { cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #38BDF8; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        .verify-result { padding: 0.75rem 1rem; border-radius: 0.75rem; text-align: center; font-weight: 600; font-size: 1rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .comparison-table { width: 100%; border-collapse: collapse; }
+        .comparison-table th { text-align: left; padding: 0.625rem 0.75rem; font-size: 0.75rem;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+            color: #64748B; border-bottom: 1px solid #1E293B; }
+        .comparison-table td { padding: 0.625rem 0.75rem; font-size: 0.8125rem;
+            color: #CBD5E1; border-bottom: 1px solid rgba(30,41,59,0.5); }
+
+        .toggle-pw { cursor: pointer; padding: 0.375rem; color: #64748B; transition: color 0.2s; }
+        .toggle-pw:hover { color: #E2E8F0; }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/password-hash-generator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/password-hash-generator/">
+    <meta property="og:title" content="Password Hash Generator &amp; Verifier / 密碼雜湊產生與驗證">
+    <meta property="og:description" content="專注於密碼雜湊（Password Hash）的產生與驗證工具。支援 bcrypt、Argon2id、PBKDF2，含 Salt 產生、Cost 設定、驗證比對與效能基準測試。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Password Hash Generator &amp; Verifier / 密碼雜湊產生與驗證">
+    <meta name="twitter:description" content="專注於密碼雜湊（Password Hash）的產生與驗證工具。支援 bcrypt、Argon2id、PBKDF2，含 Salt 產生、Cost 設定、驗證比對與效能基準測試。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Password Hash Generator & Verifier / 密碼雜湊產生與驗證","url":"https://toolhuben.com/password-hash-generator/","description":"專注於密碼雜湊（Password Hash）的產生與驗證工具。支援 bcrypt、Argon2id、PBKDF2，含 Salt 產生、Cost 設定、驗證比對與效能基準測試。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Password Hash Generator & Verifier / 密碼雜湊產生與驗證","item":"https://toolhuben.com/password-hash-generator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/password-hash-generator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/password-hash-generator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/password-hash-generator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248" data-tool-visual data-classic-tool data-classic-layout="glass">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+
+        <!-- Hero -->
+        <div class="text-center mb-8 fade-in">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                密碼雜湊產生與驗證引擎
+            </span>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                Password Hash Generator & Verifier
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">密碼雜湊產生與驗證工具</span>
+            </h1>
+            <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                快速產生與驗證 bcrypt、Argon2id、PBKDF2 等密碼雜湊。支援 Salt 自動產生、
+                Cost 設定、效能基準測試與演算法對比。為開發者與資安學習者打造。
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <!-- Left: Input & Settings -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Password Input -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="ph ph-lock-key text-hub-accent"></i> 密碼輸入
+                    </h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1.5 block">Password</label>
+                            <div class="relative">
+                                <input type="password" id="pw-input" class="field-input w-full pr-10 font-mono"
+                                    placeholder="輸入密碼..." oninput="onInputChange()" autocomplete="off">
+                                <span class="toggle-pw absolute right-2 top-1/2 -translate-y-1/2" onclick="togglePW('pw-input',this)">
+                                    <i class="ph ph-eye text-lg"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1.5 block">Confirm Password</label>
+                            <div class="relative">
+                                <input type="password" id="pw-confirm" class="field-input w-full pr-10 font-mono"
+                                    placeholder="再次輸入密碼..." oninput="onInputChange()" autocomplete="off">
+                                <span class="toggle-pw absolute right-2 top-1/2 -translate-y-1/2" onclick="togglePW('pw-confirm',this)">
+                                    <i class="ph ph-eye text-lg"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="pw-match" class="text-xs hidden"></div>
+                    </div>
+                </div>
+
+                <!-- Algorithm Selection -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="ph ph-flask text-hub-accent"></i> 演算法
+                    </h2>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="algo-card active" data-algo="bcrypt" onclick="selectAlgo('bcrypt')">
+                            <p class="font-bold text-sm text-white">bcrypt</p>
+                            <p class="text-xs text-slate-500 mt-0.5">推薦</p>
+                        </div>
+                        <div class="algo-card" data-algo="argon2" onclick="selectAlgo('argon2')">
+                            <p class="font-bold text-sm text-white">Argon2id</p>
+                            <p class="text-xs text-slate-500 mt-0.5">最推薦</p>
+                        </div>
+                        <div class="algo-card" data-algo="pbkdf2" onclick="selectAlgo('pbkdf2')">
+                            <p class="font-bold text-sm text-white">PBKDF2</p>
+                            <p class="text-xs text-slate-500 mt-0.5">可用</p>
+                        </div>
+                        <div class="algo-card" data-algo="sha256" onclick="selectAlgo('sha256')">
+                            <p class="font-bold text-sm text-white">SHA-256</p>
+                            <p class="text-xs text-slate-500 mt-0.5">⚠️ 教育</p>
+                        </div>
+                    </div>
+
+                    <!-- Cost Settings -->
+                    <div id="cost-section" class="mt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-500">Cost Factor / 迭代次數</span>
+                            <span id="cost-label" class="text-xs font-mono text-hub-accent">10 (推薦)</span>
+                        </div>
+                        <div id="cost-options" class="flex flex-wrap gap-2">
+                            <span class="cost-chip" data-cost="4" onclick="setCost(4)">4</span>
+                            <span class="cost-chip" data-cost="6" onclick="setCost(6)">6</span>
+                            <span class="cost-chip" data-cost="8" onclick="setCost(8)">8</span>
+                            <span class="cost-chip active" data-cost="10" onclick="setCost(10)">10</span>
+                            <span class="cost-chip" data-cost="12" onclick="setCost(12)">12</span>
+                            <span class="cost-chip" data-cost="14" onclick="setCost(14)">14</span>
+                        </div>
+                        <div id="cost-desc" class="flex justify-between text-xs text-slate-600 mt-1">
+                            <span>🚀 更快</span>
+                            <span class="text-hub-accent">✅ 推薦</span>
+                            <span>🔒 更安全</span>
+                        </div>
+                        <!-- PBKDF2 iterations slider -->
+                        <div id="pbkdf2-iterations" class="hidden mt-3">
+                            <label class="text-xs text-slate-500 mb-1.5 block">迭代次數: <span id="pbkdf2-iter-val" class="text-hub-accent font-mono">600000</span></label>
+                            <input type="range" id="pbkdf2-iter-slider" min="10000" max="2000000" value="600000" step="10000"
+                                oninput="document.getElementById('pbkdf2-iter-val').textContent=this.value; onInputChange()"
+                                class="w-full accent-hub-accent cursor-pointer">
+                        </div>
+                        <!-- Argon2 memory -->
+                        <div id="argon2-memory" class="hidden mt-3">
+                            <label class="text-xs text-slate-500 mb-1.5 block">記憶體: <span id="argon2-mem-val" class="text-hub-accent font-mono">64</span> MB</label>
+                            <input type="range" id="argon2-mem-slider" min="16" max="512" value="64" step="16"
+                                oninput="document.getElementById('argon2-mem-val').textContent=this.value; onInputChange()"
+                                class="w-full accent-hub-accent cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Salt Section -->
+                    <div class="mt-4 pt-4 border-t border-hub-700/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-500">Salt</span>
+                            <button onclick="generateSalt()" class="text-xs text-hub-accent hover:text-sky-400 transition-colors">⟳ 重新產生</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="salt-input" class="field-input flex-1 font-mono text-xs"
+                                placeholder="自動產生..." oninput="onInputChange()" readonly>
+                            <button onclick="toggleSaltEdit()" class="px-3 py-2 text-xs text-slate-500 border border-hub-700 rounded-lg hover:text-hub-accent transition-colors">
+                                <i class="ph ph-pencil-simple"></i>
+                            </button>
+                        </div>
+                        <p id="salt-len" class="text-xs text-slate-600 mt-1">長度: 0 bytes</p>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button onclick="generateHash()" class="w-full mt-4 py-3 bg-hub-accent text-white rounded-xl font-medium hover:bg-sky-400 transition-colors flex items-center justify-center gap-2">
+                        <i class="ph ph-lightning"></i> 產生雜湊
+                    </button>
+                </div>
+
+                <!-- Verify Section -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="ph ph-seal-check text-hub-accent"></i> 驗證
+                    </h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1.5 block">Password</label>
+                            <input type="password" id="verify-pw" class="field-input w-full font-mono"
+                                placeholder="輸入密碼..." autocomplete="off">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1.5 block">Hash</label>
+                            <textarea id="verify-hash" class="field-input w-full font-mono text-xs" rows="2"
+                                placeholder="貼上要驗證的 Hash..."></textarea>
+                        </div>
+                        <button onclick="verifyHash()" class="px-5 py-2.5 bg-ph-green/10 text-ph-green border border-ph-green/20 rounded-lg font-medium text-sm hover:bg-ph-green/20 transition-colors">
+                            <i class="ph ph-seal-check"></i> 驗證
+                        </button>
+                        <div id="verify-result" class="hidden verify-result fade-in"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Output -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Hash Output -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-code text-hub-accent"></i> 產生結果
+                        </h2>
+                        <div class="flex gap-1">
+                            <button onclick="copyHash()" class="p-2 text-slate-500 hover:text-hub-accent transition-colors" title="複製 Hash">
+                                <i class="ph ph-copy-simple text-lg"></i>
+                            </button>
+                            <button onclick="downloadTXT()" class="p-2 text-slate-500 hover:text-blue-400 transition-colors" title="下載 TXT">
+                                <i class="ph ph-download-simple text-lg"></i>
+                            </button>
+                            <button onclick="downloadJSON()" class="p-2 text-slate-500 hover:text-emerald-400 transition-colors" title="下載 JSON">
+                                <i class="ph ph-download-simple text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="hash-output" class="bg-[#0B1120] rounded-xl border border-hub-700 p-3 mb-3">
+                        <div class="text-xs text-slate-500 mb-2">Hash</div>
+                        <div id="hash-value" class="text-sm font-mono text-hub-accent break-all min-h-[2rem]">--</div>
+                    </div>
+                    <div id="hash-details" class="hidden space-y-1">
+                        <div class="info-row"><span class="label">演算法</span><span id="det-algo" class="value" style="font-family:inherit">--</span></div>
+                        <div class="info-row"><span class="label">Salt</span><span id="det-salt" class="value text-xs">--</span></div>
+                        <div class="info-row"><span class="label">Cost</span><span id="det-cost" class="value" style="font-family:inherit">--</span></div>
+                        <div class="info-row"><span class="label">耗時</span><span id="det-time" class="value" style="font-family:inherit">--</span></div>
+                    </div>
+                </div>
+
+                <!-- Benchmark -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                        <i class="ph ph-gauge text-hub-accent"></i> Benchmark — 瀏覽器效能
+                    </h2>
+                    <div id="bench-content">
+                        <div class="space-y-2" id="bench-results">
+                            <div class="flex items-center justify-between py-2"><span class="text-xs text-slate-500">bcrypt Cost 10</span><span id="bench-bcrypt" class="text-xs text-slate-500">--</span></div>
+                            <div class="flex items-center justify-between py-2 border-t border-hub-700/30"><span class="text-xs text-slate-500">Argon2id (64MB)</span><span id="bench-argon2" class="text-xs text-slate-500">--</span></div>
+                            <div class="flex items-center justify-between py-2 border-t border-hub-700/30"><span class="text-xs text-slate-500">PBKDF2 (600k)</span><span id="bench-pbkdf2" class="text-xs text-slate-500">--</span></div>
+                        </div>
+                        <button onclick="runBenchmark()" class="mt-3 w-full py-2 bg-slate-700/40 border border-hub-700 rounded-lg text-xs text-slate-400 hover:bg-slate-700/60 transition-colors">
+                            <i class="ph ph-play"></i> 執行 Benchmark
+                        </button>
+                        <p class="text-[10px] text-slate-600 mt-2">⚠️ 瀏覽器效能測試，實際伺服器端速度會更快（約 5-20x）</p>
+                    </div>
+                </div>
+
+                <!-- Algorithm Comparison -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                        <i class="ph ph-arrows-down-up text-hub-accent"></i> 演算法比較
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr><th>演算法</th><th>安全性</th><th>速度</th><th>建議</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="font-mono text-ph-red">SHA-256</td><td>⭐</td><td>⭐⭐⭐⭐⭐</td><td class="text-ph-red">❌ 不建議存密碼</td></tr>
+                                <tr><td class="font-mono text-ph-orange">PBKDF2</td><td>⭐⭐⭐</td><td>⭐⭐⭐</td><td class="text-ph-orange">⚠️ 可用（建議高迭代）</td></tr>
+                                <tr><td class="font-mono text-ph-green">bcrypt</td><td>⭐⭐⭐⭐</td><td>⭐⭐</td><td class="text-ph-green">✅ 推薦</td></tr>
+                                <tr><td class="font-mono text-ph-purple">Argon2id</td><td>⭐⭐⭐⭐⭐</td><td>⭐</td><td class="text-ph-purple">🏆 最推薦</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-[10px] text-slate-600 mt-2">安全性評級為綜合考量抗暴力破解、抗 ASIC/GPU 與設計成熟度。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ + SEO -->
+        <div class="mt-8 space-y-6">
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-question text-hub-accent"></i> 常見問題 (FAQ)
+                </h2>
+                <div class="space-y-2 divide-y divide-hub-700/50">
+                    <details class="faq-item">
+                        <summary class="text-slate-200">Password Hash 與一般 Hash 有什麼不同？</summary>
+                        <div class="faq-answer">
+                            一般 Hash（如 MD5、SHA-256）是為資料完整性驗證設計的，計算速度極快。而 Password Hash（如 bcrypt、Argon2id）是專為密碼儲存設計的，具有以下特點：<br><br>
+                            • <strong>刻意慢速</strong>：透過 Cost Factor 控制計算時間，增加暴力破解成本<br>
+                            • <strong>自動加 Salt</strong>：每個密碼使用不同的 Salt，防止彩虹表攻擊<br>
+                            • <strong>抗 GPU/ASIC</strong>：Argon2id 需要大量記憶體，使 GPU 難以平行加速<br><br>
+                            結論：<strong>永遠不要直接用 MD5 或 SHA-256 存密碼</strong>，請使用 bcrypt、Argon2id 或 PBKDF2。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">為什麼需要 Salt？</summary>
+                        <div class="faq-answer">
+                            Salt（鹽值）是一段隨機資料，在計算 Hash 前與密碼拼接。其作用包括：<br><br>
+                            • <strong>防彩虹表</strong>：預先計算好的 Hash 對照表（彩虹表）無法使用，因為每個 Salt 都不同<br>
+                            • <strong>防重複</strong>：即使兩個使用者設定相同密碼，產生的 Hash 也不同<br>
+                            • <strong>增加破解成本</strong>：攻擊者需要對每個 Salt 分別進行暴力破解，無法批量處理<br><br>
+                            標準做法是每個密碼使用不同的隨機 Salt（至少 16 bytes），並將 Salt 與 Hash 一起儲存（bcrypt 的輸出已內含 Salt）。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">bcrypt、Argon2id、PBKDF2 如何選擇？</summary>
+                        <div class="faq-answer">
+                            • <strong>Argon2id</strong>（最推薦）：2015 年密碼雜湊比賽冠軍，設計最先進，同時抗 GPU 與 ASIC。需要調校記憶體與迭代參數。<br><br>
+                            • <strong>bcrypt</strong>（推薦基數大）：1999 年設計，成熟穩定，廣泛支援。內建 Salt 與 Cost 控制，是許多框架的預設選擇。<br><br>
+                            • <strong>PBKDF2</strong>（可用）：FIPS 認證標準，以迭代次數控制強度。對 GPU/ASIC 抵抗較弱，需使用極高迭代次數（數十萬次）。<br><br>
+                            • <strong>SHA-256</strong>（僅教育用途）：不建議用於密碼儲存，無 Salt、速度太快，極易被 GPU 暴力破解。<br><br>
+                            建議：<strong>新專案使用 Argon2id，既有專案維持 bcrypt，兩者均遠優於 PBKDF2。</strong>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">什麼是 Cost Factor？</summary>
+                        <div class="faq-answer">
+                            Cost Factor（成本係數）控制密碼雜湊的計算難度。以 bcrypt 為例，Cost 為 10 表示進行 2¹⁰ = 1024 次迭代。Cost 每增加 1，計算時間約加倍。<br><br>
+                            • Cost 8 — 較快，低階硬體也可承受（約 50ms）<br>
+                            • Cost 10 — 一般推薦值，安全與效能平衡（約 200ms）<br>
+                            • Cost 12 — 較安全，適合對安全性要求高的場景（約 800ms）<br>
+                            • Cost 14 — 非常安全，但使用者體驗可能受影響（約 3s）<br><br>
+                            建議根據伺服器效能調整 Cost，使每次驗證時間維持在 200-500ms。隨著硬體進步，應逐步提高 Cost 值。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">為什麼不要直接用 SHA-256 存密碼？</summary>
+                        <div class="faq-answer">
+                            直接用 SHA-256（或 MD5）儲存密碼的主要問題：<br><br>
+                            • <strong>速度太快</strong>：GPU 每秒可計算數十億次 SHA-256，暴力破解只是時間問題<br>
+                            • <strong>無 Salt</strong>：相同密碼產生相同 Hash，彩虹表攻擊有效<br>
+                            • <strong>抗 GPU 設計為零</strong>：無記憶體需求，GPU 可大規模平行計算<br><br>
+                            即使加上 Salt 並使用多次迭代（如 PBKDF2 的做法），SHA-256 的底層設計仍不如 bcrypt 或 Argon2id 適合作為密碼雜湊演算法。<br><br>
+                            最簡單的記憶法：<strong>Hash 是給檔案用的，Password Hash 才是給密碼用的。</strong>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">雜湊後密碼還原得回來嗎？</summary>
+                        <div class="faq-answer">
+                            不行。密碼雜湊是單向函數，設計上無法從 Hash 逆推回原始密碼。這也是為什麼密碼雜湊適合儲存密碼——即使資料庫外洩，攻擊者也無法直接取得明文密碼。<br><br>
+                            驗證密碼時，系統對使用者輸入的密碼重新計算 Hash，然後與資料庫中儲存的 Hash 比對是否相同。這就是本工具「驗證」功能的工作原理。<br><br>
+                            <strong>任何號稱可以「解密」或「還原」密碼雜湊的服務都是詐騙</strong>——它們只是使用彩虹表或常見密碼字典進行比對。
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-book-open text-hub-accent"></i> 密碼雜湊完整指南
+                </h2>
+                <div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">為什麼密碼不能存明文？</h3>
+                        <p>如果資料庫以明文儲存密碼，一旦發生資料外洩，所有使用者的密碼將直接暴露。由於多數使用者在不同網站重複使用密碼，攻擊者可以憑這些憑證登入使用者的 Email、銀行等其他帳號（Credential Stuffing）。</p>
+                        <p class="mt-2">密碼雜湊技術解決了這個問題：即使資料庫外洩，攻擊者也無法從 Hash 逆推出原始密碼。只要你的密碼夠強且使用了正確的雜湊演算法，你的帳號安全性就能得到保障。</p>
+                    </section>
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">雜湊演算法歷史演進</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-xs font-bold text-white mb-1">第一代：簡單 Hash</p>
+                                <p class="text-[11px] text-slate-500">MD5, SHA-1, SHA-256<br>❌ 無 Salt、速度太快<br>1930s~1990s 設計</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-xs font-bold text-white mb-1">第二代：專用密碼 Hash</p>
+                                <p class="text-[11px] text-slate-500">bcrypt (1999), PBKDF2 (2000)<br>✅ 有 Salt、可調 Cost<br>但仍可被 ASIC 加速</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-xs font-bold text-white mb-1">第三代：記憶體硬綁定</p>
+                                <p class="text-[11px] text-slate-500">scrypt (2009), Argon2 (2015)<br>✅ 需要大量記憶體<br>抗 GPU/ASIC 效果最佳</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-xs font-bold text-white mb-1">未來：量子安全</p>
+                                <p class="text-[11px] text-slate-500">研究階段<br>🔬 抗量子電腦攻擊</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
+        <span id="toast-icon" class="text-lg">✅</span> <span id="toast-message" class="text-sm font-medium text-slate-300"></span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <script>
+        async function loadComponent(id, path) {
+            try { const r = await fetch(path); if (!r.ok) throw Error('HTTP '+r.status);
+                const html = await r.text(); const c = document.getElementById(id); c.innerHTML = html;
+                Array.from(c.querySelectorAll('script')).forEach(os => { const ns = document.createElement('script');
+                    Array.from(os.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(os.innerHTML)); os.parentNode.replaceChild(ns, os); });
+            } catch(e) { console.error('[System Error]', path, e); }
+        }
+        function setupSidebarActiveState() {
+            const cp = '/password-hash-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(i => {
+                const h = i.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    i.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50');
+                    i.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const ic = i.querySelector('svg'); if (ic) ic.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([loadComponent('component-header','/components/header.html'),loadComponent('component-sidebar','/components/sidebar.html'),loadComponent('component-footer','/components/footer.html')]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) { const t = e.target.closest('#sidebar-trigger-btn'); if (t) window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar')); });
+            setupSidebarActiveState(); initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <script>
+        // ===================== STATE =====================
+        let currentAlgo = 'bcrypt';
+        let currentCost = 10;
+        let currentSalt = '';
+        let currentHash = '';
+        let currentHashTime = 0;
+
+        // ===================== INIT =====================
+        function initApp() {
+            generateSalt();
+        }
+
+        // ===================== UI HELPERS =====================
+        function togglePW(id, el) {
+            const inp = document.getElementById(id);
+            const icon = el.querySelector('i');
+            if (inp.type === 'password') { inp.type = 'text'; icon.className = 'ph ph-eye-slash text-lg'; }
+            else { inp.type = 'password'; icon.className = 'ph ph-eye text-lg'; }
+        }
+
+        function selectAlgo(algo) {
+            currentAlgo = algo;
+            document.querySelectorAll('.algo-card').forEach(c => c.classList.toggle('active', c.dataset.algo === algo));
+            document.getElementById('cost-section').classList.toggle('hidden', algo === 'sha256');
+            document.getElementById('pbkdf2-iterations').classList.toggle('hidden', algo !== 'pbkdf2');
+            document.getElementById('argon2-memory').classList.toggle('hidden', algo !== 'argon2');
+            document.getElementById('cost-options').classList.toggle('hidden', algo === 'pbkdf2');
+            document.getElementById('cost-desc').classList.toggle('hidden', algo === 'pbkdf2');
+            if (algo === 'sha256') { document.getElementById('salt-input').readOnly = false; }
+            else { document.getElementById('salt-input').readOnly = true; }
+        }
+
+        function setCost(val) {
+            currentCost = val;
+            document.querySelectorAll('.cost-chip').forEach(c => c.classList.toggle('active', parseInt(c.dataset.cost) === val));
+            const labels = ['🚀 更快', '', '', '✅ 推薦', '🔒 更安全', '🔒 最安全'];
+            const idx = [4,6,8,10,12,14].indexOf(val);
+            document.getElementById('cost-desc').innerHTML = idx >= 0 ? labels.map((l,i) => {
+                if (i === idx) return `<span class="${i === 3 ? 'text-hub-accent' : i > 3 ? 'text-ph-green' : 'text-slate-400'}">${l}</span>`;
+                return `<span class="text-slate-600">${l}</span>`;
+            }).join('') : '';
+            document.getElementById('cost-label').textContent = `${val} (${val <= 6 ? '較快' : val <= 10 ? '推薦' : val <= 12 ? '更安全' : '最安全'})`;
+        }
+
+        function onInputChange() {
+            const pw = document.getElementById('pw-input').value;
+            const confirm = document.getElementById('pw-confirm').value;
+            const match = document.getElementById('pw-match');
+            if (confirm) {
+                match.classList.remove('hidden');
+                if (pw === confirm) match.innerHTML = '<span class="text-green-400">✓ 密碼一致</span>';
+                else match.innerHTML = '<span class="text-red-400">✗ 密碼不一致</span>';
+            } else {
+                match.classList.add('hidden');
+            }
+        }
+
+        let saltEditing = false;
+
+        function toggleSaltEdit() {
+            const inp = document.getElementById('salt-input');
+            saltEditing = !saltEditing;
+            inp.readOnly = !saltEditing;
+            inp.focus();
+        }
+
+        function generateSalt() {
+            const len = 16;
+            const bytes = new Uint8Array(len);
+            crypto.getRandomValues(bytes);
+            currentSalt = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            document.getElementById('salt-input').value = currentSalt;
+            document.getElementById('salt-len').textContent = `長度: ${len} bytes (${currentSalt.length} hex chars)`;
+        }
+
+        // ===================== HASH GENERATION =====================
+        async function generateHash() {
+            const pw = document.getElementById('pw-input').value;
+            if (!pw) { showToast('請輸入密碼', true); return; }
+            if (pw.length < 4) { showToast('密碼至少 4 個字元', true); return; }
+
+            const confirm = document.getElementById('pw-confirm').value;
+            if (confirm && pw !== confirm) { showToast('密碼不一致', true); return; }
+
+            const algo = currentAlgo;
+            const salt = document.getElementById('salt-input').value || currentSalt;
+
+            const hashEl = document.getElementById('hash-value');
+            const details = document.getElementById('hash-details');
+            hashEl.textContent = '計算中⋯';
+            hashEl.className = 'text-sm font-mono text-slate-400 break-all min-h-[2rem]';
+
+            try {
+                const start = performance.now();
+
+                if (algo === 'bcrypt') {
+                    const cost = currentCost;
+                    if (!salt || salt.length < 8) { showToast('請先產生 Salt', true); return; }
+                    // bcrypt uses first 16 bytes of salt (32 hex chars) typically
+                    const bcryptSalt = bcrypt.genSaltSync(cost);
+                    currentHash = bcrypt.hashSync(pw, bcryptSalt);
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'bcrypt';
+                    document.getElementById('det-salt').textContent = '(內建於 Hash)';
+                    document.getElementById('det-cost').textContent = `${cost} (2^${cost} = ${Math.pow(2,cost).toLocaleString()} rounds)`;
+                }
+                else if (algo === 'argon2') {
+                    if (typeof argon2 === 'undefined') { showToast('Argon2id 無法載入', true); hashEl.textContent = '--'; return; }
+                    const mem = parseInt(document.getElementById('argon2-mem-slider').value);
+                    const result = await argon2.hash({
+                        pass: pw, salt: salt,
+                        time: currentCost,
+                        mem: mem,
+                        type: argon2.ArgonType.Argon2id,
+                        hashLen: 32
+                    });
+                    currentHash = result.encoded;
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'Argon2id';
+                    document.getElementById('det-salt').textContent = salt.substring(0, 16) + '...';
+                    document.getElementById('det-cost').textContent = `Time=${currentCost}, Mem=${mem}MB`;
+                }
+                else if (algo === 'pbkdf2') {
+                    const iterations = parseInt(document.getElementById('pbkdf2-iter-slider').value);
+                    const enc = new TextEncoder();
+                    const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+                    const saltBytes = hexToBytes(salt || currentSalt);
+                    const derivedBits = await crypto.subtle.deriveBits(
+                        { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' },
+                        keyMaterial, 256
+                    );
+                    const hashHex = bytesToHex(new Uint8Array(derivedBits));
+                    // Format: pbkdf2:sha256:iterations:salt:hash
+                    currentHash = `pbkdf2:sha256:${iterations}:${salt}:${hashHex}`;
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'PBKDF2 (SHA-256)';
+                    document.getElementById('det-salt').textContent = salt;
+                    document.getElementById('det-cost').textContent = `${iterations.toLocaleString()} 次迭代`;
+                }
+                else if (algo === 'sha256') {
+                    const enc = new TextEncoder();
+                    const data = enc.encode(pw + salt);
+                    const digest = await crypto.subtle.digest('SHA-256', data);
+                    const hashHex = bytesToHex(new Uint8Array(digest));
+                    currentHash = hashHex;
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'SHA-256 ⚠️ (教育用途)';
+                    document.getElementById('det-salt').textContent = salt;
+                    document.getElementById('det-cost').textContent = 'N/A (固定)';
+                }
+
+                hashEl.textContent = currentHash;
+                hashEl.className = 'text-sm font-mono text-hub-accent break-all min-h-[2rem]';
+                details.classList.remove('hidden');
+                document.getElementById('det-time').textContent = `${Math.round(currentHashTime)} ms`;
+                showToast('✅ 雜湊已產生');
+
+                // Auto-fill verify
+                document.getElementById('verify-hash').value = currentHash;
+                document.getElementById('verify-pw').value = pw;
+
+            } catch(e) {
+                hashEl.textContent = '--';
+                hashEl.className = 'text-sm font-mono text-red-400 break-all min-h-[2rem]';
+                showToast('❌ 產生失敗: ' + e.message, true);
+                console.error(e);
+            }
+        }
+
+        // ===================== VERIFY =====================
+        async function verifyHash() {
+            const pw = document.getElementById('verify-pw').value;
+            const hash = document.getElementById('verify-hash').value.trim();
+            const resultEl = document.getElementById('verify-result');
+            resultEl.classList.remove('hidden');
+
+            if (!pw || !hash) {
+                resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                resultEl.textContent = '請輸入密碼與 Hash';
+                return;
+            }
+
+            try {
+                // Detect algorithm from hash format
+                if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
+                    // bcrypt
+                    const match = bcrypt.compareSync(pw, hash);
+                    resultEl.className = `verify-result fade-in ${match ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                    resultEl.textContent = match ? '✅ Match — 密碼正確' : '❌ Not Match — 密碼錯誤';
+                }
+                else if (hash.startsWith('$argon2')) {
+                    // Argon2
+                    try {
+                        const result = await argon2.verify({ pass: pw, encoded: hash });
+                        resultEl.className = `verify-result fade-in ${result ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                        resultEl.textContent = result ? '✅ Match — 密碼正確' : '❌ Not Match — 密碼錯誤';
+                    } catch(e) {
+                        resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                        resultEl.textContent = '❌ Argon2 驗證失敗: ' + e.message;
+                    }
+                }
+                else if (hash.startsWith('pbkdf2:')) {
+                    // PBKDF2
+                    const parts = hash.split(':');
+                    if (parts.length >= 5) {
+                        const iterations = parseInt(parts[2]);
+                        const salt = parts[3];
+                        const storedHash = parts.slice(4).join(':');
+                        const enc = new TextEncoder();
+                        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+                        const saltBytes = hexToBytes(salt);
+                        const derivedBits = await crypto.subtle.deriveBits(
+                            { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' },
+                            keyMaterial, 256
+                        );
+                        const computedHash = bytesToHex(new Uint8Array(derivedBits));
+                        const match = computedHash === storedHash;
+                        resultEl.className = `verify-result fade-in ${match ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                        resultEl.textContent = match ? '✅ Match — 密碼正確' : '❌ Not Match — 密碼錯誤';
+                    } else {
+                        resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                        resultEl.textContent = '❌ PBKDF2 Hash 格式不正確';
+                    }
+                }
+                else if (/^[0-9a-fA-F]{64}$/.test(hash)) {
+                    // SHA-256 (64 hex chars)
+                    const salt = document.getElementById('salt-input').value || '';
+                    const enc = new TextEncoder();
+                    const data = enc.encode(pw + salt);
+                    const digest = await crypto.subtle.digest('SHA-256', data);
+                    const computedHash = bytesToHex(new Uint8Array(digest));
+                    const match = computedHash === hash.toLowerCase();
+                    resultEl.className = `verify-result fade-in ${match ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                    resultEl.textContent = match ? '✅ Match — 密碼正確 (請注意 SHA-256 不建議用於密碼儲存)' : '❌ Not Match — 密碼錯誤';
+                }
+                else {
+                    resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                    resultEl.textContent = '❌ 無法識別 Hash 格式（支援 bcrypt、Argon2id、PBKDF2）';
+                }
+            } catch(e) {
+                resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                resultEl.textContent = '❌ 驗證失敗: ' + e.message;
+            }
+        }
+
+        // ===================== BENCHMARK =====================
+        async function runBenchmark() {
+            const btn = document.querySelector('#bench-content button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="bench-spinner"></span> 執行中...';
+            document.getElementById('bench-bcrypt').innerHTML = '<span class="bench-spinner"></span>';
+            document.getElementById('bench-argon2').innerHTML = '<span class="bench-spinner"></span>';
+            document.getElementById('bench-pbkdf2').innerHTML = '<span class="bench-spinner"></span>';
+
+            const benchPw = 'BenchmarkPassword123!';
+
+            // bcrypt Cost 10
+            try {
+                const start = performance.now();
+                const s = bcrypt.genSaltSync(10);
+                bcrypt.hashSync(benchPw, s);
+                const t = performance.now() - start;
+                document.getElementById('bench-bcrypt').textContent = `${Math.round(t)} ms`;
+            } catch(e) {
+                document.getElementById('bench-bcrypt').textContent = 'N/A';
+            }
+
+            // Argon2id 64MB
+            try {
+                if (typeof argon2 !== 'undefined') {
+                    const start = performance.now();
+                    await argon2.hash({ pass: benchPw, salt: 'benchmarksalt1234', time: 2, mem: 64, type: argon2.ArgonType.Argon2id, hashLen: 32 });
+                    const t = performance.now() - start;
+                    document.getElementById('bench-argon2').textContent = `${Math.round(t)} ms`;
+                } else {
+                    document.getElementById('bench-argon2').textContent = 'N/A';
+                }
+            } catch(e) {
+                document.getElementById('bench-argon2').textContent = 'N/A';
+            }
+
+            // PBKDF2 600k
+            try {
+                const enc = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(benchPw), 'PBKDF2', false, ['deriveBits']);
+                const saltBytes = new Uint8Array(16);
+                crypto.getRandomValues(saltBytes);
+                const start = performance.now();
+                await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: saltBytes, iterations: 600000, hash: 'SHA-256' }, keyMaterial, 256);
+                const t = performance.now() - start;
+                document.getElementById('bench-pbkdf2').textContent = `${Math.round(t)} ms`;
+            } catch(e) {
+                document.getElementById('bench-pbkdf2').textContent = 'N/A';
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-play"></i> 重新執行 Benchmark';
+            showToast('Benchmark 完成');
+        }
+
+        // ===================== EXPORT =====================
+        function copyHash() {
+            if (currentHash) copyToClipboard(currentHash);
+            else showToast('尚無 Hash 可複製', true);
+        }
+
+        function downloadTXT() {
+            if (!currentHash) { showToast('尚無資料可下載', true); return; }
+            const lines = [
+                '═══════════════════════════════════════',
+                '  Password Hash Report',
+                '  ToolHub - Password Hash Generator & Verifier',
+                '═══════════════════════════════════════',
+                '',
+                `Algorithm:  ${document.getElementById('det-algo').textContent}`,
+                `Hash:       ${currentHash}`,
+                `Salt:       ${currentSalt || '(內建於 Hash)'}`,
+                `Cost:       ${document.getElementById('det-cost').textContent}`,
+                `Time:       ${Math.round(currentHashTime)} ms`,
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/password-hash-generator)`,
+                `Timestamp: ${new Date().toISOString()}`,
+                '───────────────────────────────────────'
+            ].join('\n');
+            downloadFile(lines, 'password-hash.txt', 'text/plain');
+            showToast('TXT 已下載');
+        }
+
+        function downloadJSON() {
+            if (!currentHash) { showToast('尚無資料可下載', true); return; }
+            const data = {
+                tool: 'ToolHub Password Hash Generator & Verifier',
+                url: 'https://toolhuben.com/password-hash-generator/',
+                timestamp: new Date().toISOString(),
+                algorithm: document.getElementById('det-algo').textContent,
+                hash: currentHash,
+                salt: currentSalt,
+                cost: document.getElementById('det-cost').textContent,
+                timeMs: Math.round(currentHashTime)
+            };
+            downloadFile(JSON.stringify(data, null, 2), 'password-hash.json', 'application/json');
+            showToast('JSON 已下載');
+        }
+
+        // ===================== UTILITIES =====================
+        function hexToBytes(hex) {
+            const bytes = [];
+            for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substring(i, i+2), 16));
+            return new Uint8Array(bytes);
+        }
+        function bytesToHex(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast'), ic = document.getElementById('toast-icon'), m = document.getElementById('toast-message');
+            ic.textContent = isError ? '❌' : '✅'; m.textContent = msg;
+            t.classList.remove('opacity-0','pointer-events-none','translate-y-4');
+            t.classList.add('opacity-100','pointer-events-auto');
+            clearTimeout(t._timeout);
+            t._timeout = setTimeout(() => { t.classList.remove('opacity-100','pointer-events-auto'); t.classList.add('opacity-0','pointer-events-none','translate-y-4'); }, 2500);
+        }
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => showToast('已複製')).catch(() => fallbackCopy(text));
+            else fallbackCopy(text);
+        }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showToast('已複製'); } catch(e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        window.selectAlgo = selectAlgo; window.setCost = setCost; window.generateSalt = generateSalt;
+        window.onInputChange = onInputChange; window.togglePW = togglePW; window.toggleSaltEdit = toggleSaltEdit;
+        window.generateHash = generateHash; window.verifyHash = verifyHash; window.runBenchmark = runBenchmark;
+        window.copyHash = copyHash; window.downloadTXT = downloadTXT; window.downloadJSON = downloadJSON;
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

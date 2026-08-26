@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Counter 字數統計工具 | ToolHub - 字元數、閱讀時間、平台限制檢查</title>
+    <meta name="description" content="免費線上 Word Counter 字數與字元統計工具。支援即時字數、字元數、段落、句子、閱讀時間與朗讀時間統計。內建平台限制檢查器，快速確認您的內容是否符合 X、YouTube、Meta、Instagram 等平台字數上限。適用於寫作、SEO、翻譯、學生與開發者。">
+    <meta name="keywords" content="Word Counter, 字數統計, 字元統計, 字數計算, 文字計數, Character Count, 閱讀時間, 文章統計, SEO 字數, 寫作工具, 線上字數計算">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        wc: {
+                            primary: '#A855F7',
+                            secondary: '#C084FC',
+                            bg: 'rgba(168, 85, 247, 0.15)',
+                            text: '#D8B4FE',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #A855F7; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+        @keyframes countUp {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-count { animation: countUp 0.3s ease-out; }
+
+        /* 編輯器 */
+        .wc-editor {
+            font-family: 'Fira Code', 'Noto Sans TC', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            tab-size: 4;
+            resize: none;
+            transition: border-color 0.2s ease;
+        }
+        .wc-editor:focus {
+            border-color: #A855F7;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+        }
+
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .option-checkbox:checked + .option-label {
+            background-color: rgba(168, 85, 247, 0.15);
+            border-color: #A855F7;
+            color: #D8B4FE;
+        }
+
+        .platform-bar {
+            transition: width 0.5s ease;
+        }
+
+        .limit-ok { color: #10B981; }
+        .limit-warn { color: #F59E0B; }
+        .limit-exceed { color: #EF4444; }
+
+        .chip-active {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: #A855F7;
+            color: #D8B4FE;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 4px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+
+        @media (max-width: 640px) {
+            .wc-editor { font-size: 13px; }
+            .glass-panel { padding: 1rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/word-counter/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/word-counter/">
+    <meta property="og:title" content="Word Counter 字數統計工具">
+    <meta property="og:description" content="免費線上 Word Counter 字數與字元統計工具。支援即時字數、字元數、段落、句子、閱讀時間與朗讀時間統計。內建平台限制檢查器，快速確認您的內容是否符合 X、YouTube、Meta、Instagram 等平台字數上限。適用於寫作、SEO、翻譯、學生與開發者。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Word Counter 字數統計工具">
+    <meta name="twitter:description" content="免費線上 Word Counter 字數與字元統計工具。支援即時字數、字元數、段落、句子、閱讀時間與朗讀時間統計。內建平台限制檢查器，快速確認您的內容是否符合 X、YouTube、Meta、Instagram 等平台字數上限。適用於寫作、SEO、翻譯、學生與開發者。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Word Counter 字數統計工具","url":"https://toolhuben.com/word-counter/","description":"免費線上 Word Counter 字數與字元統計工具。支援即時字數、字元數、段落、句子、閱讀時間與朗讀時間統計。內建平台限制檢查器，快速確認您的內容是否符合 X、YouTube、Meta、Instagram 等平台字數上限。適用於寫作、SEO、翻譯、學生與開發者。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Word Counter 字數統計工具","item":"https://toolhuben.com/word-counter/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/word-counter/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/word-counter/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/word-counter/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#A855F7;--classic-accent-rgb:168,85,247" data-tool-visual data-classic-tool data-classic-layout="neon">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ===================== Hero ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-purple-950/30 border border-purple-900/50 text-xs text-purple-400 shadow-inner">
+                <i class="ph-fill ph-text-aa mr-1.5 text-sm"></i>
+                字數統計引擎已啟動
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Word Counter <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-fuchsia-400">字數統計工具</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                即時統計字數、字元數、段落、句子與閱讀時間。內建平台限制檢查器，
+                快速確認您的內容是否符合各大社群平台的字數上限。
+            </p>
+        </div>
+
+        <!-- ===================== 文字編輯器 ===================== -->
+        <div class="glass-panel p-4 sm:p-5 shadow-xl mb-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-text-align-left text-purple-400"></i>
+                    <h3 class="text-sm font-bold text-white">輸入文字</h3>
+                </div>
+                <span class="text-[10px] text-slate-500 font-mono" id="live-chars">0 字符</span>
+            </div>
+            <textarea id="text-input" class="wc-editor w-full bg-hub-900/50 border border-hub-700 rounded-lg p-4 text-slate-200 outline-none min-h-[280px] sm:min-h-[350px] custom-scrollbar" placeholder="在此輸入文章、程式碼或任何文字內容，統計資訊將即時更新..." spellcheck="false"></textarea>
+        </div>
+
+        <!-- ===================== 選項列 ===================== -->
+        <div class="flex flex-wrap items-center gap-2 mb-6">
+            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mr-1">選項</span>
+            <label class="cursor-pointer">
+                <input type="checkbox" class="sr-only option-checkbox" id="opt-html">
+                <span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">忽略 HTML Tags</span>
+            </label>
+            <label class="cursor-pointer">
+                <input type="checkbox" class="sr-only option-checkbox" id="opt-markdown">
+                <span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">忽略 Markdown 語法</span>
+            </label>
+            <label class="cursor-pointer">
+                <input type="checkbox" class="sr-only option-checkbox" id="opt-empty">
+                <span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">忽略空行</span>
+            </label>
+            <label class="cursor-pointer">
+                <input type="checkbox" class="sr-only option-checkbox" id="opt-spaces">
+                <span class="option-label px-2.5 py-1 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 transition-all inline-block">忽略多餘空白</span>
+            </label>
+        </div>
+
+        <!-- ===================== 操作按鈕列 ===================== -->
+        <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
+            <button id="btn-copy" class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-purple-500/50 hover:text-purple-300 transition-all flex items-center gap-1.5">
+                <i class="ph-fill ph-copy"></i> 複製文字
+            </button>
+            <button id="btn-download" class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-purple-500/50 hover:text-purple-300 transition-all flex items-center gap-1.5">
+                <i class="ph-fill ph-download"></i> 下載 TXT
+            </button>
+            <button id="btn-clear" class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-red-500/50 hover:text-red-400 transition-all flex items-center gap-1.5">
+                <i class="ph-fill ph-trash"></i> 清除
+            </button>
+            <button id="btn-sample" class="px-4 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium hover:border-purple-500/50 hover:text-purple-300 transition-all flex items-center gap-1.5">
+                <i class="ph-fill ph-file-plus"></i> 範例文字
+            </button>
+        </div>
+
+        <!-- ===================== 即時統計卡片區 ===================== -->
+        <div id="stats-section" class="glass-panel p-5 sm:p-6 mb-5 shadow-xl">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="ph-fill ph-chart-bar text-purple-400"></i>
+                <h3 class="text-sm font-bold text-white">即時統計</h3>
+                <span class="text-[10px] text-slate-500 font-mono ml-auto" id="update-time"></span>
+            </div>
+
+            <!-- 主要統計 -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-4">
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">字符 (含空白)</span>
+                    <p id="stat-chars-with" class="font-mono text-xl font-bold text-white mt-1">0</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">字符 (不含空白)</span>
+                    <p id="stat-chars-without" class="font-mono text-xl font-bold text-white mt-1">0</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">單字</span>
+                    <p id="stat-words" class="font-mono text-xl font-bold text-purple-400 mt-1">0</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">句子</span>
+                    <p id="stat-sentences" class="font-mono text-xl font-bold text-fuchsia-400 mt-1">0</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">段落</span>
+                    <p id="stat-paragraphs" class="font-mono text-xl font-bold text-cyan-400 mt-1">0</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">行數</span>
+                    <p id="stat-lines" class="font-mono text-xl font-bold text-emerald-400 mt-1">0</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">閱讀時間</span>
+                    <p id="stat-readtime" class="font-mono text-xl font-bold text-sky-400 mt-1">0 min</p>
+                </div>
+                <div class="stat-card bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">朗讀時間</span>
+                    <p id="stat-speaktime" class="font-mono text-xl font-bold text-amber-400 mt-1">0 min</p>
+                </div>
+            </div>
+
+            <!-- 額外分析 -->
+            <div class="border-t border-hub-700 pt-4">
+                <div class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-3">內容分析</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-hub-900/30 rounded-lg border border-hub-700 p-3">
+                        <span class="text-xs text-slate-500">最長單字</span>
+                        <p id="stat-longest-word" class="font-mono text-sm font-bold text-white mt-1 break-all">—</p>
+                    </div>
+                    <div class="bg-hub-900/30 rounded-lg border border-hub-700 p-3">
+                        <span class="text-xs text-slate-500">平均單字長度</span>
+                        <p id="stat-avg-word" class="font-mono text-sm font-bold text-white mt-1">0</p>
+                    </div>
+                    <div class="bg-hub-900/30 rounded-lg border border-hub-700 p-3">
+                        <span class="text-xs text-slate-500">平均句子長度 (字)</span>
+                        <p id="stat-avg-sentence" class="font-mono text-sm font-bold text-white mt-1">0</p>
+                    </div>
+                    <div class="bg-hub-900/30 rounded-lg border border-hub-700 p-3">
+                        <span class="text-xs text-slate-500">平均段落長度 (字)</span>
+                        <p id="stat-avg-paragraph" class="font-mono text-sm font-bold text-white mt-1">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== 閱讀分析 & 視覺化 ===================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+            <!-- 閱讀分析 -->
+            <div class="glass-panel p-5 shadow-xl">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-clock text-purple-400"></i>
+                    <h3 class="text-sm font-bold text-white">閱讀分析</h3>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <span class="text-sm text-slate-400">1 分鐘閱讀</span>
+                        <span id="read-1min" class="font-mono text-sm text-white">—</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <span class="text-sm text-slate-400">3 分鐘閱讀</span>
+                        <span id="read-3min" class="font-mono text-sm text-white">—</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <span class="text-sm text-slate-400">5 分鐘閱讀</span>
+                        <span id="read-5min" class="font-mono text-sm text-white">—</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <span class="text-sm text-slate-400">完整閱讀時間</span>
+                        <span id="read-full" class="font-mono text-sm text-purple-400 font-bold">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圓餅圖 -->
+            <div class="glass-panel p-5 shadow-xl">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-pie-chart text-purple-400"></i>
+                    <h3 class="text-sm font-bold text-white">字數比例</h3>
+                </div>
+                <div class="flex items-center justify-center gap-6">
+                    <svg class="w-36 h-36 sm:w-40 sm:h-40" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#1E293B" stroke-width="12"/>
+                        <!-- Characters arc -->
+                        <circle id="pie-chars" cx="60" cy="60" r="50" fill="none" stroke="#A855F7" stroke-width="12"
+                            stroke-dasharray="314.16" stroke-dashoffset="0" stroke-linecap="round"
+                            transform="rotate(-90, 60, 60)"/>
+                        <!-- Words arc -->
+                        <circle id="pie-words" cx="60" cy="60" r="38" fill="none" stroke="#1E293B" stroke-width="10"/>
+                        <circle id="pie-words-arc" cx="60" cy="60" r="38" fill="none" stroke="#C084FC" stroke-width="10"
+                            stroke-dasharray="238.76" stroke-dashoffset="238.76" stroke-linecap="round"
+                            transform="rotate(-90, 60, 60)"/>
+                    </svg>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-sm bg-purple-500"></span>
+                            <span class="text-slate-400">字符</span>
+                            <span id="pie-chars-label" class="font-mono text-white font-bold">0%</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-sm bg-purple-300"></span>
+                            <span class="text-slate-400">單字</span>
+                            <span id="pie-words-label" class="font-mono text-white font-bold">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== 段落分布長條圖 ===================== -->
+        <div id="bar-chart-section" class="glass-panel p-5 sm:p-6 shadow-xl mb-5">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="ph-fill ph-chart-bar-horizontal text-purple-400"></i>
+                <h3 class="text-sm font-bold text-white">段落分布</h3>
+                <span class="text-xs text-slate-500 ml-auto">顯示最多 10 個段落</span>
+            </div>
+            <div id="bar-chart" class="space-y-2 custom-scrollbar max-h-[300px] overflow-y-auto">
+                <div class="text-center text-slate-600 text-sm py-8">輸入文字後將顯示段落分布</div>
+            </div>
+        </div>
+
+        <!-- ===================== Platform Limit Checker ===================== -->
+        <div class="glass-panel p-5 sm:p-6 shadow-xl mb-5">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="ph-fill ph-devices text-purple-400"></i>
+                <h3 class="text-sm font-bold text-white">平台限制檢查器</h3>
+                <span class="text-xs text-slate-500 ml-auto">即時檢查您的內容是否超過各平台字數上限</span>
+            </div>
+            <div class="space-y-3" id="platform-limits">
+                <!-- 由 JS 動態產生 -->
+            </div>
+        </div>
+
+        <!-- ===================== SEO 知識區 ===================== -->
+        <div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+
+            <div class="border-b border-hub-700 pb-2 mb-6">
+                <h2 class="text-xl font-bold text-white tracking-wide">Word Counter 字數統計完整指南</h2>
+                <p class="text-slate-500 text-sm mt-1">深入了解字數統計、閱讀時間計算與 SEO 最佳化策略</p>
+            </div>
+
+            <!-- 什麼是 Word Count -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-question text-purple-400"></i> 什麼是 Word Count（字數統計）？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    <strong class="text-white">Word Count（字數統計）</strong> 是指對一段文字中的單字數量進行計算的工具或功能。它是寫作、編輯、翻譯和學術研究中最基本也最重要的統計指標之一。無論是撰寫論文、部落格文章、社群媒體貼文還是 SEO 內容，了解精確的字數都能幫助您更好地控制內容長度與品質。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    字數統計工具不僅計算單字數量，還提供<strong class="text-white">字符數（含/不含空白）</strong>、<strong class="text-white">句子數</strong>、<strong class="text-white">段落數</strong>和<strong class="text-white">閱讀時間</strong>等關鍵指標，讓您對文字內容有全面的量化了解。本工具支援純文字、Markdown 和 HTML 三種輸入格式，並可選擇忽略標記語言語法來獲得純內容的統計資料。
+                </p>
+            </div>
+
+            <!-- 什麼是 Character Count -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-text-aa text-purple-400"></i> 什麼是 Character Count（字符計數）？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    <strong class="text-white">Character Count（字符計數）</strong> 是指計算文字中所有字符的總數，包括字母、數字、標點符號和空白。字符計數通常分為「含空白」和「不含空白」兩種計算方式：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-white">含空白字符數</strong>：計算所有字符，包括空格、Tab、換行等空白字符。這是大多數平台（如 X、Instagram）使用的計算方式。</li>
+                    <li><strong class="text-white">不含空白字符數</strong>：僅計算可視字符，排除所有空白。這個數字更能反映實際的文字內容密度。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    字符計數在社群媒體寫作中尤為重要，因為大部分平台都對貼文、標題和描述設有嚴格的字符數上限。例如 X（Twitter）限制每則貼文 280 字符，Google Meta Description 建議 150-160 字符。
+                </p>
+            </div>
+
+            <!-- SEO 建議文章長度 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-seo text-purple-400"></i> SEO 建議文章長度
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    根據多項 SEO 研究和搜尋引擎最佳化專家的建議，不同類型的內容有各自的最佳字數範圍：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-3">
+                    <li><strong class="text-white">部落格文章（通用）</strong>：1,500～2,500 字 — 涵蓋主題所需的深度，同時保持讀者注意力。</li>
+                    <li><strong class="text-white">SEO 排名最大化</strong>：2,000～2,500 字 — 多項研究顯示，這個範圍的文章在 Google 搜尋結果中平均排名最高。</li>
+                    <li><strong class="text-white">深度指南 / 權威文章</strong>：3,000～5,000 字 — 適合教學、研究報告和完整指南，這類內容更容易獲得外部連結。</li>
+                    <li><strong class="text-white">產品描述</strong>：150～500 字 — 簡潔有力，重點突出產品特色和優勢。</li>
+                    <li><strong class="text-white">Meta Description</strong>：150～160 字符 — 在搜尋結果中完整顯示而不被截斷。</li>
+                    <li><strong class="text-white">Google 標題標籤</strong>：50～60 字符 — 確保在搜尋結果中完整顯示。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    需要注意的是，<strong class="text-white">內容品質永遠比字數更重要</strong>。一篇 1,000 字的精采文章比一篇 3,000 字的灌水文章更有價值。字數只是一個參考指標，核心應該是提供有價值、有深度、滿足讀者需求的內容。
+                </p>
+            </div>
+
+            <!-- 社群平台字數限制 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-share-network text-purple-400"></i> 常見社群平台字數限制
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    了解各大社群平台的字數限制，有助於更有效地規劃和發布內容。以下是主要平台的最新限制：
+                </p>
+                <div class="overflow-x-auto mt-3">
+                    <table class="w-full text-sm text-slate-400">
+                        <thead>
+                            <tr class="border-b border-hub-700">
+                                <th class="text-left py-2 px-3 text-white font-bold">平台</th>
+                                <th class="text-left py-2 px-3 text-white font-bold">限制類型</th>
+                                <th class="text-right py-2 px-3 text-white font-bold">上限</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">X (Twitter)</td><td class="py-2 px-3">貼文</td><td class="py-2 px-3 text-right font-mono">280 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">X Premium</td><td class="py-2 px-3">貼文</td><td class="py-2 px-3 text-right font-mono">25,000 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">Facebook</td><td class="py-2 px-3">一般貼文</td><td class="py-2 px-3 text-right font-mono">63,206 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">Instagram</td><td class="py-2 px-3">說明文字</td><td class="py-2 px-3 text-right font-mono">2,200 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">TikTok</td><td class="py-2 px-3">說明文字</td><td class="py-2 px-3 text-right font-mono">2,200 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">YouTube</td><td class="py-2 px-3">標題</td><td class="py-2 px-3 text-right font-mono">100 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">YouTube</td><td class="py-2 px-3">描述</td><td class="py-2 px-3 text-right font-mono">5,000 字符</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">Google</td><td class="py-2 px-3">Meta Description</td><td class="py-2 px-3 text-right font-mono">160 字符（建議）</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 px-3">Google</td><td class="py-2 px-3">標題標籤</td><td class="py-2 px-3 text-right font-mono">60 字符（建議）</td></tr>
+                            <tr><td class="py-2 px-3">LinkedIn</td><td class="py-2 px-3">一般貼文</td><td class="py-2 px-3 text-right font-mono">3,000 字符</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 閱讀時間計算 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-clock text-purple-400"></i> 閱讀時間與朗讀時間是如何計算的？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    閱讀時間和朗讀時間是根據文字總字數與平均閱讀/朗讀速度估算得出的：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-white">閱讀時間</strong>：以 <strong class="text-white">每分鐘 200 個中文/英文單字</strong> 的平均閱讀速度計算。這是一般成人閱讀中等難度內容的平均速度。</li>
+                    <li><strong class="text-white">朗讀時間</strong>：以 <strong class="text-white">每分鐘 150 個字</strong> 的平均朗讀速度計算，比閱讀速度慢，因為朗讀需要清晰的發音和停頓。</li>
+                    <li><strong class="text-white">閱讀分析</strong>：根據不同的閱讀時間目標（1 分鐘、3 分鐘、5 分鐘）反推出對應的建議字數，幫助您規劃內容長度。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    這些估算基於學術研究中的平均數據，實際閱讀速度會因內容難度、讀者背景和閱讀目的而有所差異。技術文件、學術論文的閱讀速度通常較慢，而輕度娛樂內容的閱讀速度則較快。
+                </p>
+            </div>
+
+            <!-- FAQ -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+                    <i class="ph-fill ph-question-mark text-purple-400"></i> Word Counter 常見問題 FAQ
+                </h3>
+                <div class="space-y-4" itemscope itemtype="https://schema.org/FAQPage">
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q1: 「字符含空白」和「字符不含空白」有什麼差別？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                <strong class="text-white">字符含空白（Characters with spaces）</strong>：計算文字中所有字符的總數，包括空格、Tab、換行等空白字符。這是社群平台（如 X、Instagram）計算貼文字數的標準方式。<br>
+                                <strong class="text-white">字符不含空白（Characters without spaces）</strong>：僅計算可視字符，排除所有空白字符。這個數字更能反映實際的文字內容密度，常用於評估翻譯工作量和內容品質。<br>
+                                兩者的差距越大，代表文字中的空白字符越多，可能意味著排版較鬆散或段落間距較大。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q2: 閱讀時間的計算是基於什麼標準？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                閱讀時間基於<strong class="text-white">平均閱讀速度 200 字/分鐘</strong> 的標準進行估算。這個數字來自閱讀研究，代表一般成人閱讀中等難度內容（如新聞文章、部落格）的平均速度。學術研究建議，閱讀速度範圍在 200-250 字/分鐘之間，我們採用保守的 200 字/分鐘以確保估算更貼近實際情況。朗讀時間則以較慢的 <strong class="text-white">150 字/分鐘</strong> 計算，因為朗讀需要額外的發音和表達處理。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q3: 「忽略 HTML Tags」和「忽略 Markdown 語法」的作用是什麼？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                當您輸入的內容包含 HTML 或 Markdown 標記語言時，啟用這些選項可以讓統計工具<strong class="text-white">自動忽略標記語法</strong>，僅計算純文字內容的字數和字符數：<br>
+                                <strong class="text-white">忽略 HTML Tags</strong>：去除所有 HTML 標籤（如 <code class="text-purple-400">&lt;div&gt;</code>、<code class="text-purple-400">&lt;p&gt;</code>、<code class="text-purple-400">&lt;a&gt;</code> 等），僅保留純文字內容進行統計。<br>
+                                <strong class="text-white">忽略 Markdown 語法</strong>：去除 Markdown 格式化符號（如 <code class="text-purple-400">**</code>、<code class="text-purple-400">##</code>、<code class="text-purple-400">[]()</code> 等），僅計算實際的文字內容。<br>
+                                這對於網頁開發者、部落客和技術寫作者特別有用，可以準確了解去除格式化後的淨內容長度。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q4: 什麼是「最長單字」和「平均單字長度」？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                <strong class="text-white">最長單字</strong>：顯示文字中字符數最多的單字，幫助您了解是否有異常長的字詞。這在檢查程式碼或專業術語時特別有用。<br>
+                                <strong class="text-white">平均單字長度</strong>：總字符數（不含空白）除以總單字數，反映文字的整體用字複雜度。一般英文文章的平均單字長度約為 4-5 個字符。數值越高，代表用字越複雜或專業術語越多。<br>
+                                這兩個指標可以用來評估文字的可讀性。一般來說，平均單字長度在 4-6 之間的文章對大多數讀者來說是易讀的。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q5: 平台限制檢查器的數據準確嗎？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                平台限制檢查器提供的是各平台<strong class="text-white">公開的官方字數限制</strong>，這些數據基於各平台的官方文件和常見使用指南。請注意：<br>
+                                • 部分平台（如 X）對付費訂閱用戶提供更高的字數上限。<br>
+                                • Instagram 和 TikTok 的說明文字限制可能因區域和帳戶類型而異。<br>
+                                • Google 的 Meta Description 和標題限制是建議值而非強制限制，超過仍可發布，但可能在搜尋結果中被截斷。<br>
+                                建議在使用前參考各平台的最新官方文件以獲得最準確的資訊。本工具的檢查結果僅供參考，不作為正式發布的唯一依據。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q6: 我的文字內容會被上傳到伺服器嗎？隱私安全嗎？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                完全不會。本工具是<strong class="text-white">純前端應用</strong>，所有的文字處理、統計計算和內容分析都在您的瀏覽器中本地完成，<strong class="text-white">沒有任何資料被傳送到伺服器</strong>。您可以放心輸入任何機密內容，包括商業文件、學術論文或個人資料。即使在離線狀態下，本工具也能正常運作。您的資料安全是我們的首要考量。
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-purple-400" id="toast-icon"></i>
+        <span id="toast-msg">完成</span>
+    </div>
+
+    <!-- 頁尾 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式                               -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/word-counter';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        let initCalled = false;
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => { container.classList.remove('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full'); overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+            if (!initCalled) { initCalled = true; initApp(); }
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 核心業務邏輯：Word Counter 引擎            -->
+    <!-- ========================================== -->
+    <script>
+        // ============================================================
+        // 1. 預處理與工具函數
+        // ============================================================
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        function getProcessedText() {
+            let text = document.getElementById('text-input').value || '';
+
+            if (document.getElementById('opt-html').checked) {
+                text = text.replace(/<[^>]*>/g, '');
+            }
+            if (document.getElementById('opt-markdown').checked) {
+                text = text
+                    .replace(/!\[.*?\]\(.*?\)/g, '')
+                    .replace(/\[([^\]]*)\]\(.*?\)/g, '$1')
+                    .replace(/`{1,3}[^`]*`{1,3}/g, '')
+                    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+                    .replace(/(\*|_)(.*?)\1/g, '$2')
+                    .replace(/~~(.*?)~~/g, '$1')
+                    .replace(/^#{1,6}\s+/gm, '')
+                    .replace(/^[-*+]\s+/gm, '')
+                    .replace(/^\d+\.\s+/gm, '')
+                    .replace(/^>\s+/gm, '')
+                    .replace(/\|/g, ' ')
+                    .replace(/[-]{3,}/g, '');
+            }
+            if (document.getElementById('opt-empty').checked) {
+                text = text.replace(/^\s*$\n/gm, '').replace(/^\s*$/gm, '');
+            }
+            if (document.getElementById('opt-spaces').checked) {
+                text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n');
+            }
+
+            return text;
+        }
+
+        function getStats(text) {
+            const charsWithSpaces = text.length;
+            const charsWithoutSpaces = text.replace(/[\s​-‍﻿]/g, '').length;
+            const words = text.trim() ? text.trim().split(/[\s]+/).length : 0;
+            const lines = text ? text.split(/\n/).length : 0;
+
+            // 句子：以 . ! ? 結尾（含中文句號、問號、驚嘆號）
+            const sentenceMatches = text.match(/[^.!?。？！]+[.!?。？！]+/g);
+            const sentences = sentenceMatches ? sentenceMatches.length : 0;
+
+            // 段落：依連續換行分割
+            const paragraphs = text.trim() ? text.trim().split(/\n{2,}/).filter(p => p.trim()).length : 0;
+
+            // 最長單字
+            const wordArr = text.trim() ? text.trim().split(/[\s]+/) : [];
+            const longestWord = wordArr.length ? wordArr.reduce((a, b) => a.length >= b.length ? a : b, '') : '';
+
+            // 平均單字長度
+            const avgWordLen = words > 0 ? (charsWithoutSpaces / words) : 0;
+
+            // 平均句子長度（以字為單位）
+            const avgSentenceLen = sentences > 0 ? (charsWithoutSpaces / sentences) : 0;
+
+            // 平均段落長度（以字為單位）
+            const paraArr = text.trim() ? text.trim().split(/\n{2,}/).filter(p => p.trim()) : [];
+            const avgParagraphLen = paraArr.length > 0
+                ? (paraArr.reduce((sum, p) => sum + p.replace(/[\s​-‍﻿]/g, '').length, 0) / paraArr.length)
+                : 0;
+
+            // 閱讀時間 (200 字/分鐘)
+            const readMin = words / 200;
+            const readTime = readMin < 1 ? '< 1 min' : `${Math.round(readMin)} min ${Math.round((readMin % 1) * 60)} sec`;
+
+            // 朗讀時間 (150 字/分鐘)
+            const speakMin = words / 150;
+            const speakTime = speakMin < 1 ? '< 1 min' : `${Math.round(speakMin)} min ${Math.round((speakMin % 1) * 60)} sec`;
+
+            // 段落分布（每個段落的字數）
+            const paraDists = paraArr.map((p, i) => ({
+                index: i + 1,
+                words: p.trim().split(/[\s]+/).filter(w => w).length,
+                chars: p.replace(/[\s​-‍﻿]/g, '').length,
+                preview: p.trim().substring(0, 60)
+            }));
+
+            return {
+                charsWithSpaces,
+                charsWithoutSpaces,
+                words,
+                sentences,
+                paragraphs,
+                lines,
+                longestWord,
+                avgWordLen,
+                avgSentenceLen,
+                avgParagraphLen,
+                readMin,
+                readTime,
+                speakTime,
+                paraDists
+            };
+        }
+
+        // ============================================================
+        // 2. 平台限制資料
+        // ============================================================
+
+        const PLATFORMS = [
+            { id: 'x', name: 'X (Twitter)', limit: 280, desc: '一般貼文字數上限', icon: 'ph-twitter-logo' },
+            { id: 'x-premium', name: 'X Premium', limit: 25000, desc: '付費用戶貼文上限', icon: 'ph-check-circle' },
+            { id: 'youtube-title', name: 'YouTube 標題', limit: 100, desc: '影片標題上限', icon: 'ph-video' },
+            { id: 'youtube-desc', name: 'YouTube 描述', limit: 5000, desc: '影片描述上限', icon: 'ph-file-text' },
+            { id: 'meta-desc', name: 'Google Meta Description', limit: 160, desc: '搜尋結果建議上限', icon: 'ph-magnifying-glass' },
+            { id: 'google-title', name: 'Google 標題', limit: 60, desc: '搜尋標題建議上限', icon: 'ph-tag' },
+            { id: 'facebook', name: 'Facebook', limit: 63206, desc: '一般貼文上限', icon: 'ph-facebook-logo' },
+            { id: 'instagram', name: 'Instagram Caption', limit: 2200, desc: '說明文字上限', icon: 'ph-instagram-logo' },
+            { id: 'tiktok', name: 'TikTok Caption', limit: 2200, desc: '說明文字上限', icon: 'ph-music-note' },
+            { id: 'linkedin', name: 'LinkedIn', limit: 3000, desc: '一般貼文上限', icon: 'ph-linkedin-logo' },
+        ];
+
+        // ============================================================
+        // 3. UI 渲染函數
+        // ============================================================
+
+        let statsCache = null;
+
+        function updateStats() {
+            const text = getProcessedText();
+            const stats = getStats(text);
+            statsCache = stats;
+
+            // 主要統計
+            document.getElementById('stat-chars-with').textContent = stats.charsWithSpaces.toLocaleString();
+            document.getElementById('stat-chars-without').textContent = stats.charsWithoutSpaces.toLocaleString();
+            document.getElementById('stat-words').textContent = stats.words.toLocaleString();
+            document.getElementById('stat-sentences').textContent = stats.sentences.toLocaleString();
+            document.getElementById('stat-paragraphs').textContent = stats.paragraphs.toLocaleString();
+            document.getElementById('stat-lines').textContent = stats.lines.toLocaleString();
+            document.getElementById('stat-readtime').textContent = stats.readTime;
+            document.getElementById('stat-speaktime').textContent = stats.speakTime;
+            document.getElementById('live-chars').textContent = `${stats.charsWithSpaces.toLocaleString()} 字符`;
+            document.getElementById('update-time').textContent = `更新於 ${new Date().toLocaleTimeString('zh-TW')}`;
+
+            // 額外分析
+            document.getElementById('stat-longest-word').textContent = stats.longestWord || '—';
+            document.getElementById('stat-avg-word').textContent = stats.avgWordLen ? stats.avgWordLen.toFixed(1) : '0';
+            document.getElementById('stat-avg-sentence').textContent = stats.avgSentenceLen ? stats.avgSentenceLen.toFixed(1) : '0';
+            document.getElementById('stat-avg-paragraph').textContent = stats.avgParagraphLen ? stats.avgParagraphLen.toFixed(1) : '0';
+
+            // 閱讀分析
+            const wpm = 200;
+            const words1min = wpm * 1;
+            const words3min = wpm * 3;
+            const words5min = wpm * 5;
+            document.getElementById('read-1min').textContent = `${words1min.toLocaleString()} 字`;
+            document.getElementById('read-3min').textContent = `${words3min.toLocaleString()} 字`;
+            document.getElementById('read-5min').textContent = `${words5min.toLocaleString()} 字`;
+            document.getElementById('read-full').textContent = `${stats.readMin.toFixed(1)} min (${stats.words.toLocaleString()} 字)`;
+
+            // 圓餅圖
+            updatePieChart(stats);
+
+            // 段落分布長條圖
+            updateBarChart(stats);
+
+            // 平台限制檢查
+            updatePlatformLimits(stats);
+
+            // 加入動畫效果
+            document.querySelectorAll('#stats-section .font-mono.text-xl').forEach(el => {
+                el.classList.remove('animate-count');
+                void el.offsetWidth;
+                el.classList.add('animate-count');
+            });
+        }
+
+        function updatePieChart(stats) {
+            const total = stats.charsWithSpaces || 1;
+            const charsPct = Math.round((stats.charsWithoutSpaces / total) * 100);
+            const wordsPct = Math.round((stats.words / total) * 100);
+
+            const charsArc = document.getElementById('pie-chars');
+            const wordsArc = document.getElementById('pie-words-arc');
+            const charsLabel = document.getElementById('pie-chars-label');
+            const wordsLabel = document.getElementById('pie-words-label');
+
+            const charsCircum = 314.16;
+            const wordsCircum = 238.76;
+
+            charsArc.style.strokeDashoffset = charsCircum * (1 - charsPct / 100);
+            wordsArc.style.strokeDashoffset = wordsCircum * (1 - wordsPct / 100);
+
+            charsLabel.textContent = `${charsPct}%`;
+            wordsLabel.textContent = `${wordsPct}%`;
+        }
+
+        function updateBarChart(stats) {
+            const container = document.getElementById('bar-chart');
+            const dists = stats.paraDists;
+
+            if (!dists.length) {
+                container.innerHTML = '<div class="text-center text-slate-600 text-sm py-8">輸入文字後將顯示段落分布</div>';
+                return;
+            }
+
+            const maxWords = Math.max(...dists.map(d => d.words), 1);
+            const show = dists.slice(0, 10);
+
+            let html = '';
+            for (const d of show) {
+                const pct = Math.max((d.words / maxWords) * 100, 1);
+                html += `
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-slate-500 font-mono w-6 flex-shrink-0 text-right">#${d.index}</span>
+                        <div class="flex-1 bg-hub-900/50 rounded-full h-6 overflow-hidden border border-hub-700">
+                            <div class="h-full rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-500 platform-bar flex items-center px-2" style="width: ${pct}%; min-width: 0">
+                                <span class="text-[10px] text-white font-bold whitespace-nowrap ${pct < 15 ? 'sr-only' : ''}">${d.words} 字</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 font-mono w-12 flex-shrink-0 text-right">${d.words} 字</span>
+                    </div>
+                `;
+            }
+
+            if (dists.length > 10) {
+                html += `<div class="text-center text-[10px] text-slate-600 pt-2">僅顯示前 10 個段落（共 ${dists.length} 個段落）</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updatePlatformLimits(stats) {
+            const container = document.getElementById('platform-limits');
+            const charCount = document.getElementById('opt-html').checked
+                ? stats.charsWithSpaces
+                : (document.getElementById('text-input').value || '').length;
+
+            let html = '';
+            for (const p of PLATFORMS) {
+                const exceeded = charCount > p.limit;
+                const pct = Math.min((charCount / p.limit) * 100, 100);
+                const statusClass = exceeded ? 'limit-exceed' : (pct >= 80 ? 'limit-warn' : 'limit-ok');
+                const statusIcon = exceeded ? 'ph-x-circle' : (pct >= 80 ? 'ph-warning' : 'ph-check-circle');
+                const barColor = exceeded ? 'bg-red-500' : (pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500');
+
+                html += `
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <i class="ph-fill ${statusIcon} text-sm ${statusClass}"></i>
+                                <span class="text-sm font-medium text-white">${p.name}</span>
+                            </div>
+                            <span class="font-mono text-xs ${statusClass} font-bold">
+                                ${charCount.toLocaleString()} / ${p.limit.toLocaleString()}
+                            </span>
+                        </div>
+                        <div class="w-full bg-hub-700 rounded-full h-1.5">
+                            <div class="h-full rounded-full ${barColor} platform-bar" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">${p.desc} ${exceeded ? '· 已超過上限' : (pct >= 80 ? '· 即將達到上限' : '')}</div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // ============================================================
+        // 4. 顯示 Toast
+        // ============================================================
+
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msgEl = document.getElementById('toast-msg');
+            msgEl.textContent = msg;
+            icon.className = isError ? 'ph-fill ph-warning text-lg text-red-400' : 'ph-fill ph-check-circle text-lg text-purple-400';
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // ============================================================
+        // 5. 範例文字
+        // ============================================================
+
+        const SAMPLE_TEXT = `# 人工智慧時代的內容創作策略
+
+在數位轉型的浪潮中，人工智慧（AI）正在徹底改變我們創作和管理內容的方式。從自動生成文章到智慧化 SEO 最佳化，AI 工具不僅提高了生產力，還為內容創作者開闢了全新的可能性。
+
+## AI 輔助寫作的優勢
+
+### 1. 提升效率
+AI 寫作工具可以在短時間內產生大量高品質的草稿，讓創作者能夠專注於策略規劃和創意發想。根據統計，使用 AI 輔助寫作的內容團隊平均生產力提升了 40% 以上。
+
+### 2. 改善 SEO 表現
+現代的 AI 工具能夠分析搜尋引擎演算法，提供關鍵字建議、內容結構最佳化和元數據撰寫建議。這使得網頁內容在搜尋結果中的排名顯著提升。
+
+### 3. 多語言內容擴展
+對於全球化企業來說，AI 翻譯和本地化工具讓內容能夠快速適應不同市場。不僅是單純的翻譯，還能根據當地文化習慣調整語氣和用詞。
+
+## 內容創作者如何適應 AI 時代
+
+雖然 AI 帶來了許多便利，但內容創作者的價值仍然不可取代。以下是一些適應策略：
+
+1. 將 AI 視為協作夥伴而非競爭對手
+2. 專注於高階策略和創意思考
+3. 培養獨特的觀點和聲音
+4. 掌握 AI Prompt Engineering 技巧
+5. 持續學習和更新技能
+
+## SEO 最佳化實戰建議
+
+要讓您的內容在搜尋引擎中獲得最佳表現，請遵循以下原則：
+
+- 撰寫高品質、原創性的內容
+- 目標關鍵字自然融入文章中
+- 優化標題標籤（50-60 字符）
+- 撰寫吸引人的 Meta Description（150-160 字符）
+- 使用結構化資料標記
+- 確保網頁載入速度快
+- 建立高品質的外部連結
+
+## 結語
+
+人工智慧不是來取代內容創作者的，而是來幫助我們更好地發揮創造力。擁抱 AI 工具，同時保持人類獨特的洞察力和情感連結，才是未來內容創作的致勝關鍵。
+
+你準備好迎接 AI 時代的內容創作革命了嗎？現在就開始嘗試將 AI 工具整合到你的工作流程中吧！`;
+
+        // ============================================================
+        // 6. 事件綁定
+        // ============================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 等初始化完成後綁定
+        });
+
+        function initApp() {
+            // 文字輸入即時更新
+            const textInput = document.getElementById('text-input');
+            textInput.addEventListener('input', updateStats);
+
+            // 選項變更
+            document.querySelectorAll('.option-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateStats);
+            });
+
+            // 複製
+            document.getElementById('btn-copy').addEventListener('click', () => {
+                const text = document.getElementById('text-input').value;
+                if (!text.trim()) {
+                    showToast('尚無文字可複製', true);
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('已複製到剪貼簿', false);
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showToast('已複製到剪貼簿', false);
+                });
+            });
+
+            // 下載 TXT
+            document.getElementById('btn-download').addEventListener('click', () => {
+                const text = document.getElementById('text-input').value;
+                if (!text.trim()) {
+                    showToast('尚無文字可下載', true);
+                    return;
+                }
+
+                const stats = statsCache || getStats(getProcessedText());
+                const lines = [
+                    '========================================',
+                    'Word Counter 字數統計報告',
+                    '========================================',
+                    `產生時間: ${new Date().toLocaleString('zh-TW')}`,
+                    '',
+                    '--- 統計數據 ---',
+                    `字符 (含空白): ${stats.charsWithSpaces.toLocaleString()}`,
+                    `字符 (不含空白): ${stats.charsWithoutSpaces.toLocaleString()}`,
+                    `單字: ${stats.words.toLocaleString()}`,
+                    `句子: ${stats.sentences.toLocaleString()}`,
+                    `段落: ${stats.paragraphs.toLocaleString()}`,
+                    `行數: ${stats.lines.toLocaleString()}`,
+                    `閱讀時間: ${stats.readTime}`,
+                    `朗讀時間: ${stats.speakTime}`,
+                    `最長單字: ${stats.longestWord || '—'}`,
+                    `平均單字長度: ${stats.avgWordLen.toFixed(1)}`,
+                    `平均句子長度: ${stats.avgSentenceLen.toFixed(1)}`,
+                    `平均段落長度: ${stats.avgParagraphLen.toFixed(1)}`,
+                    '',
+                    '--- 原始文字 ---',
+                    text,
+                    '========================================',
+                ];
+                const report = lines.join('\n');
+                const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `word-counter-report-${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showToast('統計報告已下載', false);
+            });
+
+            // 清除
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                document.getElementById('text-input').value = '';
+                updateStats();
+                showToast('已清除所有文字', false);
+            });
+
+            // 範例文字
+            document.getElementById('btn-sample').addEventListener('click', () => {
+                document.getElementById('text-input').value = SAMPLE_TEXT;
+                updateStats();
+                showToast('已載入範例文字', false);
+            });
+
+            // 初始統計
+            updateStats();
+        }
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

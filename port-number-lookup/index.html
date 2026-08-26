@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Number Lookup 連接埠號碼查詢對照表 | ToolHub - 網路管理必備工具</title>
+    <meta name="description" content="免費線上 Port Number 查詢對照工具。涵蓋 Well Known Ports、Registered Ports 與 Dynamic Ports，提供 TCP/UDP 篩選、即時搜尋、安全建議、收藏與最近查詢功能。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="Port Number, 連接埠查詢, TCP/UDP, 80 HTTP, 443 HTTPS, 22 SSH, 3306 MySQL, 防火牆設定, Docker Port, NAS Port, 網路管理">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#14B8A6',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #14B8A6; }
+
+        .search-input {
+            width: 100%;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            outline: none;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 0.9rem;
+        }
+        .search-input:focus {
+            border-color: #14B8A6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+        }
+        .search-input::placeholder { color: #475569; }
+
+        .category-tab {
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .category-tab:hover { color: #e2e8f0; background: rgba(20, 184, 166, 0.05); }
+        .category-tab.active { background: rgba(20, 184, 166, 0.12); color: #14B8A6; border-color: rgba(20, 184, 166, 0.25); }
+
+        .protocol-tab {
+            padding: 0.3rem 0.7rem;
+            border-radius: 0.4rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .protocol-tab:hover { color: #e2e8f0; }
+        .protocol-tab.active-tcp { background: rgba(59, 130, 246, 0.12); color: #3B82F6; border-color: rgba(59, 130, 246, 0.25); }
+        .protocol-tab.active-udp { background: rgba(245, 158, 11, 0.12); color: #F59E0B; border-color: rgba(245, 158, 11, 0.25); }
+        .protocol-tab.active-both { background: rgba(20, 184, 166, 0.12); color: #14B8A6; border-color: rgba(20, 184, 166, 0.25); }
+
+        .port-card {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .port-card:hover {
+            border-color: rgba(20, 184, 166, 0.3);
+            background: #1E293B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .port-card .port-number {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .detail-panel {
+            border-top: 1px solid #1e293b;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+        }
+        .detail-panel dt { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.6rem; }
+        .detail-panel dt:first-child { margin-top: 0; }
+        .detail-panel dd { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; margin-top: 0.15rem; }
+        .detail-panel .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #14B8A6; border-color: #14B8A6; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary { list-style: none; cursor: pointer; user-select: none; }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #14B8A6;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #14B8A6;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(20, 184, 166, 0.05);
+            border-left: 3px solid #14B8A6;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .search-input { font-size: 0.82rem; }
+            .category-tab { font-size: 0.72rem; padding: 0.3rem 0.6rem; }
+            .port-card .port-number { font-size: 1.3rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/port-number-lookup/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/port-number-lookup/">
+    <meta property="og:title" content="Port Number Lookup 連接埠號碼查詢對照表">
+    <meta property="og:description" content="免費線上 Port Number 查詢對照工具。涵蓋 Well Known Ports、Registered Ports 與 Dynamic Ports，提供 TCP/UDP 篩選、即時搜尋、安全建議、收藏與最近查詢功能。純前端本地運算，保障隱私安全。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Port Number Lookup 連接埠號碼查詢對照表">
+    <meta name="twitter:description" content="免費線上 Port Number 查詢對照工具。涵蓋 Well Known Ports、Registered Ports 與 Dynamic Ports，提供 TCP/UDP 篩選、即時搜尋、安全建議、收藏與最近查詢功能。純前端本地運算，保障隱私安全。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Port Number Lookup 連接埠號碼查詢對照表","url":"https://toolhuben.com/port-number-lookup/","description":"免費線上 Port Number 查詢對照工具。涵蓋 Well Known Ports、Registered Ports 與 Dynamic Ports，提供 TCP/UDP 篩選、即時搜尋、安全建議、收藏與最近查詢功能。純前端本地運算，保障隱私安全。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Port Number Lookup 連接埠號碼查詢對照表","item":"https://toolhuben.com/port-number-lookup/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/port-number-lookup/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/port-number-lookup/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/port-number-lookup/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#14B8A6;--classic-accent-rgb:20,184,166" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- Hero -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-teal-400">
+                <span class="flex w-2 h-2 bg-teal-400 rounded-full animate-pulse mr-2"></span>
+                涵蓋 80+ 常見連接埠 · TCP/UDP 篩選 · 安全建議
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Port Number Lookup <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-500">連接埠號碼查詢對照表</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                快速查詢 TCP/UDP Port 的用途、常見服務與安全建議。<br class="hidden sm:block"/>
+                適用於 <strong class="text-teal-400">網路管理</strong>、<strong class="text-teal-400">防火牆設定</strong>、<strong class="text-teal-400">Docker</strong>、<strong class="text-teal-400">NAS</strong> 與 <strong class="text-teal-400">自架服務</strong>。
+            </p>
+        </div>
+
+        <!-- Tool Card -->
+        <div id="tool-card" class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-6">
+
+            <!-- Search -->
+            <div class="p-4 sm:p-5 border-b border-hub-700">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg"></i>
+                    <input type="text" id="search-input" class="search-input" placeholder="搜尋 Port（80、443、22）、服務名稱（HTTP、SSH、MySQL）、關鍵字（Database、Mail、Web）..." autocomplete="off">
+                    <button id="clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors hidden">
+                        <i class="ph ph-x-circle text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category Tabs + Protocol Filter -->
+            <div class="px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-hub-700/50">
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
+                    <button class="category-tab active" data-category="all">全部 <span id="count-all" class="opacity-60">0</span></button>
+                    <button class="category-tab" data-category="well-known">Well Known <span id="count-well-known" class="opacity-60">0</span></button>
+                    <button class="category-tab" data-category="registered">Registered <span id="count-registered" class="opacity-60">0</span></button>
+                    <button class="category-tab" data-category="dynamic">Dynamic <span id="count-dynamic" class="opacity-60">0</span></button>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-wider mr-1">Filter:</span>
+                    <button class="protocol-tab active-both" data-protocol="both">TCP+UDP</button>
+                    <button class="protocol-tab" data-protocol="tcp">TCP</button>
+                    <button class="protocol-tab" data-protocol="udp">UDP</button>
+                </div>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-400 hover:text-white transition-colors select-none">
+                        <div class="relative">
+                            <input type="checkbox" id="fav-toggle" class="sr-only toggle-checkbox">
+                            <div class="toggle-bg block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors"></div>
+                            <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                        </div>
+                        <i class="ph ph-star text-teal-400 text-sm"></i> 只顯示收藏
+                    </label>
+                    <button id="recent-btn" class="text-xs text-slate-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+                        <i class="ph ph-clock-counter-clockwise"></i> 最近查詢
+                    </button>
+                </div>
+                <span id="result-count" class="text-xs text-slate-500"></span>
+            </div>
+        </div>
+
+        <!-- Recent Queries Panel -->
+        <div id="recent-panel" class="hidden bg-hub-800/60 border border-hub-700 rounded-xl p-4 mb-4 fade-in">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider"><i class="ph ph-clock-counter-clockwise text-teal-400 mr-1"></i> 最近查詢</span>
+                <button id="clear-recent" class="text-xs text-slate-500 hover:text-red-400 transition-colors">清除記錄</button>
+            </div>
+            <div id="recent-list" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Port Grid -->
+        <div id="codes-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <div class="mt-16 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ 常見問題 <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-500">FAQ</span></h2>
+                <p class="text-slate-400 text-sm">關於網路連接埠（Port）的常見疑問與解答</p>
+            </div>
+            <div class="space-y-3">
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 Port（連接埠）？為什麼重要？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">Port（連接埠 / 埠號）</strong> 是網路通訊中用來識別特定應用程式或服務的數字標籤。可以想像 IP 地址是「大樓地址」，而 Port 就是「大樓內的房間號碼」。</p>
+                        <p class="mt-2">當您的電腦與伺服器通訊時，除了要知道對方的 IP 地址，還要指定連接埠號碼，才能讓資料正確送達對應的應用程式（例如瀏覽器用 Port 80 存取 Web 伺服器）。</p>
+                        <p class="mt-2"><strong class="text-white">Port 範圍：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">Well Known Ports（0–1023）</strong> — 系統保留，由 IANA 分配給知名服務（HTTP、SSH、FTP 等）</li>
+                            <li><strong class="text-white">Registered Ports（1024–49151）</strong> — 可註冊，供應用程式與資料庫使用（MySQL 3306、Redis 6379 等）</li>
+                            <li><strong class="text-white">Dynamic / Private Ports（49152–65535）</strong> — 動態分配，用於暫存連線與自訂服務</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>TCP 與 UDP 有什麼不同？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>TCP 與 UDP 是傳輸層的兩種核心協定，最大的差異在於 <strong class="text-white">可靠性</strong> 與 <strong class="text-white">效率</strong>：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-blue-400">TCP（傳輸控制協定）</strong> — 可靠但較慢</p>
+                            <p>🔹 建立連線（三次握手）<br/>
+                            🔹 保證資料送達（確認機制 Auto-Retry）<br/>
+                            🔹 保證資料順序（序列號）<br/>
+                            🔹 適用：網頁瀏覽（HTTP）、Email（SMTP）、檔案傳輸（FTP）、SSH</p>
+                        </div>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-amber-400">UDP（使用者資料包協定）</strong> — 快速但不可靠</p>
+                            <p>🔹 無連線（發送即走）<br/>
+                            🔹 不保證送達（可能遺失封包）<br/>
+                            🔹 不保證順序<br/>
+                            🔹 適用：DNS 查詢、影片串流、線上遊戲、VoIP 語音通話</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">💡 選擇原則：</strong>需要資料完整 → TCP；需要即時性 → UDP。許多服務同時支援兩種協定（如 DNS 使用 UDP 為主，但超過 512 位元組會切換到 TCP）。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Docker Port Mapping 是什麼？如何運作？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">Docker Port Mapping（連接埠映射）</strong> 是將 Docker 容器內部的連接埠映射到主機（Host）上的連接埠，讓外部可以透過主機 IP 存取容器內的服務。</p>
+                        <p class="mt-2"><strong class="text-white">語法：</strong><code>docker run -p 主機埠:容器埠</code></p>
+                        <p class="mt-2"><strong class="text-white">實際範例：</strong></p>
+                        <div class="highlight-box mt-2">
+                            <code>docker run -p 8080:80 nginx</code>
+                            <p class="mt-1">→ 將容器內的 Port 80（Nginx）映射到主機的 Port 8080</p>
+                            <p>→ 外部可透過 <code>http://主機IP:8080</code> 存取</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">⚠️ 安全提醒：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>避免將資料庫埠（如 3306）直接暴露到主機（除非必要）</li>
+                            <li>使用 Docker 內部網路（bridge network）讓容器間通訊，不暴露埠</li>
+                            <li>僅映射需要的埠，不要使用 <code>-p 0.0.0.0:80:80</code> 暴露到所有介面</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>哪些 Port 最常見的安全風險？如何防護？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>開放不必要的 Port 是網路安全中最常見的風險之一。以下是常被攻擊的目標與防護建議：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-white">🔴 高風險 Port</strong></p>
+                            <ul class="pl-5 mt-1 space-y-1">
+                                <li><strong>Port 22 (SSH)</strong> — 禁止密碼登入，使用 SSH Key，改用非標準埠</li>
+                                <li><strong>Port 23 (Telnet)</strong> — 完全不建議使用，改用 SSH</li>
+                                <li><strong>Port 445 (SMB)</strong> — 不應對外開放（WannaCry 勒索軟體即透過此埠擴散）</li>
+                                <li><strong>Port 3306 (MySQL)</strong> — 僅限內部網路存取，不應暴露到網際網路</li>
+                                <li><strong>Port 3389 (RDP)</strong> — 使用 VPN 連線後再存取，或啟用 NLA 認證</li>
+                            </ul>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">🛡️ 通用防護原則：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>防火牆只開放必要 Port（最小權限原則）</li>
+                            <li>使用 VPN 存取內部管理介面</li>
+                            <li>定期掃描對外開放的 Port（使用 nmap 等工具）</li>
+                            <li>啟用 Fail2Ban 等入侵預防機制</li>
+                            <li>保持服務版本更新（修補已知漏洞）</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 NAT / Port Forwarding？如何在路由器設定？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">Port Forwarding（連接埠轉發）</strong> 是 NAT（網路地址轉換）的一種功能，讓外部網路可以透過路由器的 IP 存取內部區域網路中的服務。</p>
+                        <p class="mt-2"><strong class="text-white">典型使用情境：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>在家架設 Web 伺服器（轉發 Port 80/443 到內部主機）</li>
+                            <li>遠端存取 NAS（轉發特定管理埠）</li>
+                            <li>遠端桌面連線到公司電腦（轉發 Port 3389）</li>
+                            <li>自架 Minecraft 伺服器（轉發 Port 25565）</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">⚠️ 安全提醒：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>只轉發必要的 Port（不要全部轉發）</li>
+                            <li>盡量使用非標準埠（如將 SSH 設在 Port 2222 而非 22）</li>
+                            <li>搭配防火牆規則限制來源 IP</li>
+                            <li>考慮使用反向代理（如 Nginx Proxy Manager）統一管理對外服務</li>
+                            <li>定期檢查路由器轉發規則</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>NAS 常見服務使用哪些 Port？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>NAS（網路附加儲存）裝置使用多種連接埠來提供檔案分享、媒體串流與管理功能：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-white">Synology / QNAP 常見 Port</strong></p>
+                            <ul class="pl-5 mt-1 space-y-1">
+                                <li><strong>5000 / 5001</strong> — DSM / QTS Web 管理介面（HTTP/HTTPS）</li>
+                                <li><strong>21</strong> — FTP 檔案傳輸</li>
+                                <li><strong>137-139</strong> — NetBIOS / SMB 檔案分享（Windows）</li>
+                                <li><strong>443</strong> — HTTPS 安全連線</li>
+                                <li><strong>548</strong> — AFP（Apple 檔案分享）</li>
+                                <li><strong>2049</strong> — NFS（Linux 檔案分享）</li>
+                                <li><strong>9091</strong> — Transmission BT 下載管理</li>
+                                <li><strong>32400</strong> — Plex Media Server</li>
+                            </ul>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">💡 建議：</strong>NAS 管理介面不要直接暴露到網際網路，建議透過 VPN 連線後再存取。如果必須遠端存取，請啟用 HTTPS（Port 5001）並使用強密碼。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>如何檢查 Port 是否開放？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>檢查連接埠是否開放有多種方法，從簡單到進階：</p>
+                        <p class="mt-2"><strong class="text-white">1️⃣ 使用 nmap（最強大）</strong></p>
+                        <div class="highlight-box mt-2">
+                            <code>nmap -sT -p 80,443 目標IP</code>
+                            <p class="mt-1">掃描指定 IP 的特定 Port</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">2️⃣ 使用 telnet（簡單測試 TCP）</strong></p>
+                        <div class="highlight-box mt-2">
+                            <code>telnet 目標IP 埠號</code>
+                            <p class="mt-1">連線成功表示 Port 有開放</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">3️⃣ 使用 nc（netcat）</strong></p>
+                        <div class="highlight-box mt-2">
+                            <code>nc -zv 目標IP 埠號</code>
+                            <p class="mt-1">-z 僅掃描不發送資料，-v 顯示詳細資訊</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">4️⃣ 線上工具</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong>YouGetSignal</strong> — 線上 Port 掃描工具</li>
+                            <li><strong>CanYouSeeMe</strong> — 檢查外部是否可看到您的 Port</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">💡 注意：</strong>掃描不屬於自己的伺服器前，請先取得授權。未經授權的掃描可能違反法律。</p>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+
+        <!-- ===== SEO ARTICLE ===== -->
+        <div class="mt-16 max-w-4xl mx-auto seo-article">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 網路連接埠（Port）完全指南</h2>
+                <p class="text-slate-400 text-sm">深入了解網路連接埠的運作原理、分類與最佳實踐</p>
+            </div>
+            <div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+
+                <h2>什麼是網路連接埠（Port）？</h2>
+                <p><strong>網路連接埠（Network Port）</strong> 是 TCP/IP 協定中用來區分不同網路服務的邏輯編號。它的概念類似於公寓大樓的門牌號碼 — IP 地址是「大樓地址」，而 Port 就是「房間號碼」，確保資料送達正確的應用程式。</p>
+                <p>連接埠號碼是一個 16 位元的無符號整數，範圍從 <strong class="text-teal-400">0 到 65535</strong>。網際網路號碼分配局（IANA）將 Port 分為三個範圍：</p>
+                <ul>
+                    <li><strong class="text-white">Well Known Ports（0–1023）</strong> — 系統保留，需要 root/管理員權限才能使用。分配給最常見的網路服務（HTTP、FTP、SSH、DNS 等）</li>
+                    <li><strong class="text-white">Registered Ports（1024–49151）</strong> — 可供應用程式註冊使用。資料庫、遊戲伺服器、企業軟體等使用此範圍</li>
+                    <li><strong class="text-white">Dynamic / Private Ports（49152–65535）</strong> — 用於暫時連線（如瀏覽器連線 Web 伺服器時使用的隨機埠）</li>
+                </ul>
+
+                <h2>TCP 與 UDP 的差異</h2>
+                <p>在理解連接埠之前，必須先了解 <strong class="text-white">TCP 與 UDP</strong> 這兩種傳輸層協定的差異：</p>
+
+                <h3>TCP（Transmission Control Protocol）</h3>
+                <p>TCP 是一種<strong class="text-white">連線導向</strong>、<strong class="text-white">可靠</strong>的傳輸協定。在傳輸資料前，客戶端與伺服器需要透過「三次握手」（Three-Way Handshake）建立連線。TCP 確保資料完整送達、順序正確，並在封包遺失時自動重傳。</p>
+                <p>適用於需要資料完整性的應用：<strong>網頁瀏覽（HTTP/HTTPS）</strong>、<strong>Email（SMTP、IMAP）</strong>、<strong>檔案傳輸（FTP、SFTP）</strong>、<strong>遠端連線（SSH、Telnet）</strong>。</p>
+
+                <h3>UDP（User Datagram Protocol）</h3>
+                <p>UDP 是一種<strong class="text-white">無連線</strong>、<strong class="text-white">不可靠</strong>的傳輸協定。它直接發送資料包，不建立連線、不確認送達、不保證順序。但正因為沒有這些開銷，UDP 的延遲極低。</p>
+                <p>適用於需要即時性的應用：<strong>DNS 查詢</strong>、<strong>影片串流</strong>、<strong>線上遊戲</strong>、<strong>VoIP 語音通話</strong>、<strong>DHCP</strong>。</p>
+
+                <div class="highlight-box">
+                    <p><strong>選擇原則：</strong></p>
+                    <p>資料完整性 > 速度 → <strong class="text-blue-400">TCP</strong><br/>
+                    即時性 > 完整性 → <strong class="text-amber-400">UDP</strong></p>
+                    <p class="mt-2">許多服務會同時支援 TCP 和 UDP（如 DNS 預設使用 UDP，但需要時會切換到 TCP）。</p>
+                </div>
+
+                <h2>常見服務與對應 Port</h2>
+                <p>以下是最常使用的網路服務與其預設連接埠：</p>
+                <ul>
+                    <li><strong>20/21 (FTP)</strong> — 檔案傳輸協定（20 為資料，21 為控制）</li>
+                    <li><strong>22 (SSH)</strong> — 安全 Shell，加密遠端連線</li>
+                    <li><strong>25 (SMTP)</strong> — 郵件傳送協定</li>
+                    <li><strong>53 (DNS)</strong> — 域名解析系統（UDP 為主）</li>
+                    <li><strong>80 (HTTP)</strong> — 全球資訊網，未加密網頁瀏覽</li>
+                    <li><strong>443 (HTTPS)</strong> — 加密網頁瀏覽（TLS/SSL）</li>
+                    <li><strong>3306 (MySQL)</strong> — MySQL 資料庫</li>
+                    <li><strong>5432 (PostgreSQL)</strong> — PostgreSQL 資料庫</li>
+                    <li><strong>6379 (Redis)</strong> — Redis 快取資料庫</li>
+                    <li><strong>27017 (MongoDB)</strong> — MongoDB 資料庫</li>
+                </ul>
+
+                <h2>防火牆與 Port 管理最佳實踐</h2>
+                <p>正確管理對外開放的 Port 是網路安全的第一道防線：</p>
+                <ul>
+                    <li><strong>最小權限原則</strong> — 只開放必要的 Port，關閉所有不在白名單中的 Port</li>
+                    <li><strong>變更預設埠</strong> — 將 SSH、資料庫等服務移到非標準埠（如 SSH 改為 2222）</li>
+                    <li><strong>使用 VPN</strong> — 管理介面（NAS、路由器、資料庫）透過 VPN 存取</li>
+                    <li><strong>防火牆規則</strong> — 限制特定來源 IP 存取管理 Port</li>
+                    <li><strong>Fail2Ban</strong> — 自動封鎖嘗試暴力破解的 IP</li>
+                    <li><strong>定期掃描</strong> — 使用 nmap 等工具檢查哪些 Port 對外開放</li>
+                    <li><strong>Docker 注意</strong> — 不要將容器埠直接 mapping 到主機 0.0.0.0 除非必要</li>
+                </ul>
+
+                <h2>Docker Port Mapping 深入解析</h2>
+                <p>在 Docker 環境中，連接埠管理變得更加複雜：</p>
+                <p>每個容器有自己的內部網路，容器內的服務監聽在特定埠號。要讓外部存取這些服務，需要使用 <code>-p</code> 參數進行連接埠映射：</p>
+                <div class="highlight-box">
+                    <code>docker run -p 8080:80 nginx</code>
+                    <p class="mt-1">主機 Port 8080 → 容器 Port 80</p>
+                </div>
+                <p><strong class="text-white">建議：</strong>使用 Docker Compose 時，在 <code>ports:</code> 區段中明確定義映射關係。使用 <code>127.0.0.1:8080:80</code> 可讓 Port 僅監聽本機，再透過反向代理（如 Nginx Proxy Manager、Traefik）統一管理對外服務。</p>
+
+                <div class="highlight-box">
+                    <p><strong>總結：</strong>網路連接埠是網路通訊的基礎設施，了解每個 Port 的用途、選擇正確的協定（TCP/UDP）、實施適當的安全措施，是每位系統管理員與開發者必備的技能。使用 ToolHub 的 Port Number Lookup 工具，隨時查詢任何連接埠的資訊與安全建議。</p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div id="component-footer"></div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-teal-400" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- ================ SYSTEM INIT ================ -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/port-number-lookup';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ================ BUSINESS LOGIC ================ -->
+    <script>
+        // ===== CATEGORY =====
+        function getPortCategory(port) {
+            if (port <= 1023) return 'well-known';
+            if (port <= 49151) return 'registered';
+            return 'dynamic';
+        }
+        const CATEGORY_LABELS = {
+            'well-known': { hex: '#3B82F6', label: 'Well Known (0–1023)' },
+            'registered': { hex: '#F59E0B', label: 'Registered (1024–49151)' },
+            'dynamic': { hex: '#14B8A6', label: 'Dynamic (49152–65535)' },
+        };
+
+        // ===== DATA =====
+        const PORT_DATA = [
+            { port: 7, service: 'Echo', proto: 'both', desc: 'Echo Protocol（回應測試）', usage: '網路測試, Ping 替代', encrypted: false, publicSafe: false, security: '不建議開放，可能被用於放大攻擊 (DDoS)' },
+            { port: 20, service: 'FTP Data', proto: 'tcp', desc: 'File Transfer Protocol Data Transfer', usage: 'FTP 檔案傳輸（資料通道）', encrypted: false, publicSafe: false, security: '建議改用 SFTP 或 FTPS' },
+            { port: 21, service: 'FTP Control', proto: 'tcp', desc: 'File Transfer Protocol Control', usage: 'FTP 檔案傳輸（控制通道）', encrypted: false, publicSafe: false, security: '密碼明文傳輸，強烈建議改用 SFTP (22)' },
+            { port: 22, service: 'SSH', proto: 'tcp', desc: 'Secure Shell', usage: '安全遠端連線, SFTP, Git, 伺服器管理', encrypted: true, publicSafe: true, security: '使用 SSH Key 認證，禁用密碼登入，可考慮改用非標準埠' },
+            { port: 23, service: 'Telnet', proto: 'tcp', desc: 'Telnet Remote Login', usage: '傳統遠端連線（已淘汰）', encrypted: false, publicSafe: false, security: '完全不安全！所有內容明文傳輸，禁用改用 SSH' },
+            { port: 25, service: 'SMTP', proto: 'tcp', desc: 'Simple Mail Transfer Protocol', usage: '郵件傳送（MTA 間通訊）', encrypted: false, publicSafe: false, security: '防止開放轉發 (Open Relay)，建議使用 SMTPS (465) 或 STARTTLS' },
+            { port: 53, service: 'DNS', proto: 'both', desc: 'Domain Name System', usage: '域名解析查詢', encrypted: false, publicSafe: true, security: '確保 DNS 伺服器無 Recursive 漏洞，可啟用 DNSSEC' },
+            { port: 67, service: 'DHCP Server', proto: 'udp', desc: 'Dynamic Host Configuration Protocol (Server)', usage: '自動分配 IP 地址（伺服器端）', encrypted: false, publicSafe: false, security: '限內部網路使用，不應對外開放' },
+            { port: 68, service: 'DHCP Client', proto: 'udp', desc: 'Dynamic Host Configuration Protocol (Client)', usage: '自動取得 IP 地址（客戶端）', encrypted: false, publicSafe: false, security: '客戶端埠，不應對外開放' },
+            { port: 69, service: 'TFTP', proto: 'udp', desc: 'Trivial File Transfer Protocol', usage: '簡單檔案傳輸（無認證）', encrypted: false, publicSafe: false, security: '無認證無加密，僅限內部網路使用' },
+            { port: 80, service: 'HTTP', proto: 'tcp', desc: 'HyperText Transfer Protocol', usage: '網頁瀏覽, REST API, Web 服務', encrypted: false, publicSafe: true, security: '建議啟用 HTTPS (443) 並將 HTTP 重定向到 HTTPS' },
+            { port: 110, service: 'POP3', proto: 'tcp', desc: 'Post Office Protocol v3', usage: '收信協定（下載後刪除伺服器郵件）', encrypted: false, publicSafe: false, security: '建議使用 POP3S (995) 或改用 IMAP' },
+            { port: 111, service: 'RPC Portmapper', proto: 'both', desc: 'ONC RPC Portmapper / rpcbind', usage: 'NFS 服務註冊', encrypted: false, publicSafe: false, security: '常被用於 DDoS 放大攻擊，不應對外開放' },
+            { port: 123, service: 'NTP', proto: 'udp', desc: 'Network Time Protocol', usage: '時間同步', encrypted: false, publicSafe: true, security: '更新至最新版防範 DDoS 放大攻擊，使用 NTP Pool' },
+            { port: 135, service: 'RPC Endpoint Mapper', proto: 'both', desc: 'Microsoft RPC Endpoint Mapper', usage: 'Windows RPC 服務', encrypted: false, publicSafe: false, security: '高風險，不應對外開放' },
+            { port: 137, service: 'NetBIOS Name', proto: 'both', desc: 'NetBIOS Name Service', usage: 'Windows 網路芳鄰名稱解析', encrypted: false, publicSafe: false, security: '高風險（曾用於永恆之藍攻擊），完全不應對外開放' },
+            { port: 138, service: 'NetBIOS Datagram', proto: 'udp', desc: 'NetBIOS Datagram Service', usage: 'Windows 網路芳鄰資料封包', encrypted: false, publicSafe: false, security: '不建議對外開放' },
+            { port: 139, service: 'NetBIOS Session', proto: 'tcp', desc: 'NetBIOS Session Service', usage: 'Windows 網路芳鄰工作階段', encrypted: false, publicSafe: false, security: '不建議對外開放' },
+            { port: 143, service: 'IMAP', proto: 'tcp', desc: 'Internet Message Access Protocol', usage: '收信協定（管理伺服器郵件）', encrypted: false, publicSafe: false, security: '建議使用 IMAPS (993)' },
+            { port: 161, service: 'SNMP', proto: 'udp', desc: 'Simple Network Management Protocol', usage: '網路設備監控與管理', encrypted: false, publicSafe: false, security: '使用 SNMPv3 加密，修改預設 Community String' },
+            { port: 162, service: 'SNMP Trap', proto: 'udp', desc: 'SNMP Trap Notifications', usage: '網路設備告警通知', encrypted: false, publicSafe: false, security: '限內部網路使用' },
+            { port: 179, service: 'BGP', proto: 'tcp', desc: 'Border Gateway Protocol', usage: '路由交換協定（ISP 骨幹）', encrypted: false, publicSafe: false, security: '不應對外開放，啟用 MD5 認證' },
+            { port: 194, service: 'IRC', proto: 'tcp', desc: 'Internet Relay Chat', usage: '即時聊天協定', encrypted: false, publicSafe: false, security: '建議使用 IRC over TLS (6697)' },
+            { port: 389, service: 'LDAP', proto: 'tcp', desc: 'Lightweight Directory Access Protocol', usage: '目錄服務查詢（AD、OpenLDAP）', encrypted: false, publicSafe: false, security: '建議使用 LDAPS (636)' },
+            { port: 443, service: 'HTTPS', proto: 'tcp', desc: 'HTTP over TLS/SSL', usage: '安全網頁瀏覽, API, 所有 Web 服務', encrypted: true, publicSafe: true, security: '使用 TLS 1.2/1.3，定期更新憑證' },
+            { port: 445, service: 'SMB', proto: 'tcp', desc: 'Server Message Block', usage: 'Windows 檔案分享, 網路芳鄰', encrypted: false, publicSafe: false, security: '極高風險（WannaCry 勒索軟體擴散管道），絕對不應直接對外開放' },
+            { port: 465, service: 'SMTPS', proto: 'tcp', desc: 'SMTP over TLS/SSL', usage: '加密郵件傳送', encrypted: true, publicSafe: false, security: '使用強加密設定，防止被當作轉發站' },
+            { port: 500, service: 'IPsec/IKE', proto: 'udp', desc: 'IPsec Internet Key Exchange', usage: 'VPN 加密連線（IPsec）', encrypted: true, publicSafe: true, security: '使用強加密演算法，定期更新金鑰' },
+            { port: 514, service: 'Syslog', proto: 'udp', desc: 'Syslog Protocol', usage: '系統日誌傳送', encrypted: false, publicSafe: false, security: '限內部網路使用，建議使用 RSyslog over TLS (6514)' },
+            { port: 515, service: 'LPD', proto: 'tcp', desc: 'Line Printer Daemon', usage: '網路列印', encrypted: false, publicSafe: false, security: '不建議對外開放' },
+            { port: 546, service: 'DHCPv6 Client', proto: 'udp', desc: 'DHCPv6 Client', usage: 'IPv6 自動設定', encrypted: false, publicSafe: false, security: '限內部網路使用' },
+            { port: 547, service: 'DHCPv6 Server', proto: 'udp', desc: 'DHCPv6 Server', usage: 'IPv6 位址分配', encrypted: false, publicSafe: false, security: '限內部網路使用' },
+            { port: 554, service: 'RTSP', proto: 'tcp', desc: 'Real Time Streaming Protocol', usage: '串流媒體控制', encrypted: false, publicSafe: false, security: '建議使用 RTSPS (322)' },
+            { port: 587, service: 'SMTP Submission', proto: 'tcp', desc: 'SMTP Message Submission', usage: '郵件用戶端送出郵件', encrypted: false, publicSafe: false, security: '啟用 STARTTLS，要求認證' },
+            { port: 631, service: 'IPP', proto: 'tcp', desc: 'Internet Printing Protocol', usage: '網路列印（AirPrint、CUPS）', encrypted: false, publicSafe: false, security: '限內部網路使用' },
+            { port: 636, service: 'LDAPS', proto: 'tcp', desc: 'LDAP over TLS/SSL', usage: '加密目錄服務', encrypted: true, publicSafe: false, security: '使用強加密憑證' },
+            { port: 873, service: 'rsync', proto: 'tcp', desc: 'rsync File Sync', usage: '檔案同步與備份', encrypted: false, publicSafe: false, security: '限內部網路，建議透過 SSH Tunnel 使用' },
+            { port: 993, service: 'IMAPS', proto: 'tcp', desc: 'IMAP over TLS/SSL', usage: '加密收信', encrypted: true, publicSafe: false, security: '支援 TLS 1.2/1.3' },
+            { port: 995, service: 'POP3S', proto: 'tcp', desc: 'POP3 over TLS/SSL', usage: '加密收信（下載模式）', encrypted: true, publicSafe: false, security: '建議改用 IMAPS (993)' },
+            { port: 1080, service: 'SOCKS Proxy', proto: 'tcp', desc: 'SOCKS Proxy Protocol', usage: '代理伺服器', encrypted: false, publicSafe: false, security: '開放代理為高風險，僅限授權使用者' },
+            { port: 1194, service: 'OpenVPN', proto: 'both', desc: 'OpenVPN', usage: 'VPN 連線', encrypted: true, publicSafe: true, security: '使用強加密，限制憑證存取' },
+            { port: 1433, service: 'MSSQL', proto: 'tcp', desc: 'Microsoft SQL Server', usage: 'MS SQL 資料庫', encrypted: false, publicSafe: false, security: '不應對外開放，限內部網路使用' },
+            { port: 1521, service: 'Oracle DB', proto: 'tcp', desc: 'Oracle Database Listener', usage: 'Oracle 資料庫', encrypted: false, publicSafe: false, security: '不應對外開放，限內部網路使用' },
+            { port: 1701, service: 'L2TP', proto: 'udp', desc: 'Layer 2 Tunneling Protocol', usage: 'VPN（常搭配 IPsec）', encrypted: true, publicSafe: true, security: '與 IPsec (500, 4500) 搭配使用' },
+            { port: 1723, service: 'PPTP', proto: 'tcp', desc: 'Point-to-Point Tunneling Protocol', usage: 'VPN（已淘汰，不安全）', encrypted: true, publicSafe: false, security: 'PPTP 已被破解，建議改用 OpenVPN 或 WireGuard' },
+            { port: 1812, service: 'RADIUS Auth', proto: 'udp', desc: 'RADIUS Authentication', usage: 'AAA 認證（網路存取控制）', encrypted: false, publicSafe: false, security: '限內部網路，使用 RADIUS over TLS (2083)' },
+            { port: 1813, service: 'RADIUS Accounting', proto: 'udp', desc: 'RADIUS Accounting', usage: 'AAA 計費記錄', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 1883, service: 'MQTT', proto: 'tcp', desc: 'MQTT Message Broker', usage: 'IoT 物聯網訊息傳遞', encrypted: false, publicSafe: false, security: '建議使用 MQTTS (8883)' },
+            { port: 1900, service: 'SSDP', proto: 'udp', desc: 'Simple Service Discovery Protocol', usage: 'UPnP 設備發現', encrypted: false, publicSafe: false, security: '常被用於 DDoS 放大攻擊，不應對外開放' },
+            { port: 2049, service: 'NFS', proto: 'both', desc: 'Network File System', usage: 'Linux 網路檔案分享', encrypted: false, publicSafe: false, security: '限內部網路，使用 NFSv4 搭配 Kerberos' },
+            { port: 2082, service: 'cPanel', proto: 'tcp', desc: 'cPanel Web Hosting Control Panel', usage: '虛擬主機管理', encrypted: false, publicSafe: false, security: '使用 HTTPS (2083)' },
+            { port: 2083, service: 'cPanel SSL', proto: 'tcp', desc: 'cPanel over TLS/SSL', usage: '安全虛擬主機管理', encrypted: true, publicSafe: false, security: '限管理員存取，使用強密碼' },
+            { port: 2181, service: 'ZooKeeper', proto: 'tcp', desc: 'Apache ZooKeeper', usage: '分散式協調服務（Kafka 等）', encrypted: false, publicSafe: false, security: '不應對外開放，限內部叢集通訊' },
+            { port: 2375, service: 'Docker API (HTTP)', proto: 'tcp', desc: 'Docker REST API (Plain)', usage: '遠端 Docker 管理', encrypted: false, publicSafe: false, security: '極高風險！避免使用，改用 TLS (2376)' },
+            { port: 2376, service: 'Docker API (TLS)', proto: 'tcp', desc: 'Docker REST API over TLS', usage: '安全遠端 Docker 管理', encrypted: true, publicSafe: false, security: '使用用戶端憑證驗證，僅限信任 IP' },
+            { port: 2443, service: 'Oliveirinha', proto: 'tcp', desc: 'Oliveirinha Application Server', usage: '應用伺服器替代埠', encrypted: false, publicSafe: false, security: '自訂應用服務檢查' },
+            { port: 2483, service: 'Oracle DB (Alt)', proto: 'tcp', desc: 'Oracle Database Alternative Port', usage: 'Oracle 資料庫（替代埠）', encrypted: false, publicSafe: false, security: '不應對外開放' },
+            { port: 2484, service: 'Oracle DB SSL', proto: 'tcp', desc: 'Oracle Database over SSL', usage: '安全 Oracle 資料庫連線', encrypted: true, publicSafe: false, security: '限內部網路使用' },
+            { port: 27017, service: 'MongoDB', proto: 'tcp', desc: 'MongoDB Database', usage: 'MongoDB 資料庫', encrypted: false, publicSafe: false, security: '不應對外開放！大量 MongoDB 勒索攻擊源自開放 Port' },
+            { port: 28017, service: 'MongoDB Web', proto: 'tcp', desc: 'MongoDB HTTP Status', usage: 'MongoDB Web 管理介面', encrypted: false, publicSafe: false, security: '不應對外開放' },
+            { port: 32400, service: 'Plex Media Server', proto: 'tcp', desc: 'Plex Media Server', usage: '多媒體串流伺服器', encrypted: true, publicSafe: true, security: '使用 Plex 官方 Relay 或限內部網路' },
+            { port: 3306, service: 'MySQL', proto: 'tcp', desc: 'MySQL Database', usage: 'MySQL / MariaDB 資料庫', encrypted: false, publicSafe: false, security: '極高風險！不應直接對外開放，限內部網路並使用 SSL 連線' },
+            { port: 3389, service: 'RDP', proto: 'tcp', desc: 'Remote Desktop Protocol', usage: 'Windows 遠端桌面', encrypted: true, publicSafe: false, security: '不應對外開放！建議透過 VPN，啟用 NLA 認證' },
+            { port: 3478, service: 'STUN/TURN', proto: 'both', desc: 'STUN / TURN Protocol', usage: 'WebRTC NAT 穿透', encrypted: false, publicSafe: true, security: '限受信任的 TURN 使用者' },
+            { port: 3689, service: 'DAAP', proto: 'tcp', desc: 'Digital Audio Access Protocol', usage: 'Apple 音樂分享', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 4000, service: 'Node.js Dev', proto: 'tcp', desc: 'Common Node.js Development Port', usage: 'Node.js 開發伺服器（Next.js、Nuxt 等）', encrypted: false, publicSafe: false, security: '開發用途，上線後應使用標準 80/443' },
+            { port: 4500, service: 'IPsec NAT-T', proto: 'udp', desc: 'IPsec NAT Traversal', usage: 'IPsec VPN（通過 NAT）', encrypted: true, publicSafe: true, security: '搭配 IPsec (500) 使用' },
+            { port: 4567, service: 'Sinatra', proto: 'tcp', desc: 'Sinatra Web Server (Default)', usage: 'Ruby 開發伺服器', encrypted: false, publicSafe: false, security: '開發用途' },
+            { port: 4569, service: 'IAX2', proto: 'udp', desc: 'Inter-Asterisk eXchange v2', usage: 'Asterisk VoIP 通訊', encrypted: false, publicSafe: false, security: '限內部 VoIP 網路' },
+            { port: 5000, service: 'Synology DSM / Flask', proto: 'tcp', desc: 'Synology DSM HTTP / Flask Dev', usage: 'NAS 管理介面, Flask 開發', encrypted: false, publicSafe: false, security: '建議使用 HTTPS (5001)，限內部網路' },
+            { port: 5001, service: 'Synology DSM HTTPS', proto: 'tcp', desc: 'Synology DSM HTTPS', usage: 'NAS 安全管理介面', encrypted: true, publicSafe: false, security: '限管理員存取，使用強密碼，建議透過 VPN' },
+            { port: 5060, service: 'SIP', proto: 'both', desc: 'Session Initiation Protocol', usage: 'VoIP 語音通話控制', encrypted: false, publicSafe: false, security: '不應對外開放，啟用 SIP over TLS (5061)' },
+            { port: 5061, service: 'SIPS', proto: 'tcp', desc: 'SIP over TLS/SSL', usage: '安全 VoIP 通話控制', encrypted: true, publicSafe: false, security: '使用強加密設定' },
+            { port: 5144, service: 'Radius (Alt)', proto: 'udp', desc: 'RADIUS Alternative Port', usage: 'AAA 認證（替代埠）', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 5222, service: 'XMPP Client', proto: 'tcp', desc: 'XMPP / Jabber Client Connection', usage: '即時通訊協定', encrypted: false, publicSafe: false, security: '建議使用 XMPPS (5223)' },
+            { port: 5223, service: 'XMPPS', proto: 'tcp', desc: 'XMPP over TLS/SSL', usage: '安全即時通訊', encrypted: true, publicSafe: false, security: '使用憑證加密' },
+            { port: 5341, service: 'Kestrel', proto: 'tcp', desc: 'ASP.NET Core Kestrel', usage: '.NET 應用伺服器', encrypted: false, publicSafe: false, security: '上線後使用反向代理 (Nginx/IIS)' },
+            { port: 5432, service: 'PostgreSQL', proto: 'tcp', desc: 'PostgreSQL Database', usage: 'PostgreSQL 資料庫', encrypted: false, publicSafe: false, security: '不應對外開放，限內部網路使用' },
+            { port: 5672, service: 'RabbitMQ', proto: 'tcp', desc: 'RabbitMQ AMQP', usage: '訊息佇列服務', encrypted: false, publicSafe: false, security: '限內部服務通訊' },
+            { port: 5850, service: 'Node.js Debug', proto: 'tcp', desc: 'Node.js Debugger (Legacy)', usage: 'Node.js 除錯埠', encrypted: false, publicSafe: false, security: '開發用途，不應對外開放' },
+            { port: 5900, service: 'VNC', proto: 'tcp', desc: 'Virtual Network Computing', usage: '遠端桌面（跨平台）', encrypted: false, publicSafe: false, security: '使用 SSH Tunnel 或 VNC over TLS' },
+            { port: 5984, service: 'CouchDB', proto: 'tcp', desc: 'Apache CouchDB', usage: 'CouchDB NoSQL 資料庫', encrypted: false, publicSafe: false, security: '不應對外開放' },
+            { port: 6000, service: 'X11', proto: 'both', desc: 'X Window System', usage: 'Linux 圖形介面顯示', encrypted: false, publicSafe: false, security: '不應對外開放' },
+            { port: 6379, service: 'Redis', proto: 'tcp', desc: 'Redis Key-Value Store', usage: '快取, Session 儲存, 訊息佇列', encrypted: false, publicSafe: false, security: '極高風險！不應對外開放，啟用 Password 與 protected-mode' },
+            { port: 6443, service: 'Kubernetes API (Alt)', proto: 'tcp', desc: 'Kubernetes API Server (Alt)', usage: 'K8s 叢集管理（替代埠）', encrypted: true, publicSafe: false, security: '使用 RBAC 與憑證認證' },
+            { port: 6514, service: 'Syslog TLS', proto: 'tcp', desc: 'Syslog over TLS/SSL', usage: '加密日誌傳送', encrypted: true, publicSafe: false, security: '限內部日誌收集' },
+            { port: 6587, service: 'Rsyslog', proto: 'tcp', desc: 'Rsyslog Alternative', usage: '系統日誌（替代埠）', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 6697, service: 'IRC TLS', proto: 'tcp', desc: 'IRC over TLS/SSL', usage: '安全 IRC 聊天', encrypted: true, publicSafe: false, security: '使用憑證加密' },
+            { port: 6881, service: 'BitTorrent', proto: 'both', desc: 'BitTorrent DHT / Peer', usage: 'P2P 檔案分享（BT 下載）', encrypted: false, publicSafe: true, security: '注意 ISP 可能會限制 P2P 流量' },
+            { port: 7001, service: 'WebLogic', proto: 'tcp', desc: 'Oracle WebLogic Server', usage: 'Java EE 應用伺服器', encrypted: false, publicSafe: false, security: '確保修補已知漏洞（Log4j 等）' },
+            { port: 7077, service: 'Spark', proto: 'tcp', desc: 'Apache Spark Master', usage: 'Spark 分散式運算', encrypted: false, publicSafe: false, security: '限內部叢集' },
+            { port: 8000, service: 'HTTP Alt', proto: 'tcp', desc: 'HTTP Alternative Port', usage: 'Web 開發, Django, Python 開發伺服器', encrypted: false, publicSafe: false, security: '開發用途，上線後使用標準 80/443' },
+            { port: 8008, service: 'HTTP Alt', proto: 'tcp', desc: 'HTTP Alternative', usage: '部分 NAS HTTP 管理, 應用伺服器', encrypted: false, publicSafe: false, security: '建議使用 HTTPS' },
+            { port: 8080, service: 'HTTP Proxy/Alt', proto: 'tcp', desc: 'HTTP Proxy / Alternative HTTP Port', usage: '代理伺服器, Tomcat, 開發伺服器, 部分 NAS', encrypted: false, publicSafe: false, security: '確認非開放代理，上線後建議使用 443' },
+            { port: 8081, service: 'HTTP Monitor', proto: 'tcp', desc: 'HTTP Monitor / Secondary HTTP', usage: '應用監控, 管理介面（Sonatype Nexus 等）', encrypted: false, publicSafe: false, security: '建議加上認證' },
+            { port: 8443, service: 'HTTPS Alt', proto: 'tcp', desc: 'HTTPS Alternative Port', usage: 'Tomcat SSL, 管理介面 HTTPS', encrypted: true, publicSafe: false, security: '使用有效憑證' },
+            { port: 8500, service: 'Consul', proto: 'both', desc: 'HashiCorp Consul', usage: '服務發現與設定', encrypted: false, publicSafe: false, security: '限內部叢集，啟用 ACL' },
+            { port: 8883, service: 'MQTTS', proto: 'tcp', desc: 'MQTT over TLS/SSL', usage: '安全 IoT 訊息傳遞', encrypted: true, publicSafe: false, security: '使用憑證驗證裝置' },
+            { port: 8888, service: 'Jupyter', proto: 'tcp', desc: 'Jupyter Notebook', usage: '數據科學開發環境', encrypted: false, publicSafe: false, security: '務必設定密碼，建議使用 HTTPS' },
+            { port: 9000, service: 'Portainer / MinIO', proto: 'tcp', desc: 'Docker Management / Object Storage', usage: 'Portainer Docker 管理, MinIO 物件儲存', encrypted: false, publicSafe: false, security: '建議使用 HTTPS，限管理員存取' },
+            { port: 9001, service: 'SonarQube / XAMPP', proto: 'tcp', desc: 'SonarQube / XAMPP Admin', usage: '程式碼品質分析, PHP 管理', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 9042, service: 'Cassandra', proto: 'tcp', desc: 'Apache Cassandra Native', usage: 'NoSQL 資料庫', encrypted: false, publicSafe: false, security: '限內部叢集' },
+            { port: 9091, service: 'Transmission', proto: 'tcp', desc: 'Transmission BT RPC', usage: 'BT 下載管理', encrypted: false, publicSafe: false, security: '建議啟用密碼保護' },
+            { port: 9092, service: 'Kafka', proto: 'tcp', desc: 'Apache Kafka Broker', usage: '事件串流平台', encrypted: false, publicSafe: false, security: '限內部叢集，使用 SASL/SSL' },
+            { port: 9100, service: 'Node Exporter', proto: 'tcp', desc: 'Prometheus Node Exporter', usage: '系統監控指標', encrypted: false, publicSafe: false, security: '限 Prometheus 伺服器存取' },
+            { port: 9160, service: 'Cassandra Thrift', proto: 'tcp', desc: 'Apache Cassandra Thrift', usage: '舊版 Cassandra API', encrypted: false, publicSafe: false, security: '已淘汰，使用 9042' },
+            { port: 9418, service: 'Git', proto: 'tcp', desc: 'Git Daemon', usage: 'Git 匿名存取', encrypted: false, publicSafe: false, security: '建議使用 SSH (22) 或 HTTPS (443)' },
+            { port: 9999, service: 'Dev Server', proto: 'tcp', desc: 'Common Dev Server Port', usage: '測試伺服器, 除錯介面', encrypted: false, publicSafe: false, security: '僅開發環境使用' },
+            { port: 10000, service: 'Webmin', proto: 'tcp', desc: 'Webmin System Admin Panel', usage: '系統管理 Web 介面', encrypted: false, publicSafe: false, security: '建議使用 HTTPS (10001)，限管理員' },
+            { port: 11211, service: 'Memcached', proto: 'tcp', desc: 'Memcached', usage: '分散式快取系統', encrypted: false, publicSafe: false, security: '極高風險！不應對外開放（大量 DDoS 放大攻擊），使用 SASL 認證' },
+            { port: 11214, service: 'Memcached SSL', proto: 'tcp', desc: 'Memcached over SSL', usage: '安全快取', encrypted: true, publicSafe: false, security: '限內部網路' },
+            { port: 12017, service: 'NFS (Alt)', proto: 'tcp', desc: 'NFS Alternative', usage: '檔案分享（替代埠）', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 12345, service: 'NetBus', proto: 'tcp', desc: 'NetBus Trojan', usage: '遠端控制木馬', encrypted: false, publicSafe: false, security: '惡意軟體，若發現此埠開放請立即檢查系統' },
+            { port: 13724, service: 'FastCGI', proto: 'tcp', desc: 'FastCGI (PHP-FPM Default)', usage: 'PHP 處理器通訊', encrypted: false, publicSafe: false, security: '限本機通訊，不應對外開放' },
+            { port: 15672, service: 'RabbitMQ Web', proto: 'tcp', desc: 'RabbitMQ Management UI', usage: '訊息佇列管理介面', encrypted: false, publicSafe: false, security: '限管理員存取' },
+            { port: 16010, service: 'HBase Web', proto: 'tcp', desc: 'HBase Master Web UI', usage: 'HBase 管理介面', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 16379, service: 'Redis (Alt)', proto: 'tcp', desc: 'Redis Alternative Port', usage: 'Redis（替代埠）', encrypted: false, publicSafe: false, security: '使用受保護模式' },
+            { port: 17017, service: 'MongoDB (Alt)', proto: 'tcp', desc: 'MongoDB Alternative Port', usage: 'MongoDB（替代埠）', encrypted: false, publicSafe: false, security: '不應對外開放' },
+            { port: 20000, service: 'DNP3', proto: 'tcp', desc: 'Distributed Network Protocol 3', usage: '工業控制/SCADA 通訊', encrypted: false, publicSafe: false, security: '應隔離在獨立 OT 網路' },
+            { port: 20048, service: 'NFS Mountd', proto: 'both', desc: 'NFS Mount Daemon', usage: 'NFS 掛載管理', encrypted: false, publicSafe: false, security: '限內部網路' },
+            { port: 25565, service: 'Minecraft', proto: 'tcp', desc: 'Minecraft Server', usage: 'Minecraft 遊戲伺服器', encrypted: false, publicSafe: true, security: '啟用正版驗證，設定白名單' },
+            { port: 27017, service: 'MongoDB', proto: 'tcp', desc: 'MongoDB Database', usage: 'MongoDB NoSQL 資料庫', encrypted: false, publicSafe: false, security: '極高風險，不應對外開放！' },
+            { port: 31337, service: 'Back Orifice', proto: 'both', desc: 'Back Orifice Trojan', usage: '遠端控制木馬', encrypted: false, publicSafe: false, security: '惡意軟體，若發現此埠開放請立即檢查' },
+            { port: 32400, service: 'Plex Server', proto: 'tcp', desc: 'Plex Media Server', usage: '多媒體伺服器', encrypted: true, publicSafe: true, security: '使用官方 Relay 或限內部網路' },
+            { port: 50070, service: 'HDFS NameNode', proto: 'tcp', desc: 'Hadoop HDFS NameNode Web UI', usage: 'Hadoop 管理介面', encrypted: false, publicSafe: false, security: '限內部叢集' },
+            { port: 50075, service: 'HDFS DataNode', proto: 'tcp', desc: 'Hadoop HDFS DataNode Web UI', usage: 'Hadoop 資料節點管理', encrypted: false, publicSafe: false, security: '限內部叢集' },
+            { port: 61616, service: 'ActiveMQ', proto: 'tcp', desc: 'Apache ActiveMQ', usage: '訊息佇列服務', encrypted: false, publicSafe: false, security: '確保修補已知漏洞，限內部' },
+        ];
+
+        const COMMON_PORTS = new Set([20, 21, 22, 25, 53, 67, 68, 80, 110, 123, 143, 443, 445, 3306, 3389, 5432, 6379, 8080]);
+
+        // ===== STATE =====
+        let favorites = (() => { try { return JSON.parse(localStorage.getItem('port-favorites') || '[]'); } catch(e) { return []; } })();
+        let recentQueries = (() => { try { return JSON.parse(localStorage.getItem('port-recent') || '[]'); } catch(e) { return []; } })();
+        let activeCategory = 'all';
+        let activeProtocol = 'both';
+        let searchQuery = '';
+        let showFavoritesOnly = false;
+        let debounceTimer = null;
+
+        const grid = document.getElementById('codes-grid');
+        const searchInput = document.getElementById('search-input');
+        const clearSearch = document.getElementById('clear-search');
+        const favToggle = document.getElementById('fav-toggle');
+        const recentBtn = document.getElementById('recent-btn');
+        const recentPanel = document.getElementById('recent-panel');
+        const recentList = document.getElementById('recent-list');
+        const clearRecent = document.getElementById('clear-recent');
+        const resultCount = document.getElementById('result-count');
+
+        function updateCategoryCounts() {
+            document.getElementById('count-all').textContent = PORT_DATA.length;
+            ['well-known', 'registered', 'dynamic'].forEach(cat => {
+                const count = PORT_DATA.filter(s => getPortCategory(s.port) === cat).length;
+                const el = document.getElementById(`count-${cat}`);
+                if (el) el.textContent = count;
+            });
+        }
+
+        function getFilteredPorts() {
+            let codes = PORT_DATA;
+            if (activeCategory !== 'all') {
+                codes = codes.filter(s => getPortCategory(s.port) === activeCategory);
+            }
+            if (activeProtocol !== 'both') {
+                codes = codes.filter(s => s.proto === 'both' || s.proto === activeProtocol);
+            }
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                codes = codes.filter(s =>
+                    String(s.port).includes(q) ||
+                    s.service.toLowerCase().includes(q) ||
+                    s.desc.toLowerCase().includes(q) ||
+                    s.usage.toLowerCase().includes(q) ||
+                    s.proto.includes(q)
+                );
+            }
+            if (showFavoritesOnly) {
+                codes = codes.filter(s => favorites.includes(s.port));
+            }
+            return codes;
+        }
+
+        function renderCards() {
+            const ports = getFilteredPorts();
+            const sorted = [...ports].sort((a, b) => {
+                const aCommon = COMMON_PORTS.has(a.port);
+                const bCommon = COMMON_PORTS.has(b.port);
+                if (aCommon && !bCommon) return -1;
+                if (!aCommon && bCommon) return 1;
+                return a.port - b.port;
+            });
+
+            if (sorted.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-16">
+                        <i class="ph ph-magnifying-glass text-4xl text-slate-600 block mb-3"></i>
+                        <p class="text-slate-500 text-sm">${searchQuery ? '沒有符合條件的連接埠，請嘗試其他關鍵字' : showFavoritesOnly ? '還沒有收藏任何連接埠，點擊 ⭐ 圖示開始收藏' : '暫無資料'}</p>
+                    </div>
+                `;
+                resultCount.textContent = '顯示 0 個連接埠';
+                return;
+            }
+
+            let html = '';
+            for (const s of sorted) {
+                const cat = getPortCategory(s.port);
+                const cc = CATEGORY_LABELS[cat];
+                const isFav = favorites.includes(s.port);
+                const isCommon = COMMON_PORTS.has(s.port);
+                const protoLabel = s.proto === 'both' ? 'TCP+UDP' : s.proto.toUpperCase();
+                const protoColor = s.proto === 'both' ? '#14B8A6' : s.proto === 'tcp' ? '#3B82F6' : '#F59E0B';
+                const safeColor = s.publicSafe ? '#10B981' : '#EF4444';
+                const safeLabel = s.publicSafe ? '✅ 建議對外開放' : '⚠️ 不建議對外開放';
+
+                html += `
+                    <div class="port-card${isCommon ? ' ring-1 ring-teal-500/20' : ''}" data-port="${s.port}">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <span class="port-number" style="color:${cc.hex}">${s.port}</span>
+                                <div class="min-w-0">
+                                    <h3 class="text-white font-semibold text-sm truncate">${s.service}</h3>
+                                    <p class="text-slate-400 text-xs truncate">${s.desc}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                                <button class="p-1.5 rounded-lg hover:bg-teal-500/10 transition-colors favorite-btn" onclick="event.stopPropagation();toggleFavorite(${s.port})" title="${isFav ? '取消收藏' : '加入收藏'}">
+                                    <i class="ph ${isFav ? 'ph-fill ph-star' : 'ph-star'} text-lg ${isFav ? 'text-teal-400' : 'text-slate-500'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <span class="tag-pill" style="background:${cc.hex}15;color:${cc.hex};border:1px solid ${cc.hex}30">${cc.label}</span>
+                            <span class="tag-pill" style="background:${protoColor}15;color:${protoColor};border:1px solid ${protoColor}30">${protoLabel}</span>
+                            ${isCommon ? '<span class="tag-pill bg-teal-500/10 text-teal-400 border border-teal-500/20">⭐ 常用</span>' : ''}
+                            <span class="tag-pill" style="background:${safeColor}15;color:${safeColor};border:1px solid ${safeColor}30">${safeLabel}</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mb-2"><i class="ph ph-lightbulb mr-1"></i>${s.usage}</div>
+                        <div class="flex items-center justify-between" onclick="event.stopPropagation()">
+                            <button class="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 transition-colors expand-btn" onclick="event.stopPropagation();toggleDetail(this.closest('.port-card'))">
+                                <i class="ph ph-caret-down text-sm transition-transform"></i> 查看詳細
+                            </button>
+                            <button class="px-2 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 text-xs font-medium transition-colors" onclick="event.stopPropagation();copyPort(${s.port})"><i class="ph ph-copy mr-0.5"></i> Copy</button>
+                        </div>
+                        <div class="detail-panel hidden">
+                            <dl>
+                                <dt>🔢 Port Number</dt>
+                                <dd><span style="color:${cc.hex};font-family:monospace;font-weight:700;font-size:1rem;">${s.port}</span></dd>
+                                <dt>🔤 Service Name</dt>
+                                <dd><strong class="text-white">${s.service}</strong></dd>
+                                <dt>📡 Protocol</dt>
+                                <dd><span class="tag-pill" style="background:${protoColor}15;color:${protoColor};border:1px solid ${protoColor}30">${protoLabel}</span></dd>
+                                <dt>📖 Official Description</dt>
+                                <dd>${s.desc}</dd>
+                                <dt>💡 Common Usage</dt>
+                                <dd>${s.usage}</dd>
+                                <dt>🔒 Encryption</dt>
+                                <dd>${s.encrypted ? '<span class="text-emerald-400">✅ 加密傳輸</span>' : '<span class="text-red-400">❌ 未加密</span>'}</dd>
+                                <dt>🌐 Public Exposure</dt>
+                                <dd><span class="tag-pill" style="background:${safeColor}15;color:${safeColor};border:1px solid ${safeColor}30">${safeLabel}</span></dd>
+                                <dt>🛡️ Security Advice</dt>
+                                <dd>${s.security}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+            resultCount.textContent = `顯示 ${sorted.length} 個連接埠`;
+        }
+
+        function toggleFavorite(port) {
+            const idx = favorites.indexOf(port);
+            if (idx > -1) { favorites.splice(idx, 1); } else { favorites.push(port); }
+            try { localStorage.setItem('port-favorites', JSON.stringify(favorites)); } catch(e) {}
+            renderCards();
+            showToast(idx > -1 ? '已取消收藏' : '已加入收藏');
+        }
+
+        function copyPort(port) {
+            const s = PORT_DATA.find(p => p.port === port);
+            if (!s) return;
+            const text = `${port} ${s.service} - ${s.desc}`;
+            navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已複製到剪貼簿');
+            });
+        }
+
+        function addRecent(port) {
+            recentQueries = recentQueries.filter(c => c !== port);
+            recentQueries.unshift(port);
+            if (recentQueries.length > 10) recentQueries = recentQueries.slice(0, 10);
+            try { localStorage.setItem('port-recent', JSON.stringify(recentQueries)); } catch(e) {}
+        }
+
+        function renderRecent() {
+            if (recentQueries.length === 0) {
+                recentList.innerHTML = '<span class="text-xs text-slate-600">尚無查詢記錄</span>';
+                return;
+            }
+            let html = '';
+            for (const port of recentQueries) {
+                const s = PORT_DATA.find(p => p.port === port);
+                if (!s) continue;
+                const cat = getPortCategory(s.port);
+                const cc = CATEGORY_LABELS[cat];
+                html += `<button class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors" style="background:${cc.hex}12;color:${cc.hex};border:1px solid ${cc.hex}25" onclick="searchByPort(${port})">${port} ${s.service}</button>`;
+            }
+            recentList.innerHTML = html;
+        }
+
+        function searchByPort(port) {
+            searchInput.value = String(port);
+            searchQuery = String(port);
+            clearSearch.classList.remove('hidden');
+            activeCategory = 'all';
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-category="all"]').classList.add('active');
+            recentPanel.classList.add('hidden');
+            renderCards();
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-teal-400';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // ===== EVENT BINDINGS =====
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                searchQuery = searchInput.value.trim();
+                clearSearch.classList.toggle('hidden', !searchQuery);
+                renderCards();
+            }, 150);
+        });
+
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearch.classList.add('hidden');
+            renderCards();
+            searchInput.focus();
+        });
+
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeCategory = tab.dataset.category;
+                if (showFavoritesOnly && activeCategory !== 'all') {
+                    favToggle.checked = false;
+                    showFavoritesOnly = false;
+                }
+                renderCards();
+            });
+        });
+
+        document.querySelectorAll('.protocol-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.protocol-tab').forEach(t => {
+                    t.classList.remove('active-tcp', 'active-udp', 'active-both');
+                });
+                activeProtocol = tab.dataset.protocol;
+                const cls = activeProtocol === 'both' ? 'active-both' : activeProtocol === 'tcp' ? 'active-tcp' : 'active-udp';
+                tab.classList.add(cls);
+                renderCards();
+            });
+        });
+
+        favToggle.addEventListener('change', () => {
+            showFavoritesOnly = favToggle.checked;
+            renderCards();
+            showToast(showFavoritesOnly ? '只顯示收藏的連接埠' : '顯示所有連接埠');
+        });
+
+        recentBtn.addEventListener('click', () => {
+            recentPanel.classList.toggle('hidden');
+            if (!recentPanel.classList.contains('hidden')) renderRecent();
+        });
+
+        clearRecent.addEventListener('click', () => {
+            recentQueries = [];
+            try { localStorage.setItem('port-recent', JSON.stringify(recentQueries)); } catch(e) {}
+            renderRecent();
+            showToast('已清除查詢記錄');
+        });
+
+        // Click card to expand
+        function toggleDetail(card) {
+            // Accordion: close all other cards first
+            const allCards = card.parentElement.querySelectorAll('.port-card');
+            allCards.forEach(c => {
+                if (c !== card && c.classList.contains('expanded')) {
+                    c.classList.remove('expanded');
+                    const d = c.querySelector('.detail-panel');
+                    if (d) d.classList.add('hidden');
+                    const b = c.querySelector('.expand-btn i');
+                    if (b) b.classList.remove('rotate-180');
+                }
+            });
+            // Toggle clicked card
+            card.classList.toggle('expanded');
+            const detail = card.querySelector('.detail-panel');
+            const btn = card.querySelector('.expand-btn i');
+            if (detail) detail.classList.toggle('hidden');
+            if (btn) btn.classList.toggle('rotate-180');
+            // Track recent query
+            const port = parseInt(card.dataset.port);
+            addRecent(port);
+        }
+
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.port-card');
+            if (card && !e.target.closest('.favorite-btn') && !e.target.closest('.expand-btn') && !e.target.closest('button')) {
+                toggleDetail(card);
+            }
+        });
+
+        // ===== INIT =====
+        updateCategoryCounts();
+        renderCards();
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

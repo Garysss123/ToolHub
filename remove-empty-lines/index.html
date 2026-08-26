@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remove Empty Lines 移除空白行工具 | ToolHub - 文字清理與空白行處理</title>
+    <meta name="description" content="免費線上移除空白行工具。快速清理文字中的空白行、多餘換行與空白段落。支援 Remove Empty Lines、Remove Multiple Empty Lines、Trim Spaces、移除首尾空白行。內建 Preview Difference 即時預覽清理差異。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="Remove Empty Lines, 移除空白行, 空白行移除, 文字清理, 多餘換行, 空白段落, Trim Spaces, 程式碼清理, 線上工具">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #10B981; }
+
+        .editor-textarea {
+            width: 100%;
+            min-height: 300px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .editor-textarea:focus {
+            border-color: #10B981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        .editor-textarea::placeholder { color: #475569; }
+
+        .output-textarea {
+            width: 100%;
+            min-height: 300px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            border-radius: 0.75rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .output-textarea::placeholder { color: #475569; }
+
+        /* Stats badges */
+        .stat-badge {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            text-align: center;
+        }
+        .stat-badge .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #10B981;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .stat-badge .stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        /* Toggle switches */
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #10B981; border-color: #10B981; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        /* Option buttons */
+        .option-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .option-btn:hover {
+            background: #1E293B;
+            color: #10B981;
+            border-color: #10B981;
+        }
+        .option-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10B981;
+            border-color: #10B981;
+        }
+
+        /* Preview diff styles */
+        .diff-added {
+            background: rgba(16, 185, 129, 0.08);
+            border-left: 3px solid #10B981;
+        }
+        .diff-removed {
+            background: rgba(239, 68, 68, 0.08);
+            border-left: 3px solid #EF4444;
+        }
+        .diff-neutral {
+            border-left: 3px solid transparent;
+        }
+
+        /* Preview line numbers */
+        .line-num {
+            display: inline-block;
+            width: 2.5rem;
+            text-align: right;
+            color: #475569;
+            font-size: 0.75rem;
+            user-select: none;
+            margin-right: 0.75rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        /* Animation */
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+
+        /* SEO Article Styles */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #10B981;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #10B981;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(16, 185, 129, 0.05);
+            border-left: 3px solid #10B981;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .editor-textarea { min-height: 200px; }
+            .output-textarea { min-height: 200px; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/remove-empty-lines/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/remove-empty-lines/">
+    <meta property="og:title" content="Remove Empty Lines 移除空白行工具">
+    <meta property="og:description" content="免費線上移除空白行工具。快速清理文字中的空白行、多餘換行與空白段落。支援 Remove Empty Lines、Remove Multiple Empty Lines、Trim Spaces、移除首尾空白行。內建 Preview Difference 即時預覽清理差異。純前端本地運算，保障隱私安全。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Remove Empty Lines 移除空白行工具">
+    <meta name="twitter:description" content="免費線上移除空白行工具。快速清理文字中的空白行、多餘換行與空白段落。支援 Remove Empty Lines、Remove Multiple Empty Lines、Trim Spaces、移除首尾空白行。內建 Preview Difference 即時預覽清理差異。純前端本地運算，保障隱私安全。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Remove Empty Lines 移除空白行工具","url":"https://toolhuben.com/remove-empty-lines/","description":"免費線上移除空白行工具。快速清理文字中的空白行、多餘換行與空白段落。支援 Remove Empty Lines、Remove Multiple Empty Lines、Trim Spaces、移除首尾空白行。內建 Preview Difference 即時預覽清理差異。純前端本地運算，保障隱私安全。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Remove Empty Lines 移除空白行工具","item":"https://toolhuben.com/remove-empty-lines/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/remove-empty-lines/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/remove-empty-lines/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/remove-empty-lines/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248" data-tool-visual data-classic-tool data-classic-layout="blueprint">
+
+    <!-- 1. Header -->
+    <div id="component-header"></div>
+    <!-- 2. Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. Core Module: Remove Empty Lines -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- Module Title -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-emerald-400">
+                <span class="flex w-2 h-2 bg-emerald-400 rounded-full animate-pulse mr-2"></span>
+                6 種清理模式 · 即時預覽差異
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Remove Empty Lines <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">移除空白行工具</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                快速清理文字中的空白行、多餘換行與空白段落，適用於程式碼、Log、Markdown、AI 輸出與一般文字整理。<br class="hidden sm:block"/>
+                內建 <strong class="text-emerald-400">Preview Difference</strong> 即時顯示清理前後差異。
+            </p>
+        </div>
+
+        <!-- Main Tool Area -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+
+            <!-- Tool Content -->
+            <div class="flex flex-col lg:flex-row min-h-[500px]">
+
+                <!-- ===== LEFT PANEL: Input ===== -->
+                <div class="w-full lg:w-3/5 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- Input Label Row -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-text-aa text-emerald-400 text-lg"></i> 原始文字
+                        </label>
+                        <span id="input-stats" class="text-xs text-slate-500 font-mono">0 lines</span>
+                    </div>
+
+                    <!-- Input Textarea -->
+                    <textarea id="input-textarea" class="editor-textarea" placeholder="在此輸入文字，即時清理空白行...&#10;&#10;支援：純文字、Markdown、CSV、Log、HTML、程式碼" spellcheck="false"></textarea>
+
+                    <!-- Cleaning Modes -->
+                    <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-broom text-emerald-400 text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">清理模式</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button id="opt-remove-empty" class="option-btn active" data-option="remove-empty">
+                                <i class="ph ph-text-strikethrough text-xs"></i> Remove Empty Lines
+                            </button>
+                            <button id="opt-merge-empty" class="option-btn" data-option="merge-empty">
+                                <i class="ph ph-text-h-five text-xs"></i> Merge Empty Lines (Keep 1)
+                            </button>
+                            <button id="opt-trim-leading" class="option-btn" data-option="trim-leading">
+                                <i class="ph ph-arrow-line-right text-xs"></i> Trim Leading Spaces
+                            </button>
+                            <button id="opt-trim-trailing" class="option-btn" data-option="trim-trailing">
+                                <i class="ph ph-arrow-line-left text-xs"></i> Trim Trailing Spaces
+                            </button>
+                            <button id="opt-remove-trailing-blank" class="option-btn" data-option="remove-trailing-blank">
+                                <i class="ph ph-caret-double-up text-xs"></i> Remove Trailing Blank Lines
+                            </button>
+                            <button id="opt-remove-leading-blank" class="option-btn" data-option="remove-leading-blank">
+                                <i class="ph ph-caret-double-down text-xs"></i> Remove Leading Blank Lines
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Extra Options -->
+                    <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-faders-horizontal text-emerald-400 text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">額外選項</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-preserve-md" class="sr-only toggle-checkbox">
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                保留 Markdown 段落
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-preserve-indent" class="sr-only toggle-checkbox" checked>
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                保留程式碼縮排
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-ignore-whitespace" class="sr-only toggle-checkbox">
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                Ignore Whitespace Only Lines
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap items-center gap-2 pt-2">
+                        <button id="btn-copy" class="px-4 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 text-xs font-medium transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-copy"></i> Copy
+                        </button>
+                        <button id="btn-download" class="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/50 text-emerald-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-download-simple"></i> Download TXT
+                        </button>
+                        <button id="btn-clear" class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-trash"></i> Clear
+                        </button>
+                        <button id="btn-sample" class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-file-text"></i> Sample
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ===== RIGHT PANEL: Output ===== -->
+                <div class="w-full lg:w-2/5 border-t lg:border-t-0 lg:border-l border-hub-700 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- Output Label Row -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-check-square text-emerald-400 text-lg"></i>
+                            <span id="output-label">清理結果</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-toggle-diff" class="text-xs flex items-center gap-1 px-2.5 py-1 rounded-lg border border-hub-700 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-colors bg-hub-900/50">
+                                <i class="ph ph-git-diff"></i>
+                                <span>Preview Diff</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Output Textarea (Normal Mode) -->
+                    <textarea id="output-textarea" class="output-textarea flex-grow" readonly placeholder="清理結果將顯示在此處..."></textarea>
+
+                    <!-- Preview Diff Container (hidden by default) -->
+                    <div id="preview-diff" class="hidden flex-col gap-2 flex-grow overflow-hidden">
+                        <div class="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/40 inline-block"></span> 保留</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500/40 inline-block"></span> 移除</span>
+                        </div>
+                        <div id="diff-content" class="overflow-y-auto font-mono text-sm leading-relaxed bg-hub-900/50 border border-hub-700 rounded-xl p-4 flex-grow" style="max-height: 400px;">
+                            <div class="text-slate-500 text-center py-8">
+                                <i class="ph ph-git-diff text-2xl block mb-2"></i>
+                                請在左側輸入文字後查看差異
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-4 gap-2">
+                        <div class="stat-badge">
+                            <div class="stat-value" id="stat-original">0</div>
+                            <div class="stat-label">原始行數</div>
+                        </div>
+                        <div class="stat-badge">
+                            <div class="stat-value" id="stat-cleaned">0</div>
+                            <div class="stat-label">清理後行數</div>
+                        </div>
+                        <div class="stat-badge">
+                            <div class="stat-value text-red-400" id="stat-removed">0</div>
+                            <div class="stat-label">移除空行</div>
+                        </div>
+                        <div class="stat-badge">
+                            <div class="stat-value text-emerald-400" id="stat-rate">0%</div>
+                            <div class="stat-label">移除比例</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Stats -->
+                    <div class="bg-hub-900/50 border border-hub-700 rounded-xl px-4 py-3 flex items-center justify-between text-xs">
+                        <span class="text-slate-500">
+                            <i class="ph ph-file-text mr-1"></i> 內容行：
+                            <strong class="text-white font-mono" id="stat-content-lines">0</strong>
+                        </span>
+                        <span class="text-slate-500">
+                            <i class="ph ph-trash mr-1"></i> 移除了
+                            <strong class="text-red-400 font-mono" id="stat-removed-detailed">0</strong> 行空白
+                        </span>
+                        <span class="text-slate-500">
+                            <i class="ph ph-check-circle mr-1"></i> 最終共
+                            <strong class="text-emerald-400 font-mono" id="stat-total-detailed">0</strong> 行
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <div class="mt-12 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ 常見問題 <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">FAQ</span></h2>
+                <p class="text-slate-400 text-sm">關於移除空白行與文字清理的常見疑問</p>
+            </div>
+
+            <div class="space-y-3">
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 Empty Line（空白行）？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">Empty Line（空白行）</strong> 指的是在文字中不包含任何可視字元的行。可能的情況包括：</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li><strong class="text-white">完全空白</strong> — 該行沒有任何字元，只有一個換行符號</li>
+                            <li><strong class="text-white">僅有空白字元</strong> — 該行包含空格（Spaces）或定位字元（Tabs），但沒有實際內容</li>
+                            <li><strong class="text-white">連續空白行</strong> — 多個空白行連在一起，形成空白段落</li>
+                        </ul>
+                        <p class="mt-2">這個工具可以幫助您辨識並移除這些不必要的空白行，讓文字更加緊湊與乾淨。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>為什麼需要移除空白行？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>移除空白行在許多場景中都能帶來實際好處：</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li><strong class="text-white">程式碼格式化</strong> — 刪除不必要的空白行，讓程式碼更緊湊易讀</li>
+                            <li><strong class="text-white">Log 分析</strong> — Log 檔案常包含大量空白行，清理後更方便分析</li>
+                            <li><strong class="text-white">AI 輸出整理</strong> — ChatGPT、Claude 等 AI 輸出常有多餘換行，一鍵清理</li>
+                            <li><strong class="text-white">CSV 資料清理</strong> — 移除 CSV 中的空行，避免匯入資料庫時出錯</li>
+                            <li><strong class="text-white">檔案大小優化</strong> — 移除不必要的空白行可以減少檔案體積</li>
+                            <li><strong class="text-white">文字內容標準化</strong> — 統一段落間距，讓文件格式更一致</li>
+                        </ul>
+                        <p class="mt-2">使用 <strong class="text-white">Preview Difference</strong> 模式，您可以在執行清理前先確認哪些行會被移除，避免誤刪重要內容。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Remove Empty Lines 與 Merge Empty Lines 有什麼不同？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>兩者的主要差異在於如何處理空白行：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-emerald-400">Remove Empty Lines</strong>：移除所有空白行，完全不保留任何空行。</p>
+                            <p class="mt-1"><strong class="text-emerald-400">Merge Empty Lines（Keep 1）</strong>：將連續的多個空白行合併為一個空白行，保留段落分隔效果。</p>
+                        </div>
+                        <p class="mt-2">範例對比：</p>
+                        <div class="bg-hub-900/80 rounded-xl p-4 mt-2 font-mono text-xs leading-relaxed">
+                            <p class="text-slate-400">原始：</p>
+                            <p>Line A<br/><span class="text-slate-600">（空白行）</span><br/><span class="text-slate-600">（空白行）</span><br/><span class="text-slate-600">（空白行）</span><br/>Line B</p>
+                            <p class="text-slate-400 mt-2">Remove Empty Lines 結果：</p>
+                            <p>Line A<br/>Line B</p>
+                            <p class="text-slate-400 mt-2">Merge Empty Lines 結果：</p>
+                            <p>Line A<br/><span class="text-slate-600">（保留 1 個空白行）</span><br/>Line B</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">使用建議</strong>：如果您希望完全去除空白，選擇 Remove Empty Lines；如果您希望在段落之間保留一個空行作為分隔，選擇 Merge Empty Lines。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Markdown 段落保留功能怎麼運作？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>在 Markdown 語法中，空白行具有重要的<strong class="text-white">語義意義</strong>：</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>空白行用於<strong class="text-white">分隔段落</strong> — 在 Markdown 中，兩個空白行表示一個新的段落</li>
+                            <li>空白行用於<strong class="text-white">結束程式碼區塊</strong> — 程式碼區塊由空白行標記結束</li>
+                            <li>空白行用於<strong class="text-white">分隔列表</strong> — 在巢狀列表中，空白行可能影響渲染</li>
+                        </ul>
+                        <p class="mt-2">啟用「保留 Markdown 段落」選項後，系統會<strong class="text-white">自動偵測 Markdown 語境</strong>，保留必要的段落分隔空行，同時移除多餘的空白行。這對於 Markdown 文件的清理特別實用，既能保持格式正確，又能讓文件更緊湊。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Trim Leading/Trailing Spaces 與 Remove Blank Lines 有什麼關係？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>這是兩個不同層次的文字清理功能，但經常搭配使用：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-emerald-400">Remove Blank Lines</strong> 處理的是「整行都是空白」的情況。</p>
+                            <p class="mt-1"><strong class="text-emerald-400">Trim Spaces</strong> 處理的是「行內有多餘空白」的情況。</p>
+                        </div>
+                        <p class="mt-2">實務上，這兩種情況經常同時發生：</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>複製貼上時，行尾可能包含多餘的空格</li>
+                            <li>程式碼檔案可能同時有空白行和行尾空格</li>
+                            <li>從 PDF 或網頁複製文字時，行首常有不必要的前置空白</li>
+                        </ul>
+                        <p class="mt-2">建議操作流程：先勾選 <strong class="text-white">Trim Leading Spaces</strong> 和 <strong class="text-white">Trim Trailing Spaces</strong>，再執行 Remove Empty Lines，最後使用 Preview Difference 確認結果。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Remove Leading/Trailing Blank Lines 是做什麼的？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>這兩個功能專門處理文件<strong class="text-white">開頭與結尾</strong>的空白行：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-emerald-400">Remove Leading Blank Lines</strong>：移除文件開頭的所有空白行。</p>
+                            <p class="mt-1"><strong class="text-emerald-400">Remove Trailing Blank Lines</strong>：移除文件結尾的所有空白行。</p>
+                        </div>
+                        <p class="mt-2">這在以下場景特別實用：</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li><strong class="text-white">程式碼檔案</strong> — 許多 IDE 會在檔案結尾自動添加一個空行，但過多的結尾空行可能不符合 coding style</li>
+                            <li><strong class="text-white">從 API 回傳的文字</strong> — 回傳的內容常包含開頭或結尾的換行符號</li>
+                            <li><strong class="text-white">從編輯器複製貼上的內容</strong> — 常會多出開頭的空白行</li>
+                            <li><strong class="text-white">批次處理檔案</strong> — 統整多個檔案時，確保開頭和結尾格式一致</li>
+                        </ul>
+                        <p class="mt-2">這兩個功能可以獨立使用，只處理邊界的空白行，而不影響文件內部的空白行結構。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>這個工具的隱私安全性如何？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>ToolHub 的 Remove Empty Lines 工具是<strong class="text-white">完全純前端的應用</strong>：</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>所有文字處理都在您自己的瀏覽器中進行</li>
+                            <li>沒有任何資料會上傳到伺服器</li>
+                            <li>不需要網路連線即可執行（除了首次載入頁面）</li>
+                            <li>不會在瀏覽器中儲存任何暫存資料</li>
+                            <li>不會使用 Cookie 或追蹤器</li>
+                        </ul>
+                        <div class="highlight-box mt-2">
+                            <p>💡 這意味著您可以放心處理<strong class="text-white">敏感資料</strong>，包括商業機密、個人隱私或原始碼，完全不必擔心資料外洩。</p>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- ===== SEO ARTICLE ===== -->
+        <div class="mt-12 max-w-4xl mx-auto seo-article">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 空白行清理完全指南</h2>
+                <p class="text-slate-400 text-sm">深入了解空白行的成因、清理策略與最佳實踐</p>
+            </div>
+
+            <div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2>什麼是 Empty Line？為什麼它會成為問題？</h2>
+                <p>在數位文字處理中，<strong>Empty Line（空白行）</strong>指的是不包含任何可視字元的行。雖然適度的空白行可以增強文字的可讀性（例如分隔段落），但過多或不必要的空白行會帶來許多問題：</p>
+                <ul>
+                    <li><strong>增加檔案體積</strong> — 大量的空白行會增加檔案大小，尤其在 CSV、Log 和資料傳輸中影響明顯</li>
+                    <li><strong>降低可讀性</strong> — 過多的空白行反而讓內容難以閱讀，就像一篇充滿空白段落文章</li>
+                    <li><strong>干擾程式執行</strong> — 在某些程式語言或資料格式中，空行可能導致解析錯誤</li>
+                    <li><strong>影響資料分析</strong> — 在資料處理中，空行常被誤解為資料結束或記錄分隔</li>
+                    <li><strong>造成格式不一致</strong> — 不同來源的內容合併後，空白行的數量與位置通常不一致</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <p><strong>💡 核心原則：</strong>空白行應該是「有意識的設計選擇」，而不是「無意識的編輯殘留」。使用這個工具，您可以快速移除不必要的空白行，同時保留具有語義意義的段落分隔。</p>
+                </div>
+
+                <h2>六種清理模式詳解</h2>
+                <p>這個工具提供了六種不同的清理模式，您可以根據需求組合使用：</p>
+
+                <h3>1. Remove Empty Lines（移除所有空白行）</h3>
+                <p>這是最徹底的清理模式，會移除<strong>所有</strong>不包含可視字元的行。無論是整行完全空白，還是僅包含空格與 Tab 的行，都會被一併移除。適用於：Log 分析、CSV 清理、程式碼格式化、資料預處理。</p>
+                <p><strong>注意：</strong>如果您使用 Markdown，啟用「保留 Markdown 段落」選項可以避免破壞段落結構。</p>
+
+                <h3>2. Merge Empty Lines（合併空白行，保留一行）</h3>
+                <p>這是一種更溫和的清理模式。它會將連續的多個空白行<strong>合併為一個</strong>，保留一個空白行作為段落分隔。適用於：文章編輯、文件整理、保留可讀性的同時減少空白。</p>
+                <p>範例：5 個連續空白行 → 1 個空白行。內容行之間仍然有基本的段落區隔。</p>
+
+                <h3>3. Trim Leading Spaces（移除行首空白）</h3>
+                <p>移除每一行開頭的多餘空格與 Tab 字元。這在處理從網頁、PDF 或其他格式化來源複製的文字時特別實用。啟用「保留程式碼縮排」選項可以保留有意義的縮排。</p>
+
+                <h3>4. Trim Trailing Spaces（移除行尾空白）</h3>
+                <p>移除每一行結尾的多餘空格。行尾空白是程式碼品質檢查（如 ESLint）中最常見的警告之一，也是版本控制中不必要的 diff 干擾。</p>
+
+                <h3>5. Remove Trailing Blank Lines（移除結尾空白行）</h3>
+                <p>專門移除文件<strong>結尾</strong>的所有空白行。許多編輯器和工具會在儲存時自動在檔案結尾添加換行，但過多的結尾空白行需要清理。</p>
+
+                <h3>6. Remove Leading Blank Lines（移除開頭空白行）</h3>
+                <p>專門移除文件<strong>開頭</strong>的所有空白行。從外部來源貼上內容時，常會出現開頭的空白行。</p>
+
+                <h2>如何選擇正確的清理策略？</h2>
+                <p>不同的使用場景需要不同的清理策略：</p>
+
+                <h3>程式碼開發場景</h3>
+                <p>建議組合：<strong>Remove Empty Lines + Trim Trailing Spaces + 保留程式碼縮排</strong></p>
+                <ul>
+                    <li>移除不必要的空白行，但保留程式碼區塊間的邏輯分隔</li>
+                    <li>移除行尾空白，避免版本控制的雜訊</li>
+                    <li>保留縮排，確保程式碼結構完整</li>
+                    <li>可使用 Remove Leading/Trailing Blank Lines 清理檔案邊界</li>
+                </ul>
+
+                <h3>AI 輸出整理場景</h3>
+                <p>建議組合：<strong>Merge Empty Lines (Keep 1) + Trim Leading Spaces</strong></p>
+                <ul>
+                    <li>ChatGPT、Claude 等 AI 輸出的換行通常不一致</li>
+                    <li>合併空白行保留基本的段落區隔</li>
+                    <li>行首空白通常來自於 Markdown 格式化</li>
+                    <li>使用 Preview Difference 確認清理效果</li>
+                </ul>
+
+                <h3>Log 與資料分析場景</h3>
+                <p>建議組合：<strong>Remove Empty Lines + Trim Leading/Trailing Spaces</strong></p>
+                <ul>
+                    <li>Log 檔案中的空白行通常沒有任何資訊價值</li>
+                    <li>徹底移除所有空白行，方便後續處理</li>
+                    <li>行首行尾空格可能干擾 grep、awk 等工具</li>
+                    <li>統計資訊可以快速了解資料品質</li>
+                </ul>
+
+                <h3>Markdown 文件整理場景</h3>
+                <p>建議組合：<strong>Merge Empty Lines + 保留 Markdown 段落 + Trim Trailing Spaces</strong></p>
+                <ul>
+                    <li>保留必要的 Markdown 段落分隔（程式碼區塊前後、段落之間）</li>
+                    <li>合併多餘的空白行，讓文件更緊湊</li>
+                    <li>移除行尾空白，保持 Markdown 原始碼整潔</li>
+                    <li>文件開頭和結尾的空白行通常可以移除</li>
+                </ul>
+
+                <h2>使用 Preview Difference 確保清理品質</h2>
+                <p><strong class="text-emerald-400">Preview Difference</strong> 是這個工具最實用的功能之一。啟用後，系統會以視覺化方式顯示清理前後的差異：</p>
+                <ul>
+                    <li><strong class="text-emerald-400">綠色高亮</strong> — 標示將被保留的內容行</li>
+                    <li><strong class="text-red-400">紅色高亮</strong> — 標示將被移除的空白行</li>
+                    <li>您可以<strong>在執行清理前</strong>先確認哪些行會被移除</li>
+                    <li>如果發現誤判，可以調整選項後再執行</li>
+                </ul>
+                <p>這個功能特別適合在處理重要文件時使用，讓您對清理結果有完全的控制與信心。</p>
+
+                <div class="highlight-box">
+                    <p><strong>📌 實用建議：</strong>先啟用 Preview Diff 模式確認清理範圍，再關閉 Diff 檢視最終結果。如果需要調整，可以使用 Clear 按鈕重置並重新載入 Sample Data 進行測試。</p>
+                </div>
+
+                <h2>常見使用案例</h2>
+
+                <h3>案例一：清理程式碼檔案</h3>
+                <p>從 GitHub 或其他來源複製的程式碼常包含不一致的空白行。使用「Remove Empty Lines」搭配「保留程式碼縮排」，可以快速讓程式碼格式一致。記得啟用「Trim Trailing Spaces」來處理行尾空白。</p>
+
+                <h3>案例二：整理 AI 聊天輸出</h3>
+                <p>ChatGPT、Claude 等 AI 模型的輸出通常包含較多的換行與空白段落。使用「Merge Empty Lines (Keep 1)」可以在保留基本段落結構的同時，顯著減少空白行數量，讓輸出更適合閱讀或貼入文件。</p>
+
+                <h3>案例三：批次清理 CSV 資料</h3>
+                <p>從不同來源合併的 CSV 檔案可能包含空白行，這會導致資料庫匯入錯誤。使用「Remove Empty Lines + Trim Spaces」徹底清理資料，並透過統計資訊確認清理後的資料完整性。</p>
+
+                <h3>案例四：標準化文件格式</h3>
+                <p>團隊協作中，不同成員的文件格式可能不一致。透過統一的清理策略（如「Merge Empty Lines + Trim Trailing Spaces + Remove Trailing Blank Lines」），可以確保所有文件具有一致的空白行格式。</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-emerald-400" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. Footer -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- System Init Script -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/remove-empty-lines';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Remove Empty Lines Business Logic -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM References ---
+            const inputTextarea = document.getElementById('input-textarea');
+            const outputTextarea = document.getElementById('output-textarea');
+            const diffContainer = document.getElementById('preview-diff');
+            const diffContent = document.getElementById('diff-content');
+            const btnToggleDiff = document.getElementById('btn-toggle-diff');
+
+            const statOriginal = document.getElementById('stat-original');
+            const statCleaned = document.getElementById('stat-cleaned');
+            const statRemoved = document.getElementById('stat-removed');
+            const statRate = document.getElementById('stat-rate');
+            const statContentLines = document.getElementById('stat-content-lines');
+            const statRemovedDetailed = document.getElementById('stat-removed-detailed');
+            const statTotalDetailed = document.getElementById('stat-total-detailed');
+            const inputStats = document.getElementById('input-stats');
+            const outputLabel = document.getElementById('output-label');
+
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+            const btnClear = document.getElementById('btn-clear');
+            const btnSample = document.getElementById('btn-sample');
+
+            const optBtns = document.querySelectorAll('.option-btn');
+            const optPreserveMd = document.getElementById('opt-preserve-md');
+            const optPreserveIndent = document.getElementById('opt-preserve-indent');
+            const optIgnoreWhitespace = document.getElementById('opt-ignore-whitespace');
+
+            let activeOptions = new Set(['remove-empty']);
+            let showDiff = false;
+
+            // --- Helper: check if a line is empty/whitespace-only ---
+            const isEmptyLine = (line, ignoreWhitespace) => {
+                if (ignoreWhitespace) {
+                    return line.trim() === '';
+                }
+                return line === '';
+            };
+
+            // --- Main Cleaning Engine ---
+            const cleanText = (text, options) => {
+                if (!text) return { cleaned: '', originalLines: 0, cleanedLines: 0, removedLines: 0, contentLines: 0, lineMap: [] };
+
+                const lines = text.split('\n');
+                const originalLines = lines.length;
+                let result = [];
+                let lineMap = []; // tracks: { kept: true/false, line: string }
+
+                // Step 1: Determine which lines to keep based on Remove/Merge Empty Lines
+                let keepLine = new Array(lines.length).fill(true);
+                let consecutiveEmpty = 0;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const isEmpty = isEmptyLine(lines[i], options.ignoreWhitespace);
+
+                    if (isEmpty) {
+                        if (options.mergeEmpty) {
+                            // Merge mode: keep at most 1 consecutive empty line
+                            consecutiveEmpty++;
+                            if (consecutiveEmpty > 1) {
+                                keepLine[i] = false;
+                            } else {
+                                keepLine[i] = true;
+                            }
+                        } else if (options.removeEmpty) {
+                            keepLine[i] = false;
+                        }
+                    } else {
+                        consecutiveEmpty = 0;
+                        // Check if line is whitespace-only and should be ignored
+                        if (options.ignoreWhitespace && lines[i].trim() === '' && lines[i] !== '') {
+                            keepLine[i] = false;
+                        }
+                    }
+                }
+
+                // Step 2: Remove Leading Blank Lines
+                if (options.removeLeadingBlank) {
+                    let foundFirstContent = false;
+                    for (let i = 0; i < lines.length; i++) {
+                        if (keepLine[i] && isEmptyLine(lines[i], options.ignoreWhitespace)) {
+                            if (!foundFirstContent) keepLine[i] = false;
+                        } else {
+                            foundFirstContent = true;
+                        }
+                    }
+                }
+
+                // Step 3: Remove Trailing Blank Lines
+                if (options.removeTrailingBlank) {
+                    let foundLastContent = false;
+                    for (let i = lines.length - 1; i >= 0; i--) {
+                        if (keepLine[i] && isEmptyLine(lines[i], options.ignoreWhitespace)) {
+                            if (!foundLastContent) keepLine[i] = false;
+                        } else if (keepLine[i]) {
+                            foundLastContent = true;
+                        }
+                    }
+                }
+
+                // Step 4: Handle Markdown paragraph preservation
+                if (options.preserveMd) {
+                    // In Markdown, single blank lines between paragraphs are significant
+                    // Re-enable kept empty lines that serve as paragraph separators
+                    for (let i = 1; i < lines.length - 1; i++) {
+                        if (!keepLine[i] && isEmptyLine(lines[i], options.ignoreWhitespace)) {
+                            // Check if surrounded by content lines
+                            const prevNonEmpty = getPrevNonEmpty(i, lines, keepLine, options.ignoreWhitespace);
+                            const nextNonEmpty = getNextNonEmpty(i, lines, keepLine, options.ignoreWhitespace);
+                            if (prevNonEmpty !== -1 && nextNonEmpty !== -1) {
+                                // Keep this as a paragraph separator (but still merge if multiple)
+                                keepLine[i] = true;
+                            }
+                        }
+                    }
+                }
+
+                // Step 5: Count content lines (non-empty original lines)
+                let contentLines = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    if (!isEmptyLine(lines[i], options.ignoreWhitespace)) {
+                        contentLines++;
+                    }
+                }
+
+                // Step 6: Apply trimming
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i];
+                    if (options.trimLeading && !isEmptyLine(line, options.ignoreWhitespace)) {
+                        if (options.preserveIndent) {
+                            // Only trim if not indented with purpose
+                            line = line.replace(/^[ \t]+(?=\S)/, '');
+                        } else {
+                            line = line.replace(/^[ \t]+/, '');
+                        }
+                    }
+                    if (options.trimTrailing) {
+                        line = line.replace(/[ \t]+$/, '');
+                    }
+
+                    if (keepLine[i]) {
+                        result.push(line);
+                    }
+
+                    lineMap.push({
+                        kept: keepLine[i],
+                        originalLine: lines[i],
+                        processedLine: line
+                    });
+                }
+
+                const cleanedLines = result.length;
+                const removedLines = originalLines - cleanedLines;
+                const removeRate = originalLines > 0 ? (removedLines / originalLines * 100) : 0;
+
+                return {
+                    cleaned: result.join('\n'),
+                    originalLines,
+                    cleanedLines,
+                    removedLines,
+                    contentLines,
+                    removeRate,
+                    lineMap
+                };
+            };
+
+            const getPrevNonEmpty = (idx, lines, keepLine, ignoreWhitespace) => {
+                for (let i = idx - 1; i >= 0; i--) {
+                    if (!isEmptyLine(lines[i], ignoreWhitespace)) return i;
+                }
+                return -1;
+            };
+
+            const getNextNonEmpty = (idx, lines, keepLine, ignoreWhitespace) => {
+                for (let i = idx + 1; i < lines.length; i++) {
+                    if (!isEmptyLine(lines[i], ignoreWhitespace)) return i;
+                }
+                return -1;
+            };
+
+            // --- Get current options ---
+            const getOptions = () => {
+                return {
+                    removeEmpty: activeOptions.has('remove-empty'),
+                    mergeEmpty: activeOptions.has('merge-empty'),
+                    trimLeading: activeOptions.has('trim-leading'),
+                    trimTrailing: activeOptions.has('trim-trailing'),
+                    removeLeadingBlank: activeOptions.has('remove-leading-blank'),
+                    removeTrailingBlank: activeOptions.has('remove-trailing-blank'),
+                    preserveMd: optPreserveMd.checked,
+                    preserveIndent: optPreserveIndent.checked,
+                    ignoreWhitespace: optIgnoreWhitespace.checked,
+                };
+            };
+
+            // --- Render Diff View ---
+            const renderDiff = (lineMap) => {
+                if (!lineMap || lineMap.length === 0) {
+                    diffContent.innerHTML = `
+                        <div class="text-slate-500 text-center py-8">
+                            <i class="ph ph-git-diff text-2xl block mb-2"></i>
+                            請在左側輸入文字後查看差異
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="space-y-0">';
+                for (let i = 0; i < lineMap.length; i++) {
+                    const entry = lineMap[i];
+                    const lineNum = i + 1;
+                    const displayLine = entry.originalLine || ' ';
+
+                    if (entry.kept) {
+                        html += `<div class="diff-added py-0.5 px-2 text-slate-300"><span class="line-num">${lineNum}</span>${escapeHtml(displayLine)}</div>`;
+                    } else {
+                        html += `<div class="diff-removed py-0.5 px-2 text-slate-500 line-through opacity-60"><span class="line-num">${lineNum}</span>${escapeHtml(displayLine)}</div>`;
+                    }
+                }
+                html += '</div>';
+                diffContent.innerHTML = html;
+            };
+
+            const escapeHtml = (str) => {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            };
+
+            // --- Main Update ---
+            const updateOutput = () => {
+                const input = inputTextarea.value;
+                const options = getOptions();
+
+                // Update input stats
+                const lines = input ? input.split('\n').length : 0;
+                inputStats.textContent = `${lines} lines`;
+
+                // Clean
+                const result = cleanText(input, options);
+                outputTextarea.value = result.cleaned;
+
+                // Update stats
+                statOriginal.textContent = result.originalLines;
+                statCleaned.textContent = result.cleanedLines;
+                statRemoved.textContent = result.removedLines;
+                statRate.textContent = result.originalLines > 0 ? `${Math.round(result.removeRate)}%` : '0%';
+                statContentLines.textContent = result.contentLines;
+                statRemovedDetailed.textContent = result.removedLines;
+                statTotalDetailed.textContent = result.cleanedLines;
+
+                outputLabel.textContent = `清理結果${result.removedLines > 0 ? ` (移除了 ${result.removedLines} 行)` : ''}`;
+
+                // Render diff if visible
+                if (showDiff) {
+                    renderDiff(result.lineMap);
+                }
+            };
+
+            // --- Toggle Diff View ---
+            const toggleDiff = () => {
+                showDiff = !showDiff;
+                if (showDiff) {
+                    outputTextarea.classList.add('hidden');
+                    diffContainer.classList.remove('hidden');
+                    diffContainer.classList.add('flex');
+                    btnToggleDiff.classList.add('text-emerald-400', 'border-emerald-500/50');
+                    btnToggleDiff.classList.remove('text-slate-400');
+                    const input = inputTextarea.value;
+                    const options = getOptions();
+                    const result = cleanText(input, options);
+                    renderDiff(result.lineMap);
+                } else {
+                    outputTextarea.classList.remove('hidden');
+                    diffContainer.classList.add('hidden');
+                    diffContainer.classList.remove('flex');
+                    btnToggleDiff.classList.remove('text-emerald-400', 'border-emerald-500/50');
+                    btnToggleDiff.classList.add('text-slate-400');
+                }
+            };
+
+            // --- Set Active Option ---
+            const setActiveOption = (option) => {
+                // For remove-empty and merge-empty, they are mutually exclusive
+                if (option === 'remove-empty' || option === 'merge-empty') {
+                    activeOptions.delete('remove-empty');
+                    activeOptions.delete('merge-empty');
+                    activeOptions.add(option);
+                } else {
+                    // Toggle
+                    if (activeOptions.has(option)) {
+                        activeOptions.delete(option);
+                    } else {
+                        activeOptions.add(option);
+                    }
+                }
+                updateBtnStyles();
+                updateOutput();
+            };
+
+            const updateBtnStyles = () => {
+                optBtns.forEach(btn => {
+                    const opt = btn.dataset.option;
+                    btn.classList.toggle('active', activeOptions.has(opt));
+                });
+            };
+
+            // --- Event Binding ---
+            // Option buttons
+            optBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setActiveOption(btn.dataset.option);
+                });
+            });
+
+            // Toggle diff
+            btnToggleDiff.addEventListener('click', toggleDiff);
+
+            // Input textarea - real-time
+            inputTextarea.addEventListener('input', updateOutput);
+
+            // Extra options
+            [optPreserveMd, optPreserveIndent, optIgnoreWhitespace].forEach(opt => {
+                opt.addEventListener('change', updateOutput);
+            });
+
+            // Copy
+            btnCopy.addEventListener('click', () => {
+                const text = showDiff ? outputTextarea.value : outputTextarea.value;
+                if (!text) {
+                    showToast('沒有可複製的內容', true);
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('已複製到剪貼簿');
+                }).catch(() => {
+                    outputTextarea.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('已複製到剪貼簿');
+                });
+            });
+
+            // Download
+            btnDownload.addEventListener('click', () => {
+                if (!outputTextarea.value) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                const blob = new Blob([outputTextarea.value], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Cleaned_${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('已下載 TXT 檔案');
+            });
+
+            // Clear
+            btnClear.addEventListener('click', () => {
+                if (!inputTextarea.value && !outputTextarea.value) {
+                    showToast('已經沒有內容了', true);
+                    return;
+                }
+                inputTextarea.value = '';
+                if (showDiff) toggleDiff();
+                updateOutput();
+                showToast('已清除所有內容');
+            });
+
+            // Sample Data
+            btnSample.addEventListener('click', () => {
+                const sample = `function hello() {
+    console.log("Hello World!");
+
+
+
+    return true;
+}
+
+
+
+const data = [
+    1, 2, 3,
+
+    4, 5, 6
+];
+
+
+
+
+function process() {
+    // Some logic here
+
+    const result = doSomething();
+
+
+    return result;
+}
+
+
+
+
+
+const str = "This is a test";
+
+const num = 42;` + '\n\n\n' + `# Markdown Example
+
+
+## Section 1
+
+
+This is a paragraph with some text.
+
+
+Another paragraph here.
+
+
+## Section 2
+
+- Item 1
+
+- Item 2
+
+- Item 3
+
+
+This is the last paragraph.`;
+                inputTextarea.value = sample;
+                // Reset to remove-empty mode
+                activeOptions.clear();
+                activeOptions.add('remove-empty');
+                updateBtnStyles();
+                if (showDiff) toggleDiff();
+                updateOutput();
+                showToast('已載入範例資料');
+            });
+
+            // --- Toast ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                const toastMsg = document.getElementById('toast-msg');
+
+                toastMsg.textContent = msg;
+
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-emerald-400';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // Initialize with sample
+            activeOptions.add('remove-empty');
+            updateBtnStyles();
+            inputTextarea.value = `Hello World
+
+
+This is a test with empty lines.
+
+
+
+Remove the blank lines above.
+
+
+   Leading spaces here
+  More leading spaces
+    And more` + '\n\n\n' + `Trailing blank lines above should be removed.`;
+            updateOutput();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

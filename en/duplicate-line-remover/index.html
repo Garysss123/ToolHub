@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Duplicate Line Remover | Free Online Tool - ToolHub</title>
+<meta content="Free online Duplicate Line Remover Duplicate Line Remover tool. Supports deduplication, retaining first/last occurrence, case sensitivity, and ignoring leading and trailing whitespace. Highlight Duplicate Lines visually highlights all duplicate lines, suitable for text sorting, Log, CSV, AI output, code and list deduplication." name="description"/>
+<meta content="Duplicate Line Remover, 重複行移除, 去重工具, 文字去重, 重複行刪除, Dedup, 文字整理, 比對工具, 行去重, 線上工具" name="keywords"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F43F5E; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .editor-textarea {
+            width: 100%;
+            min-height: 320px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+            font-family: '"Fira Code"', 'Noto Sans TC', ui-monospace, monospace;
+            transition: border-color 0.2s;
+            tab-size: 4;
+        }
+        .editor-textarea:focus {
+            border-color: #F43F5E;
+            box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.1);
+        }
+        .editor-textarea::placeholder { color: #475569; }
+
+        .output-textarea {
+            width: 100%;
+            min-height: 320px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+            font-family: '"Fira Code"', 'Noto Sans TC', ui-monospace, monospace;
+            tab-size: 4;
+        }
+        .output-textarea:focus {
+            border-color: #F43F5E;
+            box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.1);
+        }
+        .output-textarea::placeholder { color: #475569; }
+
+        /* Highlighted output area (non-textarea) */
+        #highlight-output {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: '"Fira Code"', 'Noto Sans TC', ui-monospace, monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            tab-size: 4;
+        }
+        #highlight-output .dup-line {
+            background-color: rgba(244, 63, 94, 0.15);
+            border-left: 3px solid #F43F5E;
+            display: block;
+            padding: 1px 8px;
+            border-radius: 2px;
+        }
+        #highlight-output .uniq-line {
+            display: block;
+            padding: 1px 8px;
+            border-left: 3px solid transparent;
+        }
+
+        /* Toggle switches */
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #F43F5E; border-color: #F43F5E; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+        .toggle-bg { transition: background-color 0.2s, border-color 0.2s; }
+
+        /* Stat cards */
+        .stat-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem 0.75rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(244, 63, 94, 0.3);
+        }
+        .stat-card .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #F43F5E;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .stat-card .stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        /* Action buttons */
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .action-btn-primary {
+            background: rgba(244, 63, 94, 0.2);
+            border: 1px solid rgba(244, 63, 94, 0.5);
+            color: #F43F5E;
+        }
+        .action-btn-primary:hover {
+            background: rgba(244, 63, 94, 0.3);
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.15);
+        }
+
+        .action-btn-copy {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            color: #94a3b8;
+        }
+        .action-btn-copy:hover {
+            background: #1E293B;
+            color: #F43F5E;
+            border-color: #F43F5E;
+        }
+
+        .action-btn-download {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34D399;
+        }
+        .action-btn-download:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+
+        .action-btn-clear {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #F87171;
+        }
+        .action-btn-clear:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .action-btn-sample {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #60A5FA;
+        }
+        .action-btn-sample:hover {
+            background: rgba(59, 130, 246, 0.25);
+        }
+
+        /* Remove method buttons */
+        .method-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .method-btn:hover {
+            background: #1E293B;
+            color: #F43F5E;
+            border-color: rgba(244, 63, 94, 0.4);
+        }
+        .method-btn.active {
+            background: rgba(244, 63, 94, 0.15);
+            color: #F43F5E;
+            border-color: #F43F5E;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.15);
+        }
+
+        /* Options label */
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            transition: color 0.2s;
+        }
+        .option-label:hover {
+            color: #e2e8f0;
+        }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        /* SEO Article Styles */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #F43F5E;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #F43F5E;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(244, 63, 94, 0.05);
+            border-left: 3px solid #F43F5E;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .editor-textarea { min-height: 200px; }
+            .output-textarea { min-height: 200px; }
+            #highlight-output { min-height: 200px; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/duplicate-line-remover/" property="og:url"/>
+<meta content="Duplicate Line Remover | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free online Duplicate Line Remover Duplicate Line Remover tool. Supports deduplication, retaining first/last occurrence, case sensitivity, and ignoring leading and trailing whitespace. Highlight Duplicate Lines visually highlights all duplicate lines, suitable for text sorting, Log, CSV, AI output, code and list deduplication." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Duplicate Line Remover | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free online Duplicate Line Remover Duplicate Line Remover tool. Supports deduplication, retaining first/last occurrence, case sensitivity, and ignoring leading and trailing whitespace. Highlight Duplicate Lines visually highlights all duplicate lines, suitable for text sorting, Log, CSV, AI output, code and list deduplication." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Duplicate Line Remover","url":"https://toolhuben.com/en/duplicate-line-remover/","description":"Free online Duplicate Line Remover Duplicate Line Remover tool. Supports deduplication, retaining first/last occurrence, case sensitivity, and ignoring leading and trailing whitespace. Highlight Duplicate Lines visually highlights all duplicate lines, suitable for text sorting, Log, CSV, AI output, code and list deduplication.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Duplicate Line Remover","item":"https://toolhuben.com/en/duplicate-line-remover/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/duplicate-line-remover/" rel="canonical"/><link href="https://toolhuben.com/duplicate-line-remover/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/duplicate-line-remover/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/duplicate-line-remover/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","[System Error] 模組":"[System Error] Module","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","切換到 Highlight 模式檢視重複行":"Switch to Highlight mode to view duplicate rows","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清除所有內容":"All content cleared","已移除重複行 (":"Duplicate rows removed (","已經沒有內容了":"There is no content anymore","已複製到剪貼簿":"Copied to clipboard","已下載 CSV 檔案":"CSV file downloaded","已下載 TXT 檔案":"Downloaded TXT file","已載入範例資料":"Sample data loaded","建立理念":"Our Founding Idea","建議":"Recommendation","沒有可下載的內容":"No downloadable content","沒有可複製的內容":"No content to copy","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","行)":"OK)","請先執行去重操作":"Please perform deduplication operation first","請先輸入文字":"Please enter text first","載入失敗:":"Loading failed:","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","無重複行":"No repeat rows","請輸入文字以檢視重複行高亮":"Please enter text to review the repetitious line highlight","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="split" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#F43F5E;--classic-accent-rgb:244,63,94">
+<!-- 1. Header -->
+<div id="component-header"></div>
+<!-- 2. Sidebar -->
+<div id="component-sidebar"></div>
+<!-- 3. Core Module: Duplicate Line Remover -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Module Title -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-dlr-primary">
+<span class="flex w-2 h-2 bg-dlr-primary rounded-full animate-pulse mr-2"></span>
+                Highlight &amp; Remove · Instant deduplication engine
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Duplicate Line Remover <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-600">Duplicate row removal tool</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                Quickly remove duplicate lines in text, support retaining the first/last occurrence, case sensitivity, and ignoring leading and trailing whitespace and blank lines.<br class="hidden sm:block"/>
+                Built-in <strong class="text-dlr-primary">Highlight Duplicate Lines</strong> Visually highlight, confirm first and then remove to avoid accidental deletion.
+            </p>
+</div>
+<!-- Main Tool Area -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+<!-- Mode Tabs: Remove / Highlight -->
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-dlr-primary uppercase tracking-widest">operating mode</span>
+</div>
+<div class="flex items-center gap-1 sm:gap-2">
+<button class="view-tab active" data-tab="remove" id="tab-remove">
+<i class="ph ph-x-circle mr-1.5 text-xs"></i>Remove
+                    </button>
+<button class="view-tab" data-tab="highlight" id="tab-highlight">
+<i class="ph ph-highlight mr-1.5 text-xs"></i>Highlight
+                    </button>
+</div>
+</div>
+<!-- Tool Content -->
+<div class="flex flex-col lg:flex-row min-h-[500px]">
+<!-- ===== LEFT PANEL: Input (Before) ===== -->
+<div class="w-full lg:w-1/2 p-4 sm:p-6 flex flex-col gap-4 border-b lg:border-b-0 lg:border-r border-hub-700">
+<!-- Input Label Row -->
+<div class="flex items-center justify-between">
+<label class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-text-align-left text-dlr-primary text-lg"></i> Before
+                        </label>
+<span class="text-xs text-slate-500 font-mono" id="input-stats">0 lines · 0 chars</span>
+</div>
+<!-- Input Textarea (Before) / Highlight view uses same textarea -->
+<div class="flex flex-col gap-3" id="input-panel">
+<textarea class="editor-textarea" id="input-textarea" placeholder="Enter text here, one item per line... Supports: plain text, CSV, Log, Markdown, code Example: Apple Banana Apple Orange Orange" spellcheck="false"></textarea>
+</div>
+<!-- Options Panel -->
+<div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700">
+<div class="flex items-center gap-2 mb-3">
+<i class="ph ph-faders-horizontal text-dlr-primary text-sm"></i>
+<span class="text-xs font-bold text-white uppercase tracking-wider">Deduplication option</span>
+</div>
+<!-- Remove Method -->
+<div class="mb-3">
+<span class="text-xs text-slate-500 block mb-2">retention method</span>
+<div class="flex flex-wrap gap-2">
+<button class="method-btn active" data-method="first" id="method-first">
+<i class="ph ph-arrow-fat-up mr-1"></i>Keep first occurrence
+                                </button>
+<button class="method-btn" data-method="last" id="method-last">
+<i class="ph ph-arrow-fat-down mr-1"></i>Keep last occurrence
+                                </button>
+</div>
+</div>
+<!-- Toggles -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<label class="option-label">
+<div class="relative">
+<input checked="" class="sr-only toggle-checkbox" id="opt-case-sensitive" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                Case Sensitive
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-ignore-spaces" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                Ignore Spaces
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input checked="" class="sr-only toggle-checkbox" id="opt-ignore-empty" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                Ignore Empty Lines
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-sort" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                Sort After Remove
+                            </label>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-wrap items-center gap-2 pt-2">
+<button class="action-btn action-btn-primary text-sm px-5 py-2.5" id="btn-remove">
+<i class="ph ph-x-circle"></i> Remove Duplicates
+                        </button>
+<button class="action-btn action-btn-copy" id="btn-copy">
+<i class="ph ph-copy"></i> Copy
+                        </button>
+<button class="action-btn action-btn-download" id="btn-download-txt">
+<i class="ph ph-download-simple"></i> TXT
+                        </button>
+<button class="action-btn action-btn-download" id="btn-download-csv">
+<i class="ph ph-file-csv"></i> CSV
+                        </button>
+<button class="action-btn action-btn-clear" id="btn-clear">
+<i class="ph ph-trash"></i> Clear
+                        </button>
+<button class="action-btn action-btn-sample" id="btn-sample">
+<i class="ph ph-file-text"></i> Sample
+                        </button>
+</div>
+</div>
+<!-- ===== RIGHT PANEL: Output (After) ===== -->
+<div class="w-full lg:w-1/2 p-4 sm:p-6 flex flex-col gap-4">
+<!-- Output Label Row -->
+<div class="flex items-center justify-between">
+<label class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-check-square text-dlr-primary text-lg"></i> After
+                        </label>
+<span class="text-xs text-slate-500 font-mono" id="output-stats-label">0 lines · 0 chars</span>
+</div>
+<!-- REMOVE VIEW: Output Textarea -->
+<div class="flex flex-col gap-3 flex-grow" id="view-remove">
+<textarea class="output-textarea flex-grow" id="output-textarea" placeholder="The processed results will be displayed here..." readonly=""></textarea>
+<!-- Statistics -->
+<div class="grid grid-cols-4 gap-2 sm:gap-3">
+<div class="stat-card">
+<div class="stat-value" id="stat-original">0</div>
+<div class="stat-label">Original number of rows</div>
+</div>
+<div class="stat-card">
+<div class="stat-value" id="stat-unique">0</div>
+<div class="stat-label">Number of rows after deduplication</div>
+</div>
+<div class="stat-card">
+<div class="stat-value" id="stat-removed">0</div>
+<div class="stat-label">Remove rows</div>
+</div>
+<div class="stat-card">
+<div class="stat-value" id="stat-rate">0%</div>
+<div class="stat-label">Repeat rate</div>
+</div>
+</div>
+</div>
+<!-- HIGHLIGHT VIEW: Highlighted Output -->
+<div class="hidden flex-col gap-3 flex-grow" id="view-highlight">
+<div class="bg-[#0f172a] border border-[#1e293b] rounded-xl p-4 overflow-auto flex-grow custom-scrollbar" style="min-height: 320px; max-height: 500px;">
+<div id="highlight-output">
+<span class="text-slate-500">Switch to Highlight mode to view duplicate rows</span>
+</div>
+</div>
+<div class="flex items-center gap-3 text-xs text-slate-500">
+<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-[rgba(244,63,94,0.25)] border border-dlr-primary/40 inline-block"></span> Duplicate rows</span>
+<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-transparent border border-transparent inline-block"></span> Only OK</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== FAQ SECTION ===== -->
+<div class="mt-12 max-w-4xl mx-auto">
+<div class="text-center mb-8">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ FAQ <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-rose-600">FAQ</span></h2>
+<p class="text-slate-400 text-sm">Frequently asked questions about duplicate row removal and text deduplication</p>
+</div>
+<div class="space-y-3">
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What is Duplicate Line Remover?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Duplicate Line Remover</strong>(Duplicate Line Remover Tool) is an online tool focused on quickly identifying and removing duplicate lines from text. It scans the text you enter, finds identical lines, and removes duplicates based on your settings (keep the first or last occurrence).</p>
+<p class="mt-2">Unlike general duplicate removal tools, ToolHub's Duplicate Line Remover also provides <strong class="text-dlr-primary">Highlight Duplicate Lines</strong> mode, which allows you to visually check which rows are duplicates before performing the removal operation to ensure the correctness of data processing.</p>
+<p class="mt-2">Supported formats include plain text, CSV, Log files, Markdown, code and other text content in line units.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>When do you need to remove duplicate rows?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>Removing duplicate rows is very practical in many daily tasks:</p>
+<ul class="list-disc pl-5 mt-2 space-y-1">
+<li><strong class="text-white">Organize Log files</strong> — Server Logs often contain a large number of repeated error messages or warnings. After deduplication, you can quickly identify different types of problems.</li>
+<li><strong class="text-white">CSV / spreadsheet deduplication</strong> — There are often duplicate order, customer or product data in the exported CSV. Ensure the uniqueness of the data after deduplication.</li>
+<li><strong class="text-white">AI output sorting</strong> — AI-generated responses sometimes produce repeated paragraphs or list items. Removing duplication makes the content more concise.</li>
+<li><strong class="text-white">Code cleanup</strong> — Duplicate definitions may appear in the import list or configuration file, remove duplicates to keep the code clean</li>
+<li><strong class="text-white">List deduplication</strong> — After merging mailing lists and member lists from multiple sources, deduplication ensures that each piece of information appears only once.</li>
+</ul>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What is the difference between "Keep first occurrence" and "Keep last occurrence"?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>These two modes determine which row should be kept when duplicate rows are encountered:</p>
+<div class="highlight-box mt-2">
+<p><strong class="text-dlr-primary">Keep first occurrence</strong>: Keep only the first row and delete all subsequent duplicates</p>
+<p class="mt-1"><strong class="text-dlr-primary">Keep last occurrence</strong>: Keep only the last row and delete all previous duplicates</p>
+</div>
+<p class="mt-2"><strong class="text-white">Example:</strong></p>
+<div class="bg-hub-900 rounded-lg p-3 text-xs font-mono mt-2">
+<p>Original content: Apple → Banana → Apple → Orange → Apple</p>
+<p class="mt-1"><strong>keep first time</strong>：Apple → Banana → Orange</p>
+<p><strong>save for last</strong>：Banana → Orange → Apple</p>
+</div>
+<p class="mt-2">Generally "preserve first occurrence" is the most commonly used mode because it preserves the original order of the data. And "Keep last occurrence" is very useful when you need to keep the latest data (such as the last time the same error occurred in the Log).</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What does Case Sensitive do?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Case Sensitive</strong> Controls whether to distinguish between uppercase and lowercase English letters when deduplicating.</p>
+<div class="highlight-box mt-2">
+<p><strong class="text-dlr-primary">Turn on Case Sensitive</strong>：<code>Apple</code> with <code>apple</code> regarded as different</p>
+<p class="mt-1"><strong class="text-dlr-primary">Close Case Sensitive</strong>：<code>Apple</code> with <code>apple</code> are regarded as the same row and will be deduplicated.</p>
+</div>
+<p class="mt-2"><strong class="text-white">Recommended time to use:</strong></p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-white">turn on</strong> — Processing code (variable names are case-sensitive), CSV data, Log files</li>
+<li><strong class="text-white">close</strong> — Organize article content, lists, and natural language text (when case differences are not important)</li>
+</ul>
+<p class="mt-2">It is turned on by default to ensure the most rigorous deduplication comparison.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>How can the Highlight Duplicate Lines feature help me?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Highlight Duplicate Lines</strong> It is a unique visualization feature of ToolHub. It highlights all duplicate rows before performing the removal operation, allowing you to visually confirm which rows are duplicates.</p>
+<p class="mt-2">This feature is particularly suitable for:</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-white">Data verification</strong> — Before removing, confirm whether the duplicate data is correct to avoid accidentally deleting rows that appear to be duplicates but are actually meaningful.</li>
+<li><strong class="text-white">Debugging and Analysis</strong> — Quickly locate duplicate locations and understand data duplication patterns</li>
+<li><strong class="text-white">Teaching and presentation</strong> — When showing duplication of data to your team or clients, visual highlights are more convincing than numbers.</li>
+</ul>
+<p class="mt-2">💡 Recommended process: First check and confirm in Highlight mode → switch to Remove mode → click Remove Duplicates → get clean results.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>How to sort duplicate rows in CSV and Log files?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>Recommended settings when organizing different types of files:</p>
+<p class="mt-3"><strong class="text-white">📊 CSV file:</strong></p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li>turn on <strong class="text-white">Case Sensitive</strong> — Data content is usually case-sensitive</li>
+<li>turn on <strong class="text-white">Ignore Empty Lines</strong> — Skip empty lines</li>
+<li>Retention method selection <strong class="text-white">Keep first occurrence</strong></li>
+<li>If you need to sort output, turn on <strong class="text-white">Sort After Remove</strong></li>
+<li>available <strong class="text-white">Download CSV</strong> Export results</li>
+</ul>
+<p class="mt-3"><strong class="text-white">📋 Log file:</strong></p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li>turn on <strong class="text-white">Case Sensitive</strong> — Log content is case-sensitive</li>
+<li>turn on <strong class="text-white">Ignore Empty Lines</strong></li>
+<li>To retain the last error timestamp, select <strong class="text-white">Keep last occurrence</strong></li>
+<li>It is recommended to use it first <strong class="text-white">Highlight</strong> Pattern View Repeat Distribution</li>
+</ul>
+<p class="mt-3"><strong class="text-white">📝 AI output sorting:</strong></p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li>close <strong class="text-white">Case Sensitive</strong> — AI output can still be compared even if the case is inconsistent</li>
+<li>turn on <strong class="text-white">Ignore Empty Lines</strong></li>
+<li>Retention method selection <strong class="text-white">Keep first occurrence</strong></li>
+</ul>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>Is the data in this tool safe? Will my information be uploaded?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Totally safe!</strong> ToolHub’s Duplicate Line Remover is a <strong class="text-dlr-primary">Pure front-end tools</strong>, all your text data is processed in the browser and is not uploaded to any server.</p>
+<p class="mt-2">This means:</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li>The tool still works even when offline (after the page has loaded)</li>
+<li>No data leaves your computer</li>
+<li>No registration or account login required</li>
+<li>There is no need to worry about the risk of leakage when handling sensitive information (such as customer lists, internal logs)</li>
+</ul>
+<p class="mt-2">💡 If you need to process extremely large amounts of data, it is recommended to process in batches for optimal browser performance.</p>
+</div>
+</details>
+</div>
+</div>
+<!-- ===== SEO ARTICLE ===== -->
+<div class="mt-12 max-w-4xl mx-auto seo-article">
+<div class="text-center mb-8">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 Complete Guide to Duplicate Row Removal</h2>
+<p class="text-slate-400 text-sm">Learn more about the principles, application scenarios and best practices of duplicate row removal</p>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2>Why do I need to remove duplicate rows?</h2>
+<p>In the era of information explosion, we have to deal with a large amount of text data every day. Whether it’s output from AI, a server log file, a CSV spreadsheet, or code.<strong>Duplicate data</strong> Not only does it take up space, but it also affects the accuracy of the analysis results. Statistically, a non-deduplicated data set may contain <strong>5% to 30%</strong> Duplicate information, which can lead to serious biases in data analysis, machine learning, and business decisions.</p>
+<div class="highlight-box">
+<p><strong>💡 Core Principles:</strong> Deduplication is not only the removal of duplicate content, but also a key step to ensure data quality. A good deduplication strategy can greatly improve data processing efficiency while retaining information integrity.</p>
+</div>
+<h2>The core principle of the de-replay algorithm</h2>
+<p>The de-duplication algorithm used by Duplicate Line Remover is based on the following steps:</p>
+<ol>
+<li><strong class="text-white">line split</strong> — Split the input text into an array of lines using newline characters (\n)</li>
+<li><strong class="text-white">preprocessing</strong> — Case normalization, whitespace removal, and blank line filtering based on setting options</li>
+<li><strong class="text-white">hash comparison</strong> — Quickly identify duplicate rows using the Set data structure</li>
+<li><strong class="text-white">Retention policy</strong> — Output results based on the “Keep First/Keep Last” strategy</li>
+<li><strong class="text-white">Post-processing</strong> — Optional sorting</li>
+</ol>
+<p>The time complexity of this algorithm is <strong>O(n)</strong>, maintaining excellent performance even when processing large numbers of rows.</p>
+<h2>Application scenarios for deduplication</h2>
+<h3>📊 Data analysis and CSV sorting</h3>
+<p>In data analysis work, CSV is the most common data exchange format. CSVs exported from databases, API threads, or manually collected often contain duplicate records. Use Duplicate Line Remover to quickly remove duplicate data lines to ensure the accuracy of analysis results. Combined with the "Keep First Occurrence" mode, the earliest data record can be retained.</p>
+<h3>📋 Log file analysis</h3>
+<p>Server Log files are one of the most important debugging tools for maintenance engineers. However, the amount of repetitive error messages often drowns out the information that really matters. With the duplicate row removal tool, engineers can quickly:</p>
+<ul>
+<li>Filter out duplicate warning messages and focus on different types of errors</li>
+<li>Use "keep last occurrence" mode to find the last time each error occurred</li>
+<li>Use Highlight mode to intuitively understand which errors occur repeatedly</li>
+</ul>
+<h3>🤖 AI output deduplication</h3>
+<p>When AI language models (such as ChatGPT, Claude) generate long texts or lists, sometimes duplicate paragraphs or items appear. This is generating:</p>
+<ul>
+<li><strong class="text-white">to-do list</strong> — Duplicate task items may appear</li>
+<li><strong class="text-white">List of creative ideas</strong> — Similar ideas may be repeated with different wordings</li>
+<li><strong class="text-white">Summary and conclusion</strong> — AI may repeat the same conclusion in multiple paragraphs</li>
+</ul>
+<p>Use the duplicate row removal tool to make your AI output cleaner and more concise. It is recommended to use Highlight mode to view before deduplication to confirm which duplications really need to be removed.</p>
+<h3>💻 Code maintenance</h3>
+<p>In large projects, duplicate lines of code may appear in the following situations:</p>
+<ul>
+<li><strong class="text-white">Import statement</strong> — Duplicate imports may occur when multiple people collaborate</li>
+<li><strong class="text-white">Profile</strong> — Duplicate setting items may cause unexpected behavior</li>
+<li><strong class="text-white">CSS class definition</strong> — Repeated style declaration</li>
+</ul>
+<p>Regularly cleaning up duplicate lines in your code will help maintain code quality and readability.</p>
+<h2>Best practices and usage suggestions</h2>
+<p>In order to obtain the best deduplication effect, it is recommended to follow the following principles:</p>
+<ol>
+<li><strong class="text-white">Highlight first and then Remove</strong> — Use Highlight mode to visually confirm duplicate rows to avoid accidental deletion</li>
+<li><strong class="text-white">Choose a retention strategy wisely</strong> — In general, use "first occurrence"; for log analysis, use "last occurrence"</li>
+<li><strong class="text-white">Set comparison rules appropriately</strong> —Determine whether to enable Case Sensitive and Ignore Spaces based on data type</li>
+<li><strong class="text-white">Enable sorting when needed</strong> — Sort After Remove makes the output more organized, but changes the original order</li>
+<li><strong class="text-white">Process large amounts of data in batches</strong> — The browser can still process tens of thousands of rows of data efficiently, but it is recommended to batch it appropriately.</li>
+<li><strong class="text-white">Verification results</strong> — Check whether the statistics (repetition rate) are reasonable after deduplication</li>
+</ol>
+<div class="highlight-box">
+<p><strong>📌 Practical advice:</strong> For important data processing tasks, it is recommended to keep a backup of the original data and then use Duplicate Line Remover to remove duplicates. This allows you to return to the original data and reprocess it at any time when you find that the deduplication strategy is not ideal.</p>
+</div>
+<h2>Improve efficiency with ToolHub Duplicate Line Remover</h2>
+<p>ToolHub's Duplicate Line Remover not only provides basic duplication removal functions, but also <strong class="text-dlr-primary">Highlight Duplicate Lines</strong> visualization mode,<strong class="text-dlr-primary">Live statistics</strong> and<strong class="text-dlr-primary">Multiple deduplication options</strong>, making data collection work more intuitive and efficient. Whether you're a data analyst, software engineer, system administrator or content creator, this tool can help you quickly clean up duplicate data and focus on the work that really matters.</p>
+<p>Enter text on the left immediately and experience the powerful function of smart duplication removal!</p>
+</div>
+</div>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-dlr-primary" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 4. Footer -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- System Init Script -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/duplicate-line-remover';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- Duplicate Line Remover Business Logic -->
+<!-- ========================================== -->
+<style>
+        input[type="checkbox"]:checked ~ .toggle-bg { background-color: #F43F5E; border-color: #F43F5E; }
+        input[type="checkbox"]:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+        .toggle-bg { transition: background-color 0.2s, border-color 0.2s; }
+
+        .view-tab {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            border: 1px solid transparent;
+        }
+        .view-tab:hover { color: #e2e8f0; }
+        .view-tab.active {
+            background: rgba(244, 63, 94, 0.1);
+            color: #F43F5E;
+            border-color: rgba(244, 63, 94, 0.2);
+        }
+    </style>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM References ---
+            const inputTextarea = document.getElementById('input-textarea');
+            const outputTextarea = document.getElementById('output-textarea');
+            const highlightOutput = document.getElementById('highlight-output');
+            const viewRemove = document.getElementById('view-remove');
+            const viewHighlight = document.getElementById('view-highlight');
+            const tabRemove = document.getElementById('tab-remove');
+            const tabHighlight = document.getElementById('tab-highlight');
+
+            const statOriginal = document.getElementById('stat-original');
+            const statUnique = document.getElementById('stat-unique');
+            const statRemoved = document.getElementById('stat-removed');
+            const statRate = document.getElementById('stat-rate');
+            const inputStats = document.getElementById('input-stats');
+            const outputStatsLabel = document.getElementById('output-stats-label');
+
+            const btnRemove = document.getElementById('btn-remove');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownloadTxt = document.getElementById('btn-download-txt');
+            const btnDownloadCsv = document.getElementById('btn-download-csv');
+            const btnClear = document.getElementById('btn-clear');
+            const btnSample = document.getElementById('btn-sample');
+
+            const optCaseSensitive = document.getElementById('opt-case-sensitive');
+            const optIgnoreSpaces = document.getElementById('opt-ignore-spaces');
+            const optIgnoreEmpty = document.getElementById('opt-ignore-empty');
+            const optSort = document.getElementById('opt-sort');
+
+            const methodFirst = document.getElementById('method-first');
+            const methodLast = document.getElementById('method-last');
+
+            let currentMethod = 'first';
+
+            // --- Sample Data ---
+            const SAMPLE_DATA = `Apple
+Banana
+Apple
+Orange
+Orange
+Grape
+Banana
+Watermelon
+Apple
+Strawberry
+Kiwi
+Orange
+Peach
+Grape
+Mango
+Strawberry
+Cherry
+Banana
+Papaya
+Kiwi`;
+
+            // --- Core Dedup Logic ---
+            const removeDuplicates = (text, options) => {
+                let lines = text.split('\n');
+                const { caseSensitive, ignoreSpaces, ignoreEmpty, sort, method } = options;
+
+                // Pre-process each line
+                let processed = lines.map((line, index) => {
+                    let key = line;
+                    if (ignoreSpaces) {
+                        key = key.trim();
+                    }
+                    if (!caseSensitive) {
+                        key = key.toLowerCase();
+                    }
+                    return { original: line, key, index };
+                });
+
+                // Filter empty lines if needed
+                if (ignoreEmpty) {
+                    processed = processed.filter(item => item.key.length > 0);
+                }
+
+                const seen = new Set();
+                const result = [];
+
+                if (method === 'first') {
+                    // Keep first occurrence
+                    for (const item of processed) {
+                        if (!seen.has(item.key)) {
+                            seen.add(item.key);
+                            result.push(item.original);
+                        }
+                    }
+                } else {
+                    // Keep last occurrence - iterate in reverse
+                    const reversed = [...processed].reverse();
+                    const seenLast = new Set();
+                    const tempResult = [];
+                    for (const item of reversed) {
+                        if (!seenLast.has(item.key)) {
+                            seenLast.add(item.key);
+                            tempResult.push(item.original);
+                        }
+                    }
+                    result.push(...tempResult.reverse());
+                }
+
+                if (sort) {
+                    const sortKey = caseSensitive ? (s) => s : (s) => s.toLowerCase();
+                    result.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+                }
+
+                return {
+                    result,
+                    originalCount: lines.length,
+                    uniqueCount: result.length,
+                    removedCount: lines.length - result.length,
+                    duplicateRate: lines.length > 0 ? ((lines.length - result.length) / lines.length * 100) : 0,
+                };
+            };
+
+            // --- Highlight Duplicates ---
+            const highlightDuplicates = (text, options) => {
+                let lines = text.split('\n');
+                const { caseSensitive, ignoreSpaces, ignoreEmpty } = options;
+
+                let processed = lines.map((line, index) => {
+                    let key = line;
+                    if (ignoreSpaces) {
+                        key = key.trim();
+                    }
+                    if (!caseSensitive) {
+                        key = key.toLowerCase();
+                    }
+                    return { original: line, key, index };
+                });
+
+                if (ignoreEmpty) {
+                    processed = processed.filter(item => item.key.length > 0);
+                }
+
+                // Count occurrences
+                const count = new Map();
+                for (const item of processed) {
+                    count.set(item.key, (count.get(item.key) || 0) + 1);
+                }
+
+                // Build highlighted HTML
+                let html = '';
+                for (const item of processed) {
+                    const isDuplicate = count.get(item.key) > 1;
+                    const displayLine = item.original;
+                    if (isDuplicate) {
+                        html += `<span class="dup-line">${escapeHtml(displayLine)}</span>`;
+                    } else {
+                        html += `<span class="uniq-line">${escapeHtml(displayLine)}</span>`;
+                    }
+                }
+
+                return html;
+            };
+
+            // --- Utility ---
+            const escapeHtml = (str) => {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            };
+
+            const getOptions = () => ({
+                caseSensitive: optCaseSensitive.checked,
+                ignoreSpaces: optIgnoreSpaces.checked,
+                ignoreEmpty: optIgnoreEmpty.checked,
+                sort: optSort.checked,
+                method: currentMethod,
+            });
+
+            const updateInputStats = () => {
+                const text = inputTextarea.value;
+                const lines = text ? text.split('\n').length : 0;
+                const chars = text.length;
+                inputStats.textContent = `${lines} lines · ${chars} chars`;
+            };
+
+            const updateOutputStats = (text) => {
+                const lines = text ? text.split('\n').length : 0;
+                const chars = text.length;
+                outputStatsLabel.textContent = `${lines} lines · ${chars} chars`;
+            };
+
+            // --- Process & Update ---
+            const processRemove = () => {
+                const text = inputTextarea.value;
+                if (!text.trim()) {
+                    outputTextarea.value = '';
+                    statOriginal.textContent = '0';
+                    statUnique.textContent = '0';
+                    statRemoved.textContent = '0';
+                    statRate.textContent = '0%';
+                    updateOutputStats('');
+                    updateInputStats();
+                    return;
+                }
+
+                const options = getOptions();
+                const { result, originalCount, uniqueCount, removedCount, duplicateRate } = removeDuplicates(text, options);
+                const output = result.join('\n');
+
+                outputTextarea.value = output;
+                statOriginal.textContent = originalCount;
+                statUnique.textContent = uniqueCount;
+                statRemoved.textContent = removedCount;
+                statRate.textContent = `${duplicateRate.toFixed(1)}%`;
+                updateOutputStats(output);
+                updateInputStats();
+            };
+
+            const processHighlight = () => {
+                const text = inputTextarea.value;
+                if (!text.trim()) {
+                    highlightOutput.innerHTML = '<span class="text-slate-500">請輸入文字以檢視重複行高亮</span>';
+                    updateInputStats();
+                    return;
+                }
+
+                const options = getOptions();
+                const html = highlightDuplicates(text, options);
+                highlightOutput.innerHTML = html || '<span class="text-slate-500">無重複行</span>';
+                updateInputStats();
+            };
+
+            const refreshView = () => {
+                const isRemove = !viewRemove.classList.contains('hidden');
+                if (isRemove) {
+                    processRemove();
+                } else {
+                    processHighlight();
+                }
+            };
+
+            // --- Switch View ---
+            const switchView = (view) => {
+                if (view === 'remove') {
+                    viewRemove.classList.remove('hidden');
+                    viewHighlight.classList.add('hidden');
+                    tabRemove.classList.add('active');
+                    tabHighlight.classList.remove('active');
+                    processRemove();
+                } else {
+                    viewRemove.classList.add('hidden');
+                    viewHighlight.classList.remove('hidden');
+                    tabRemove.classList.remove('active');
+                    tabHighlight.classList.add('active');
+                    processHighlight();
+                }
+            };
+
+            // --- Event Binding ---
+            // View tabs
+            tabRemove.addEventListener('click', () => switchView('remove'));
+            tabHighlight.addEventListener('click', () => switchView('highlight'));
+
+            // Input textarea
+            inputTextarea.addEventListener('input', () => {
+                updateInputStats();
+            });
+
+            // Remove button
+            btnRemove.addEventListener('click', () => {
+                if (!inputTextarea.value.trim()) {
+                    showToast('請先輸入文字', true);
+                    return;
+                }
+                switchView('remove');
+                processRemove();
+                showToast(`已移除重複行 (${statRemoved.textContent} 行)`);
+            });
+
+            // Options change
+            [optCaseSensitive, optIgnoreSpaces, optIgnoreEmpty, optSort].forEach(opt => {
+                opt.addEventListener('change', refreshView);
+            });
+
+            // Method buttons
+            methodFirst.addEventListener('click', () => {
+                methodFirst.classList.add('active');
+                methodLast.classList.remove('active');
+                currentMethod = 'first';
+                refreshView();
+            });
+            methodLast.addEventListener('click', () => {
+                methodLast.classList.add('active');
+                methodFirst.classList.remove('active');
+                currentMethod = 'last';
+                refreshView();
+            });
+
+            // Copy
+            btnCopy.addEventListener('click', () => {
+                const source = viewRemove.classList.contains('hidden') ? null : outputTextarea.value;
+                if (!source) {
+                    showToast('請先執行去重操作', true);
+                    return;
+                }
+                if (!source.trim()) {
+                    showToast('沒有可複製的內容', true);
+                    return;
+                }
+                navigator.clipboard.writeText(source).then(() => {
+                    showToast('已複製到剪貼簿');
+                }).catch(() => {
+                    outputTextarea.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('已複製到剪貼簿');
+                });
+            });
+
+            // Download TXT
+            btnDownloadTxt.addEventListener('click', () => {
+                const content = outputTextarea.value;
+                if (!content.trim()) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Duplicate_Remover_${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('已下載 TXT 檔案');
+            });
+
+            // Download CSV
+            btnDownloadCsv.addEventListener('click', () => {
+                const content = outputTextarea.value;
+                if (!content.trim()) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                // Convert to CSV: each line becomes a row
+                const lines = content.split('\n');
+                const csvContent = lines.map(line => {
+                    // Escape quotes and wrap in quotes if contains comma or quote
+                    if (line.includes(',') || line.includes('"') || line.includes('\n')) {
+                        return `"${line.replace(/"/g, '""')}"`;
+                    }
+                    return line;
+                }).join('\n');
+                const bom = '﻿';
+                const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Duplicate_Remover_${Date.now()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('已下載 CSV 檔案');
+            });
+
+            // Clear
+            btnClear.addEventListener('click', () => {
+                if (!inputTextarea.value && !outputTextarea.value) {
+                    showToast('已經沒有內容了', true);
+                    return;
+                }
+                inputTextarea.value = '';
+                outputTextarea.value = '';
+                highlightOutput.innerHTML = '<span class="text-slate-500">切換到 Highlight 模式檢視重複行</span>';
+                statOriginal.textContent = '0';
+                statUnique.textContent = '0';
+                statRemoved.textContent = '0';
+                statRate.textContent = '0%';
+                updateInputStats();
+                updateOutputStats('');
+                showToast('已清除所有內容');
+            });
+
+            // Sample
+            btnSample.addEventListener('click', () => {
+                inputTextarea.value = SAMPLE_DATA;
+                updateInputStats();
+                if (viewRemove.classList.contains('hidden')) {
+                    processHighlight();
+                } else {
+                    processRemove();
+                }
+                showToast('已載入範例資料');
+            });
+
+            // --- Toast ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                const toastMsg = document.getElementById('toast-msg');
+
+                toastMsg.textContent = msg;
+
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-dlr-primary';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // Initialize with sample data
+            inputTextarea.value = SAMPLE_DATA;
+            updateInputStats();
+            processRemove();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

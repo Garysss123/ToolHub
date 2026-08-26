@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSD 壽命估算器｜TBW、DWPD 與每日寫入量計算 | ToolHub</title>
+    <meta name="description" content="依 SSD 容量、TBW、DWPD、每日寫入量與使用年限估算耐用度，理解保固指標並規劃備份。">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        ssd: {
+                            primary: '#F59E0B',
+                            green: '#10B981',
+                            yellow: '#F59E0B',
+                            red: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 壽命評級徽章 */
+        .rating-excellent { background-color: rgba(16, 185, 129, 0.15); border-color: #10B981; color: #10B981; }
+        .rating-normal { background-color: rgba(245, 158, 11, 0.15); border-color: #F59E0B; color: #F59E0B; }
+        .rating-heavy { background-color: rgba(239, 68, 68, 0.15); border-color: #EF4444; color: #EF4444; }
+
+        /* 單位切換開關 */
+        .unit-radio:checked + .unit-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/ssd-endurance/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/ssd-endurance/">
+    <meta property="og:title" content="SSD 壽命估算器｜TBW、DWPD 與每日寫入量計算">
+    <meta property="og:description" content="依 SSD 容量、TBW、DWPD、每日寫入量與使用年限估算耐用度，理解保固指標並規劃備份。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SSD 壽命估算器｜TBW、DWPD 與每日寫入量計算">
+    <meta name="twitter:description" content="依 SSD 容量、TBW、DWPD、每日寫入量與使用年限估算耐用度，理解保固指標並規劃備份。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"SSD 壽命與 TBW 估算器","url":"https://toolhuben.com/ssd-endurance/","description":"依 SSD 容量、TBW、DWPD、每日寫入量與使用年限估算耐用度，理解保固指標並規劃備份。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"author":{"@type":"Organization","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"SSD 壽命與 TBW 估算器","item":"https://toolhuben.com/ssd-endurance/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"SSD 壽命與 TBW 估算器適合什麼用途？","acceptedAnswer":{"@type":"Answer","text":"SSD 耐用度常以 TBW 或 DWPD 表示，可用來比較保固期間允許的累積寫入量。估算器依輸入負載換算理論使用年限，但實際壽命仍受控制器、NAND、溫度、寫入放大與韌體影響。"}},{"@type":"Question","name":"如何使用SSD 壽命與 TBW 估算器？","acceptedAnswer":{"@type":"Answer","text":"查詢產品規格中的容量、TBW、DWPD 與保固年限；輸入平均每日主機寫入量並觀察使用情境；將估算結果與 SMART 健康資訊、備份策略一起評估。"}},{"@type":"Question","name":"使用SSD 壽命與 TBW 估算器時要注意什麼？","acceptedAnswer":{"@type":"Answer","text":"耐用度不是資料安全保證。SSD 可能因控制器或電源問題提前故障，也可能超過 TBW 後繼續運作；重要資料必須維持多份獨立備份。"}},{"@type":"Question","name":"SSD 壽命與 TBW 估算器會上傳資料嗎？","acceptedAnswer":{"@type":"Answer","text":"產品參數與使用量只在本機計算，不會讀取硬碟或 SMART 資料。"}},{"@type":"Question","name":"需要安裝軟體或註冊帳號嗎？","acceptedAnswer":{"@type":"Answer","text":"不需要。ToolHub 提供純前端網頁工具，開啟頁面即可使用；若瀏覽器封鎖必要的 JavaScript 或檔案權限，部分功能可能無法執行。"}}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/ssd-endurance/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/ssd-endurance/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/ssd-endurance/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#F59E0B;--classic-accent-rgb:245,158,11" data-tool-visual data-classic-tool data-classic-layout="neon">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        <nav class="seo-upgrade-breadcrumb" aria-label="麵包屑"><a href="/">首頁</a><span>›</span><span>SSD 壽命與 TBW 估算器</span></nav>
+
+        <!-- ===================== 標題區 ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-amber-950/30 border border-amber-900/50 text-xs text-amber-400 shadow-inner">
+                <i class="ph-fill ph-hard-drive mr-1.5 text-sm"></i>
+                物理寫入耐久度推演已掛載
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                SSD 壽命<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">估算器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                基於 TBW (Total Bytes Written) 規格的 SSD 耐用度計算引擎。輸入每日寫入量，即可精準推演固態硬碟的預估使用年限，並獲取使用情境建議。
+            </p>
+        </div>
+
+        <!-- ===================== 主網格：輸入(左) + 結果(右) ===================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ======== 左側：輸入面板 (lg:col-span-5) ======== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+
+                <!-- SSD TBW -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-hard-drive text-amber-400 text-lg"></i> SSD 寫入總量 (TBW)
+                    </h3>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">TB</span>
+                        <input type="number" id="in-tbw" value="640" min="1" max="100000" step="1"
+                            class="w-full bg-hub-900 border border-hub-700 rounded-lg pl-9 pr-4 py-3 text-white font-mono text-lg outline-none focus:border-amber-400 transition-colors">
+                    </div>
+                    <p class="text-[10px] text-slate-500 leading-relaxed">
+                        TBW 為 SSD 製造商保證的總寫入量（以 TB 為單位）。可在 SSD 規格表中找到此數值。
+                    </p>
+                </div>
+
+                <!-- 每日寫入量 + 容量 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-5 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-pencil-simple-line text-sky-400 text-lg"></i> 每日寫入量與硬碟容量
+                    </h3>
+
+                    <!-- 每日寫入量 -->
+                    <div class="space-y-3">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">每日寫入量</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="in-daily-write" value="50" min="0.1" step="0.1"
+                                class="flex-1 bg-hub-900 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-sm outline-none focus:border-sky-400 transition-colors">
+
+                            <!-- GB/day / TB/day 切換 -->
+                            <div class="flex rounded-lg overflow-hidden border border-hub-700 flex-shrink-0">
+                                <label>
+                                    <input type="radio" name="write-unit" value="gb" class="sr-only unit-radio" checked>
+                                    <span class="unit-label px-3 py-2 bg-hub-900 text-xs text-slate-400 cursor-pointer transition-all inline-block">GB/天</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="write-unit" value="tb" class="sr-only unit-radio">
+                                    <span class="unit-label px-3 py-2 bg-hub-900 text-xs text-slate-400 cursor-pointer transition-all inline-block">TB/天</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SSD 容量 (選填) -->
+                    <div class="space-y-3">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">SSD 容量 <span class="text-slate-600 font-normal normal-case">(選填，輔助參考)</span></label>
+                        <select id="in-capacity"
+                            class="w-full bg-hub-900 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-sm outline-none focus:border-sky-400 transition-colors cursor-pointer">
+                            <option value="">不使用容量參考</option>
+                            <option value="250">250 GB</option>
+                            <option value="500">500 GB</option>
+                            <option value="1000">1 TB</option>
+                            <option value="2000">2 TB</option>
+                            <option value="4000">4 TB</option>
+                            <option value="custom">自訂大小</option>
+                        </select>
+                        <!-- 自訂容量 -->
+                        <div id="custom-capacity-wrap" class="hidden mt-2 relative">
+                            <input type="number" id="in-custom-capacity" value="1024" min="1" step="1"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg pl-4 pr-12 py-2.5 text-white font-mono text-sm outline-none focus:border-sky-400 transition-colors"
+                                placeholder="輸入容量 (GB)">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">GB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 計算按鈕 -->
+                <button id="btn-calculate"
+                    class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-lg rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-calculator text-xl"></i> 開始計算
+                </button>
+
+            </div>
+
+            <!-- ======== 右側：結果面板 (lg:col-span-7) ======== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col gap-5">
+                    <!-- 裝飾背景 icon -->
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-timer text-9xl"></i>
+                    </div>
+
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 relative z-10">
+                        壽命預估結果
+                    </h3>
+
+                    <!-- 主要結果：年數 -->
+                    <div class="relative z-10 text-center py-4" id="result-years-wrap">
+                        <div class="text-5xl sm:text-6xl font-mono font-bold text-amber-400 drop-shadow-lg tracking-tight" id="out-years">--</div>
+                        <div class="text-slate-500 text-sm mt-1">預估可使用年數</div>
+                    </div>
+
+                    <!-- 次要數據網格 2x2 -->
+                    <div class="grid grid-cols-2 gap-3 relative z-10">
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">可寫入總 TB</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-total-tbw">-- TB</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">預估天數</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-days">-- 天</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">每日寫入量</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-daily">-- GB</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">DWPD 參考</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-dwpd">-- DWPD</p>
+                        </div>
+                    </div>
+
+                    <!-- 壽命評級徽章 -->
+                    <div class="relative z-10 mt-1">
+                        <div id="life-rating" class="hidden rounded-xl border p-4 flex items-start gap-3 transition-all">
+                            <i class="ph-fill ph-seal-check text-2xl mt-0.5" id="rating-icon"></i>
+                            <div>
+                                <p class="font-bold text-sm" id="rating-title">--</p>
+                                <p class="text-xs mt-0.5 opacity-80" id="rating-desc">--</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 計算公式 -->
+                    <div class="relative z-10 bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">計算公式</span>
+                        <p class="font-mono text-xs text-slate-300 leading-relaxed" id="out-formula">
+                            <span class="text-amber-400">使用天數</span> = TBW ÷ 每日寫入量(TB)
+                            <br>
+                            <span class="text-amber-400">使用年數</span> = 使用天數 ÷ 365
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ===================== 使用情境參考表 ===================== -->
+        <div class="mt-10 glass-panel p-6 shadow-xl">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                <i class="ph ph-table text-amber-400 text-lg"></i> 使用情境參考表
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-hub-700">
+                            <th class="pb-2 pr-4">使用情境</th>
+                            <th class="pb-2 pr-4">每日寫入量</th>
+                            <th class="pb-2">建議 TBW</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-mono text-xs">
+                        <tr class="border-b border-hub-700/50">
+                            <td class="py-2.5 pr-4 text-white">文書處理 / 上網</td>
+                            <td class="py-2.5 pr-4 text-slate-300">~20 GB/天</td>
+                            <td class="py-2.5 text-amber-400">200 TBW</td>
+                        </tr>
+                        <tr class="border-b border-hub-700/50">
+                            <td class="py-2.5 pr-4 text-white">遊戲</td>
+                            <td class="py-2.5 pr-4 text-slate-300">~50 GB/天</td>
+                            <td class="py-2.5 text-amber-400">400 TBW</td>
+                        </tr>
+                        <tr class="border-b border-hub-700/50">
+                            <td class="py-2.5 pr-4 text-white">軟體開發</td>
+                            <td class="py-2.5 pr-4 text-slate-300">~80 GB/天</td>
+                            <td class="py-2.5 text-amber-400">600 TBW</td>
+                        </tr>
+                        <tr class="border-b border-hub-700/50">
+                            <td class="py-2.5 pr-4 text-white">影片剪輯</td>
+                            <td class="py-2.5 pr-4 text-slate-300">~150 GB/天</td>
+                            <td class="py-2.5 text-amber-400">1200 TBW</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2.5 pr-4 text-white">AI 工作站 / 資料中心</td>
+                            <td class="py-2.5 pr-4 text-slate-300">~300 GB/天</td>
+                            <td class="py-2.5 text-amber-400">2400 TBW</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===================== SEO 知識區 ===================== -->
+        <div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+
+            <div class="border-b border-hub-700 pb-2 mb-6">
+                <h2 class="text-xl font-bold text-white tracking-wide">SSD 壽命知識百科</h2>
+                <p class="text-slate-500 text-sm mt-1">深入了解 SSD 耐用度的技術內涵與影響因素</p>
+            </div>
+
+            <!-- 什麼是 TBW -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-question text-amber-400"></i> 什麼是 TBW？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    TBW（Total Bytes Written，總寫入位元組）是 SSD 固態硬碟最重要的耐用度指標之一，代表製造商保證硬碟在保固期內可以安全寫入的資料總量。舉例來說，若一顆 SSD 標示為「640 TBW」，代表這顆硬碟在出廠到保固屆滿之間，總共可以承受約 640 TB 的資料寫入量。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    TBW 由 JEDEC（固態技術協會）制定標準，是目前業界最廣泛採用的 SSD 耐用度衡量基準。不同等級的 SSD 擁有截然不同的 TBW 規格：一般消費級 SSD 約介於 150~600 TBW，而企業級 SSD 則可高達數千甚至上萬 TBW。
+                </p>
+            </div>
+
+            <!-- SSD 壽命介紹 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-info text-amber-400"></i> SSD 壽命介紹
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    SSD 的壽命主要由 NAND Flash 快閃記憶體的 P/E 循環（Program/Erase Cycle，寫入/抹除次數）決定。每次對 SSD 進行資料寫入時，儲存單元都會經歷一次 P/E 循環。隨著 P/E 次數增加，儲存單元的氧化物層會逐漸磨損，最終導致無法可靠地保存資料。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    不同類型的 NAND 快閃記憶體擁有不同的 P/E 循環耐受度：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-1 list-disc list-inside">
+                    <li><strong class="text-slate-300">SLC</strong>（單層單元）：約 50,000~100,000 次 P/E — 最耐用但成本最高</li>
+                    <li><strong class="text-slate-300">MLC</strong>（雙層單元）：約 3,000~10,000 次 P/E</li>
+                    <li><strong class="text-slate-300">TLC</strong>（三層單元）：約 1,000~3,000 次 P/E — 目前消費級主流</li>
+                    <li><strong class="text-slate-300">QLC</strong>（四層單元）：約 500~1,000 次 P/E — 容量最大但壽命最短</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    以 TLC SSD 為例，若每日寫入量為 50 GB，一顆 1TB（1000GB）的硬碟理論上可使用 1,000 × 1,000 ÷ 50 = 20,000 天，約 54 年。然而實際壽命還會受到寫入放大（Write Amplification）等因素影響。
+                </p>
+            </div>
+
+            <!-- TBW 是否代表 SSD 會壞 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-shield-check text-amber-400"></i> TBW 是否代表 SSD 會壞？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    <strong class="text-slate-300">不一定。</strong> TBW 是製造商的保固承諾值，並非 SSD 的「死亡倒數計時器」。超過 TBW 並不代表 SSD 會立即損壞，而是表示製造商不再保證其可靠性。事實上，許多 SSD 在超過 TBW 後仍可正常運作很長一段時間。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    然而，隨著寫入量逼近 TBW 上限，SSD 出現以下情況的機率會逐漸增加：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-1 list-disc list-inside">
+                    <li>壞塊（Bad Block）數量增加</li>
+                    <li>讀寫速度下降</li>
+                    <li>資料保存期限（Data Retention）縮短</li>
+                    <li>ECC 糾錯頻率升高</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    建議在 SSD 達到 80% TBW 時開始規劃更換，以確保資料安全。
+                </p>
+            </div>
+
+            <!-- 哪些因素影響 SSD 壽命 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-microchip text-amber-400"></i> 哪些因素影響 SSD 壽命？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    除了 TBW 和 NAND 類型之外，以下因素也會顯著影響 SSD 的實際使用壽命：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">寫入放大（Write Amplification, WA）</strong>：SSD 在寫入前必須先抹除整區塊，即使只修改少量資料，也可能引發大量內部搬移寫入。寫入放大係數越高，對 SSD 的損耗越大。</li>
+                    <li><strong class="text-slate-300">TRIM 指令支援</strong>：啟用 TRIM 可讓 SSD 在刪除檔案時預先清理無效資料區塊，減少寫入放大的影響，延長使用壽命。</li>
+                    <li><strong class="text-slate-300">預留空間（Over-Provisioning, OP）</strong>：SSD 保留的額外空間（通常為總容量的 7%~28%）可作為磨損平衡的緩衝區，越多預留空間越有助於延長壽命。</li>
+                    <li><strong class="text-slate-300">溫度</strong>：高溫會加速 NAND 儲存單元的電子洩漏，縮短資料保存時間並加劇磨損。建議將 SSD 工作溫度控制在 70°C 以下。</li>
+                    <li><strong class="text-slate-300">電源穩定性</strong>：頻繁的突然斷電可能導致 SSD 韌體崩潰或對映表（FTL）損毀，建議搭配 UPS 或具備斷電保護（PLP）的企業級 SSD。</li>
+                    <li><strong class="text-slate-300">SSD 填充率</strong>：當 SSD 接近滿載時（使用率 >90%），寫入放大效應會急遽增加，因為可用的空白區塊減少，GC（垃圾回收）更加頻繁。</li>
+                </ul>
+            </div>
+
+        </div>
+
+    
+        <!-- SEO Upgrade 2026 Content -->
+        <article class="seo-upgrade" aria-label="SSD 壽命與 TBW 估算器教學與常見問題">
+          <section class="seo-upgrade-card">
+            <h2>SSD 壽命與 TBW 估算器完整使用指南</h2>
+            <p>SSD 耐用度常以 TBW 或 DWPD 表示，可用來比較保固期間允許的累積寫入量。估算器依輸入負載換算理論使用年限，但實際壽命仍受控制器、NAND、溫度、寫入放大與韌體影響。</p>
+            <h3>操作步驟</h3>
+            <ol><li>查詢產品規格中的容量、TBW、DWPD 與保固年限</li><li>輸入平均每日主機寫入量並觀察使用情境</li><li>將估算結果與 SMART 健康資訊、備份策略一起評估</li></ol>
+            <h3>實務建議與限制</h3>
+            <p>耐用度不是資料安全保證。SSD 可能因控制器或電源問題提前故障，也可能超過 TBW 後繼續運作；重要資料必須維持多份獨立備份。</p>
+            <h3>隱私與本機處理</h3>
+            <p>產品參數與使用量只在本機計算，不會讀取硬碟或 SMART 資料。</p>
+          </section>
+          <section class="seo-upgrade-card">
+            <h2>SSD 壽命與 TBW 估算器常見問題</h2>
+            <details><summary>SSD 壽命與 TBW 估算器適合什麼用途？</summary><div class="seo-upgrade-answer">SSD 耐用度常以 TBW 或 DWPD 表示，可用來比較保固期間允許的累積寫入量。估算器依輸入負載換算理論使用年限，但實際壽命仍受控制器、NAND、溫度、寫入放大與韌體影響。</div></details>
+            <details><summary>如何使用SSD 壽命與 TBW 估算器？</summary><div class="seo-upgrade-answer">查詢產品規格中的容量、TBW、DWPD 與保固年限；輸入平均每日主機寫入量並觀察使用情境；將估算結果與 SMART 健康資訊、備份策略一起評估。</div></details>
+            <details><summary>使用SSD 壽命與 TBW 估算器時要注意什麼？</summary><div class="seo-upgrade-answer">耐用度不是資料安全保證。SSD 可能因控制器或電源問題提前故障，也可能超過 TBW 後繼續運作；重要資料必須維持多份獨立備份。</div></details>
+            <details><summary>SSD 壽命與 TBW 估算器會上傳資料嗎？</summary><div class="seo-upgrade-answer">產品參數與使用量只在本機計算，不會讀取硬碟或 SMART 資料。</div></details>
+            <details><summary>需要安裝軟體或註冊帳號嗎？</summary><div class="seo-upgrade-answer">不需要。ToolHub 提供純前端網頁工具，開啟頁面即可使用；若瀏覽器封鎖必要的 JavaScript 或檔案權限，部分功能可能無法執行。</div></details>
+          </section>
+        </article>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 頁尾 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式 (System Bootstrap)             -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/ssd-endurance';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：SSD 壽命計算引擎            -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Toast ---
+            window.showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- DOM 元素參照 ---
+            const inTbw = document.getElementById('in-tbw');
+            const inDailyWrite = document.getElementById('in-daily-write');
+            const inCapacity = document.getElementById('in-capacity');
+            const inCustomCapacity = document.getElementById('in-custom-capacity');
+            const customCapacityWrap = document.getElementById('custom-capacity-wrap');
+            const outYears = document.getElementById('out-years');
+            const outDays = document.getElementById('out-days');
+            const outTotalTbw = document.getElementById('out-total-tbw');
+            const outDaily = document.getElementById('out-daily');
+            const outDwpd = document.getElementById('out-dwpd');
+            const outFormula = document.getElementById('out-formula');
+            const lifeRating = document.getElementById('life-rating');
+            const ratingIcon = document.getElementById('rating-icon');
+            const ratingTitle = document.getElementById('rating-title');
+            const ratingDesc = document.getElementById('rating-desc');
+            const btnCalculate = document.getElementById('btn-calculate');
+
+            // --- 輔助：取得容量 GB ---
+            const getCapacityGB = () => {
+                const selected = inCapacity.value;
+                if (selected === 'custom') return parseFloat(inCustomCapacity.value) || 0;
+                return selected ? parseFloat(selected) : 0;
+            };
+
+            // --- Pop 動畫 ---
+            const triggerPop = (el) => {
+                el.classList.remove('animate-pop');
+                void el.offsetWidth;
+                el.classList.add('animate-pop');
+            };
+
+            // --- 核心計算 ---
+            const calculate = () => {
+                const tbw = parseFloat(inTbw.value) || 0;
+                let dailyWrite = parseFloat(inDailyWrite.value) || 0;
+
+                // 單位換算
+                const unit = document.querySelector('input[name="write-unit"]:checked').value;
+                const dailyWriteTB = unit === 'gb' ? dailyWrite / 1024 : dailyWrite;
+                const dailyWriteGB = unit === 'gb' ? dailyWrite : dailyWrite * 1024;
+
+                // 更新每日寫入顯示
+                outDaily.textContent = dailyWriteGB.toFixed(2) + ' GB';
+                outTotalTbw.textContent = tbw.toLocaleString('zh-TW') + ' TB';
+
+                // 驗證輸入
+                if (tbw <= 0 || dailyWrite <= 0 || dailyWriteTB <= 0) {
+                    outYears.textContent = '--';
+                    outDays.textContent = '-- 天';
+                    outDwpd.textContent = '-- DWPD';
+                    lifeRating.classList.add('hidden');
+                    outFormula.innerHTML = `
+                        <span class="text-amber-400">使用天數</span> = TBW ÷ 每日寫入量(TB)
+                        <br>
+                        <span class="text-amber-400">使用年數</span> = 使用天數 ÷ 365
+                    `;
+                    return;
+                }
+
+                // 計算天數與年數
+                const days = tbw / dailyWriteTB;
+                const years = days / 365;
+
+                // 更新主要結果
+                outYears.textContent = years.toFixed(2);
+                triggerPop(outYears);
+                outDays.textContent = Math.round(days).toLocaleString('zh-TW') + ' 天';
+
+                // DWPD 計算 (每日寫入量 / 容量GB)
+                const capacityGB = getCapacityGB();
+                let dwpdStr = '-- DWPD';
+                if (capacityGB > 0 && dailyWriteGB > 0) {
+                    const dwpd = dailyWriteGB / capacityGB;
+                    dwpdStr = dwpd.toFixed(4) + ' DWPD';
+                }
+                outDwpd.textContent = dwpdStr;
+
+                // 計算公式
+                outFormula.innerHTML = `
+                    <span class="text-amber-400">使用天數</span> = ${tbw.toLocaleString('zh-TW')} TB ÷ ${dailyWriteTB.toFixed(4)} TB = <span class="text-white font-bold">${Math.round(days).toLocaleString('zh-TW')} 天</span>
+                    <br>
+                    <span class="text-amber-400">使用年數</span> = ${Math.round(days).toLocaleString('zh-TW')} 天 ÷ 365 = <span class="text-white font-bold">${years.toFixed(2)} 年</span>
+                `;
+
+                // 壽命評級
+                lifeRating.classList.remove('hidden');
+                lifeRating.className = 'rounded-xl border p-4 flex items-start gap-3';
+
+                if (years >= 10) {
+                    lifeRating.classList.add('rating-excellent');
+                    ratingIcon.className = 'ph-fill ph-seal-check text-2xl mt-0.5';
+                    ratingTitle.textContent = '🟢 極佳耐用 — Excellent';
+                    ratingDesc.textContent = '預估可使用超過 10 年，SSD 壽命非常充裕。在正常使用下，這顆 SSD 足以陪伴您度過多次硬體升級週期，無需擔心寫入壽命問題。';
+                } else if (years >= 3) {
+                    lifeRating.classList.add('rating-normal');
+                    ratingIcon.className = 'ph-fill ph-warning-circle text-2xl mt-0.5';
+                    ratingTitle.textContent = '🟡 正常使用 — Normal';
+                    ratingDesc.textContent = '預估使用 3~10 年，符合一般消費級 SSD 的正常壽命範圍。請持續監控 SSD 健康度，並定期備份重要資料。';
+                } else {
+                    lifeRating.classList.add('rating-heavy');
+                    ratingIcon.className = 'ph-fill ph-fire text-2xl mt-0.5';
+                    ratingTitle.textContent = '🔴 高強度寫入 — Heavy Usage';
+                    ratingDesc.textContent = '預估使用不足 3 年，屬於高強度寫入場景。建議考慮升級更高 TBW 的企業級 SSD，或降低每日寫入量以延長使用壽命。';
+                }
+            };
+
+            // --- 事件綁定 ---
+            btnCalculate.addEventListener('click', calculate);
+
+            // 即時計算（輸入變更時自動更新）
+            inTbw.addEventListener('input', calculate);
+            inDailyWrite.addEventListener('input', calculate);
+
+            // 單位切換
+            document.querySelectorAll('input[name="write-unit"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    // 切換時轉換數值
+                    const currentVal = parseFloat(inDailyWrite.value);
+                    if (!currentVal || isNaN(currentVal)) return;
+
+                    const unit = document.querySelector('input[name="write-unit"]:checked').value;
+                    if (unit === 'gb') {
+                        // 從 TB 轉 GB
+                        inDailyWrite.value = currentVal * 1024;
+                    } else {
+                        // 從 GB 轉 TB
+                        inDailyWrite.value = currentVal / 1024;
+                    }
+                    calculate();
+                });
+            });
+
+            // 容量下拉：顯示/隱藏自訂輸入
+            inCapacity.addEventListener('change', () => {
+                if (inCapacity.value === 'custom') {
+                    customCapacityWrap.classList.remove('hidden');
+                } else {
+                    customCapacityWrap.classList.add('hidden');
+                }
+                calculate();
+            });
+            inCustomCapacity.addEventListener('input', calculate);
+
+            // 初始化計算
+            calculate();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

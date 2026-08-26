@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTTP Header Analyzer HTTP 標頭分析工具 | ToolHub - 安全、快取、CORS 完整分析</title>
+<meta name="description" content="免費線上 HTTP Header Analyzer。貼上 Request/Response Header 即時分析安全標頭、CORS 配置、快取策略、Cookie 安全性。支援 Security Score、Header Reference、cURL 解析。純前端本地運算。">
+<meta name="keywords" content="HTTP Header Analyzer, HTTP 標頭分析, Security Header, CORS 分析, Cache 分析, Cookie 安全, HSTS, CSP, HTTP Header Reference">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script>
+tailwind.config={theme:{extend:{colors:{hub:{900:'#0B1120',800:'#151F32',700:'#1E293B',accent:'#10B981'}},fontFamily:{sans:['"Noto Sans TC"','ui-sans-serif','system-ui','sans-serif'],mono:['"Fira Code"','ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','monospace']}}}}
+</script>
+<style>
+body{background-color:#0B1120;color:#E2E8F0;background-image:linear-gradient(to right,rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:30px 30px;background-attachment:fixed}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1E293B;border-radius:10px;border:2px solid #0B1120}
+::-webkit-scrollbar-thumb:hover{background:#10B981}
+.glass-panel{background-color:rgba(21,31,50,0.8);backdrop-filter:blur(8px);border:1px solid #1E293B;border-radius:1rem}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.h-input{width:100%;min-height:180px;background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;border-radius:0.75rem;padding:0.85rem 1rem;outline:none;font-family:'Fira Code',monospace;font-size:0.78rem;line-height:1.6;resize:vertical;transition:border-color 0.2s,box-shadow 0.2s;tab-size:2}
+.h-input:focus{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,0.1)}
+.h-input::placeholder{color:#475569}
+.action-btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 0.9rem;border-radius:0.5rem;font-size:0.78rem;font-weight:500;border:1px solid #1e293b;background:transparent;color:#94a3b8;transition:all 0.2s;cursor:pointer}
+.action-btn:hover{color:#e2e8f0;background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.25)}
+.action-btn.primary{background:rgba(16,185,129,0.12);color:#10B981;border-color:rgba(16,185,129,0.25)}
+.action-btn.primary:hover{background:rgba(16,185,129,0.2)}
+.action-btn svg{width:0.9rem;height:0.9rem}
+.sec-card{background:#0f172a;border:1px solid #1e293b;border-radius:0.5rem;padding:0.65rem;display:flex;align-items:center;gap:0.5rem;transition:border-color 0.2s}
+.sec-card:hover{border-color:rgba(16,185,129,0.2)}
+.sec-card .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sec-card .name{font-size:0.72rem;font-weight:600;color:#94a3b8;font-family:'Fira Code',monospace}
+.sec-card .val{font-size:0.7rem;color:#64748b;word-break:break-all}
+.tag{display:inline-flex;padding:0.1rem 0.4rem;border-radius:0.25rem;font-size:0.6rem;font-weight:600;white-space:nowrap}
+.tag.ok{background:rgba(16,185,129,0.15);color:#6EE7B7}
+.tag.warn{background:rgba(245,158,11,0.15);color:#FCD34D}
+.tag.bad{background:rgba(239,68,68,0.15);color:#FCA5A5}
+.tag.info{background:rgba(59,130,246,0.15);color:#93C5FD}
+.score-ring{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;flex-shrink:0}
+.score-ring.excellent{background:conic-gradient(#10B981 360deg,#1e293b 0deg);color:#10B981}
+.score-ring.good{background:conic-gradient(#38BDF8 270deg,#1e293b 0deg);color:#38BDF8}
+.score-ring.fair{background:conic-gradient(#F59E0B 180deg,#1e293b 0deg);color:#F59E0B}
+.score-ring.poor{background:conic-gradient(#EF4444 90deg,#1e293b 0deg);color:#EF4444}
+.h-table{width:100%;border-collapse:collapse;font-size:0.78rem}
+.h-table th{text-align:left;padding:0.45rem 0.6rem;font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;border-bottom:1px solid #1e293b;background:rgba(11,17,32,0.3)}
+.h-table td{padding:0.4rem 0.6rem;border-bottom:1px solid rgba(30,41,59,0.3);vertical-align:top;word-break:break-all}
+.h-table tr{cursor:pointer;transition:background 0.1s}
+.h-table tr:hover td{background:rgba(16,185,129,0.015)}
+.h-table .h-name{color:#10B981;font-family:'Fira Code',monospace;font-weight:500}
+.h-table .h-val{color:#e2e8f0;font-family:'Fira Code',monospace;font-size:0.72rem}
+.h-table .h-desc{color:#64748b;font-size:0.7rem}
+.ref-panel{background:#0f172a;border:1px solid #1e293b;border-radius:0.5rem;padding:0.75rem;margin-top:0.25rem;display:none}
+.ref-panel.open{display:block}
+.ref-panel .r-title{font-size:0.8rem;font-weight:700;color:#e2e8f0;margin-bottom:0.3rem}
+.ref-panel .r-row{display:flex;gap:0.5rem;font-size:0.72rem;padding:0.15rem 0}
+.ref-panel .r-label{color:#64748b;flex-shrink:0;width:4.5rem}
+.ref-panel .r-value{color:#94a3b8}
+.cookie-card{background:#0f172a;border:1px solid #1e293b;border-radius:0.5rem;padding:0.6rem 0.75rem}
+.cookie-card .c-name{font-weight:600;color:#e2e8f0;font-family:'Fira Code',monospace;font-size:0.78rem}
+.cookie-card .c-attr{font-size:0.7rem;color:#94a3b8;display:inline-flex;align-items:center;gap:0.25rem;padding:0.1rem 0.35rem;border-radius:0.2rem;background:rgba(11,17,32,0.5)}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary{cursor:pointer;padding:1rem 1.25rem;border-radius:0.75rem;background:#151F32;border:1px solid #1e293b;font-weight:500;color:#e2e8f0;transition:all 0.2s;display:flex;align-items:center;justify-content:space-between}
+.faq-item summary:hover{border-color:rgba(16,185,129,0.3)}
+.faq-item[open] summary{border-color:rgba(16,185,129,0.3);border-radius:0.75rem 0.75rem 0 0}
+.faq-item .faq-content{padding:1rem 1.25rem;background:#151F32;border:1px solid #1e293b;border-top:none;border-radius:0 0 0.75rem 0.75rem;color:#94a3b8;font-size:0.9rem;line-height:1.7}
+.faq-item .chevron-icon{transition:transform 0.3s}
+.faq-item[open] .chevron-icon{transform:rotate(180deg)}
+@media(max-width:640px){.h-input{font-size:0.7rem;min-height:140px}.h-table{font-size:0.7rem}.h-table td{padding:0.3rem 0.4rem}}
+</style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/http-header-analyzer/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/http-header-analyzer/">
+    <meta property="og:title" content="HTTP Header Analyzer HTTP 標頭分析工具">
+    <meta property="og:description" content="免費線上 HTTP Header Analyzer。貼上 Request/Response Header 即時分析安全標頭、CORS 配置、快取策略、Cookie 安全性。支援 Security Score、Header Reference、cURL 解析。純前端本地運算。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="HTTP Header Analyzer HTTP 標頭分析工具">
+    <meta name="twitter:description" content="免費線上 HTTP Header Analyzer。貼上 Request/Response Header 即時分析安全標頭、CORS 配置、快取策略、Cookie 安全性。支援 Security Score、Header Reference、cURL 解析。純前端本地運算。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"HTTP Header Analyzer HTTP 標頭分析工具","url":"https://toolhuben.com/http-header-analyzer/","description":"免費線上 HTTP Header Analyzer。貼上 Request/Response Header 即時分析安全標頭、CORS 配置、快取策略、Cookie 安全性。支援 Security Score、Header Reference、cURL 解析。純前端本地運算。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"HTTP Header Analyzer HTTP 標頭分析工具","item":"https://toolhuben.com/http-header-analyzer/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/http-header-analyzer/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/http-header-analyzer/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/http-header-analyzer/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#10B981;--classic-accent-rgb:16,185,129" data-tool-visual data-classic-tool data-classic-layout="split">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+<span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>純前端本地運算 · 您的 Header 絕不離開設備</div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">HTTP Header <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Analyzer</span></h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">貼上 HTTP Request / Response Header，即時解析結構、分析安全性、快取設定、CORS 配置與 Cookie 安全。<br class="hidden sm:block">適用於 Web 開發、API 除錯與資安分析。</p>
+</div>
+
+<div class="glass-panel shadow-2xl shadow-black/50 overflow-hidden mb-8">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-text-h-five text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">HTTP Header 分析器</span><span class="text-[10px] text-slate-500 ml-auto">支援 Request / Response / cURL</span>
+</div>
+<div class="p-4 sm:p-6 space-y-4">
+<div><label class="text-xs font-medium text-slate-400 mb-1.5 block">貼上 HTTP Header</label>
+<textarea id="h-input" class="h-input" placeholder='貼上 HTTP Request 或 Response Header，例如：&#10;&#10;GET /api/users HTTP/1.1&#10;Host: api.example.com&#10;User-Agent: Mozilla/5.0&#10;Accept: application/json&#10;Authorization: Bearer xyz&#10;&#10;或 Response Header：&#10;&#10;HTTP/1.1 200 OK&#10;Content-Type: application/json&#10;Cache-Control: public, max-age=3600&#10;Strict-Transport-Security: max-age=31536000&#10;X-Frame-Options: DENY' spellcheck="false"></textarea></div>
+<div class="flex flex-wrap gap-2">
+<button id="btn-parse" class="action-btn primary"><i class="ph ph-play"></i> 分析</button>
+<button id="btn-sample-req" class="action-btn"><i class="ph ph-upload"></i> Sample Request</button>
+<button id="btn-sample-resp" class="action-btn"><i class="ph ph-download"></i> Sample Response</button>
+<button id="btn-clear" class="action-btn"><i class="ph ph-trash"></i> Clear</button>
+</div>
+</div>
+</div>
+
+<div id="results-container" style="display:none">
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-shield-check text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">Security Score</span></div>
+<div class="p-4 sm:p-6"><div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6" id="score-content"></div></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-info text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">概覽</span></div>
+<div class="p-4 sm:p-6" id="overview-content"></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-shield text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">Security Headers 分析</span></div>
+<div class="p-4 sm:p-6" id="security-headers-content"></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-globe text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">CORS 分析</span></div>
+<div class="p-4 sm:p-6" id="cors-content"></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-gauge text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">Cache 分析</span></div>
+<div class="p-4 sm:p-6" id="cache-content"></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-cookie text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">Cookie 分析</span></div>
+<div class="p-4 sm:p-6" id="cookie-content"></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2 flex-wrap"><i class="ph ph-list-checks text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">所有 Headers</span>
+<div class="ml-auto relative"><input id="header-search" style="padding:0.3rem 0.5rem;font-size:0.7rem;width:130px;background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;border-radius:0.375rem;outline:none;font-family:inherit" placeholder="搜尋 Header..."></div></div>
+<div class="p-4 sm:p-6 overflow-x-auto"><table class="h-table"><thead><tr><th style="width:30%">Header</th><th style="width:35%">Value</th><th style="width:35%">Description</th></tr></thead><tbody id="header-table-body"></tbody></table></div>
+</div>
+
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2"><i class="ph ph-book text-hub-accent text-lg"></i><span class="text-sm font-bold text-white">HTTP Header Reference</span><span class="text-[10px] text-hub-accent bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">特色功能</span></div>
+<div class="p-4 sm:p-6"><div class="text-xs text-slate-500 mb-2">點擊上方表格中的 Header 名稱，查看詳細說明、常見值與 RFC。</div><div id="ref-content" class="text-slate-500 text-sm">點擊 Header 名稱查看參考資訊</div></div>
+</div>
+
+<div class="flex flex-wrap gap-2 pt-2">
+<button id="btn-copy" class="action-btn"><i class="ph ph-copy"></i> Copy Analysis</button>
+<button id="btn-download-txt" class="action-btn"><i class="ph ph-file-text"></i> Download TXT</button>
+<button id="btn-download-json" class="action-btn"><i class="ph ph-file-js"></i> Download JSON</button>
+</div>
+</div>
+
+<div class="glass-panel p-6 shadow-xl mt-8">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5"><i class="ph-fill ph-question-mark text-hub-accent"></i> HTTP Header 常見問題 FAQ</h3>
+<div class="space-y-4" itemscope itemtype="https://schema.org/FAQPage">
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q1: HTTP Header 是什麼？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed"><strong class="text-white">HTTP Header（HTTP 標頭）</strong>是 HTTP 請求和回應中的後設資料（metadata），位於起始行之後、訊息主體之前，以 <code class="text-hub-accent">Header-Name: Value</code> 格式呈現。Header 傳遞了關於請求、回應或連線的額外資訊，如內容類型、快取策略、認證資訊、安全設定等。<br><br>範例：<br><code class="text-hub-accent text-xs">Content-Type: text/html; charset=utf-8<br>Cache-Control: public, max-age=3600<br>X-Frame-Options: DENY</code></p></div>
+</details></div>
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q2: Request Header 和 Response Header 有什麼差別？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed"><strong class="text-white">Request Header</strong>由用戶端發送給伺服器，包含 Host、User-Agent、Accept、Authorization、Cookie 等。<strong class="text-white">Response Header</strong>由伺服器發送給用戶端，包含 Content-Type、Cache-Control、Set-Cookie、Strict-Transport-Security 等。</p></div>
+</details></div>
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q3: 什麼是 Security Headers？為什麼重要？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed"><strong class="text-white">Security Headers</strong>是 HTTP Response Header 中用來增強網站安全性的標頭，如 HSTS（強制 HTTPS）、CSP（防 XSS）、X-Frame-Options（防 Clickjacking）等。OWASP 建議所有正式環境網站都應配置這些標頭。</p></div>
+</details></div>
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q4: CORS 是什麼？為什麼需要設定 CORS Headers？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed"><strong class="text-white">CORS（跨來源資源共享）</strong>是一種瀏覽器安全機制，允許網頁從一個網域向另一個網域請求資源。相關 Header 包括 <code class="text-hub-accent">Access-Control-Allow-Origin</code>、<code class="text-hub-accent">Allow-Methods</code>、<code class="text-hub-accent">Allow-Headers</code>、<code class="text-hub-accent">Allow-Credentials</code>、<code class="text-hub-accent">Max-Age</code>。常見問題：使用 <code>*</code> 搭配 credentials=true 會失敗。</p></div>
+</details></div>
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q5: Cache-Control 和 Expires 有什麼不同？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed"><strong class="text-white">Expires</strong> 是 HTTP/1.0 標頭，使用絕對時間指定過期時間。<strong class="text-white">Cache-Control</strong> 是 HTTP/1.1 標頭，提供更精細的快取控制（如 <code class="text-hub-accent">max-age</code>、<code class="text-hub-accent">public</code>、<code class="text-hub-accent">no-store</code>）。現代網站應優先使用 Cache-Control，並可同時設定 Expires 作為 fallback。</p></div>
+</details></div>
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q6: Cookie 的 Secure、HttpOnly、SameSite 是做什麼的？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed"><strong class="text-white">Secure</strong>：Cookie 僅在 HTTPS 下發送。<strong class="text-white">HttpOnly</strong>：禁止 JavaScript 存取（防 XSS 竊取）。<strong class="text-white">SameSite</strong>：控制跨站請求行為（Strict/Lax/None）。最佳實踐：敏感 Cookie 應同時設定三者。</p></div>
+</details></div>
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q7: 本工具會將我的 Header 資訊上傳到伺服器嗎？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">完全不會。本工具是<strong class="text-white">純前端應用</strong>，所有解析與分析都在您的瀏覽器中本地完成。</p></div>
+</details></div>
+</div>
+</div>
+
+<div class="glass-panel p-6 shadow-xl mt-8">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5"><i class="ph ph-book-open text-hub-accent"></i> HTTP Header 完整指南</h3>
+<div class="space-y-5 text-slate-400 text-sm leading-relaxed">
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">HTTP 訊息的結構</h4>
+<p>一個完整的 HTTP 訊息由三部分組成：</p>
+<div class="mt-2 p-3 bg-slate-900/50 rounded-lg border border-hub-700 font-mono text-xs leading-relaxed text-slate-300">
+<span class="text-emerald-400">起始行（Start Line）</span><br><span class="text-slate-500">GET /api/users HTTP/1.1</span> 或 <span class="text-slate-500">HTTP/1.1 200 OK</span><br><br>
+<span class="text-emerald-400">標頭（Headers）</span><br><span class="text-slate-500">Host: api.example.com</span><br><span class="text-slate-500">Content-Type: application/json</span><br><br>
+<span class="text-slate-600">(空行)</span><br><br>
+<span class="text-emerald-400">訊息主體（Body）</span> — 可選</div>
+<p class="mt-2">Header 位於起始行之後、空行之前，每個 Header 一行。正確配置 Header 對於安全、效能和 SEO 至關重要。</p>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">Security Score 評分標準</h4>
+<ul class="space-y-1.5 list-disc list-inside">
+<li><strong>HSTS（+20）</strong>：強制 HTTPS，防止 SSL Stripping</li>
+<li><strong>CSP（+20）</strong>：內容安全策略，防範 XSS</li>
+<li><strong>X-Frame-Options（+12）</strong>：防止 Clickjacking</li>
+<li><strong>X-Content-Type-Options（+10）</strong>：防止 MIME 嗅探</li>
+<li><strong>Referrer-Policy（+10）</strong>：控制 Referer 暴露</li>
+<li><strong>Permissions-Policy（+10）</strong>：限制 API 存取</li>
+<li><strong>CORS 正確配置（+8）</strong>、<strong>Content-Type（+5）</strong>、<strong>Cookie 安全（+5）</strong></li>
+</ul>
+<p class="mt-2">滿分 100 分，80+ Excellent · 60+ Good · 40+ Fair · 低於 40 Poor。</p>
+</div>
+</div>
+</div>
+
+</div>
+
+<div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i><span id="toast-msg">完成</span>
+</div>
+<div id="component-footer"></div>
+
+<script>
+async function loadComponent(e,t){try{const n=await fetch(t);if(!n.ok)throw Error();const o=await n.text(),r=document.getElementById(e);r.innerHTML=o,Array.from(r.querySelectorAll('script')).forEach(e=>{const t=document.createElement('script');Array.from(e.attributes).forEach(e=>t.setAttribute(e.name,e.value)),t.appendChild(document.createTextNode(e.innerHTML)),e.parentNode.replaceChild(t,e)})}catch(e){}}
+function setupSidebarActiveState(){const e='/http-header-analyzer';document.querySelectorAll('#sidebar-container .nav-item').forEach(t=>{const n=t.getAttribute('href');if(!n)return;const o=n.replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';e===o||'/'!==e&&'/'!==o&&e.startsWith(o)&&(t.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50'),t.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]'))})}
+async function initializeSystem(){await Promise.all([loadComponent('component-header','/components/header.html'),loadComponent('component-sidebar','/components/sidebar.html'),loadComponent('component-footer','/components/footer.html')]),typeof lucide!=='undefined'&&lucide.createIcons(),document.body.addEventListener('click',e=>{const t=e.target.closest('#sidebar-trigger-btn'),n=e.target.closest('#sidebar-close-btn'),o=e.target.closest('#sidebar-overlay');if(t||n||o){const r=document.getElementById('sidebar-container'),i=document.getElementById('sidebar-overlay');if(r&&i){const l=r.classList.contains('translate-x-full');l&&t?(i.classList.remove('pointer-events-none'),requestAnimationFrame(()=>{r.classList.remove('translate-x-full'),i.classList.remove('opacity-0'),i.classList.add('opacity-100')})):!l&&(n||o||t)&&(r.classList.add('translate-x-full'),i.classList.remove('opacity-0'),i.classList.add('opacity-100'),setTimeout(()=>i.classList.add('pointer-events-none'),300))}}}),setupSidebarActiveState(),initApp()}
+document.addEventListener('DOMContentLoaded',initializeSystem);
+</script>
+
+<script>
+const HEADER_REF={'content-type':{desc:'指定資源的媒體類型（MIME type）與字元編碼',values:['application/json','text/html','text/plain','application/xml','text/css','text/javascript','application/javascript','image/png','image/jpeg','image/svg+xml','multipart/form-data','application/x-www-form-urlencoded'],rfc:'RFC 7231 Section 3.1.1.5',err:['遺失 charset','MIME 類型與內容不符']},'content-length':{desc:'回應主體的大小（位元組）',values:['Content-Length: 1024'],rfc:'RFC 7230 Section 3.3.2',err:['值與實際大小不符','傳輸編碼為 chunked 時不應使用']},'cache-control':{desc:'控制快取行為的指令集',values:['public, max-age=3600','private, no-cache','no-store, no-cache, must-revalidate','public, immutable, max-age=31536000'],rfc:'RFC 7234 Section 5.2',err:['同時使用衝突的指令','遺失 max-age','使用 no-cache 但未設定 ETag']},'etag':{desc:'資源的實體標籤，用於條件式請求',values:['ETag: "33a64df5"','W/"33a64df5" （弱驗證器）'],rfc:'RFC 7232 Section 2.3',err:['ETag 格式不正確','未搭配 If-None-Match 使用']},'last-modified':{desc:'資源最後修改的時間戳記',values:['Last-Modified: Wed, 21 Oct 2026 07:28:00 GMT'],rfc:'RFC 7232 Section 2.2',err:['日期格式不正確','未來時間戳記']},'expires':{desc:'資源的過期時間（HTTP/1.0）',values:['Expires: Wed, 21 Oct 2026 07:28:00 GMT'],rfc:'RFC 7234 Section 5.3',err:['使用過去時間','與 Cache-Control max-age 衝突']},'set-cookie':{desc:'設定 Cookie，由伺服器發送給瀏覽器',values:['Set-Cookie: sessionId=abc123; Secure; HttpOnly; SameSite=Lax'],rfc:'RFC 6265',err:['未設定 Secure 屬性','未設定 HttpOnly','未設定 SameSite']},'cookie':{desc:'用戶端發送給伺服器的 Cookie',values:['Cookie: sessionId=abc123; theme=dark'],rfc:'RFC 6265',err:['Cookie 過大','缺少必要的 Cookie']},'strict-transport-security':{desc:'HSTS — 強制瀏覽器使用 HTTPS 連線',values:['max-age=31536000','max-age=31536000; includeSubDomains','max-age=31536000; preload'],rfc:'RFC 6797',err:['max-age 太小','未設定 includeSubDomains']},'content-security-policy':{desc:'CSP — 限制內容載入來源，防範 XSS 攻擊',values:["default-src 'self'","script-src 'self' https://cdn.example.com","style-src 'self' 'unsafe-inline'"],rfc:'CSP Level 2 / Level 3',err:["使用 'unsafe-inline' 過多","遺失 default-src","CSP 語法錯誤"]},'x-frame-options':{desc:'防止頁面被嵌入 iframe（防 Clickjacking）',values:['DENY','SAMEORIGIN'],rfc:'RFC 7034',err:['值非 DENY 或 SAMEORIGIN','已由 CSP frame-ancestors 取代']},'x-content-type-options':{desc:'防止瀏覽器進行 MIME 類型嗅探',values:['nosniff'],rfc:'',err:['缺少此標頭可能導致安全風險']},'referrer-policy':{desc:'控制 Referer 標頭中暴露多少資訊',values:['strict-origin-when-cross-origin','no-referrer','same-origin','strict-origin'],rfc:'Referrer Policy Spec',err:['策略過於寬鬆','使用已棄用的值']},'permissions-policy':{desc:'限制瀏覽器 API 的存取權限',values:["camera=()","geolocation=(self)","microphone=()"],rfc:'Permissions Policy Spec',err:['語法錯誤','過度授權']},'access-control-allow-origin':{desc:'CORS — 允許跨來源請求的來源網域',values:['https://example.com','*'],rfc:'Fetch Spec',err:['使用 * 搭配 credentials=true 會失敗']},'access-control-allow-methods':{desc:'CORS — 允許的 HTTP 方法',values:['GET, POST, PUT, DELETE, OPTIONS'],rfc:'Fetch Spec',err:['遺漏 OPTIONS（Preflight）']},'access-control-allow-headers':{desc:'CORS — 允許的自訂標頭',values:['Content-Type, Authorization, X-Requested-With'],rfc:'Fetch Spec',err:['未包含 Content-Type']},'access-control-allow-credentials':{desc:'CORS — 是否允許攜帶憑證',values:['true'],rfc:'Fetch Spec',err:['設為 true 時 Allow-Origin 不能為 *']},'access-control-max-age':{desc:'CORS — Preflight 快取時間（秒）',values:['86400'],rfc:'Fetch Spec',err:['值過小（增加延遲）']},'server':{desc:'伺服器軟體名稱與版本',values:['nginx/1.24.0','Apache/2.4.57','cloudflare'],rfc:'RFC 7231 Section 7.4.2',err:['暴露過多版本資訊']},'location':{desc:'重導向目標 URL',values:['Location: https://example.com/new-page'],rfc:'RFC 7231 Section 7.1.2',err:['重導向循環']},'www-authenticate':{desc:'伺服器要求用戶端進行認證',values:['Bearer realm="api"','Basic realm="Access to site"'],rfc:'RFC 7235 Section 4.1',err:['realm 遺失']},'authorization':{desc:'用戶端發送的認證資訊',values:['Bearer eyJhbGciOiJIUzI1NiIs...','Basic base64(account:password)'],rfc:'RFC 7235 Section 4.2',err:['Token 已過期','格式錯誤']},'user-agent':{desc:'用戶端應用程式資訊',values:['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'],rfc:'RFC 7231 Section 5.5.3',err:['User-Agent 偽造']},'accept':{desc:'用戶端可接受的內容類型',values:['application/json','text/html,application/xhtml+xml','*/*'],rfc:'RFC 7231 Section 5.3.2',err:['要求過於特定導致 406']},'host':{desc:'請求的目標伺服器主機名稱與埠號',values:['Host: api.example.com','Host: localhost:8080'],rfc:'RFC 7230 Section 5.4',err:['遺失 Host 標頭（HTTP/1.1 強制要求）']},'origin':{desc:'請求的來源網域（CORS 相關）',values:['Origin: https://example.com'],rfc:'RFC 6454',err:['跨來源請求缺少 Origin']},'referer':{desc:'請求的來源頁面 URL',values:['Referer: https://example.com/page'],rfc:'RFC 7231 Section 5.5.2',err:['拼寫為 Referer（非 Referrer）','暴露敏感 URL']}};
+
+function parseHeaders(text){
+ if(!text||!text.trim())return null;
+ const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+ if(!lines.length)return null;
+ const result={type:null,startLine:null,headers:[],parsed:{},raw:text};
+ const first=lines[0];
+ const isReq=/^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|CONNECT|TRACE)\s/i.test(first);
+ const isRes=/^HTTP\/[\d.]+\s+\d{3}/i.test(first);
+ if(isReq){result.type='request';result.startLine=first;}
+ else if(isRes){result.type='response';result.startLine=first;}
+ else{result.type='unknown';result.startLine=lines[0];}
+ let headerLines=lines;
+ if(result.type!=='unknown')headerLines=lines.slice(1);
+ for(const line of headerLines){
+  const idx=line.indexOf(':');
+  if(idx===-1)continue;
+  const name=line.substring(0,idx).trim();
+  const value=line.substring(idx+1).trim();
+  if(name&&value!==undefined)result.headers.push({name,value,nameLower:name.toLowerCase()});
+ }
+ for(const h of result.headers)result.parsed[h.nameLower]=h.value;
+ result.security=analyzeSecurity(result);
+ result.cors=analyzeCORS(result);
+ result.cache=analyzeCache(result);
+ result.cookies=parseCookies(result);
+ result.score=computeScore(result);
+ return result;
+}
+
+function analyzeSecurity(result){
+ const checks=[
+  {name:'Strict-Transport-Security',key:'strict-transport-security',weight:20,critical:true,
+   check:v=>v?{exists:true,status:'ok',msg:`已設定：${v}`}:{exists:false,status:'bad',msg:'未設定 — 可能遭受 SSL Stripping 攻擊'},
+   best:'max-age=31536000; includeSubDomains'},
+  {name:'Content-Security-Policy',key:'content-security-policy',weight:20,critical:true,
+   check:v=>v?{exists:true,status:'ok',msg:'已設定'}:{exists:false,status:'bad',msg:'未設定 — 無法防範 XSS'},
+   best:"default-src 'self'; script-src 'self'"},
+  {name:'X-Frame-Options',key:'x-frame-options',weight:12,critical:true,
+   check:v=>{if(!v)return{exists:false,status:'bad',msg:'未設定 — 可能被 Clickjacking'};if(/deny|sameorigin/i.test(v))return{exists:true,status:'ok',msg:`已設定：${v}`};return{exists:true,status:'warn',msg:`設定值非標準：${v}`}},
+   best:'DENY'},
+  {name:'X-Content-Type-Options',key:'x-content-type-options',weight:10,
+   check:v=>v&&/nosniff/i.test(v)?{exists:true,status:'ok',msg:'已設定：nosniff'}:{exists:false,status:'bad',msg:'未設定 — 可能進行 MIME 嗅探'},
+   best:'nosniff'},
+  {name:'Referrer-Policy',key:'referrer-policy',weight:10,
+   check:v=>v?{exists:true,status:'ok',msg:`已設定：${v}`}:{exists:false,status:'warn',msg:'未設定 — Referer 可能過度暴露'},
+   best:'strict-origin-when-cross-origin'},
+  {name:'Permissions-Policy',key:'permissions-policy',weight:8,
+   check:v=>v?{exists:true,status:'ok',msg:'已設定'}:{exists:false,status:'warn',msg:'未設定 — API 權限未受限制'},
+   best:"camera=(); microphone=(); geolocation=()"},
+ ];
+ for(const c of checks){const val=result.parsed[c.key];const res=c.check(val);c.exists=res.exists;c.status=res.status;c.message=res.msg;c.value=val||'';}
+ return checks;
+}
+
+function analyzeCORS(result){
+ const h=result.parsed;
+ const cors={'access-control-allow-origin':h['access-control-allow-origin']||null,'access-control-allow-methods':h['access-control-allow-methods']||null,'access-control-allow-headers':h['access-control-allow-headers']||null,'access-control-allow-credentials':h['access-control-allow-credentials']||null,'access-control-max-age':h['access-control-max-age']||null};
+ const issues=[];
+ if(!cors['access-control-allow-origin']){issues.push({type:'info',msg:'未使用 CORS（若無跨來源需求則為正常）'});}
+ else{if(cors['access-control-allow-origin']==='*'){if(cors['access-control-allow-credentials']==='true')issues.push({type:'error',msg:'Allow-Origin 為 * 時不能設定 Allow-Credentials=true'});issues.push({type:'warn',msg:'Allow-Origin 為 *，建議指定明確來源'});}
+ if(!cors['access-control-allow-methods'])issues.push({type:'warn',msg:'未設定 Allow-Methods'});
+ if(cors['access-control-allow-credentials']==='true')issues.push({type:'info',msg:'允許攜帶憑證'});}
+ return{cors,issues};
+}
+
+function analyzeCache(result){
+ const h=result.parsed;const cc=h['cache-control']||'';const etag=h['etag']||null;const lm=h['last-modified']||null;const exp=h['expires']||null;
+ const items=[];
+ items.push({name:'Cache-Control',value:cc||'(未設定)',status:cc?(cc.includes('no-store')?'info':'ok'):'warn'});
+ items.push({name:'ETag',value:etag||'(未設定)',status:etag?'ok':'info'});
+ items.push({name:'Last-Modified',value:lm||'(未設定)',status:lm?'ok':'info'});
+ items.push({name:'Expires',value:exp||'(未設定)',status:exp?'ok':'info'});
+ let judgement='';
+ if(!cc&&!etag&&!exp)judgement='⚠️ 未設定任何快取控制，瀏覽器將使用啟發式快取策略。';
+ else if(cc.includes('no-store'))judgement='🔒 已設定 no-store，禁止快取（適合敏感資料）。';
+ else if(cc.includes('public')||cc.includes('max-age')){const ma=cc.match(/max-age=(\d+)/);if(ma){const sec=parseInt(ma[1]);if(sec>=31536000)judgement=`✅ 長期快取（${sec}秒），適合版本化靜態資源。`;else if(sec>=3600)judgement=`✅ 短期快取（${sec}秒），適合經常更新的內容。`;else judgement=`⚠️ 快取時間極短（${sec}秒）。`;}else judgement='⚠️ 包含 public 但未指定 max-age。';}
+ else if(cc.includes('no-cache'))judgement='🔄 每次使用前需驗證（no-cache）。';
+ return{items,judgement,hasCacheControl:!!cc};
+}
+
+function parseCookies(result){
+ const allSC=result.headers.filter(h=>h.nameLower==='set-cookie');
+ const cookies=[];
+ for(const sc of allSC){const p=parseSingleCookie(sc.value);if(p)cookies.push(p);}
+ return cookies;
+}
+function parseSingleCookie(str){
+ if(!str)return null;
+ const parts=str.split(';').map(s=>s.trim());
+ const eqIdx=parts[0].indexOf('=');if(eqIdx===-1)return null;
+ const name=parts[0].substring(0,eqIdx).trim();const value=parts[0].substring(eqIdx+1).trim();
+ const attrs={secure:false,httponly:false,samesite:null,domain:null,path:null};
+ for(let i=1;i<parts.length;i++){const p=parts[i];const ei=p.indexOf('=');let k,v=true;if(ei===-1)k=p.toLowerCase();else{k=p.substring(0,ei).toLowerCase().trim();v=p.substring(ei+1).trim();}
+ if(k==='secure')attrs.secure=true;else if(k==='httponly')attrs.httponly=true;else if(k==='samesite')attrs.samesite=v;else if(k==='domain')attrs.domain=v;else if(k==='path')attrs.path=v;}
+ const issues=[];
+ if(!attrs.secure)issues.push('未設定 Secure — Cookie 可能在 HTTP 中洩漏');
+ if(!attrs.httponly)issues.push('未設定 HttpOnly — Cookie 可被 JavaScript 存取（XSS 風險）');
+ if(!attrs.samesite)issues.push('未設定 SameSite — 建議明確設定');
+ if(attrs.samesite&&attrs.samesite.toLowerCase()==='none'&&!attrs.secure)issues.push('SameSite=None 必須搭配 Secure');
+ return{name,value,attrs,issues,raw:str};
+}
+
+function computeScore(result){
+ let score=0;const sec=result.security;
+ for(const s of sec){if(s.exists)score+=s.weight;}
+ if(result.parsed['content-type'])score+=5;
+ if(result.cookies.length>0){let cs=0;for(const c of result.cookies){if(c.attrs.secure)cs+=2;if(c.attrs.httponly)cs+=2;if(c.attrs.samesite)cs+=1;}score+=Math.min(cs,5);}
+ score=Math.min(score,100);
+ let rating,color,cls;
+ if(score>=80){rating='Excellent';color='#10B981';cls='excellent';}
+ else if(score>=60){rating='Good';color='#38BDF8';cls='good';}
+ else if(score>=40){rating='Fair';color='#F59E0B';cls='fair';}
+ else{rating='Poor';color='#EF4444';cls='poor';}
+ const missing=sec.filter(s=>!s.exists&&s.critical).map(s=>s.name);
+ return{score,maxScore:100,rating,color,cls,missing};
+}
+
+function renderResults(result,shouldScroll=true){
+ if(!result){showToast('無法解析 Header，請確認格式正確',true);return;}
+ const c=document.getElementById('results-container');c.style.display='block';if(shouldScroll)c.scrollIntoView({behavior:'smooth',block:'start'});
+ renderScore(result);renderOverview(result);renderSecurityHeaders(result);renderCORS(result);renderCache(result);renderCookies(result);renderHeaderTable(result);
+}
+
+function renderScore(result){
+ const s=result.score;const el=document.getElementById('score-content');
+ el.innerHTML=`<div class="score-ring ${s.cls}">${s.score}</div><div class="flex-1"><div class="text-lg font-bold" style="color:${s.color}">${s.rating}</div><div class="text-sm text-slate-400">${s.score}/${s.maxScore}</div>${s.missing.length?`<div class="text-xs text-slate-500 mt-1">缺少：${s.missing.join(', ')}</div>`:''}<div class="flex flex-wrap gap-1.5 mt-2">${['HSTS','CSP','XFO','CTO','RP','PP'].map(t=>`<span class="tag ok">${t}</span>`).join('')}</div></div>`;
+}
+function renderOverview(result){
+ const el=document.getElementById('overview-content');const h=result.parsed;
+ const typeLabel=result.type==='request'?'📤 Request':result.type==='response'?'📥 Response':'❓ Unknown';
+ const items=[{label:'Type',value:typeLabel,color:'#10B981'}];
+ if(result.startLine)items.push({label:'Start Line',value:result.startLine,color:'#10B981'});
+ if(result.type==='request'){
+  const m=result.startLine?result.startLine.split(' ')[0]:'?';items.push({label:'Method',value:m,color:'#38BDF8'});
+  if(h['host'])items.push({label:'Host',value:h['host'],color:'#F59E0B'});
+  if(h['user-agent'])items.push({label:'User-Agent',value:h['user-agent'].substring(0,70)+'...',color:'#A855F7'});
+ }else if(result.type==='response'){
+  const st=result.startLine?result.startLine.match(/\d{3}/):null;items.push({label:'Status',value:st?st[0]:'?',color:'#38BDF8'});
+  if(h['content-type'])items.push({label:'Content-Type',value:h['content-type'],color:'#F59E0B'});
+  if(h['content-length'])items.push({label:'Content-Length',value:h['content-length']+'B',color:'#06B6D4'});
+ }
+ items.push({label:'Headers',value:result.headers.length+' 個',color:'#64748b'});
+ el.innerHTML=`<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${items.map(it=>`<div class="sec-card"><div class="status-dot" style="background:${it.color}"></div><div><div class="name">${it.label}</div><div class="val" style="color:#e2e8f0;font-size:0.72rem">${escapeHtml(it.value)}</div></div></div>`).join('')}</div>`;
+}
+function renderSecurityHeaders(result){
+ const el=document.getElementById('security-headers-content');
+ el.innerHTML=`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${result.security.map(s=>`<div class="sec-card"><div class="status-dot ${s.exists?(s.status==='ok'?'bg-emerald-500':'bg-amber-500'):'bg-red-500'}"></div><div class="flex-1 min-w-0"><div class="name">${s.name}</div><div class="val">${escapeHtml(s.message)}</div>${s.best&&!s.exists?`<div class="val" style="color:#64748b;margin-top:0.1rem">建議：${escapeHtml(s.best)}</div>`:''}</div><span class="tag ${s.exists?(s.status==='ok'?'ok':'warn'):'bad'} flex-shrink-0">${s.exists?(s.status==='ok'?'✓ 存在':'⚠️'):'✗ 缺失'}</span></div>`).join('')}</div>`;
+}
+function renderCORS(result){
+ const el=document.getElementById('cors-content');const cors=result.cors;
+ if(!cors.cors['access-control-allow-origin']){el.innerHTML='<div class="text-sm text-slate-400">未偵測到 CORS 相關標頭（若無跨來源需求則為正常）。</div>';return;}
+ let html='<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">';
+ for(const[key,val]of Object.entries(cors.cors)){const dk=key.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join('-');html+=`<div class="sec-card"><div class="flex-1 min-w-0"><div class="name">${dk}</div><div class="val">${escapeHtml(val||'(未設定)')}</div></div><span class="tag ${val?'ok':'info'}">${val?'✓':'—'}</span></div>`;}
+ html+='</div>';
+ if(cors.issues.length){html+='<div class="text-xs font-semibold text-slate-400 mb-1">分析結果：</div>';for(const iss of cors.issues){const cls=iss.type==='error'?'bad':(iss.type==='warn'?'warn':'info');html+=`<div class="flex items-center gap-1.5 text-xs mb-0.5"><span class="tag ${cls}">${iss.type}</span><span class="text-slate-300">${iss.msg}</span></div>`;}}
+ el.innerHTML=html;
+}
+function renderCache(result){
+ const el=document.getElementById('cache-content');const c=result.cache;
+ let html='<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">';
+ for(const item of c.items){const cls=item.status==='ok'?'ok':(item.status==='warn'?'warn':'info');html+=`<div class="sec-card"><div class="flex-1 min-w-0"><div class="name">${item.name}</div><div class="val">${escapeHtml(item.value)}</div></div><span class="tag ${cls}">${item.status==='ok'?'✓':item.status==='warn'?'⚠':'ℹ'}</span></div>`;}
+ html+='</div>';
+ if(c.judgement)html+=`<div class="text-xs text-slate-300 bg-hub-900/30 rounded-lg p-2.5">${c.judgement}</div>`;
+ el.innerHTML=html;
+}
+function renderCookies(result){
+ const el=document.getElementById('cookie-content');const cookies=result.cookies;
+ if(!cookies.length){el.innerHTML='<div class="text-sm text-slate-400">未偵測到 Cookie（Set-Cookie 標頭）。</div>';return;}
+ let html='';
+ for(const ck of cookies){
+  const at=[];
+  at.push(ck.attrs.secure?`<span class="c-attr" style="color:#10B981">🔒 Secure</span>`:`<span class="c-attr" style="color:#EF4444">🔓 Secure 未設定</span>`);
+  at.push(ck.attrs.httponly?`<span class="c-attr" style="color:#10B981">🛡️ HttpOnly</span>`:`<span class="c-attr" style="color:#EF4444">📄 HttpOnly 未設定</span>`);
+  at.push(ck.attrs.samesite?`<span class="c-attr" style="color:#38BDF8">🌐 SameSite=${ck.attrs.samesite}</span>`:`<span class="c-attr" style="color:#F59E0B">⚠️ SameSite 未設定</span>`);
+  if(ck.attrs.domain)at.push(`<span class="c-attr">🏠 Domain=${ck.attrs.domain}</span>`);
+  if(ck.attrs.path)at.push(`<span class="c-attr">📁 Path=${ck.attrs.path}</span>`);
+  html+=`<div class="cookie-card mb-2"><div class="flex items-center justify-between flex-wrap gap-1 mb-1"><span class="c-name">${escapeHtml(ck.name)}</span><span class="text-xs text-slate-500">${escapeHtml(ck.value.substring(0,30))}${ck.value.length>30?'...':''}</span></div><div class="flex flex-wrap gap-1">${at.join('')}</div>${ck.issues.length?`<div class="text-xs text-red-400 mt-1">${ck.issues.map(i=>'⚠ '+i).join('<br>')}</div>`:''}</div>`;
+ }
+ el.innerHTML=html;
+}
+function renderHeaderTable(result){
+ const tbody=document.getElementById('header-table-body');const headers=result.headers;
+ tbody.innerHTML=headers.map((h,i)=>`<tr onclick="toggleRef('${escapeHtml(h.name)}',this)"><td class="h-name">${escapeHtml(h.name)}</td><td class="h-val">${escapeHtml(h.value)}</td><td class="h-desc">${getHeaderDesc(h.name)}</td></tr><tr id="ref-${i}" style="display:none"><td colspan="3" style="padding:0"><div class="ref-panel open" id="ref-panel-${i}">載入中...</div></td></tr>`).join('');
+ window._headerRefIndex={};headers.forEach((h,i)=>{window._headerRefIndex[h.name.toLowerCase()]=i;});
+ window._headerData=headers;
+ document.getElementById('header-search').addEventListener('input',function(){const q=this.value.toLowerCase();document.querySelectorAll('#header-table-body>tr:nth-child(odd)').forEach((tr,i)=>{const n=tr.querySelector('.h-name')?.textContent.toLowerCase()||'';const v=tr.querySelector('.h-val')?.textContent.toLowerCase()||'';tr.style.display=n.includes(q)||v.includes(q)?'':'';const rr=tr.nextElementSibling;if(rr&&rr.id.startsWith('ref-'))rr.style.display='none';});});
+}
+function getHeaderDesc(name){const ref=HEADER_REF[name.toLowerCase()];return ref?ref.desc.substring(0,60)+(ref.desc.length>60?'...':''):'—';}
+function toggleRef(name,row){
+ const idx=window._headerRefIndex[name.toLowerCase()];if(idx===undefined)return;
+ const refRow=document.getElementById(`ref-${idx}`);if(!refRow)return;
+ const hidden=refRow.style.display==='none';
+ document.querySelectorAll('[id^="ref-"]').forEach(r=>r.style.display='none');
+ if(hidden){refRow.style.display='table-row';const panel=document.getElementById(`ref-panel-${idx}`);if(panel)panel.innerHTML=buildRefContent(name);}
+}
+function buildRefContent(name){
+ const ref=HEADER_REF[name.toLowerCase()];if(!ref)return'<div class="text-slate-500 text-xs">暫無參考資料</div>';
+ return `<div class="r-title">${escapeHtml(name)}</div><div class="r-row"><span class="r-label">用途</span><span class="r-value">${ref.desc}</span></div>${ref.values?`<div class="r-row"><span class="r-label">常見值</span><span class="r-value">${ref.values.map(v=>`<code style="font-size:0.68rem;font-family:\'Fira Code\',monospace;color:#10B981">${escapeHtml(v)}</code>`).join(', ')}</span></div>`:''}${ref.rfc?`<div class="r-row"><span class="r-label">RFC</span><span class="r-value">${ref.rfc}</span></div>`:''}${ref.err?`<div class="r-row"><span class="r-label">常見錯誤</span><span class="r-value" style="color:#FCA5A5">${ref.err.map(e=>'⚠ '+e).join('<br>')}</span></div>`:''}`;
+}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+const SAMPLES={request:`GET /api/v2/users?page=1&per_page=20 HTTP/1.1
+Host: api.example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+Accept: application/json, text/plain, */*
+Accept-Language: zh-TW,zh;q=0.9,en;q=0.8
+Accept-Encoding: gzip, deflate, br
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0
+Origin: https://admin.example.com
+Referer: https://admin.example.com/dashboard
+Cookie: sessionId=abc123; theme=dark; lang=zh-TW
+Cache-Control: no-cache
+X-Requested-With: XMLHttpRequest`,
+response:`HTTP/1.1 200 OK
+Date: Fri, 17 Jul 2026 10:30:00 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 2048
+Connection: keep-alive
+Server: nginx/1.24.0
+Cache-Control: public, max-age=3600, must-revalidate
+ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+Last-Modified: Fri, 17 Jul 2026 09:00:00 GMT
+Expires: Fri, 17 Jul 2026 11:00:00 GMT
+Set-Cookie: sessionId=xyz789; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400
+Set-Cookie: csrfToken=abc123; Secure; HttpOnly; SameSite=Strict; Path=/
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.example.com; style-src 'self' 'unsafe-inline'
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=(self)
+Access-Control-Allow-Origin: https://admin.example.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+Access-Control-Allow-Credentials: true
+Access-Control-Max-Age: 86400
+Vary: Accept-Encoding
+X-Powered-By: Express
+X-Response-Time: 42ms`};
+
+function showToast(msg,isError){
+ const t=document.getElementById('toast'),ic=document.getElementById('toast-icon');
+ document.getElementById('toast-msg').textContent=msg;
+ if(isError){t.classList.replace('bg-slate-800','bg-red-950');t.classList.replace('border-slate-700','border-red-900');ic.className='ph-fill ph-warning-circle text-lg text-red-400';}
+ else{t.classList.replace('bg-red-950','bg-slate-800');t.classList.replace('border-red-900','border-slate-700');ic.className='ph-fill ph-check-circle text-lg text-hub-accent';}
+ t.classList.remove('opacity-0','pointer-events-none','translate-y-4');t.classList.add('opacity-100','translate-y-0');
+ clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>{t.classList.remove('opacity-100','translate-y-0');t.classList.add('opacity-0','pointer-events-none','translate-y-4');},2500);
+}
+
+function performParse(text){
+ const input=text||document.getElementById('h-input').value.trim();
+ if(!input){showToast('請先貼上 HTTP Header',true);return;}
+ const result=parseHeaders(input);
+ renderResults(result);
+}
+
+document.getElementById('btn-parse').addEventListener('click',()=>performParse());
+document.getElementById('btn-clear').addEventListener('click',()=>{document.getElementById('h-input').value='';document.getElementById('results-container').style.display='none';showToast('已清除',false);});
+document.getElementById('btn-sample-req').addEventListener('click',()=>{document.getElementById('h-input').value=SAMPLES.request;performParse(SAMPLES.request);showToast('已載入 Request 範例',false);});
+document.getElementById('btn-sample-resp').addEventListener('click',()=>{document.getElementById('h-input').value=SAMPLES.response;performParse(SAMPLES.response);showToast('已載入 Response 範例',false);});
+document.getElementById('h-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();performParse();}});
+document.getElementById('btn-copy').addEventListener('click',()=>{const c=document.getElementById('results-container');if(c.style.display==='none'){showToast('尚無結果可複製',true);return;}const text=c.textContent.trim();navigator.clipboard.writeText(text).then(()=>showToast('已複製分析報告',false)).catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast('已複製分析報告',false);});});
+document.getElementById('btn-download-txt').addEventListener('click',()=>{const text=document.getElementById('results-container').textContent.trim();if(!text){showToast('尚無資料可下載',true);return;}const blob=new Blob([`HTTP Header Analyzer Report\n${new Date().toLocaleString('zh-TW')}\n\n${text}`],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`http-header-${Date.now()}.txt`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);showToast('TXT 已下載',false);});
+document.getElementById('btn-download-json').addEventListener('click',()=>{const input=document.getElementById('h-input').value.trim();if(!input){showToast('尚無資料可下載',true);return;}const result=parseHeaders(input);if(!result){showToast('解析失敗',true);return;}const data={type:result.type,startLine:result.startLine,headerCount:result.headers.length,securityScore:result.score.score,securityRating:result.score.rating,headers:result.headers.map(h=>({name:h.name,value:h.value})),security:result.security.map(s=>({name:s.name,exists:s.exists,status:s.status})),cors:result.cors.cors};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`http-header-${Date.now()}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);showToast('JSON 已下載',false);});
+
+function initApp(){
+ document.getElementById('h-input').value=SAMPLES.response;
+ const result=parseHeaders(SAMPLES.response);
+ renderResults(result,false);
+}
+</script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

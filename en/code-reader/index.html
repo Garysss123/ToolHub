@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Code Reader | Free Online Tool - ToolHub</title>
+<meta content="Read QR Code and common Barcode from the camera or picture, keep the decoded content in the browser, and provide safe opening and copying." name="description"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- 模塊專屬依賴：ZXing (工業級多格式光學解碼引擎) -->
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 模式切換按鈕 (Tabs) */
+        .mode-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+        .mode-tab.active { border-color: #38BDF8; color: #38BDF8; background: rgba(56, 189, 248, 0.05); font-weight: bold; }
+        
+        /* 強制阻斷 Tailwind 權重覆蓋 */
+        .mode-panel { display: none !important; animation: fadeIn 0.3s ease-out forwards; }
+        .mode-panel.active { display: flex !important; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 相機掃描雷射動畫 */
+        .scanner-container { position: relative; overflow: hidden; background-color: #000; }
+        #video-stream { width: 100%; height: 100%; object-fit: cover; }
+        
+        .laser-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #10b981;
+            box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.5);
+            animation: scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 5%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 95%; opacity: 0; }
+        }
+
+        /* 相機邊框準星 */
+        .scanner-guide {
+            position: absolute; inset: 15%; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 1rem; z-index: 5; pointer-events: none; transition: border-color 0.3s;
+        }
+        .scanner-guide::before, .scanner-guide::after { content: ''; position: absolute; width: 30px; height: 30px; border-color: #38BDF8; border-style: solid; transition: border-color 0.3s; }
+        .scanner-guide::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-top-left-radius: 1rem; }
+        .scanner-guide::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-bottom-right-radius: 1rem; }
+        
+        .scanner-guide-corners::before, .scanner-guide-corners::after { content: ''; position: absolute; width: 30px; height: 30px; border-color: #38BDF8; border-style: solid; transition: border-color 0.3s; }
+        .scanner-guide-corners::before { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-top-right-radius: 1rem; }
+        .scanner-guide-corners::after { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-bottom-left-radius: 1rem; }
+
+        /* 成功掃描時的綠色閃爍 */
+        .scan-success .scanner-guide { border-color: rgba(16, 185, 129, 0.8); }
+        .scan-success .scanner-guide::before, .scan-success .scanner-guide::after,
+        .scan-success .scanner-guide-corners::before, .scan-success .scanner-guide-corners::after { border-color: #10b981; }
+
+        /* 檔案上傳拖曳區 */
+        .drag-active { border-color: #38BDF8 !important; background-color: rgba(56, 189, 248, 0.05) !important; }
+        
+        /* 視覺跳動 */
+        @keyframes pop { 0% { transform: scale(0.98); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s ease-out; }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/code-reader/" property="og:url"/>
+<meta content="Code Reader | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Read QR Code and common Barcode from the camera or picture, keep the decoded content in the browser, and provide safe opening and copying." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Code Reader | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Read QR Code and common Barcode from the camera or picture, keep the decoded content in the browser, and provide safe opening and copying." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"QR Code／Barcode Reader","url":"https://toolhuben.com/en/code-reader/","description":"Read QR Code and common Barcode from the camera or picture, keep the decoded content in the browser, and provide safe opening and copying.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"author":{"@type":"Organization","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"QR Code／Barcode Reader","item":"https://toolhuben.com/en/code-reader/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What uses is QR Code/Barcode Reader suitable for?","acceptedAnswer":{"@type":"Answer","text":"Code Reader recognizes QR Codes and 1D barcodes from camera screens or pictures. The identification result is only the data content and does not mean that the URL, payment information or downloaded file is safe; you should check the domain and complete string before opening the link."}},{"@type":"Question","name":"How to use QR Code/Barcode Reader?","acceptedAnswer":{"@type":"Answer","text":"Allow the camera to select a clear and complete barcode image; keep the code surface flat, well-lit, and avoid cropping white space; read the decoded text first, and then decide whether to copy or open the link."}},{"@type":"Question","name":"What should I pay attention to when using QR Code/Barcode Reader?","acceptedAnswer":{"@type":"Answer","text":"Blur, reflection, low contrast and excessive perspective will reduce the recognition rate. Unfamiliar QR Codes may lead to phishing websites, please do not automatically trust the scan results."}},{"@type":"Question","name":"Will QR Code/Barcode Reader upload data?","acceptedAnswer":{"@type":"Answer","text":"The image and decoding results are processed locally in the browser, and the camera footage will not be uploaded."}},{"@type":"Question","name":"Do I need to install software or register an account?","acceptedAnswer":{"@type":"Answer","text":"No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed."}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/code-reader/" rel="canonical"/><link href="https://toolhuben.com/code-reader/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/code-reader/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/code-reader/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","啟動感測器":"Start sensor","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","建立理念":"Our Founding Idea","建議":"Recommendation","影像解碼成功":"Image decoding successful","找不到條碼":"Barcode not found","無法在影像中找到有效的條碼特徵。請確保影像清晰且條碼未被裁切。":"No valid barcode features could be found in the image. Please make sure the image is clear and the barcode is not cropped.","無法存取相機，請確認已給予瀏覽器權限":"Unable to access camera, please make sure you have given browser permission","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","解碼內容 已複製":"Decoded content copied","請上傳有效的圖片檔案":"Please upload a valid image file","開啟 / 搜尋":"Open/Search","預設相機 (請授權啟動)":"Default camera (please authorize activation)","顯示":"Showing","高解析度影像解碼成功":"High-resolution image decoding successful","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","Google 搜尋":"Google Search","停止掃描":"Stop Scan","執行處理":"Run","本機處理":"processed locally","無法獲取相機權限":"Could not close temporary folder: %s","開啟連結":"Turn on the link.","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="editorial" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<!-- 1. 系統組件：Header & Sidebar -->
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：Scanner Matrix -->
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="bread crumbs" class="seo-upgrade-breadcrumb"><a href="/en/">Home</a><span>›</span><span>QR Code／Barcode Reader</span></nav>
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-emerald-950/30 border border-emerald-900/50 text-xs text-emerald-400 shadow-inner">
+<i class="ph-fill ph-scan mr-1.5 text-sm"></i>
+                Full-band optical decoding array (GPU timing forced synchronization version) is wired
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Optical Code <span class="text-transparent bg-clip-text bg-gradient-to-r from-scan-frame to-scan-laser">Scanner</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                Give the browser industrial-grade optical recognition capabilities. Supports real-time lens scanning and image upload analysis. Built-in GPU lattice timing alignment engine, 100% local edge computing, ensuring absolute privacy and security.
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ========================================== -->
+<!-- 左側：感測器控制台 (Sensor Matrix)             -->
+<!-- ========================================== -->
+<div class="lg:col-span-6 flex flex-col gap-0 glass-panel shadow-2xl overflow-hidden border border-hub-700">
+<!-- 雙態偵測儀切換 -->
+<div class="flex bg-hub-900/80 border-b border-hub-700">
+<button class="mode-tab active flex-1 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-2" data-target="panel-camera">
+<i class="ph ph-camera text-lg"></i> Live Stream
+                    </button>
+<button class="mode-tab flex-1 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-2" data-target="panel-image">
+<i class="ph ph-image text-lg"></i> Still image (Upload)
+                    </button>
+</div>
+<!-- 模式 A: 相機實時串流 -->
+<div class="mode-panel active flex-col h-full w-full" id="panel-camera">
+<div class="p-4 bg-hub-800/50 flex flex-col sm:flex-row gap-3 items-center justify-between border-b border-hub-700">
+<select class="w-full sm:w-auto flex-grow bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-scan-frame outline-none transition-colors cursor-pointer appearance-none" id="camera-select">
+<option value="">Default camera (please authorize activation)</option>
+</select>
+<button class="w-full sm:w-auto px-6 py-2 bg-hub-accent hover:bg-sky-400 text-hub-900 font-bold rounded-lg transition-all shadow-md flex items-center justify-center gap-2 shrink-0" id="btn-toggle-camera">
+<i class="ph-bold ph-power"></i> Start sensor
+                        </button>
+</div>
+<div class="scanner-container w-full aspect-square sm:aspect-video relative flex items-center justify-center bg-[#050b14]">
+<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 z-20 bg-[#050b14]" id="camera-standby">
+<i class="ph-fill ph-camera-slash text-6xl mb-4 opacity-30"></i>
+<p class="text-sm font-mono">Click the button above to launch the camera</p>
+<p class="text-[10px] mt-2 px-6 text-center max-w-sm text-slate-600">If using a mobile phone, please allow camera permission after clicking to start.</p>
+</div>
+<video class="hidden" id="video-stream"></video>
+<div class="hidden absolute inset-0 pointer-events-none" id="scanner-ui">
+<div class="scanner-guide">
+<div class="scanner-guide-corners w-full h-full"></div>
+</div>
+<div class="laser-line"></div>
+</div>
+</div>
+</div>
+<!-- 模式 B: 靜態圖片上傳 -->
+<div class="mode-panel p-6 sm:p-8 flex-col items-center justify-center h-full min-h-[400px] w-full" id="panel-image">
+<input accept="image/png, image/jpeg, image/webp, image/heic" class="hidden" id="file-input" type="file"/>
+<div class="w-full h-full border-2 border-dashed border-hub-700 hover:border-scan-frame rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30 p-10 relative overflow-hidden group" id="drop-zone">
+<div class="p-4 bg-hub-800 rounded-full mb-4 text-scan-frame shadow-lg border border-hub-700 group-hover:scale-110 transition-transform">
+<i class="ph ph-qr-code text-4xl"></i>
+</div>
+<p class="text-white font-bold text-lg mb-2 text-center">Click or drag the image containing the barcode</p>
+<p class="text-xs text-slate-500 font-mono text-center max-w-xs leading-relaxed">
+                            Supports screenshots and photo files. Completely parsed at the edge, zero-knowledge processing.
+                        </p>
+<!-- 預覽圖 -->
+<img alt="Preview" class="hidden absolute inset-0 w-full h-full object-contain bg-hub-900/90 backdrop-blur-sm p-4" id="image-preview"/>
+</div>
+<button class="hidden mt-4 text-xs text-slate-400 hover:text-white items-center gap-1 transition-colors bg-hub-800 px-3 py-1.5 rounded-lg border border-hub-700" id="btn-reset-image">
+<i class="ph ph-trash"></i> Remove image
+                    </button>
+</div>
+<!-- 安全信任宣告 -->
+<div class="bg-emerald-900/20 border-t border-emerald-900/50 p-4 text-xs text-emerald-400/90 leading-relaxed flex gap-3 shadow-inner mt-auto">
+<i class="ph-fill ph-shield-check text-emerald-500 text-xl shrink-0 mt-0.5"></i>
+<p>
+<strong class="text-emerald-400 block mb-0.5">Absolute zero-knowledge defense (Zero-Knowledge)</strong>
+                        Whether it’s a camera screen or an uploaded picture,<strong>100% of optical matrix operations are performed on your device</strong>. The image is not encapsulated and never sent to any server.
+                    </p>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：資料解析儀表板 (Decoded Dashboard)      -->
+<!-- ========================================== -->
+<div class="lg:col-span-6 flex flex-col gap-5 h-full">
+<div class="glass-panel p-6 shadow-2xl flex flex-col h-full border border-hub-700/50 relative overflow-hidden" id="result-dashboard">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
+<i class="ph-fill ph-scan text-[15rem]"></i>
+</div>
+<div class="flex justify-between items-center border-b border-hub-700 pb-3 mb-4 relative z-10">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-terminal-window text-scan-frame text-lg"></i> Decoded result matrix (Decoded Payload)
+                        </h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 transition-colors" id="decode-status">Waiting</span>
+</div>
+<!-- 格式標籤區 -->
+<div class="flex items-center gap-3 mb-3 relative z-10 min-h-[24px]">
+<span class="hidden px-2.5 py-1 bg-hub-800 text-slate-300 font-mono text-[10px] font-bold rounded border border-hub-700 uppercase tracking-widest shadow-sm" id="format-badge">
+                            FORMAT: --
+                        </span>
+</div>
+<!-- 資料展示區 -->
+<div class="flex-grow flex flex-col relative z-10 mb-6">
+<textarea class="w-full flex-grow bg-[#0a0f18]/80 backdrop-blur-sm border border-hub-700 rounded-xl p-4 sm:p-5 text-white font-mono text-sm sm:text-base outline-none resize-none shadow-inner leading-relaxed placeholder:text-slate-600 transition-colors" id="decoded-output" placeholder="Waiting for the optical sensor to capture the signal..." readonly=""></textarea>
+</div>
+<!-- 智能路由按鈕區 -->
+<div class="flex flex-col sm:flex-row gap-3 relative z-10">
+<button class="flex-1 py-3 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled="" id="btn-copy">
+<i class="ph ph-copy text-lg"></i> Copy content
+                        </button>
+<button class="flex-1 py-3 bg-scan-frame/20 border border-scan-frame/50 text-sky-400 hover:bg-scan-frame/30 font-bold rounded-xl transition-all shadow-[0_0_10px_rgba(59,130,246,0.1)] flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled="" id="btn-action">
+<i class="ph ph-arrow-square-out text-lg"></i> Open/Search
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="QR Code/Barcode Reader Tutorial and Frequently Asked Questions" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>QR Code/Barcode Reader Complete User Guide</h2>
+<p>Code Reader recognizes QR Codes and 1D barcodes from camera screens or pictures. The identification result is only the data content and does not mean that the URL, payment information or downloaded file is safe; you should check the domain and complete string before opening the link.</p>
+<h3>Operation steps</h3>
+<ol><li>Allow camera or select a clear, complete barcode image</li><li>Keep the code surface flat, well-lit and avoid cutting blank spaces</li><li>Read the decoded text before deciding whether to copy or open the link</li></ol>
+<h3>Practical suggestions and limitations</h3>
+<p>Blur, reflection, low contrast and excessive perspective will reduce the recognition rate. Unfamiliar QR Codes may lead to phishing websites, please do not automatically trust the scan results.</p>
+<h3>Privacy and native processing</h3>
+<p>The image and decoding results are processed locally in the browser, and the camera footage will not be uploaded.</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>QR Code/Barcode Reader FAQ</h2>
+<details><summary>What uses is QR Code/Barcode Reader suitable for?</summary><div class="seo-upgrade-answer">Code Reader recognizes QR Codes and 1D barcodes from camera screens or pictures. The identification result is only the data content and does not mean that the URL, payment information or downloaded file is safe; you should check the domain and complete string before opening the link.</div></details>
+<details><summary>How to use QR Code/Barcode Reader?</summary><div class="seo-upgrade-answer">Allow the camera to select a clear and complete barcode image; keep the code surface flat, well-lit, and avoid cropping white space; read the decoded text first, and then decide whether to copy or open the link.</div></details>
+<details><summary>What should I pay attention to when using QR Code/Barcode Reader?</summary><div class="seo-upgrade-answer">Blur, reflection, low contrast and excessive perspective will reduce the recognition rate. Unfamiliar QR Codes may lead to phishing websites, please do not automatically trust the scan results.</div></details>
+<details><summary>Will QR Code/Barcode Reader upload data?</summary><div class="seo-upgrade-answer">The image and decoding results are processed locally in the browser, and the camera footage will not be uploaded.</div></details>
+<details><summary>Do I need to install software or register an account?</summary><div class="seo-upgrade-answer">No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed.</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/code-reader';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：ZXing 光學掃描與解析矩陣      -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const modeTabs = document.querySelectorAll('.mode-tab');
+            const modePanels = document.querySelectorAll('.mode-panel');
+            
+            const cameraSelect = document.getElementById('camera-select');
+            const btnToggleCamera = document.getElementById('btn-toggle-camera');
+            const videoStream = document.getElementById('video-stream');
+            const cameraStandby = document.getElementById('camera-standby');
+            const scannerUi = document.getElementById('scanner-ui');
+            
+            const fileInput = document.getElementById('file-input');
+            const dropZone = document.getElementById('drop-zone');
+            const imagePreview = document.getElementById('image-preview');
+            const btnResetImage = document.getElementById('btn-reset-image');
+
+            const decodeStatus = document.getElementById('decode-status');
+            const formatBadge = document.getElementById('format-badge');
+            const decodedOutput = document.getElementById('decoded-output');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnAction = document.getElementById('btn-action');
+            const resultDashboard = document.getElementById('result-dashboard');
+
+            let codeReader = new ZXing.BrowserMultiFormatReader();
+            let isVideoRunning = false;
+            let currentDeviceId = ''; 
+            let lastDecodedText = '';
+            let currentObjectUrl = null; 
+
+            const triggerSuccessEffect = () => {
+                scannerUi.classList.add('scan-success');
+                setTimeout(() => scannerUi.classList.remove('scan-success'), 500);
+                
+                resultDashboard.classList.remove('animate-pop');
+                void resultDashboard.offsetWidth;
+                resultDashboard.classList.add('animate-pop');
+                resultDashboard.classList.add('border-emerald-500/50');
+                setTimeout(() => resultDashboard.classList.remove('border-emerald-500/50'), 500);
+            };
+
+            const isUrl = (str) => {
+                try { new URL(str); return true; } catch (_) { return false; }
+            };
+
+            const handleResult = (result) => {
+                if (result.text === lastDecodedText) return; 
+                lastDecodedText = result.text;
+                triggerSuccessEffect();
+
+                decodeStatus.textContent = 'Decoded';
+                decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]';
+                
+                const formatName = result.format !== undefined ? ZXing.BarcodeFormat[result.format].replace(/_/g, ' ') : 'UNKNOWN FORMAT';
+                formatBadge.textContent = `FORMAT: ${formatName}`;
+                formatBadge.classList.remove('hidden');
+                
+                decodedOutput.value = result.text;
+                decodedOutput.classList.replace('border-hub-700', 'border-emerald-500/50');
+                setTimeout(() => decodedOutput.classList.replace('border-emerald-500/50', 'border-hub-700'), 1000);
+
+                btnCopy.disabled = false;
+                btnCopy.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnAction.disabled = false;
+                btnAction.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                btnAction.onclick = null; 
+                if (isUrl(result.text)) {
+                    btnAction.innerHTML = '<i class="ph ph-link text-lg"></i> 開啟連結';
+                    btnAction.onclick = () => window.open(result.text, '_blank', 'noopener,noreferrer');
+                } else {
+                    btnAction.innerHTML = '<i class="ph ph-magnifying-glass text-lg"></i> Google 搜尋';
+                    btnAction.onclick = () => window.open(`https://www.google.com/search?q=${encodeURIComponent(result.text)}`, '_blank');
+                }
+            };
+
+            const resetDashboard = () => {
+                lastDecodedText = '';
+                decodeStatus.textContent = 'Waiting';
+                decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                formatBadge.classList.add('hidden');
+                decodedOutput.value = '';
+                
+                btnCopy.disabled = true;
+                btnCopy.classList.add('opacity-50', 'cursor-not-allowed');
+                btnAction.disabled = true;
+                btnAction.classList.add('opacity-50', 'cursor-not-allowed');
+                btnAction.innerHTML = '<i class="ph ph-arrow-square-out text-lg"></i> 開啟 / 搜尋';
+            };
+
+            // --- 模式 A：相機控制引擎 ---
+            const loadCameras = async () => {
+                try {
+                    const videoInputDevices = await codeReader.listVideoInputDevices();
+                    
+                    if (videoInputDevices.length === 0) {
+                        cameraSelect.innerHTML = '<option value="">預設相機 (請授權啟動)</option>';
+                        return;
+                    }
+
+                    cameraSelect.innerHTML = '';
+                    let defaultDevice = videoInputDevices[0].deviceId;
+                    
+                    videoInputDevices.forEach((element) => {
+                        const option = document.createElement('option');
+                        option.value = element.deviceId;
+                        option.text = element.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                        
+                        if (element.label.toLowerCase().includes('back') || element.label.toLowerCase().includes('rear')) {
+                            defaultDevice = element.deviceId;
+                        }
+                    });
+                    
+                    cameraSelect.value = defaultDevice;
+                    currentDeviceId = defaultDevice;
+
+                } catch (error) {
+                    cameraSelect.innerHTML = '<option value="">無法獲取相機權限</option>';
+                }
+            };
+
+            const startCamera = () => {
+                cameraStandby.classList.add('hidden');
+                videoStream.classList.remove('hidden');
+                scannerUi.classList.remove('hidden');
+                
+                btnToggleCamera.innerHTML = '<i class="ph-bold ph-stop text-red-500"></i> 停止掃描';
+                btnToggleCamera.classList.replace('bg-hub-accent', 'bg-hub-800');
+                btnToggleCamera.classList.replace('text-hub-900', 'text-white');
+                btnToggleCamera.classList.replace('hover:bg-sky-400', 'hover:bg-hub-700');
+                btnToggleCamera.classList.add('border', 'border-hub-700');
+
+                resetDashboard();
+
+                const deviceToUse = currentDeviceId || undefined;
+
+                codeReader.decodeFromVideoDevice(deviceToUse, 'video-stream', (result, err) => {
+                    if (result && result.text !== lastDecodedText) {
+                        handleResult(result);
+                    }
+                }).then(async () => {
+                    const devices = await codeReader.listVideoInputDevices();
+                    if (devices.length > 0 && cameraSelect.options.length <= 1) {
+                        cameraSelect.innerHTML = '';
+                        devices.forEach(d => {
+                            const opt = document.createElement('option');
+                            opt.value = d.deviceId;
+                            opt.text = d.label || `Camera ${cameraSelect.length + 1}`;
+                            cameraSelect.appendChild(opt);
+                        });
+                        if (currentDeviceId) cameraSelect.value = currentDeviceId;
+                    }
+                }).catch((err) => {
+                    showToast('無法存取相機，請確認已給予瀏覽器權限', true);
+                    stopCamera();
+                });
+                
+                isVideoRunning = true;
+            };
+
+            const stopCamera = () => {
+                codeReader.reset();
+                
+                videoStream.classList.add('hidden');
+                scannerUi.classList.add('hidden');
+                cameraStandby.classList.remove('hidden');
+                
+                btnToggleCamera.innerHTML = '<i class="ph-bold ph-power"></i> 啟動感測器';
+                btnToggleCamera.classList.replace('bg-hub-800', 'bg-hub-accent');
+                btnToggleCamera.classList.replace('text-white', 'text-hub-900');
+                btnToggleCamera.classList.replace('hover:bg-hub-700', 'hover:bg-sky-400');
+                btnToggleCamera.classList.remove('border', 'border-hub-700');
+                
+                isVideoRunning = false;
+            };
+
+            cameraSelect.addEventListener('change', (e) => {
+                currentDeviceId = e.target.value;
+                if (isVideoRunning) {
+                    stopCamera();
+                    startCamera(); 
+                }
+            });
+
+            btnToggleCamera.addEventListener('click', () => {
+                if (isVideoRunning) stopCamera();
+                else startCamera();
+            });
+
+            loadCameras();
+
+            // --- 模式 B：圖片靜態解析引擎 (GPU 時序強制同步版) ---
+            const processImageFile = async (file) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    return showToast('請上傳有效的圖片檔案', true);
+                }
+
+                resetDashboard();
+                lastDecodedText = ''; 
+                
+                decodeStatus.innerHTML = '<i class="ph ph-spinner-gap animate-spin"></i> Parsing...';
+                decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-hub-800 text-sky-400 border border-sky-900/50 flex items-center gap-1';
+
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                currentObjectUrl = URL.createObjectURL(file);
+                
+                // 即時顯示預覽圖
+                imagePreview.src = currentObjectUrl;
+                imagePreview.classList.remove('hidden');
+                btnResetImage.classList.remove('hidden');
+                btnResetImage.classList.add('flex');
+
+                try {
+                    const img = new Image();
+                    img.src = currentObjectUrl;
+                    
+                    // 【終極物理防禦：強制等待 GPU 將點陣圖完全展開到記憶體】
+                    // 這是粉碎「第一次失敗、第二次成功」幻象的唯一解法
+                    await img.decode(); 
+
+                    // 1. 建立降採樣畫布 (防禦千萬畫素 OOM 崩潰)
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    
+                    // 將維度收斂至 2048，這能保留條碼的邊緣密度，同時極大降低 ZXing 運算量
+                    const MAX_DIM = 2048; 
+                    let scale = 1;
+                    if (img.width > MAX_DIM || img.height > MAX_DIM) {
+                        scale = Math.min(MAX_DIM / img.width, MAX_DIM / img.height);
+                    }
+                    
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    
+                    // 強制白底 (防禦透明 PNG 條碼轉檔黑屏)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // 2. 光學重序列化
+                    const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    const scanImg = new Image();
+                    scanImg.src = resizedDataUrl;
+                    
+                    // 再次等待降採樣後的影像被 GPU 完全展開
+                    await scanImg.decode();
+
+                    // 3. 執行解析 (雙重保險)
+                    try {
+                        // Pass 1: 解析降採樣且鋪白底的優化影像
+                        const result = await codeReader.decodeFromImageElement(scanImg);
+                        handleResult(result);
+                        showToast('影像解碼成功');
+                    } catch (err) {
+                        // Pass 2: 如果找不到，且原圖不是大到離譜，嘗試裸送原圖作最後掙扎
+                        if (err instanceof ZXing.NotFoundException && img.width <= 4000) {
+                             console.log('Downsampled scan failed, attempting original fidelity...');
+                             const originalResult = await codeReader.decodeFromImageElement(img);
+                             handleResult(originalResult);
+                             showToast('高解析度影像解碼成功');
+                        } else {
+                             throw err;
+                        }
+                    }
+
+                } catch (e) {
+                    console.error("Optical Pipeline Error:", e);
+                    decodeStatus.textContent = 'Not Found';
+                    decodeStatus.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-900/50 text-red-400 border border-red-500/50';
+                    decodedOutput.value = '無法在影像中找到有效的條碼特徵。請確保影像清晰且條碼未被裁切。';
+                    showToast('找不到條碼', true);
+                }
+            };
+
+            fileInput.addEventListener('change', (e) => processImageFile(e.target.files[0]));
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-active'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); 
+                dropZone.classList.remove('drag-active');
+                if (e.dataTransfer.files.length) processImageFile(e.dataTransfer.files[0]);
+            });
+
+            btnResetImage.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                fileInput.value = '';
+                imagePreview.src = '';
+                imagePreview.classList.add('hidden');
+                
+                if (currentObjectUrl) {
+                    URL.revokeObjectURL(currentObjectUrl);
+                    currentObjectUrl = null;
+                }
+                
+                btnResetImage.classList.add('hidden');
+                btnResetImage.classList.remove('flex');
+                resetDashboard();
+            });
+
+            // --- 介面切換與資源釋放管理 ---
+            modeTabs.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const target = e.currentTarget.dataset.target;
+                    
+                    modeTabs.forEach(b => b.classList.remove('active'));
+                    modePanels.forEach(p => p.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(target).classList.add('active');
+
+                    if (target !== 'panel-camera' && isVideoRunning) {
+                        stopCamera();
+                    }
+                    
+                    resetDashboard();
+                });
+            });
+
+            // --- 按鈕事件 ---
+            btnCopy.addEventListener('click', () => {
+                const text = decodedOutput.value;
+                if (!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('解碼內容 已複製');
+                }).catch(() => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("Copy");
+                    textArea.remove();
+                    showToast('解碼內容 已複製');
+                });
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (isVideoRunning) stopCamera();
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+            });
+
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

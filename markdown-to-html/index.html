@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to HTML Converter | ToolHub - 免費線上 Markdown 轉 HTML 工具</title>
+    <meta name="description" content="專業級 Markdown 轉 HTML 工具。即時預覽轉換結果，支援標題、表格、程式碼區塊、待辦清單等完整語法。可切換 Render/Source 檢視模式，一鍵複製或下載 HTML。純前端本地運算，保障資料隱私。">
+    <meta name="keywords" content="Markdown轉HTML, Markdown編輯器, Markdown預覽, Markdown轉換工具, 線上Markdown, Markdown to HTML, HTML產生器">
+    <meta name="author" content="ToolHub">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Markdown 解析函式庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                            md: '#06B6D4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #06B6D4; }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
+        }
+
+        .editor-textarea::placeholder {
+            color: #475569;
+        }
+
+        /* 預覽區塊 Markdown 渲染樣式 */
+        .md-preview {
+            padding: 1.25rem;
+            line-height: 1.8;
+            color: #e2e8f0;
+        }
+
+        .md-preview h1 { font-size: 1.75rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: #f1f5f9; padding-bottom: 0.4rem; border-bottom: 1px solid #1e293b; }
+        .md-preview h2 { font-size: 1.45rem; font-weight: 700; margin: 1.4rem 0 0.6rem; color: #f1f5f9; padding-bottom: 0.3rem; border-bottom: 1px solid #1e293b; }
+        .md-preview h3 { font-size: 1.2rem; font-weight: 600; margin: 1.2rem 0 0.5rem; color: #e2e8f0; }
+        .md-preview h4 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.4rem; color: #e2e8f0; }
+        .md-preview h5, .md-preview h6 { font-size: 0.95rem; font-weight: 600; margin: 0.8rem 0 0.4rem; color: #cbd5e1; }
+        .md-preview p { margin: 0.6rem 0; }
+        .md-preview a { color: #06B6D4; text-decoration: underline; text-decoration-color: rgba(6, 182, 212, 0.3); text-underline-offset: 2px; }
+        .md-preview a:hover { color: #22D3EE; text-decoration-color: #22D3EE; }
+        .md-preview strong { font-weight: 700; color: #f1f5f9; }
+        .md-preview em { font-style: italic; }
+        .md-preview code {
+            background-color: #1e293b;
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', monospace;
+            font-size: 0.875em;
+            color: #7DD3FC;
+        }
+        .md-preview pre {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        .md-preview pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            color: inherit;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+        .md-preview blockquote {
+            border-left: 3px solid #06B6D4;
+            padding: 0.5rem 1rem;
+            margin: 1rem 0;
+            background-color: rgba(6, 182, 212, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: #94a3b8;
+        }
+        .md-preview blockquote p { margin: 0.25rem 0; }
+        .md-preview ul, .md-preview ol { margin: 0.6rem 0; padding-left: 1.5rem; }
+        .md-preview li { margin: 0.25rem 0; }
+        .md-preview ul li { list-style-type: disc; }
+        .md-preview ol li { list-style-type: decimal; }
+        .md-preview li > ul { margin: 0.2rem 0; }
+        .md-preview li > ul li { list-style-type: circle; }
+        .md-preview hr { border: none; border-top: 1px solid #1e293b; margin: 1.5rem 0; }
+        .md-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+        .md-preview th, .md-preview td {
+            border: 1px solid #1e293b;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+        }
+        .md-preview th {
+            background-color: #151F32;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        .md-preview td {
+            background-color: rgba(15, 23, 42, 0.5);
+        }
+        .md-preview tr:nth-child(even) td {
+            background-color: rgba(21, 31, 50, 0.5);
+        }
+        .md-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid #1e293b;
+        }
+        .md-preview input[type="checkbox"] {
+            accent-color: #06B6D4;
+            margin-right: 0.4rem;
+            transform: scale(1.1);
+        }
+        .md-preview li input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+        .md-preview del {
+            color: #64748b;
+            text-decoration: line-through;
+        }
+
+        /* 語法高亮行號支援 */
+        .md-preview pre code .hljs { background: transparent; }
+
+        /* HTML Source 區塊樣式 */
+        .html-source-view {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #a5d6ff;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.8rem;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        /* 標籤切換按鈕 */
+        .view-tab {
+            transition: all 0.2s ease;
+        }
+        .view-tab.active {
+            background-color: rgba(6, 182, 212, 0.15);
+            color: #06B6D4;
+            border-color: rgba(6, 182, 212, 0.3);
+        }
+
+        /* FAQ 手風琴動畫 */
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .faq-content.open {
+            max-height: 600px;
+        }
+        .faq-chevron {
+            transition: transform 0.3s ease;
+        }
+        .faq-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        /* 狀態指示動畫 */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        /* 計數器閃爍 */
+        @keyframes count-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        .count-pop {
+            animation: count-pop 0.2s ease-out;
+        }
+
+        @media (max-width: 767px) {
+            .editor-textarea { min-height: 380px; font-size: 0.8rem; }
+            .html-source-view { min-height: 380px; font-size: 0.75rem; }
+            .md-preview { padding: 0.875rem; min-height: 380px; }
+            .md-preview h1 { font-size: 1.4rem; }
+            .md-preview h2 { font-size: 1.2rem; }
+            .md-preview h3 { font-size: 1.05rem; }
+            .flex-grow.relative { min-height: 380px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .flex-grow.relative { min-height: 400px; }
+            .editor-textarea { min-height: 400px; }
+            .html-source-view { min-height: 400px; }
+            .md-preview { min-height: 400px; }
+        }
+        @media (min-width: 1024px) {
+            .flex-grow.relative { min-height: 600px; }
+            .editor-textarea { min-height: 600px; }
+            .html-source-view { min-height: 600px; }
+            .md-preview { min-height: 600px; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/markdown-to-html/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/markdown-to-html/">
+    <meta property="og:title" content="Markdown to HTML Converter">
+    <meta property="og:description" content="專業級 Markdown 轉 HTML 工具。即時預覽轉換結果，支援標題、表格、程式碼區塊、待辦清單等完整語法。可切換 Render/Source 檢視模式，一鍵複製或下載 HTML。純前端本地運算，保障資料隱私。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Markdown to HTML Converter">
+    <meta name="twitter:description" content="專業級 Markdown 轉 HTML 工具。即時預覽轉換結果，支援標題、表格、程式碼區塊、待辦清單等完整語法。可切換 Render/Source 檢視模式，一鍵複製或下載 HTML。純前端本地運算，保障資料隱私。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Markdown to HTML Converter","url":"https://toolhuben.com/markdown-to-html/","description":"專業級 Markdown 轉 HTML 工具。即時預覽轉換結果，支援標題、表格、程式碼區塊、待辦清單等完整語法。可切換 Render/Source 檢視模式，一鍵複製或下載 HTML。純前端本地運算，保障資料隱私。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Markdown to HTML Converter","item":"https://toolhuben.com/markdown-to-html/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/markdown-to-html/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/markdown-to-html/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/markdown-to-html/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#06B6D4;--classic-accent-rgb:6,182,212" data-tool-visual data-classic-tool data-classic-layout="terminal">
+
+    <!-- 系統組件：Header -->
+    <div id="component-header"></div>
+    <!-- 系統組件：Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 核心模塊：Markdown to HTML Converter -->
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- 模塊標題區 (Hero) -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-md">
+                <span class="flex w-2 h-2 bg-hub-md rounded-full animate-pulse mr-2"></span>
+                文件轉換引擎已上線
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Markdown <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-md to-cyan-300">to HTML</span> Converter
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                即時將 Markdown 文件轉換為標準 HTML 代碼。支援標題、表格、程式碼區塊、待辦清單等完整語法。
+                提供 Render Preview 與 HTML Source 雙檢視模式，一鍵複製或下載結果。純前端本地運算，保障您的資料隱私。
+            </p>
+        </div>
+
+        <!-- 運算主控台 -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+
+            <!-- 頂部工具列 (Toolbar) -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-hub-900/80 border-b border-hub-700 p-3 sm:p-4 gap-3">
+
+                <!-- 左側：主要操作按鈕 -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-sample" class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]">
+                        <i class="ph ph-lightbulb text-base"></i> 範例
+                    </button>
+                    <button id="btn-clear" class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-red-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]">
+                        <i class="ph ph-trash text-base"></i> 清空
+                    </button>
+                </div>
+
+                <!-- 右側：複製、下載、檢視模式切換 -->
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-hub-700 pt-3 sm:pt-0">
+                    <button id="btn-copy" class="flex-1 sm:flex-none px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                        <i class="ph ph-copy text-base"></i> 複製 HTML
+                    </button>
+                    <button id="btn-download" class="flex-1 sm:flex-none px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                        <i class="ph ph-download-simple text-base"></i> 下載 HTML
+                    </button>
+                    <div class="h-5 w-px bg-hub-700 hidden sm:block"></div>
+                    <!-- 檢視模式切換 -->
+                    <div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden">
+                        <button id="tab-render" class="view-tab active px-3 py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                            <i class="ph ph-eye text-sm"></i>
+                            <span class="hidden sm:inline">Render Preview</span>
+                            <span class="sm:hidden">預覽</span>
+                        </button>
+                        <button id="tab-source" class="view-tab px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-400 flex items-center gap-1.5 border-l border-hub-700">
+                            <i class="ph ph-code text-sm"></i>
+                            <span class="hidden sm:inline">HTML Source</span>
+                            <span class="sm:hidden">原始碼</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 編輯器與預覽區域 (Split Pane) -->
+            <div class="flex flex-col lg:flex-row flex-grow">
+
+                <!-- 左側：Markdown 編輯器 -->
+                <div class="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-hub-700 flex flex-col">
+                    <div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-markdown-logo text-hub-md text-base"></i>
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Markdown Editor</span>
+                        </div>
+                        <span id="char-count" class="text-xs text-slate-500 font-mono">0 字元</span>
+                    </div>
+                    <div class="flex-grow relative">
+                        <textarea
+                            id="md-input"
+                            class="editor-textarea w-full h-full absolute inset-0"
+                            placeholder="在此輸入 Markdown 內容...&#10;&#10;支援語法：&#10;* 標題 (# H1 ~ ###### H6)&#10;* 粗體、斜體、刪除線&#10;* 程式碼區塊 (```)&#10;* 表格 (| 欄位1 | 欄位2 |)&#10;* 引用、清單、待辦清單&#10;* 連結、圖片&#10;* 分隔線"
+                            spellcheck="false"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- 右側：HTML 預覽 / 原始碼 -->
+                <div class="w-full lg:w-1/2 flex flex-col">
+                    <div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-browser text-hub-md text-base"></i>
+                            <span id="preview-label" class="text-xs font-medium text-slate-400 uppercase tracking-wider">Render Preview</span>
+                        </div>
+                        <span id="line-count" class="text-xs text-slate-500 font-mono">0 行</span>
+                    </div>
+                    <div class="flex-grow relative overflow-hidden">
+                        <!-- Render Preview -->
+                        <div id="render-preview" class="md-preview w-full h-full absolute inset-0 overflow-y-auto">
+                            <div class="text-slate-500 text-sm flex items-center justify-center h-full">
+                                <div class="text-center space-y-2">
+                                    <i class="ph ph-markdown-logo text-3xl text-slate-600"></i>
+                                    <p>輸入 Markdown 內容即可即時預覽</p>
+                                    <p class="text-xs text-slate-600">或點擊「範例」按鈕載入範例文件</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- HTML Source (隱藏) -->
+                        <textarea id="html-source" class="html-source-view w-full h-full absolute inset-0 hidden" readonly spellcheck="false" placeholder="在此顯示轉換後的 HTML 原始碼..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部狀態列 -->
+            <div class="bg-hub-900 border-t border-hub-700 p-3 sm:px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div class="flex items-center gap-4 text-xs font-mono">
+                    <div class="flex items-center gap-1.5" id="status-indicator">
+                        <div class="w-2 h-2 rounded-full bg-slate-500" id="status-dot"></div>
+                        <span id="status-text" class="text-slate-400 uppercase tracking-wider text-[10px]">Ready</span>
+                    </div>
+                    <div class="h-3 w-px bg-hub-700"></div>
+                    <span class="text-slate-500" id="word-count">0 字</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <span class="hidden sm:inline flex items-center gap-1"><i class="ph ph-info text-xs"></i> 純前端本地處理，資料不會離開您的瀏覽器</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== -->
+        <!-- FAQ 常見問題區       -->
+        <!-- ==================== -->
+        <section class="mt-16 max-w-4xl mx-auto">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-3">Markdown 轉 HTML 常見問題</h2>
+                <p class="text-slate-400 text-sm">關於 Markdown 轉換與使用的熱門疑問</p>
+            </div>
+
+            <div class="space-y-3" id="faq-container">
+
+                <!-- FAQ 1 -->
+                <div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+                        <span class="text-sm sm:text-base font-medium text-white pr-4">什麼是 Markdown？它與一般純文字有什麼不同？</span>
+                        <svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-content">
+                        <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+                            <p><strong class="text-slate-300">Markdown</strong> 是一種輕量級標記語言，由 John Gruber 於 2004 年創建。它使用簡單的符號（如 <code class="text-hub-md">#</code>、<code class="text-hub-md">*</code>、<code class="text-hub-md">-</code>）來表示文字格式，讓撰寫者專注於「內容本身」而非「排版樣式」。</p>
+                            <p>與一般純文字的不同在於：純文字不包含任何格式資訊，而 Markdown 可以透過直觀的語法表達標題、強調、清單、連結等結構，同時仍保持人類可讀的純文字形式。這使得 Markdown 成為技術文件、README、筆記、論壇發文最受歡迎的格式之一。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 2 -->
+                <div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+                        <span class="text-sm sm:text-base font-medium text-white pr-4">Markdown 與 HTML 有什麼差別？我應該用哪一種？</span>
+                        <svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-content">
+                        <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+                            <p><strong class="text-slate-300">Markdown</strong> 屬於「寫作格式」，專注於內容的語義結構（這是標題、這是清單）；<strong class="text-slate-300">HTML</strong> 則屬於「標記語言」，除了語義外還承擔了完整的外觀控制、互動行為與多媒體整合。</p>
+                            <p>選擇建議：</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li><strong class="text-slate-300">適合用 Markdown：</strong>技術文件、部落格文章、README、筆記、論壇發文、協作編輯 — 當你希望專注內容、快速產出時。</li>
+                                <li><strong class="text-slate-300">適合用 HTML：</strong>網頁開發、複雜版面設計、需要精確控制樣式與互動的場景 — 當你需要完整的前端控制權時。</li>
+                            </ul>
+                            <p class="mt-2">許多平台（如 GitHub、Notion、Discord）都在底層將 Markdown 轉換為 HTML 來渲染，因此學習 Markdown 可以說是通往 HTML 世界的最佳入門階梯。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 3 -->
+                <div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+                        <span class="text-sm sm:text-base font-medium text-white pr-4">如何在 Markdown 中建立表格和程式碼區塊？</span>
+                        <svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-content">
+                        <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+                            <p><strong class="text-slate-300">表格 (Table)：</strong>使用管線 <code class="text-hub-md">|</code> 與連字號 <code class="text-hub-md">-</code> 來定義</p>
+                            <pre class="bg-[#0B1120] border border-hub-700 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto">| 語法     | 說明         |
+|----------|--------------|
+| 標題     | # H1 ~ H6   |
+| 粗體     | **文字**     |
+| 程式碼   | `code`       |</pre>
+                            <p><strong class="text-slate-300">程式碼區塊 (Code Block)：</strong>使用三個反引號 <code class="text-hub-md">```</code> 包裹，可指定語言以獲得語法高亮</p>
+                            <pre class="bg-[#0B1120] border border-hub-700 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto">```javascript
+function hello() {
+    console.log("Hello, World!");
+}
+```</pre>
+                            <p class="text-xs text-slate-500">提示：也可以在每行前面縮排 4 個空格來建立程式碼區塊。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 4 -->
+                <div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+                        <span class="text-sm sm:text-base font-medium text-white pr-4">Markdown 支援待辦清單 (Task List) 嗎？如何建立？</span>
+                        <svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-content">
+                        <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+                            <p>是的！Markdown 支援待辦清單（也稱為 Task List 或 Checkbox List）。這是 GFM（GitHub Flavored Markdown）擴充語法，透過在清單項目中使用方括號 <code class="text-hub-md">[ ]</code> 或 <code class="text-hub-md">[x]</code> 來表示未完成或已完成。</p>
+                            <p>語法範例：</p>
+                            <pre class="bg-[#0B1120] border border-hub-700 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto">- [x] 完成購物清單
+- [ ] 撰寫週報
+- [ ] 回覆電子郵件
+  - [x] 確認會議時間
+  - [ ] 發送會議記錄</pre>
+                            <p>轉換後會渲染為互動式的勾選方塊，非常適合專案管理、待辦事項與協作清單。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 5 -->
+                <div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+                        <span class="text-sm sm:text-base font-medium text-white pr-4">使用這個工具安全嗎？我的資料會上傳到伺服器嗎？</span>
+                        <svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-content">
+                        <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+                            <p><strong class="text-green-400">100% 安全。</strong>本工具採用純前端（Client-side）架構，所有 Markdown 轉換處理都在您的瀏覽器中完成，<strong class="text-slate-300">不會將任何資料上傳至任何伺服器</strong>。</p>
+                            <p>這意味著：</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>您的商業機密文件、API 文件、私人筆記都絕不會離開您的電腦</li>
+                                <li>不需要網路連線即可執行轉換（除了第一次載入頁面）</li>
+                                <li>沒有任何後端伺服器會儲存或處理您的內容</li>
+                                <li>即使是 ToolHub 的管理者也無法存取您輸入的資料</li>
+                            </ul>
+                            <p class="mt-2">這是我們與其他雲端轉換工具最大的不同 — 安全始於架構設計。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 6 -->
+                <div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+                        <span class="text-sm sm:text-base font-medium text-white pr-4">我可以在哪些地方使用 Markdown？</span>
+                        <svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-content">
+                        <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+                            <p>Markdown 的應用範圍非常廣泛，幾乎遍及現代開發與寫作的每個角落：</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li><strong class="text-slate-300">開發相關：</strong>GitHub/GitLab README、專案 Wiki、Jupyter Notebook、API 文件 (Swagger/Stoplight)</li>
+                                <li><strong class="text-slate-300">筆記工具：</strong>Notion、Obsidian、Logseq、Bear、Joplin、Standard Notes</li>
+                                <li><strong class="text-slate-300">寫作與發布：</strong>Hugo/Jekyll 靜態網站、Ghost 部落格、Medium、Dev.to、HackMD</li>
+                                <li><strong class="text-slate-300">即時通訊：</strong>Discord、Slack、Telegram、Microsoft Teams、Signal</li>
+                                <li><strong class="text-slate-300">AI 應用：</strong>ChatGPT、Claude、Gemini 等 AI 對話系統普遍使用 Markdown 作為輸出格式</li>
+                            </ul>
+                            <p class="mt-2">學會 Markdown，等於獲得一把開啟現代數位寫作世界的大門鑰匙。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== -->
+        <!-- SEO 教學文章區        -->
+        <!-- ==================== -->
+        <section class="mt-16 max-w-4xl mx-auto">
+            <div class="bg-hub-800/40 border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <i class="ph ph-book-open-text text-hub-md text-2xl"></i>
+                    什麼是 Markdown？為什麼它成為現代寫作的標準？
+                </h2>
+
+                <div class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+
+                    <p>
+                        <strong class="text-white">Markdown</strong> 由 John Gruber 與 Aaron Swartz 於 2004 年共同創建，其核心理念是：「<em class="text-slate-300">讓文字文件在保持純文字可讀性的同時，具備結構化標記的能力。</em>」二十年後的今天，Markdown 已成為程式開發、技術寫作、AI 互動與知識管理領域無可爭議的標準格式。
+                    </p>
+
+                    <h3 class="text-lg font-bold text-white mt-6 mb-3">Markdown 的核心優勢</h3>
+
+                    <div class="grid sm:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="ph ph-file-text text-hub-md"></i>
+                                <h4 class="font-medium text-white">極低學習曲線</h4>
+                            </div>
+                            <p class="text-xs text-slate-400">大多數人在 10 分鐘內就能學會 80% 的常用語法。不需要像 HTML 那樣記住繁瑣的標籤結構。</p>
+                        </div>
+                        <div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="ph ph-device-mobile text-hub-md"></i>
+                                <h4 class="font-medium text-white">跨平台通用</h4>
+                            </div>
+                            <p class="text-xs text-slate-400">無論是 Windows、macOS、Linux、iOS 或 Android，任何文字編輯器都能開啟與編輯 Markdown 檔案。</p>
+                        </div>
+                        <div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="ph ph-git-branch text-hub-md"></i>
+                                <h4 class="font-medium text-white">版本控制友善</h4>
+                            </div>
+                            <p class="text-xs text-slate-400">純文字格式讓 Git 能夠精準追蹤每一行變更，這是 Word 或 Google Docs 等二進位格式無法比擬的優勢。</p>
+                        </div>
+                        <div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="ph ph-robot text-hub-md"></i>
+                                <h4 class="font-medium text-white">AI 原生相容</h4>
+                            </div>
+                            <p class="text-xs text-slate-400">ChatGPT、Claude 等大型語言模型普遍以 Markdown 作為輸出格式，熟悉 Markdown 即掌握與 AI 有效溝通的關鍵技能。</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-white mt-6 mb-3">常用 Markdown 語法速查表</h3>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-hub-700">
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">語法</th>
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">Markdown</th>
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">轉換結果</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-400">
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">標題</td>
+                                    <td class="py-2 px-3 font-mono text-xs"># 標題 / ## 標題</td>
+                                    <td class="py-2 px-3">&lt;h1&gt;標題&lt;/h1&gt; / &lt;h2&gt;標題&lt;/h2&gt;</td>
+                                </tr>
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">粗體</td>
+                                    <td class="py-2 px-3 font-mono text-xs">**粗體文字**</td>
+                                    <td class="py-2 px-3">&lt;strong&gt;粗體文字&lt;/strong&gt;</td>
+                                </tr>
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">斜體</td>
+                                    <td class="py-2 px-3 font-mono text-xs">*斜體文字*</td>
+                                    <td class="py-2 px-3">&lt;em&gt;斜體文字&lt;/em&gt;</td>
+                                </tr>
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">程式碼</td>
+                                    <td class="py-2 px-3 font-mono text-xs">`程式碼`</td>
+                                    <td class="py-2 px-3">&lt;code&gt;程式碼&lt;/code&gt;</td>
+                                </tr>
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">連結</td>
+                                    <td class="py-2 px-3 font-mono text-xs">[文字](網址)</td>
+                                    <td class="py-2 px-3">&lt;a href="網址"&gt;文字&lt;/a&gt;</td>
+                                </tr>
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">圖片</td>
+                                    <td class="py-2 px-3 font-mono text-xs">![替代文字](圖檔)</td>
+                                    <td class="py-2 px-3">&lt;img src="圖檔" alt="替代文字"&gt;</td>
+                                </tr>
+                                <tr class="border-b border-hub-700/50">
+                                    <td class="py-2 px-3">引用</td>
+                                    <td class="py-2 px-3 font-mono text-xs">&gt; 引用文字</td>
+                                    <td class="py-2 px-3">&lt;blockquote&gt;引用文字&lt;/blockquote&gt;</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-3">待辦清單</td>
+                                    <td class="py-2 px-3 font-mono text-xs">- [x] 已完成</td>
+                                    <td class="py-2 px-3">&lt;input type="checkbox" checked&gt;</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-white mt-6 mb-3">為什麼選擇 ToolHub 的 Markdown to HTML Converter？</h3>
+                    <p>
+                        市面上已有許多 Markdown 編輯器，但 ToolHub 版本專為<strong class="text-slate-300">開發者與技術寫作者</strong>設計，提供其他工具少有的優勢：
+                    </p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong class="text-slate-300">雙檢視模式：</strong>除了 WYSIWYG 的 Render Preview 外，還提供純 HTML 原始碼檢視，方便開發者直接取用轉換結果。</li>
+                        <li><strong class="text-slate-300">零延遲即時轉換：</strong>採用高效能 marked.js 引擎，每次按鍵觸發毫秒級轉換，流暢無卡頓。</li>
+                        <li><strong class="text-slate-300">一鍵產出：</strong>複製與下載功能讓您無需手動選取，即可取得標準 HTML 程式碼。</li>
+                        <li><strong class="text-slate-300">零伺服器架構：</strong>所有轉換 100% 在瀏覽器中完成，告別資料外洩風險。</li>
+                        <li><strong class="text-slate-300">完整語法支援：</strong>涵蓋 GFM（GitHub Flavored Markdown）全部常用擴充語法，包括表格、任務清單、刪除線等。</li>
+                    </ul>
+
+                    <p class="mt-4 text-slate-500 text-xs border-t border-hub-700 pt-4">
+                        無論您是撰寫技術文件的開發者、整理研究筆記的學者，還是需要將 Markdown 轉換為 HTML 的內容創作者，ToolHub 的 Markdown to HTML Converter 都是您最可靠的工具選擇。立即開始轉換，體驗即時、安全、專業的文件處理流程。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 全域 Toast 提示 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-md" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 組件載入區 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統級中樞神經：負責組件載入與事件代理       -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/markdown-to-html';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+
+                    // 展開父層群組
+                    const parentGroup = item.closest('.nav-group');
+                    if (parentGroup) {
+                        const content = parentGroup.querySelector('.group-content');
+                        const chevron = parentGroup.querySelector('.chevron');
+                        if (content && chevron) {
+                            setTimeout(() => {
+                                content.style.maxHeight = content.scrollHeight + 'px';
+                                chevron.classList.add('rotate-180');
+                            }, 50);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：Markdown 轉換引擎           -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // === DOM 節點映射 ===
+            const mdInput = document.getElementById('md-input');
+            const renderPreview = document.getElementById('render-preview');
+            const htmlSource = document.getElementById('html-source');
+
+            const btnSample = document.getElementById('btn-sample');
+            const btnClear = document.getElementById('btn-clear');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+
+            const tabRender = document.getElementById('tab-render');
+            const tabSource = document.getElementById('tab-source');
+            const previewLabel = document.getElementById('preview-label');
+
+            const charCount = document.getElementById('char-count');
+            const lineCount = document.getElementById('line-count');
+            const wordCount = document.getElementById('word-count');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            // === 配置 marked.js ===
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                });
+            }
+
+            // === 工具函數 ===
+            const getWordCount = (text) => {
+                const trimmed = text.trim();
+                if (!trimmed) return 0;
+                // 中英文混合計數
+                const chineseChars = (trimmed.match(/[一-鿿㐀-䶿豈-﫿]/g) || []).length;
+                const englishWords = trimmed.replace(/[一-鿿㐀-䶿豈-﫿]/g, ' ').trim();
+                const englishCount = englishWords ? englishWords.split(/\s+/).filter(w => w.length > 0).length : 0;
+                return chineseChars + englishCount;
+            };
+
+            const updateStats = () => {
+                const text = mdInput.value;
+                const chars = text.length;
+                const lines = text ? text.split('\n').length : 0;
+                const words = getWordCount(text);
+
+                charCount.textContent = `${chars} 字元`;
+                lineCount.textContent = `${lines} 行`;
+                wordCount.textContent = `${words} 字`;
+
+                if (chars > 0) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-hub-md status-pulse';
+                    statusText.textContent = 'Converting';
+                    statusText.className = 'text-hub-md uppercase tracking-wider text-[10px] font-bold';
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                    statusText.textContent = 'Ready';
+                    statusText.className = 'text-slate-400 uppercase tracking-wider text-[10px]';
+                }
+
+                // 觸發計數器動畫
+                charCount.classList.remove('count-pop');
+                void charCount.offsetWidth;
+                charCount.classList.add('count-pop');
+            };
+
+            // === 核心轉換邏輯 ===
+            const convertMarkdown = () => {
+                const text = mdInput.value;
+
+                try {
+                    let html = '';
+                    if (text.trim()) {
+                        if (typeof marked !== 'undefined') {
+                            html = marked.parse(text);
+                        } else {
+                            html = `<p class="text-red-400">⚠️ Markdown 解析器未載入，請重新整理頁面。</p>`;
+                        }
+                    } else {
+                        html = `<div class="text-slate-500 text-sm flex items-center justify-center h-full">
+                            <div class="text-center space-y-2">
+                                <i class="ph ph-markdown-logo text-3xl text-slate-600"></i>
+                                <p>輸入 Markdown 內容即可即時預覽</p>
+                                <p class="text-xs text-slate-600">或點擊「範例」按鈕載入範例文件</p>
+                            </div>
+                        </div>`;
+                    }
+
+                    renderPreview.innerHTML = html;
+                    htmlSource.value = text.trim() ? html : '';
+
+                    // 將所有連結在新視窗開啟
+                    renderPreview.querySelectorAll('a').forEach(link => {
+                        if (link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) {
+                            link.setAttribute('target', '_blank');
+                            link.setAttribute('rel', 'noopener noreferrer');
+                        }
+                    });
+
+                    updateStats();
+                } catch (error) {
+                    renderPreview.innerHTML = `<div class="text-red-400 p-4 border border-red-900/50 rounded-lg bg-red-950/20">
+                        <strong>轉換錯誤：</strong>${error.message}
+                    </div>`;
+                    console.error('Markdown conversion error:', error);
+                }
+            };
+
+            // === 檢視模式切換 ===
+            const setViewMode = (mode) => {
+                if (mode === 'render') {
+                    renderPreview.classList.remove('hidden');
+                    htmlSource.classList.add('hidden');
+                    tabRender.classList.add('active');
+                    tabSource.classList.remove('active');
+                    previewLabel.textContent = 'Render Preview';
+                } else {
+                    renderPreview.classList.add('hidden');
+                    htmlSource.classList.remove('hidden');
+                    tabSource.classList.add('active');
+                    tabRender.classList.remove('active');
+                    previewLabel.textContent = 'HTML Source';
+                    // 在切換到原始碼模式時更新內容
+                    if (mdInput.value.trim()) {
+                        convertMarkdown();
+                    }
+                }
+            };
+
+            // === Toast 提示器 ===
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+
+                document.getElementById('toast-msg').textContent = msg;
+
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-md';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // === 範例 Markdown ===
+            const sampleMarkdown = `# 歡迎使用 ToolHub Markdown 轉換器
+
+這是一份**範例文件**，展示本工具支援的所有 Markdown 語法。
+
+## 文字樣式
+
+這是**粗體文字**，這是*斜體文字*，這是~~刪除線文字~~，這是\`行內程式碼\`。
+
+> 引用區塊：Markdown 是一種輕量級標記語言，由 John Gruber 於 2004 年創建。
+> — 摘自維基百科
+
+## 程式碼區塊
+
+\`\`\`javascript
+// ToolHub Markdown Converter
+function convertMarkdownToHTML(markdown) {
+    const html = marked.parse(markdown);
+    return html;
+}
+
+console.log("Hello, ToolHub! 🚀");
+\`\`\`
+
+\`\`\`python
+def hello_toolhub():
+    """Greet the ToolHub platform."""
+    print("歡迎使用 ToolHub Markdown to HTML Converter!")
+
+hello_toolhub()
+\`\`\`
+
+## 表格
+
+| 功能 | 支援情況 | 備註 |
+|------|---------|------|
+| 標題 (H1~H6) | ✅ | 使用 # 符號 |
+| 粗體 / 斜體 | ✅ | ** 與 * |
+| 程式碼區塊 | ✅ | 支援語法高亮 |
+| 表格 | ✅ | 使用 \| 分隔 |
+| 待辦清單 | ✅ | GFM 擴充語法 |
+| 圖片嵌入 | ✅ | 支援外部圖片連結 |
+
+## 待辦清單 (Task List)
+
+- [x] 探索 Markdown 語法
+- [x] 學習表格建立
+- [ ] 測試程式碼區塊
+- [ ] 匯出 HTML 結果
+  - [x] 複製到剪貼簿
+  - [ ] 下載為 .html 檔案
+
+## 無序與有序清單
+
+### 無序清單
+- Node.js
+- Python
+- Rust
+  - 所有權系統
+  - 借用檢查器
+
+### 有序清單
+1. 第一步：輸入 Markdown
+2. 第二步：即時預覽結果
+3. 第三步：複製或下載 HTML
+
+## 連結與圖片
+
+- ToolHub 官網：https://toolhuben.com
+- 了解更多 Markdown 語法
+
+---
+
+*由 ToolHub Markdown to HTML Converter 產生 • 純前端處理 • 保障資料隱私*
+`;
+
+            // === 綁定事件監聽 ===
+
+            // 即時轉換
+            mdInput.addEventListener('input', convertMarkdown);
+
+            // 範例
+            btnSample.addEventListener('click', () => {
+                mdInput.value = sampleMarkdown;
+                convertMarkdown();
+                showToast('已載入範例 Markdown');
+            });
+
+            // 清空
+            btnClear.addEventListener('click', () => {
+                mdInput.value = '';
+                convertMarkdown();
+                showToast('已清空全部內容');
+            });
+
+            // 複製 HTML
+            btnCopy.addEventListener('click', () => {
+                const html = htmlSource.value.trim();
+                if (!html) {
+                    showToast('沒有可以複製的 HTML 內容', true);
+                    return;
+                }
+
+                // 根據當前模式決定複製內容
+                let contentToCopy = html;
+                if (tabRender.classList.contains('active')) {
+                    // Render 模式：複製渲染後的 HTML
+                    contentToCopy = html;
+                }
+
+                navigator.clipboard.writeText(contentToCopy).then(() => {
+                    showToast('HTML 已複製到剪貼簿');
+                }).catch(() => {
+                    // Fallback
+                    htmlSource.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('HTML 已複製到剪貼簿');
+                });
+            });
+
+            // 下載 HTML
+            btnDownload.addEventListener('click', () => {
+                const content = htmlSource.value.trim();
+                if (!content) {
+                    showToast('沒有可以下載的內容', true);
+                    return;
+                }
+
+                const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Markdown_${Date.now()}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('HTML 檔案已下載');
+            });
+
+            // 檢視模式切換
+            tabRender.addEventListener('click', () => setViewMode('render'));
+            tabSource.addEventListener('click', () => setViewMode('source'));
+
+            // 鍵盤快捷鍵：Tab 鍵縮排
+            mdInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const target = e.target;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    target.value = target.value.substring(0, start) + '    ' + target.value.substring(end);
+                    target.selectionStart = target.selectionEnd = start + 4;
+                    convertMarkdown();
+                }
+            });
+
+            // FAQ 手風琴切換
+            document.querySelectorAll('.faq-question').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const item = btn.closest('.faq-item');
+                    const content = item.querySelector('.faq-content');
+                    const chevron = btn.querySelector('.faq-chevron');
+                    content.classList.toggle('open');
+                    chevron.classList.toggle('rotated');
+                });
+            });
+
+            // 初始載入範例（增強使用者體驗）
+            mdInput.value = sampleMarkdown;
+            convertMarkdown();
+            showToast('已載入範例，立即體驗 Markdown 轉換！');
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

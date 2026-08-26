@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>XML to JSON | Free Online Tool - ToolHub</title>
+<meta content="Quickly convert XML data into standard JSON format. Supports data exchange scenarios such as Sitemap, RSS Feed, SOAP API, REST API, Legacy System, etc. Built-in XML validation engine accurately marks the location of syntax errors. Automatic detection of XML types." name="description"/>
+<meta content="XML轉JSON, XML to JSON, XML轉換器, JSON產生器, Sitemap XML, RSS Feed, SOAP XML, REST API, 資料格式轉換, 線上轉換工具" name="keywords"/>
+<meta content="ToolHub" name="author"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<!-- XML 轉換引擎 (fast-xml-parser) -->
+<script src="https://cdn.jsdelivr.net/npm/fast-xml-parser@4.3.6/src/fxp.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
+        }
+
+        .editor-textarea::placeholder {
+            color: #475569;
+        }
+
+        /* JSON 輸出區域 */
+        .json-output {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.8rem;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        /* XML 錯誤行標示 */
+        .error-marker {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #EF4444;
+        }
+
+        /* 驗證狀態指示 */
+        .status-valid { color: #34D399; }
+        .status-invalid { color: #EF4444; }
+        .status-idle { color: #64748b; }
+
+        .radio-group label {
+            transition: all 0.15s ease;
+        }
+        .radio-group input[type="radio"]:checked + span {
+            color: #F59E0B;
+        }
+        .option-checkbox {
+            accent-color: #F59E0B;
+        }
+
+        /* 錯誤詳情面板 */
+        .error-detail {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-family: '"Fira Code"', monospace;
+        }
+
+        /* FAQ 手風琴 */
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .faq-content.open {
+            max-height: 600px;
+        }
+        .faq-chevron {
+            transition: transform 0.3s ease;
+        }
+        .faq-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        /* XML 偵測徽章 */
+        .detect-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+        .detect-badge.sitemap {
+            background: rgba(52, 211, 153, 0.15);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: #34D399;
+        }
+        .detect-badge.rss {
+            background: rgba(251, 146, 60, 0.15);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+            color: #FB923C;
+        }
+        .detect-badge.soap {
+            background: rgba(96, 165, 250, 0.15);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            color: #60A5FA;
+        }
+
+        /* Tree View */
+        .tree-node { margin-left: 1.25rem; }
+        .tree-toggle {
+            cursor: pointer;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #94A3B8;
+            transition: transform 0.15s ease;
+        }
+        .tree-toggle:hover { color: #F59E0B; }
+        .tree-toggle.collapsed + .tree-children { display: none; }
+        .tree-toggle .chevron-icon {
+            transition: transform 0.15s ease;
+            display: inline-block;
+        }
+        .tree-toggle.collapsed .chevron-icon {
+            transform: rotate(-90deg);
+        }
+        .tree-key { color: #F59E0B; }
+        .tree-string { color: #34D399; }
+        .tree-number { color: #60A5FA; }
+        .tree-boolean { color: #A78BFA; }
+        .tree-null { color: #F87171; font-style: italic; }
+        .tree-bracket { color: #94A3B8; }
+
+        @media (max-width: 767px) {
+            .editor-textarea { min-height: 380px; font-size: 0.8rem; }
+            .json-output { min-height: 380px; font-size: 0.75rem; }
+            .flex-grow.relative { min-height: 380px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .flex-grow.relative { min-height: 400px; }
+            .editor-textarea { min-height: 400px; }
+            .json-output { min-height: 400px; }
+        }
+        @media (min-width: 1024px) {
+            .flex-grow.relative { min-height: 600px; }
+            .editor-textarea { min-height: 600px; }
+            .json-output { min-height: 600px; }
+        }
+
+        /* View toggle buttons */
+        .view-btn {
+            transition: all 0.15s ease;
+        }
+        .view-btn.active {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.5);
+            color: #F59E0B;
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/xml-to-json/" property="og:url"/>
+<meta content="XML to JSON | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Quickly convert XML data into standard JSON format. Supports data exchange scenarios such as Sitemap, RSS Feed, SOAP API, REST API, Legacy System, etc. Built-in XML validation engine accurately marks the location of syntax errors. Automatic detection of XML types." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="XML to JSON | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Quickly convert XML data into standard JSON format. Supports data exchange scenarios such as Sitemap, RSS Feed, SOAP API, REST API, Legacy System, etc. Built-in XML validation engine accurately marks the location of syntax errors. Automatic detection of XML types." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"XML to JSON Converter","url":"https://toolhuben.com/en/xml-to-json/","description":"Quickly convert XML data into standard JSON format. Supports data exchange scenarios such as Sitemap, RSS Feed, SOAP API, REST API, Legacy System, etc. Built-in XML validation engine accurately marks the location of syntax errors. Automatic detection of XML types.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"XML to JSON Converter","item":"https://toolhuben.com/en/xml-to-json/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/xml-to-json/" rel="canonical"/><link href="https://toolhuben.com/xml-to-json/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/xml-to-json/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/xml-to-json/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","Attribute 值缺少引號":"Attribute value is missing quotes","JSON 已複製到剪貼簿":"JSON copied to clipboard","UTF-8 (預設)":"UTF-8 (default)","XML 必須有一個根元素":"XML must have a root element","XML 語法錯誤":"XML syntax error","[System Error] 模組":"[System Error] Module","⚠️ 轉換錯誤：":"⚠️Conversion error:","⚠️ XML 解析器未載入，請重新整理頁面。":"⚠️ The XML parser is not loaded, please refresh the page.","不足":"Incomplete","個項目":"items","偵測到 Atom Feed":"Atom feed detected","偵測到 RSS Feed（版本":"RSS Feed detected (version","偵測到 SOAP XML":"SOAP XML detected","偵測到 SOAP XML Envelope":"SOAP XML Envelope detected","偵測到 SVG 向量圖形":"SVG vector graphic detected","偵測到 Sitemap Index XML":"Sitemap Index XML detected","偵測到 Sitemap XML":"Sitemap XML detected","偵測到 Sitemap XML（建議確認 xmlns）":"Sitemap XML detected (recommended to confirm xmlns)","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清空全部內容":"All content has been cleared","已載入 Bookstore 範例，立即體驗 XML 轉 JSON！":"The Bookstore example has been loaded, experience XML to JSON conversion now!","已載入檔案：":"File loaded:","已載入範例：":"Loaded example:","建立理念":"Our Founding Idea","建議":"Recommendation","引號錯誤":"Quotation mark error","待輸入":"To be entered","格式錯誤":"Format error","標籤不匹配":"Tags don't match","沒有可以下載的內容":"There is nothing to download","沒有可以複製的內容":"Nothing to copy","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少根元素":"root element missing","缺少":"Missing","行":"OK","複製失敗":"Copy failed","載入失敗:":"Loading failed:","非預期字符":"Unexpected characters","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","RESTful API 設計原則與常見陷阱":"RESTful API Design Principles and Common Traps","XML 與 JSON 全面比較指南":"XML Comprehensive Comparison Guide with JSON","Web API 設計最佳實踐":"Web API Design Best Practices","執行處理":"Run","教學":"Teaching","本機處理":"processed locally","深入探討 XML 與 JSON 的差異與適用場景":"In-depth discussion of the differences and applicable scenarios between XML and JSON","開發":"Development","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","JSON 檔案已下載":"JSON file downloaded","已載入範例 XML":"Sample XML loaded","檔案讀取失敗":"File read failed","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="editorial" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#F59E0B;--classic-accent-rgb:245,158,11">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 核心模塊：XML to JSON Converter -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Hero -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-xj">
+<span class="flex w-2 h-2 bg-hub-xj rounded-full animate-pulse mr-2"></span>
+                XML transformation engine is ready
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                XML <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-xj to-yellow-300">to JSON</span> Converter
+            </h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                Instantly convert XML data to standard JSON format. Built-in XML validation engine, automatically detects XML types (Sitemap, RSS, SOAP) and accurately locates syntax errors. Suitable for API integration, data migration, Legacy System and Web Services.
+            </p>
+</div>
+<!-- XML 類型偵測訊息 -->
+<div class="hidden mb-4" id="detect-panel">
+<div class="detect-badge" id="detect-badge">
+<i class="ph ph-info text-xs"></i>
+<span id="detect-text">XML type detected</span>
+</div>
+</div>
+<!-- 主控台 -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+<!-- 工具列 -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-hub-900/80 border-b border-hub-700 p-3 sm:p-4 gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-sample">
+<i class="ph ph-lightbulb text-base"></i> Example
+                    </button>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-upload">
+<i class="ph ph-upload-simple text-base"></i> Upload XML
+                    </button>
+<input accept=".xml,.xsl,.xsd,.svg,.rss,.atom,.xhtml,.html" class="hidden" id="file-input" type="file"/>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-red-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-clear">
+<i class="ph ph-trash text-base"></i> Clear
+                    </button>
+</div>
+<div class="flex flex-wrap items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-hub-700 pt-3 sm:pt-0">
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-copy">
+<i class="ph ph-copy text-base"></i> Copy
+                    </button>
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/50 text-amber-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-download">
+<i class="ph ph-download-simple text-base"></i> .json
+                    </button>
+</div>
+</div>
+<!-- 選項列 -->
+<div class="bg-hub-900/50 border-b border-hub-700 px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+<span class="text-slate-500 font-medium uppercase tracking-wider mr-1">Options</span>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-pretty" type="checkbox"/>
+                    Pretty Print
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input class="option-checkbox rounded" id="opt-minify" type="checkbox"/>
+                    Minify
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-attrs" type="checkbox"/>
+                    Reserve Attribute
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-at-prefix" type="checkbox"/>
+                    @ prefix
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-text-node" type="checkbox"/>
+                    #text
+                </label>
+<div class="h-4 w-px bg-hub-700 hidden sm:block"></div>
+<span class="flex items-center gap-1 font-mono" id="xml-validity">
+<span class="w-2 h-2 rounded-full bg-slate-600" id="validity-dot"></span>
+<span class="text-slate-500" id="validity-text">To be entered</span>
+</span>
+</div>
+<!-- 錯誤詳情面板 (預設隱藏) -->
+<div class="hidden bg-red-950/30 border-b border-red-900/30 px-4 py-2.5" id="error-panel">
+<div class="error-detail flex flex-wrap items-center gap-x-4 gap-y-1">
+<span class="text-red-400 font-medium flex items-center gap-1">
+<i class="ph ph-warning-circle text-sm"></i>
+<span id="error-type">XML syntax error</span>
+</span>
+<span class="text-red-300 text-xs font-mono" id="error-location">Line 0</span>
+<span class="text-slate-400 text-xs" id="error-message">—</span>
+</div>
+</div>
+<!-- 分割區域 -->
+<div class="flex flex-col lg:flex-row flex-grow">
+<!-- 左側：XML 編輯器 -->
+<div class="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-hub-700 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-code text-hub-xj text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">XML Input</span>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="xml-size">0 bytes</span>
+</div>
+<div class="flex-grow relative">
+<textarea class="editor-textarea w-full h-full absolute inset-0" id="xml-input" placeholder='Enter XML content here... Example: &lt;?xml version="1.0" encoding="UTF-8"?&gt; &lt;bookstore&gt; &lt;book category="fiction"&gt; &lt;title lang="en"&gt;The Great Gatsby&lt;/title&gt; &lt;author&gt;F. Scott Fitzgerald&lt;/author&gt; &lt;price&gt;12.99&lt;/price&gt; &lt;/book&gt; &lt;/bookstore&gt;' spellcheck="false"></textarea>
+</div>
+</div>
+<!-- 右側：JSON 輸出 -->
+<div class="w-full lg:w-1/2 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-brackets-curly text-hub-xj text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">JSON Output</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex bg-hub-900 rounded-lg border border-hub-700 p-0.5 text-xs" id="view-toggle">
+<button class="view-btn active px-2.5 py-1 rounded-md text-slate-400" data-view="raw">Raw</button>
+<button class="view-btn px-2.5 py-1 rounded-md text-slate-400" data-view="tree">Tree</button>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="json-size">0 bytes</span>
+</div>
+</div>
+<div class="flex-grow relative overflow-hidden">
+<!-- Raw JSON View -->
+<textarea class="json-output w-full h-full absolute inset-0" id="json-output" placeholder="The converted JSON will appear here..." readonly="" spellcheck="false"></textarea>
+<!-- Tree View (hidden by default) -->
+<div class="absolute inset-0 overflow-auto hidden" id="tree-view" style="background-color: #0B1120; padding: 1.25rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.8; color: #E2E8F0;"></div>
+</div>
+</div>
+</div>
+<!-- 底部狀態列 -->
+<div class="bg-hub-900 border-t border-hub-700 p-3 sm:px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div class="flex items-center gap-1.5" id="status-indicator">
+<div class="w-2 h-2 rounded-full bg-slate-500" id="status-dot"></div>
+<span class="text-slate-400 uppercase tracking-wider text-[10px]" id="status-text">Ready</span>
+</div>
+<div class="h-3 w-px bg-hub-700"></div>
+<span class="text-slate-500" id="line-count">0 lines</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="hidden sm:inline flex items-center gap-1"><i class="ph ph-info text-xs"></i> Pure front-end local processing, the data does not leave your browser</span>
+</div>
+</div>
+</div>
+<!-- ==================== -->
+<!-- FAQ 常見問題區       -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="text-center mb-10">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-3">XML to JSON conversion FAQ</h2>
+<p class="text-slate-400 text-sm">Popular questions about XML, JSON format conversion, API data exchange and Web Services</p>
+</div>
+<div class="space-y-3" id="faq-container">
+<!-- FAQ 1 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is the difference between XML and JSON? Which one should I use?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>XML (Extensible Markup Language) and JSON (JavaScript Object Notation) are both structured data formats, but they have significant differences in design philosophy:</p>
+<div class="overflow-x-auto text-xs">
+<table class="w-full mt-2">
+<thead>
+<tr class="border-b border-hub-700">
+<th class="text-left py-2 pr-3 text-slate-300">Features</th>
+<th class="text-left py-2 pr-3 text-slate-300">XML</th>
+<th class="text-left py-2 pr-3 text-slate-300">JSON</th>
+</tr>
+</thead>
+<tbody class="text-slate-400">
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">Readability</td>
+<td class="py-2 pr-3">Medium — lots of tags</td>
+<td class="py-2 pr-3">Excellent - simple and lightweight</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">type support</td>
+<td class="py-2 pr-3">Plain text, the type needs to be defined through Schema</td>
+<td class="py-2 pr-3">Native support for strings, numbers, Boolean, Null, arrays, and objects</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">metadata</td>
+<td class="py-2 pr-3">✅ Built-in Attribute mechanism</td>
+<td class="py-2 pr-3">❌ No native Attribute</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">Namespace</td>
+<td class="py-2 pr-3">✅ Support xmlns</td>
+<td class="py-2 pr-3">❌ Not supported</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">annotation</td>
+<td class="py-2 pr-3">✅ <code class="text-hub-xj">&lt;!-- --&gt;</code></td>
+<td class="py-2 pr-3">❌ Not supported</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">Parsing speed</td>
+<td class="py-2 pr-3">Slower (needs to parse tag structure)</td>
+<td class="py-2 pr-3">Extremely fast (native JavaScript support)</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">File size</td>
+<td class="py-2 pr-3">Larger (duplicate start/end tags)</td>
+<td class="py-2 pr-3">Smaller (least symbols)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="mt-2 text-xs text-slate-500">Selection suggestions: If you need complex file structure, Namespace, Attribute relay data → choose XML; Web API, front-end and back-end communication, lightweight data exchange → choose JSON. Many modern APIs internally convert to JSON processing after receiving XML.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 2 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is SOAP vs. REST? How do they relate to XML?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-slate-300">SOAP</strong>(Simple Object Access Protocol) is a rigorous XML-based communication protocol proposed by Microsoft in 1998. SOAP messages must use XML format and follow strict structural specifications (Envelope → Header → Body).</p>
+<p><strong class="text-slate-300">REST</strong>(Representational State Transfer) is a lightweight API design style proposed by Roy Fielding in 2000. REST APIs typically use JSON, but XML formats are also supported.</p>
+<div class="grid sm:grid-cols-2 gap-3 mt-3">
+<div class="bg-hub-800/60 border border-hub-700 rounded-lg p-3">
+<h4 class="text-white font-medium text-xs mb-1">SOAP features</h4>
+<ul class="text-xs text-slate-400 space-y-0.5 list-disc pl-3">
+<li>Strict WSDL definition</li>
+<li>Built-in security specification (WS-Security)</li>
+<li>Either stateful or stateless</li>
+<li>Only supports XML format</li>
+<li>Enterprise-level applications, financial systems</li>
+</ul>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-lg p-3">
+<h4 class="text-white font-medium text-xs mb-1">REST features</h4>
+<ul class="text-xs text-slate-400 space-y-0.5 list-disc pl-3">
+<li>Resource Oriented Design (URI)</li>
+<li>Stateless</li>
+<li>Supports JSON / XML / plain text</li>
+<li>Use standard HTTP methods (GET/POST/PUT/DELETE)</li>
+<li>Modern web and mobile applications</li>
+</ul>
+</div>
+</div>
+<p class="mt-2 text-xs text-slate-500">During the modernization process, many enterprises will convert SOAP/XML Legacy API to REST/JSON architecture. This tool is designed for this conversion scenario.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 3 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is Sitemap XML? Why is it important for SEO?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-slate-300">Sitemap XML</strong>(Sitemap) is an XML file that tells search engines which pages are on your site, how often they are updated, and their relative importance. The standard format is defined by sitemaps.org.</p>
+<pre class="bg-[#0B1120] text-xs font-mono text-slate-300 p-3 rounded-lg overflow-x-auto mt-2">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;
+  &lt;url&gt;
+    &lt;loc&gt;https://example.com/&lt;/loc&gt;
+    &lt;lastmod&gt;2024-01-15&lt;/lastmod&gt;
+    &lt;changefreq&gt;daily&lt;/changefreq&gt;
+    &lt;priority&gt;1.0&lt;/priority&gt;
+  &lt;/url&gt;
+&lt;/urlset&gt;</pre>
+<p class="mt-2">Sitemap XML is critical for SEO because:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Help search engines discover new pages and updated content faster</li>
+<li>Ensure all pages of a large website are indexed</li>
+<li>Provide relay information (last update time, change frequency)</li>
+<li>Supports special content types such as pictures, videos, news, etc.</li>
+</ul>
+<p class="text-xs text-slate-500 mt-1">The Sitemap XML for this site is located at:<code class="text-hub-xj">/sitemap.xml</code></p>
+</div>
+</div>
+</div>
+<!-- FAQ 4 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is an RSS feed? How does it relate to XML?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-slate-300">RSS</strong>(Really Simple Syndication) is an XML-based content subscription format for publishing frequently updated content (such as blog posts, news, podcasts). An RSS feed is essentially an XML file.</p>
+<pre class="bg-[#0B1120] text-xs font-mono text-slate-300 p-3 rounded-lg overflow-x-auto mt-2">&lt;?xml version="1.0" encoding="UTF-8"?&gt; &lt;rss version="2.0"&gt; &lt;channel&gt; &lt;title&gt;ToolHub Blog&lt;/title&gt; &lt;link&gt;https://toolhub.example.com/&lt;/link&gt; &lt;item&gt; &lt;title&gt;JSON vs XML Comprehensive Comparison&lt;/title&gt; &lt;pubDate&gt;Mon, 15 Jan 2024 10:00:00 GMT&lt;/pubDate&gt; &lt;/item&gt; &lt;/channel&gt; &lt;/rss&gt;</pre>
+<p class="mt-2">Main uses of RSS feeds:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Allow users to subscribe to the latest content from blogs and news websites</li>
+<li>Podcast publishing and distribution (Apple Podcasts, Spotify and other platforms use RSS)</li>
+<li>Content aggregation and automated workflows</li>
+<li>Social media scheduling and content republishing</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- FAQ 5 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">How to handle Attribute and Text nodes when converting XML to JSON?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>When converting XML to JSON, the processing of Attribute and Text nodes is the most critical design decision. This tool provides three options:</p>
+<ul class="list-disc pl-5 space-y-2 mt-2">
+<li><strong class="text-slate-300">@ prefix (recommended to enable):</strong> Change the XML Attribute to <code class="text-hub-xj">@</code> Key representation of the prefix. For example <code class="text-hub-xj">&lt;book category="fiction"&gt;</code> → <code class="text-hub-xj">"@category": "fiction"</code>. This approach clearly distinguishes attributes from child elements.</li>
+<li><strong class="text-slate-300">#text node:</strong> When an element has both Attribute and text content, the text content will be placed <code class="text-hub-xj">#text</code> key. For example <code class="text-hub-xj">&lt;title lang="en"&gt;Hello&lt;/title&gt;</code> → <code class="text-hub-xj">{"@lang": "en", "#text": "Hello"}</code>。</li>
+<li><strong class="text-slate-300">Reserve Attribute:</strong> When this option is turned off, all attributes are ignored and only the element content is preserved. Suitable for scenarios where only text content is required.</li>
+</ul>
+<div class="bg-hub-800/60 border border-hub-700 rounded-lg p-3 mt-2">
+<p class="text-xs text-slate-400"><strong class="text-white">Example:</strong></p>
+<pre class="text-xs font-mono text-slate-300 mt-1">XML: &lt;book id="b1" lang="en"&gt;The Hobbit&lt;/book&gt; ✅ @prefix + #text: {"@id": "b1", "@lang": "en", "#text": "The Hobbit"} ❌ None Attribute: "The Hobbit"</pre>
+</div>
+</div>
+</div>
+</div>
+<!-- FAQ 6 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Is this tool safe to use? Will the data be uploaded to the server?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-green-400">100% safe.</strong> This tool adopts a pure front-end (Client-side) architecture, and all XML parsing and JSON conversion are completed in your browser.<strong class="text-slate-300">No data will be uploaded to any server</strong>。</p>
+<p>This means:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Your API specifications, sitemap data, and RSS feed configurations never leave your computer</li>
+<li>No internet connection is required to perform the conversion (except when loading the page for the first time)</li>
+<li>No backend servers store or process your content</li>
+<li>Even ToolHub administrators cannot access the data you enter</li>
+</ul>
+<p class="mt-2">Whether it's SOAP API XML requests, Sitemap settings or Legacy system data, it's all handled safely here.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 7 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">The structure has changed after converting XML to JSON. How to ensure the correctness of the data?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>When converting XML to JSON, the conversion results may need to be adjusted due to the structural differences between the two formats. The following are common structural changes and processing methods:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Repeated elements are automatically transformed into an array:</strong> Repeated child elements with the same name in XML (such as multiple <code class="text-hub-xj">&lt;item&gt;</code>) will be converted to a JSON array.</li>
+<li><strong class="text-slate-300">Attribute stands alone as an attribute:</strong> When the @ prefix is enabled, the Attribute becomes an independent JSON Key and will not be confused with child elements.</li>
+<li><strong class="text-slate-300">Empty element handling:</strong> Empty XML element (<code class="text-hub-xj">&lt;element&gt;&lt;/element&gt;</code>) may be converted to Null or an empty string, depending on the settings.</li>
+<li><strong class="text-slate-300">Mixed content:</strong> When an element contains both text and child elements, the text will be placed <code class="text-hub-xj">#text</code> key.</li>
+</ul>
+<p class="mt-2 text-xs text-slate-500">Recommendation: Check the JSON structure against the original XML after conversion, paying special attention to whether arrays and nested objects are correct. You can use Tree View mode to intuitively inspect the JSON structure.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ==================== -->
+<!-- SEO 教學文章區        -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="bg-hub-800/40 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2 class="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3">
+<i class="ph ph-book-open-text text-hub-xj text-2xl"></i>
+                    From XML to JSON: Evolution and practical guide to data formats for modern web development
+                </h2>
+<div class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+<p>
+                        In the development of web technology for more than twenty-five years,<strong class="text-white">XML</strong>(eXtensible Markup Language) with <strong class="text-white">JSON</strong>(JavaScript Object Notation) respectively represent the data exchange standards of the two eras. From XML becoming a W3C recommended standard in 1998, to JSON emerging as the de facto standard for Web APIs in the 2010s, understanding the conversion between the two is not only a technical requirement, but also an important perspective for understanding the evolution of Web architecture.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">What is XML?</h3>
+<p>
+                        XML (Extensible Markup Language) was developed by the W3C in 1998 and is a<strong class="text-slate-300">extensible markup language</strong>, the design goal is to be "both readable by humans and parsed by machines." XML uses custom tags (Tags) to describe the data structure and supports <strong class="text-slate-300">Attribute, Namespace, Schema (XSD)</strong> and other rich functions.
+                    </p>
+<p>
+                        The design philosophy of XML is<strong class="text-slate-300">"Strict and complete"</strong>. Each XML file must have a root element, all tags must be closed properly, and attribute values ​​must be quoted. This rigor makes it a perfect fit<strong class="text-slate-300">Enterprise applications, financial systems, medical records, legal documents</strong> and other scenarios that require a high degree of structuring and verification. Main application areas include:
+                    </p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">SOAP Web Services</strong> — Enterprise-level API communication protocol, strictly relying on XML format</li>
+<li><strong class="text-slate-300">Sitemap XML</strong> — Standard format for search engine sitemaps</li>
+<li><strong class="text-slate-300">RSS / Atom Feed</strong> — Content subscription and publishing formats</li>
+<li><strong class="text-slate-300">SVG</strong> — Scalable vector graphics (XML-based)</li>
+<li><strong class="text-slate-300">Docx / Xlsx</strong> — Microsoft Office file format (uses XML internally)</li>
+<li><strong class="text-slate-300">XHTML</strong> — Strict HTML version</li>
+<li><strong class="text-slate-300">Configuration Files</strong> — Maven POM, Ant Build, Spring XML, etc.</li>
+</ul>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">What is JSON?</h3>
+<p>
+                        JSON (JavaScript Object Notation) was standardized by Douglas Crockford in 2001 and is a<strong class="text-slate-300">lightweight data exchange format</strong>. JSON is derived from a subset of JavaScript syntax, using<strong class="text-slate-300">key value pair</strong> with<strong class="text-slate-300">Array</strong> Organize data with concise syntax and extremely efficient parsing.
+                    </p>
+<p>
+                        The design philosophy of JSON is<strong class="text-slate-300">"Simple and efficient"</strong>. No closing tags, no attributes, no namespaces — this minimalist design has quickly become popular in web development. The main areas of benefit of JSON:
+                    </p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">RESTful API</strong> — The preferred format for modern web APIs</li>
+<li><strong class="text-slate-300">NoSQL database</strong> — MongoDB, CouchDB, etc. use JSON-like file storage</li>
+<li><strong class="text-slate-300">Front-end development</strong> — React, Vue, Angular and other frameworks natively process JSON</li>
+<li><strong class="text-slate-300">Profile</strong> — package.json, tsconfig.json, .eslintrc.json, etc.</li>
+<li><strong class="text-slate-300">instant messaging</strong> — WebSocket message format</li>
+</ul>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Detailed comparison of XML and JSON</h3>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-code text-hub-xj"></i>
+<h4 class="font-medium text-white">XML applicable scenarios</h4>
+</div>
+<ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+<li>SOAP Web Services / WSDL</li>
+<li>Sitemap SEO submission</li>
+<li>RSS/Atom Feed Post</li>
+<li>SVG vector graphics</li>
+<li>Office file formats</li>
+<li>Complex file structures and mixed content</li>
+<li>Data exchange requiring Schema validation</li>
+</ul>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-brackets-curly text-hub-xj"></i>
+<h4 class="font-medium text-white">JSON applicable scenarios</h4>
+</div>
+<ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+<li>REST / GraphQL API</li>
+<li>Front-end JavaScript applications</li>
+<li>NoSQL database files</li>
+<li>Mobile App Data Exchange</li>
+<li>IoT device data format</li>
+<li>Server side configuration file</li>
+<li>Cache and message queue</li>
+</ul>
+</div>
+</div>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">XML to JSON practical example</h3>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<h4 class="font-medium text-white text-sm mb-2">XML input</h4>
+<pre class="text-xs font-mono text-slate-300 bg-[#0B1120] p-3 rounded-lg overflow-x-auto">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;api-response&gt;
+  &lt;status&gt;success&lt;/status&gt;
+  &lt;data&gt;
+    &lt;user id="u001" role="admin"&gt;
+      &lt;name&gt;John Doe&lt;/name&gt;
+      &lt;email&gt;john@example.com&lt;/email&gt;
+      &lt;permissions&gt;
+        &lt;permission&gt;read&lt;/permission&gt;
+        &lt;permission&gt;write&lt;/permission&gt;
+        &lt;permission&gt;delete&lt;/permission&gt;
+      &lt;/permissions&gt;
+    &lt;/user&gt;
+  &lt;/data&gt;
+  &lt;meta&gt;
+    &lt;requestId&gt;req-2024-001&lt;/requestId&gt;
+    &lt;timestamp&gt;2024-01-15T10:30:00Z&lt;/timestamp&gt;
+  &lt;/meta&gt;
+&lt;/api-response&gt;</pre>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<h4 class="font-medium text-white text-sm mb-2">JSON output</h4>
+<pre class="text-xs font-mono text-slate-300 bg-[#0B1120] p-3 rounded-lg overflow-x-auto">{
+  "api-response": {
+    "status": "success",
+    "data": {
+      "user": {
+        "@id": "u001",
+        "@role": "admin",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "permissions": {
+          "permission": [
+            "read",
+            "write",
+            "delete"
+          ]
+        }
+      }
+    },
+    "meta": {
+      "requestId": "req-2024-001",
+      "timestamp": "2024-01-15T10:30:00Z"
+    }
+  }
+}</pre>
+</div>
+</div>
+<p class="text-xs text-slate-500">As you can see, Attribute (id, role) is reserved with @ prefix, and repeated &lt;permission&gt; elements are automatically merged into arrays.</p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Why choose ToolHub’s XML to JSON Converter?</h3>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Smart XML type detection:</strong> Automatically identify Sitemap XML, RSS Feed, and SOAP Envelope and display corresponding prompts.</li>
+<li><strong class="text-slate-300">Rigorous XML validation:</strong> Check tag integrity, Encoding, XML Declaration, and accurately display error line numbers and reasons.</li>
+<li><strong class="text-slate-300">Flexible Attribute handling:</strong> Supports @ prefix, #text node, and can freely switch Attribute retention.</li>
+<li><strong class="text-slate-300">Dual view mode:</strong> There are two preview methods, Raw JSON and Tree View, to meet different usage habits.</li>
+<li><strong class="text-slate-300">Zero server architecture:</strong> All conversions are done 100% in the browser and your data is completely safe.</li>
+<li><strong class="text-slate-300">One-click operation:</strong> Upload XML files, copy results, download JSON, complete workflow support.</li>
+</ul>
+<p class="mt-4 text-slate-500 text-xs border-t border-hub-700 pt-4">
+                        Whether you're migrating a SOAP API to a REST architecture, parsing Sitemap XML for SEO analysis, processing RSS feed content aggregation, or integrating your legacy system's XML data into a modern JSON workflow, ToolHub's XML to JSON Converter gets the job done with precision, security, and efficiency. Start converting now and experience seamless transformation from XML to JSON.
+                    </p>
+</div>
+</div>
+</section>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-xj" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 組件載入區 -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- 系統級中樞神經                              -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/xml-to-json';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                    const parentGroup = item.closest('.nav-group');
+                    if (parentGroup) {
+                        const content = parentGroup.querySelector('.group-content');
+                        const chevron = parentGroup.querySelector('.chevron');
+                        if (content && chevron) {
+                            setTimeout(() => {
+                                content.style.maxHeight = content.scrollHeight + 'px';
+                                chevron.classList.add('rotate-180');
+                            }, 50);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：XML to JSON 轉換引擎        -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // === DOM 節點映射 ===
+            const xmlInput = document.getElementById('xml-input');
+            const jsonOutput = document.getElementById('json-output');
+            const treeView = document.getElementById('tree-view');
+
+            const btnSample = document.getElementById('btn-sample');
+            const btnUpload = document.getElementById('btn-upload');
+            const fileInput = document.getElementById('file-input');
+            const btnClear = document.getElementById('btn-clear');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+
+            const optPretty = document.getElementById('opt-pretty');
+            const optMinify = document.getElementById('opt-minify');
+            const optAttrs = document.getElementById('opt-attrs');
+            const optAtPrefix = document.getElementById('opt-at-prefix');
+            const optTextNode = document.getElementById('opt-text-node');
+
+            const viewToggle = document.getElementById('view-toggle');
+            const viewBtns = viewToggle.querySelectorAll('.view-btn');
+
+            const validityDot = document.getElementById('validity-dot');
+            const validityText = document.getElementById('validity-text');
+            const errorPanel = document.getElementById('error-panel');
+            const errorType = document.getElementById('error-type');
+            const errorLocation = document.getElementById('error-location');
+            const errorMessage = document.getElementById('error-message');
+
+            const detectPanel = document.getElementById('detect-panel');
+            const detectBadge = document.getElementById('detect-badge');
+            const detectText = document.getElementById('detect-text');
+
+            const xmlSize = document.getElementById('xml-size');
+            const jsonSize = document.getElementById('json-size');
+            const lineCount = document.getElementById('line-count');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            let currentJsonObj = null;
+
+            // === XML 驗證引擎 ===
+            function validateXML(xml) {
+                const parser = new DOMParser();
+                const dom = parser.parseFromString(xml, 'text/xml');
+                const parseError = dom.querySelector('parsererror');
+                if (parseError) {
+                    const errorText = parseError.textContent || '';
+                    // 嘗試提取行號與錯誤原因
+                    let line = 1;
+                    let detail = errorText.trim();
+
+                    const lineMatch = errorText.match(/line\s*(\d+)/i);
+                    if (lineMatch) line = parseInt(lineMatch[1]);
+
+                    const posMatch = errorText.match(/position\s*(\d+)/i);
+                    let column = 1;
+                    if (posMatch) column = parseInt(posMatch[1]);
+
+                    // 人性化錯誤訊息
+                    let type = 'XML 語法錯誤';
+                    if (detail.includes('not well-formed') || detail.includes('invalid')) {
+                        type = '格式錯誤';
+                    } else if (detail.includes('unclosed') || detail.includes('opening and ending tag mismatch')) {
+                        type = '標籤不匹配';
+                        const tagMatch = detail.match(/mismatch.*?<(\w+)/i);
+                        if (tagMatch) detail = `標籤 <${tagMatch[1]}> 的起始與結束不匹配`;
+                    } else if (detail.includes('no element found')) {
+                        type = '缺少根元素';
+                        detail = 'XML 必須有一個根元素';
+                    } else if (detail.includes('unexpected')) {
+                        type = '非預期字符';
+                    } else if (detail.includes('quote') || detail.includes('quote')) {
+                        type = '引號錯誤';
+                        detail = 'Attribute 值缺少引號';
+                    }
+
+                    return { valid: false, line, column, type, detail, dom: null };
+                }
+
+                // 額外檢查：Encoding 偵測
+                const declMatch = xml.match(/^<\?xml\s+([^?]*)\?>/i);
+                let encoding = 'UTF-8 (預設)';
+                let hasDeclaration = false;
+                if (declMatch) {
+                    hasDeclaration = true;
+                    const encMatch = declMatch[1].match(/encoding\s*=\s*["']([^"']+)["']/i);
+                    if (encMatch) encoding = encMatch[1];
+                }
+
+                return { valid: true, line: 0, column: 0, type: '', detail: '', dom, encoding, hasDeclaration };
+            }
+
+            // === XML 類型智慧偵測 ===
+            function detectXMLType(xml, dom) {
+                const root = dom ? dom.documentElement : null;
+                if (!root) return null;
+
+                const rootName = root.tagName || '';
+                const rootNS = root.namespaceURI || '';
+
+                // 偵測 Sitemap
+                if (rootName === 'urlset' && rootNS.includes('sitemaps')) {
+                    return { type: 'sitemap', label: '偵測到 Sitemap XML', icon: 'ph ph-sitemap' };
+                }
+                if (rootName === 'urlset') {
+                    return { type: 'sitemap', label: '偵測到 Sitemap XML（建議確認 xmlns）', icon: 'ph ph-sitemap' };
+                }
+                if (rootName === 'sitemapindex') {
+                    return { type: 'sitemap', label: '偵測到 Sitemap Index XML', icon: 'ph ph-sitemap' };
+                }
+
+                // 偵測 RSS
+                if (rootName === 'rss') {
+                    const version = root.getAttribute('version') || '';
+                    return { type: 'rss', label: `偵測到 RSS Feed（版本 ${version || '未知'}）`, icon: 'ph ph-rss' };
+                }
+
+                // 偵測 SOAP
+                if (rootName.includes('Envelope') && (rootName.includes('soap') || rootName.includes('SOAP'))) {
+                    return { type: 'soap', label: '偵測到 SOAP XML Envelope', icon: 'ph ph-cloud-arrow-down' };
+                }
+                // 檢查 xmlns:soap
+                for (let i = 0; i < root.attributes.length; i++) {
+                    const attr = root.attributes[i];
+                    if (attr.value && (attr.value.includes('soap') || attr.value.includes('SOAP'))) {
+                        return { type: 'soap', label: '偵測到 SOAP XML', icon: 'ph ph-cloud-arrow-down' };
+                    }
+                }
+
+                // 偵測 SVG
+                if (rootName === 'svg') {
+                    return { type: 'svg', label: '偵測到 SVG 向量圖形', icon: 'ph ph-frame-corners' };
+                }
+
+                // 偵測 FEED (Atom)
+                if (rootName === 'feed' && (rootNS.includes('atom') || rootNS.includes('w3.org'))) {
+                    return { type: 'atom', label: '偵測到 Atom Feed', icon: 'ph ph-rss' };
+                }
+
+                return null;
+            }
+
+            // === XML 轉 JSON 核心邏輯 ===
+            function convert() {
+                const xml = xmlInput.value;
+                const isEmpty = !xml.trim();
+
+                // 更新大小
+                const xmlBytes = new TextEncoder().encode(xml).length;
+                xmlSize.textContent = formatBytes(xmlBytes);
+
+                if (isEmpty) {
+                    jsonOutput.value = '';
+                    treeView.innerHTML = '';
+                    treeView.classList.add('hidden');
+                    jsonOutput.classList.remove('hidden');
+                    setValidationStatus('idle', '待輸入');
+                    hideError();
+                    hideDetect();
+                    updateStats('');
+                    updateStatus(false);
+                    currentJsonObj = null;
+                    return;
+                }
+
+                // 驗證 XML
+                const result = validateXML(xml);
+
+                if (!result.valid) {
+                    setValidationStatus('invalid', 'Invalid XML');
+                    showError(result);
+                    jsonOutput.value = '';
+                    treeView.innerHTML = '';
+                    treeView.classList.add('hidden');
+                    jsonOutput.classList.remove('hidden');
+                    updateStatus(false);
+                    currentJsonObj = null;
+                    hideDetect();
+                    return;
+                }
+
+                // XML 通過驗證
+                setValidationStatus('valid', 'Valid XML');
+                hideError();
+                updateStatus(true);
+
+                // 偵測 XML 類型
+                const detected = detectXMLType(xml, result.dom);
+                if (detected) {
+                    showDetect(detected);
+                } else {
+                    hideDetect();
+                }
+
+                // 轉換為 JSON
+                try {
+                    if (typeof fxp === 'undefined') {
+                        jsonOutput.value = '⚠️ XML 解析器未載入，請重新整理頁面。';
+                        updateStatus(false);
+                        return;
+                    }
+
+                    // 設定轉換選項
+                    const options = {
+                        ignoreAttributes: !optAttrs.checked,
+                        ignoreDeclaration: true,
+                        ignorePiTags: true,
+                        parseTagValue: true,
+                        trimValues: true,
+                    };
+
+                    if (optAttrs.checked) {
+                        options.attributeNamePrefix = optAtPrefix.checked ? '@' : '';
+                        options.textNodeName = optTextNode.checked ? '#text' : '_text';
+                    }
+
+                    const parser = new fxp.XMLParser(options);
+                    const jsonObj = parser.parse(xml);
+                    currentJsonObj = jsonObj;
+
+                    // 輸出 JSON
+                    let jsonStr = '';
+                    if (optMinify.checked) {
+                        jsonStr = JSON.stringify(jsonObj);
+                    } else {
+                        jsonStr = JSON.stringify(jsonObj, null, 2);
+                    }
+
+                    jsonOutput.value = jsonStr;
+                    updateStats(jsonStr);
+
+                    // 更新 Tree View
+                    treeView.innerHTML = buildTreeView(jsonObj);
+
+                    // 根據當前 view 顯示
+                    const activeView = document.querySelector('.view-btn.active');
+                    if (activeView && activeView.dataset.view === 'tree') {
+                        jsonOutput.classList.add('hidden');
+                        treeView.classList.remove('hidden');
+                    } else {
+                        jsonOutput.classList.remove('hidden');
+                        treeView.classList.add('hidden');
+                    }
+
+                } catch (e) {
+                    jsonOutput.value = `⚠️ 轉換錯誤：${e.message}`;
+                    console.error('XML to JSON conversion error:', e);
+                    updateStatus(false);
+                }
+            }
+
+            // === Tree View 渲染器 ===
+            function buildTreeView(obj, depth = 0) {
+                if (obj === null || obj === undefined) {
+                    return '<span class="tree-null">null</span>';
+                }
+
+                if (typeof obj === 'string') {
+                    return `<span class="tree-string">"${escapeHtml(obj)}"</span>`;
+                }
+
+                if (typeof obj === 'number') {
+                    return `<span class="tree-number">${obj}</span>`;
+                }
+
+                if (typeof obj === 'boolean') {
+                    return `<span class="tree-boolean">${obj}</span>`;
+                }
+
+                if (Array.isArray(obj)) {
+                    if (obj.length === 0) {
+                        return '<span class="tree-bracket">[</span><span class="tree-bracket">]</span>';
+                    }
+                    let html = `<span class="tree-toggle collapsed" onclick="this.classList.toggle('collapsed')">
+                        <span class="chevron-icon">▼</span>
+                        <span class="tree-bracket">[</span><span class="tree-bracket">]</span>
+                        <span class="text-slate-500 text-[10px]">(${obj.length})</span>
+                    </span><div class="tree-children tree-node">`;
+                    for (let i = 0; i < obj.length; i++) {
+                        html += `<div><span class="tree-bracket">${i}: </span>${buildTreeView(obj[i], depth + 1)}${i < obj.length - 1 ? '<span class="text-slate-600">,</span>' : ''}</div>`;
+                    }
+                    html += '</div>';
+                    return html;
+                }
+
+                if (typeof obj === 'object') {
+                    const keys = Object.keys(obj);
+                    if (keys.length === 0) {
+                        return '<span class="tree-bracket">{</span><span class="tree-bracket">}</span>';
+                    }
+                    let html = `<span class="tree-toggle collapsed" onclick="this.classList.toggle('collapsed')">
+                        <span class="chevron-icon">▼</span>
+                        <span class="tree-bracket">{</span><span class="tree-bracket">}</span>
+                        <span class="text-slate-500 text-[10px]">(${keys.length})</span>
+                    </span><div class="tree-children tree-node">`;
+                    for (let i = 0; i < keys.length; i++) {
+                        const key = keys[i];
+                        const isAttr = key.startsWith('@');
+                        const isText = key === '#text';
+                        let keyClass = 'tree-key';
+                        if (isAttr) keyClass = 'text-amber-400';
+                        if (isText) keyClass = 'text-violet-400';
+                        html += `<div><span class="${keyClass}">"${escapeHtml(key)}"</span>: ${buildTreeView(obj[key], depth + 1)}${i < keys.length - 1 ? '<span class="text-slate-600">,</span>' : ''}</div>`;
+                    }
+                    html += '</div>';
+                    return html;
+                }
+
+                return `<span class="tree-null">${String(obj)}</span>`;
+            }
+
+            function escapeHtml(str) {
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            // === 設定驗證狀態 ===
+            function setValidationStatus(state, text) {
+                validityText.textContent = text;
+                if (state === 'valid') {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-green-400';
+                    validityText.className = 'text-green-400 font-mono text-xs font-bold';
+                } else if (state === 'invalid') {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-red-400 status-pulse';
+                    validityText.className = 'text-red-400 font-mono text-xs font-bold';
+                } else {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-slate-600';
+                    validityText.className = 'text-slate-500 font-mono text-xs';
+                }
+            }
+
+            function showError(error) {
+                errorPanel.classList.remove('hidden');
+                errorType.textContent = error.type || 'XML 語法錯誤';
+                errorLocation.textContent = `Line ${error.line}, Col ${error.column}`;
+                errorMessage.textContent = error.detail || 'XML 語法錯誤';
+            }
+
+            function hideError() {
+                errorPanel.classList.add('hidden');
+            }
+
+            // === 類型偵測顯示 ===
+            function showDetect(detected) {
+                detectPanel.classList.remove('hidden');
+                let typeClass = 'sitemap';
+                if (detected.type === 'rss') typeClass = 'rss';
+                if (detected.type === 'soap') typeClass = 'soap';
+                if (detected.type === 'svg') typeClass = 'sitemap';
+                if (detected.type === 'atom') typeClass = 'rss';
+                detectBadge.className = `detect-badge ${typeClass}`;
+                detectText.textContent = detected.label;
+                if (detected.icon) {
+                    detectBadge.innerHTML = `<i class="${detected.icon} text-xs"></i> <span id="detect-text">${detected.label}</span>`;
+                }
+            }
+
+            function hideDetect() {
+                detectPanel.classList.add('hidden');
+            }
+
+            // === 輔助函數 ===
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 bytes';
+                if (bytes < 1024) return bytes + ' bytes';
+                return (bytes / 1024).toFixed(1) + ' KB';
+            }
+
+            function updateStats(json) {
+                const lines = json ? json.split('\n').length : 0;
+                lineCount.textContent = `${lines} 行`;
+                const jsonBytes = new TextEncoder().encode(json).length;
+                jsonSize.textContent = formatBytes(jsonBytes);
+            }
+
+            function updateStatus(hasContent) {
+                if (hasContent) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-hub-xj status-pulse';
+                    statusText.textContent = 'Converted';
+                    statusText.className = 'text-hub-xj uppercase tracking-wider text-[10px] font-bold';
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                    statusText.textContent = 'Ready';
+                    statusText.className = 'text-slate-400 uppercase tracking-wider text-[10px]';
+                }
+            }
+
+            // === Toast ===
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-xj';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // === 載入資料顯示 ===
+            function loadSample(sampleXML) {
+                xmlInput.value = sampleXML;
+                convert();
+                showToast('已載入範例 XML');
+            }
+
+            // === 範例 XML ===
+            const sampleBookstore = `<?xml version="1.0" encoding="UTF-8"?>
+<!-- ToolHub XML to JSON 範例資料 -->
+<bookstore>
+  <book category="fiction" bestseller="true">
+    <title lang="en">The Great Gatsby</title>
+    <author>F. Scott Fitzgerald</author>
+    <year>1925</year>
+    <price currency="USD">12.99</price>
+    <tags>
+      <tag>classic</tag>
+      <tag>american-literature</tag>
+      <tag>jazz-age</tag>
+    </tags>
+  </book>
+  <book category="fiction">
+    <title lang="en">To Kill a Mockingbird</title>
+    <author>Harper Lee</author>
+    <year>1960</year>
+    <price currency="USD">14.99</price>
+    <tags>
+      <tag>classic</tag>
+      <tag>social-justice</tag>
+    </tags>
+  </book>
+  <book category="technology">
+    <title lang="en">Clean Code</title>
+    <author>Robert C. Martin</author>
+    <year>2008</year>
+    <price currency="USD">39.99</price>
+    <tags>
+      <tag>programming</tag>
+      <tag>best-practices</tag>
+      <tag>software-engineering</tag>
+    </tags>
+  </book>
+</bookstore>`;
+
+            const sampleSitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://toolhub.example.com/</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://toolhub.example.com/xml-to-json</loc>
+    <lastmod>2024-01-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://toolhub.example.com/json-to-yaml</loc>
+    <lastmod>2024-01-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>`;
+
+            const sampleRSS = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ToolHub Blog</title>
+    <link>https://toolhub.example.com</link>
+    <description>Latest updates and tutorials from ToolHub</description>
+    <language>zh-TW</language>
+    <lastBuildDate>Mon, 15 Jan 2024 10:00:00 GMT</lastBuildDate>
+    <item>
+      <title>XML 與 JSON 全面比較指南</title>
+      <link>https://toolhub.example.com/blog/xml-vs-json</link>
+      <description>深入探討 XML 與 JSON 的差異與適用場景</description>
+      <pubDate>Mon, 15 Jan 2024 10:00:00 GMT</pubDate>
+      <category>教學</category>
+    </item>
+    <item>
+      <title>Web API 設計最佳實踐</title>
+      <link>https://toolhub.example.com/blog/api-best-practices</link>
+      <description>RESTful API 設計原則與常見陷阱</description>
+      <pubDate>Fri, 12 Jan 2024 08:30:00 GMT</pubDate>
+      <category>開發</category>
+    </item>
+  </channel>
+</rss>`;
+
+            const sampleSOAP = `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <soap:Header>
+    <auth:Authentication xmlns:auth="http://example.com/auth">
+      <auth:ApiKey>sk-1234-abcd-5678</auth:ApiKey>
+      <auth:Timestamp>2024-01-15T10:30:00Z</auth:Timestamp>
+    </auth:Authentication>
+  </soap:Header>
+  <soap:Body>
+    <GetUserDetails xmlns="http://example.com/services">
+      <UserId>USR-001</UserId>
+      <IncludePreferences>true</IncludePreferences>
+    </GetUserDetails>
+  </soap:Body>
+</soap:Envelope>`;
+
+            const samples = [
+                { name: 'Bookstore', xml: sampleBookstore },
+                { name: 'Sitemap', xml: sampleSitemap },
+                { name: 'RSS Feed', xml: sampleRSS },
+                { name: 'SOAP API', xml: sampleSOAP },
+            ];
+            let sampleIndex = 0;
+
+            // === 綁定事件 ===
+            xmlInput.addEventListener('input', convert);
+
+            // 選項變更
+            optPretty.addEventListener('change', () => { if (xmlInput.value.trim()) convert(); });
+            optMinify.addEventListener('change', () => { if (xmlInput.value.trim()) convert(); });
+            optAttrs.addEventListener('change', () => { if (xmlInput.value.trim()) convert(); });
+            optAtPrefix.addEventListener('change', () => { if (xmlInput.value.trim()) convert(); });
+            optTextNode.addEventListener('change', () => { if (xmlInput.value.trim()) convert(); });
+
+            // View 切換
+            viewBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    viewBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    if (btn.dataset.view === 'tree' && currentJsonObj) {
+                        jsonOutput.classList.add('hidden');
+                        treeView.classList.remove('hidden');
+                    } else {
+                        jsonOutput.classList.remove('hidden');
+                        treeView.classList.add('hidden');
+                    }
+                });
+            });
+
+            // 範例輪換
+            btnSample.addEventListener('click', () => {
+                const sample = samples[sampleIndex % samples.length];
+                sampleIndex++;
+                loadSample(sample.xml);
+                showToast(`已載入範例：${sample.name}`);
+            });
+
+            // 上傳 XML
+            btnUpload.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    xmlInput.value = event.target.result;
+                    convert();
+                    showToast(`已載入檔案：${file.name}`);
+                };
+                reader.onerror = () => {
+                    showToast('檔案讀取失敗', true);
+                };
+                reader.readAsText(file);
+                fileInput.value = '';
+            });
+
+            // 清空
+            btnClear.addEventListener('click', () => {
+                xmlInput.value = '';
+                convert();
+                showToast('已清空全部內容');
+            });
+
+            // 複製
+            btnCopy.addEventListener('click', () => {
+                const content = jsonOutput.value.trim() || treeView.textContent.trim();
+                if (!content) { showToast('沒有可以複製的內容', true); return; }
+                if (jsonOutput.classList.contains('hidden')) {
+                    // Tree view mode — copy raw JSON instead
+                    const raw = JSON.stringify(currentJsonObj, null, 2);
+                    navigator.clipboard.writeText(raw).then(() => {
+                        showToast('JSON 已複製到剪貼簿');
+                    }).catch(() => {
+                        showToast('複製失敗', true);
+                    });
+                } else {
+                    navigator.clipboard.writeText(content).then(() => {
+                        showToast('JSON 已複製到剪貼簿');
+                    }).catch(() => {
+                        jsonOutput.select();
+                        document.execCommand('copy');
+                        window.getSelection().removeAllRanges();
+                        showToast('JSON 已複製到剪貼簿');
+                    });
+                }
+            });
+
+            // 下載 .json
+            btnDownload.addEventListener('click', () => {
+                const content = jsonOutput.value.trim();
+                if (!content) { showToast('沒有可以下載的內容', true); return; }
+                // 預設輸出檔名
+                let filename = 'ToolHub_XML_to_JSON';
+                const xml = xmlInput.value;
+                if (xml.includes('urlset')) filename = 'sitemap';
+                else if (xml.includes('<rss')) filename = 'rss-feed';
+                else if (xml.includes('soap:Envelope') || xml.includes('SOAP-ENV')) filename = 'soap-response';
+                const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('JSON 檔案已下載');
+            });
+
+            // Tab 縮排
+            xmlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const target = e.target;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    target.value = target.value.substring(0, start) + '    ' + target.value.substring(end);
+                    target.selectionStart = target.selectionEnd = start + 4;
+                    convert();
+                }
+            });
+
+            // 拖放上傳
+            xmlInput.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                xmlInput.style.borderColor = '#F59E0B';
+            });
+
+            xmlInput.addEventListener('dragleave', () => {
+                xmlInput.style.borderColor = '';
+            });
+
+            xmlInput.addEventListener('drop', (e) => {
+                e.preventDefault();
+                xmlInput.style.borderColor = '';
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        xmlInput.value = event.target.result;
+                        convert();
+                        showToast(`已載入檔案：${file.name}`);
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            // FAQ 手風琴
+            document.querySelectorAll('.faq-question').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const item = btn.closest('.faq-item');
+                    const content = item.querySelector('.faq-content');
+                    const chevron = btn.querySelector('.faq-chevron');
+                    content.classList.toggle('open');
+                    chevron.classList.toggle('rotated');
+                });
+            });
+
+            // 初始載入範例
+            xmlInput.value = sampleBookstore;
+            convert();
+            showToast('已載入 Bookstore 範例，立即體驗 XML 轉 JSON！');
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

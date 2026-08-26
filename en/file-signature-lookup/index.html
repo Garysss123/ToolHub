@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>File Signature Lookup | Free Online Tool - ToolHub</title>
+<meta content="Identify the real file format through the first few bytes of the file (Magic Number), support drag-and-drop upload of files, Hex input query, and magic number reference table for 150+ common file formats. Suitable for software development, information security analysis, and digital forensics." name="description"/>
+<meta content="Magic Number, File Signature, 魔術數字, 檔案簽名, 檔案格式辨識, hex lookup, 檔案鑑識, file type detection, ToolHub" name="keywords"/>
+<!-- CDN Dependencies -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+        .glass-panel-strong {
+            background: rgba(21, 31, 50, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed #334155;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #38BDF8;
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .drop-zone.drag-over {
+            border-color: #38BDF8;
+            background: rgba(56, 189, 248, 0.1);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+        }
+
+        .tab-btn {
+            position: relative;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #94A3B8;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            background: none;
+            white-space: nowrap;
+        }
+        .tab-btn:hover { color: #E2E8F0; }
+        .tab-btn.active {
+            color: #38BDF8;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #38BDF8;
+            border-radius: 2px 2px 0 0;
+        }
+
+        .hex-display {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            letter-spacing: 0.05em;
+            word-break: break-all;
+        }
+
+        .result-field {
+            padding: 0.75rem 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(30, 41, 59, 0.5);
+        }
+
+        .search-input {
+            background: #0f172a;
+            border: 1px solid #1E293B;
+            color: #E2E8F0;
+            border-radius: 0.5rem;
+            padding: 0.625rem 1rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #38BDF8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+        }
+        .search-input::placeholder { color: #64748B; }
+
+        .sig-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .sig-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748B;
+            border-bottom: 1px solid #1E293B;
+            position: sticky;
+            top: 0;
+            background: #0d1425;
+            z-index: 1;
+        }
+        .sig-table td {
+            padding: 0.625rem 1rem;
+            font-size: 0.8125rem;
+            color: #CBD5E1;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+        }
+        .sig-table tr:hover td {
+            background: rgba(56, 189, 248, 0.03);
+        }
+        .sig-table .magic-cell {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.75rem;
+            color: #38BDF8;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid #1E293B;
+        }
+        .chip:hover { border-color: #38BDF8; color: #E2E8F0; }
+        .chip.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+        }
+
+        .faq-item summary {
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+            padding: 0.75rem 0;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after {
+            content: '+';
+            font-size: 1.25rem;
+            color: #38BDF8;
+            transition: transform 0.2s;
+        }
+        .faq-item[open] summary::after {
+            content: '−';
+        }
+        .faq-item .faq-answer {
+            padding-bottom: 1rem;
+            color: #94A3B8;
+            line-height: 1.75;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @media (max-width: 640px) {
+            .tab-btn { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+            .result-field { padding: 0.5rem 0.75rem; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/file-signature-lookup/" property="og:url"/>
+<meta content="File Signature Lookup | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Identify the real file format through the first few bytes of the file (Magic Number), support drag-and-drop upload of files, Hex input query, and magic number reference table for 150+ common file formats. Suitable for software development, information security analysis, and digital forensics." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="File Signature Lookup | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Identify the real file format through the first few bytes of the file (Magic Number), support drag-and-drop upload of files, Hex input query, and magic number reference table for 150+ common file formats. Suitable for software development, information security analysis, and digital forensics." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"File Signature (Magic Number) Lookup / File Magic Number Recognition Tool","url":"https://toolhuben.com/en/file-signature-lookup/","description":"Identify the real file format through the first few bytes of the file (Magic Number), support drag-and-drop upload of files, Hex input query, and magic number reference table for 150+ common file formats. Suitable for software development, information security analysis, and digital forensics.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"File Signature (Magic Number) Lookup / File Magic Number Recognition Tool","item":"https://toolhuben.com/en/file-signature-lookup/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/file-signature-lookup/" rel="canonical"/><link href="https://toolhuben.com/file-signature-lookup/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/file-signature-lookup/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/file-signature-lookup/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","0 (檔案開頭)":"0 (beginning of file)","3GPP 手機影片":"3GPP Mobile Video","3ds Max 場景檔":"3ds Max scene file","7-Zip 壓縮檔":"7-Zip compressed file","AAC 進階音訊編碼 (ADTS)":"AAC Advanced Audio Coding (ADTS)","AAC 進階音訊編碼 (ADTS, MPEG-4)":"AAC Advanced Audio Coding (ADTS, MPEG-4)","ACE 壓縮檔":"ACE compressed file","AIFF 音訊交換格式":"AIFF Audio Interchange Format","AMR 自適應多速率音訊":"AMR adaptive multi-rate audio","AVI 影片 (RIFF AVI)":"AVI videos (RIFF AVI)","AVIF 圖片格式":"AVIF picture format","AbiWord 文件 (XML)":"AbiWord file (XML)","Adobe DNG 數位負片 RAW 格式":"Adobe DNG digital negative RAW format","Adobe Flash SWF (已淘汰)":"Adobe Flash SWF (obsolete)","Adobe Photoshop PSD 檔案":"Adobe Photoshop PSD files","Android APK 安裝包":"Android APK installation package","Android DEX 位元組碼":"Android DEX bytecode","Apple DMG 磁碟映像":"Apple DMG disk image","Apple Keynote 簡報":"Apple Keynote presentation","Apple Numbers 試算表":"Apple Numbers Spreadsheet","Apple Pages 文件":"Apple Pages files","ARJ 壓縮檔":"ARJ compressed file","AutoCAD DWG 圖檔":"AutoCAD DWG drawing file","AutoCAD DXF 交換檔":"AutoCAD DXF Swap File","BMP 點陣圖格式":"BMP bitmap format","BZip2 壓縮檔":"BZip2 compressed file","BitTorrent 種子檔":"BitTorrent torrent file","Blender 3D 專案檔":"Blender 3D Project File","Canon CR2 RAW 格式":"Canon CR2 RAW format","Chrome Extension 封裝檔":"Chrome Extension package file","Creative VOC 音訊":"Creative VOC Audio","DER 二進位 X.509 憑證":"DER binary X.509 certificate","DivX 影片 (RIFF)":"DivX Video (RIFF)","ELF 執行檔 (Linux/Unix)":"ELF executable file (Linux/Unix)","EPUB 電子書":"EPUB e-book","Email 電子郵件 (EML)":"Email Email (EML)","Embedded OpenType 字型":"Embedded OpenType fonts","DSD 音訊 (DSDIFF)":"DSD Audio (DSDIFF)","DSD 音訊 (DSF)":"DSD Audio (DSF)","Debian DEB 套件檔":"Debian DEB package files","FLAC 無損音訊編碼":"FLAC lossless audio coding","Fuji RAF RAW 格式":"Fuji RAF RAW format","GIF 圖形交換格式 (GIF87a)":"GIF Graphics Interchange Format (GIF87a)","GIF 圖形交換格式 (GIF89a)":"GIF Graphics Interchange Format (GIF89a)","GIMP XCF 圖像格式":"GIMP XCF image format","GZip 壓縮檔":"GZip compressed file","Gerber PCB 檔案":"Gerber PCB Archives","HEIC 高效率圖像格式":"HEIC high efficiency image format","FictionBook FB2 電子書 (XML)":"FictionBook FB2 e-book (XML)","Firefox XPI 附加元件":"Firefox XPI add-ons","ICO 圖示格式":"ICO icon format","ISO 9660 CD/DVD 映像檔":"ISO 9660 CD/DVD image file","ISO 9660 CD/DVD 映像檔 (Mode 2)":"ISO 9660 CD/DVD image (Mode 2)","JPEG 2000 圖片格式":"JPEG 2000 image format","JPEG 圖片格式":"JPEG image format","JSON 報告已下載":"JSON report downloaded","LHA/LZH 壓縮檔":"LHA/LZH compressed file","Java Class 類別檔":"Java Class category file","Java JAR 封存檔":"Java JAR archive","LZ4 壓縮檔":"LZ4 compressed file","LZip 壓縮檔":"LZip compressed file","LaTeX 文件":"LaTeX files","Microsoft CAB 封裝檔":"Microsoft CAB package file","Microsoft CHM 說明檔":"Microsoft CHM Help File","Microsoft Excel OpenXML 試算表":"Microsoft Excel OpenXML Spreadsheet","Microsoft Office OLE2 文件":"Microsoft Office OLE2 files","Microsoft PowerPoint OpenXML 簡報":"Microsoft PowerPoint OpenXML Presentation","Microsoft VHD 虛擬硬碟":"Microsoft VHD virtual hard disk","Microsoft VHDX 虛擬硬碟 (v2)":"Microsoft VHDX Virtual Hard Disk (v2)","Microsoft Word OpenXML 文件":"Microsoft Word OpenXML files","M4A 音訊 (AAC/ALAC MP4)":"M4A Audio (AAC/ALAC MP4)","MHTML 網頁封存檔":"MHTML web page archive","MIDI 樂器數位介面":"MIDI musical instrument digital interface","MIME 類型:":"MIME type:","MKV Matroska 影片":"MKV Matroska videos","MP3 音訊 (MPEG Layer 3)":"MP3 Audio (MPEG Layer 3)","MP3 音訊 (MPEG Layer 3, CRC)":"MP3 audio (MPEG Layer 3, CRC)","MP3 音訊 (MPEG Layer 3, No CRC)":"MP3 Audio (MPEG Layer 3, No CRC)","MP3 音訊 (含 ID3v2 標籤)":"MP3 audio (with ID3v2 tags)","MP4/ISOBMFF 影片容器":"MP4/ISOBMFF video container","MPEG-1/2 影片 (Elementary Stream)":"MPEG-1/2 Video (Elementary Stream)","MPEG-1/2 影片 (Program Stream)":"MPEG-1/2 Video (Program Stream)","MPEG-TS 傳輸串流":"MPEG-TS transport stream","MXF 素材交換格式 (Professional Video)":"MXF Material Exchange Format (Professional Video)","Mach-O 執行檔 (macOS 32-bit BE)":"Mach-O executable (macOS 32-bit BE)","Mach-O 執行檔 (macOS 32-bit LE)":"Mach-O executable (macOS 32-bit LE)","Mach-O 執行檔 (macOS 64-bit BE)":"Mach-O executable (macOS 64-bit BE)","Mach-O 執行檔 (macOS 64-bit LE)":"Mach-O executable (macOS 64-bit LE)","Mobipocket/AZW 電子書":"Mobipocket/AZW e-book","NES 模擬器 ROM":"NES emulator ROM","Nikon NEF RAW 格式":"Nikon NEF RAW format","OGG 音訊容器 (Vorbis/Opus)":"OGG audio container (Vorbis/Opus)","OGV 影片 (Ogg Theora)":"OGV Video (Ogg Theora)","Olympus ORF RAW 格式":"Olympus ORF RAW format","PCX 點陣圖格式":"PCX bitmap format","PDF 可攜式文件格式":"PDF Portable Document Format","PEM 憑證/金鑰 (Base64)":"PEM certificate/key (Base64)","PKCS#12 個人資訊交換":"PKCS#12 Personal Information Exchange","PNG 可攜式網路圖形":"PNG Portable Network Graphics","OpenDocument 文字文件 (ODT)":"OpenDocument Text Document (ODT)","OpenDocument 簡報 (ODP)":"OpenDocument Presentation (ODP)","OpenDocument 試算表 (ODS)":"OpenDocument Spreadsheet (ODS)","OpenType 字型":"OpenType fonts","Opus 音訊編碼":"Opus audio encoding","Outlook MSG 郵件":"Outlook MSG Mail","PCAP 網路封包擷取檔 (BE)":"PCAP Network Packet Capture File (BE)","PCAP 網路封包擷取檔 (LE)":"PCAP Network Packet Capture File (LE)","PCAPNG 次世代封包擷取檔":"PCAPNG next generation packet capture file","Parallels HDS 虛擬磁碟":"Parallels HDS Virtual Disk","PostScript Type 1 字型":"PostScript Type 1 font","QuickTime MOV 影片":"QuickTime MOV videos","QEMU QCOW2 虛擬磁碟映像":"QEMU QCOW2 virtual disk image","QEMU QED 虛擬磁碟映像":"QEMU QED virtual disk image","RAR 壓縮檔 (v4.x)":"RAR archive (v4.x)","RAR 壓縮檔 (v5.x)":"RAR archive (v5.x)","RealAudio 音訊":"RealAudio Audio","RealMedia 影片 (RealVideo)":"RealMedia Video (RealVideo)","RPM 套件檔":"RPM package file","RTF 豐富文字格式":"RTF rich text format","SQLite 2 資料庫":"SQLite 2 database","SQLite 3 資料庫":"SQLite 3 database","SRT 字幕檔":"SRT subtitle file","SNES 模擬器 ROM (SMC Header)":"SNES Emulator ROM (SMC Header)","SketchUp 模型檔":"SketchUp model file","STL 3D 模型 (Binary)":"STL 3D Model (Binary)","SVG 可縮放向量圖形":"SVG Scalable Vector Graphics","Sun AU 音訊格式":"Sun AU audio format","TAR 歸檔檔 (GNU tar)":"TAR archive (GNU tar)","TAR 歸檔檔 (ustar)":"TAR archive (ustar)","TGA/Targa 圖形格式":"TGA/Targa graphics format","TIFF 標記影像檔案 (Big-endian)":"TIFF tagged image file (Big-endian)","TIFF 標記影像檔案 (Little-endian)":"TIFF tagged image file (Little-endian)","TXT 報告已下載":"TXT report downloaded","TrueType 字型":"TrueType font","VirtualBox VDI 虛擬磁碟":"VirtualBox VDI virtual disk","VMware VMDK 虛擬磁碟":"VMware VMDK virtual disk","Windows/DOS MZ 可執行檔":"Windows/DOS MZ executable","WordPerfect 文件":"WordPerfect files","WAV 波形音訊 (RIFF WAVE)":"WAV waveform audio (RIFF WAVE)","WOFF 網頁字型":"WOFF web font","WOFF2 網頁字型 (v2)":"WOFF2 web font (v2)","Wavefront OBJ 3D 模型":"Wavefront OBJ 3D model","WebAssembly 二進位模組":"WebAssembly binary module","WebM 影片 (Matroska)":"WebM Video (Matroska)","WebP 圖片格式":"WebP image format","Windows Installer MSI 套件":"Windows Installer MSI Kit","Windows 捷徑 (.lnk)":"Windows shortcuts (.lnk)","XZ 壓縮檔":"XZ compressed file","ZIP 壓縮檔":"ZIP archive","ZIP 壓縮檔 (Empty Archive)":"ZIP archive (Empty Archive)","ZIP 壓縮檔 (Spanned/Split)":"ZIP archive (Spanned/Split)","Zstandard 壓縮檔":"Zstandard compressed file","不足":"Incomplete","個項目":"items","偏移量 (Offset):":"Offset:","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","共":"total","分析完成！":"Analysis completed!","副檔名":"File extension","副檔名 (Extension): .":"Extension: .","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清除":"cleared","已複製到剪貼簿":"Copied to clipboard","建立理念":"Our Founding Idea","建議":"Recommendation","未找到相符的檔案簽名":"No matching file signature found","檔案名稱:":"File name:","檔案大小:":"File size:","檔案格式 (Format):":"File format (Format):","無法辨識此檔案格式":"This file format is not recognized","無效的十六進位字串，請檢查輸入":"Invalid hexadecimal string, please check your input","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","筆資料":"pen information","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","簽名長度:":"Signature length:","缺少":"Missing","複製失敗":"Copy failed","請輸入 Hex 字串":"Please enter Hex string","讀取檔案失敗":"Failed to read file","顯示":"Showing","魔術數字 (Magic Number):":"Magic Number:","📦 此為 ASF 容器格式，可能為：WMV (影片)、WMA (音訊)":"📦 This is the ASF container format, which may be: WMV (video), WMA (audio)","📦 此為 ISO BMFF (MP4) 容器格式，可能為：MP4 (影片)、M4V/M4A (iTunes)、MOV (QuickTime)、3GP (手機影片)、HEIC/HEIF (高效率圖片)、AVIF (新一代圖片格式)":"📦 This is the ISO BMFF (MP4) container format, which may be: MP4 (video), M4V/M4A (iTunes), MOV (QuickTime), 3GP (mobile video), HEIC/HEIF (high-efficiency pictures), AVIF (new generation picture format)","📦 此為 OLE2 複合文件容器，可能為：DOC (Word 文件)、XLS (Excel 試算表)、PPT (PowerPoint 簡報)、MSG (Outlook 郵件)、MSI (Windows Installer)":"📦 This is an OLE2 compound file container, which may be: DOC (Word file), XLS (Excel spreadsheet), PPT (PowerPoint presentation), MSG (Outlook mail), MSI (Windows Installer)","📦 此為 RIFF 容器格式，可能為：AVI (影片)、WAV (音訊)、WebP (圖片)":"📦 This is a RIFF container format, which may be: AVI (video), WAV (audio), WebP (picture)","📦 此為 ZIP 容器格式，可能為：APK (Android 安裝檔)、DOCX (Word 文件)、XLSX (Excel 試算表)、PPTX (PowerPoint 簡報)、ODT/ODS/ODP (OpenDocument)、EPUB (電子書)、JAR (Java 封存)、XPI (Firefox 附加元件)":"📦 This is a ZIP container format, which may be: APK (Android installation file), DOCX (Word file), XLSX (Excel spreadsheet), PPTX (PowerPoint presentation), ODT/ODS/ODP (OpenDocument), EPUB (e-book), JAR (Java archive), XPI (Firefox add-on)","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","⚠️ 副檔名與實際格式不一致":"• Unsatisfactory slotting and actual format","執行處理":"Run","本機處理":"processed locally","的真實格式為":"The real format is","，檔案可能已被重新命名或偽裝。":", the archives may have been renamed or disguised.","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="blueprint" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+<!-- Hero Section -->
+<div class="text-center mb-8 fade-in">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                File format identification and magic number query engine
+            </span>
+<h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                File Signature (Magic Number) Lookup
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">File Magic Digital Identification Tool</span>
+</h1>
+<p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                By analyzing the Magic Number in the first few bytes of the file, you can quickly identify the actual file format and no longer rely solely on the file extension. Suitable for digital forensics, information security analysis, format verification and other scenarios.
+            </p>
+</div>
+<!-- Tab Bar -->
+<div class="glass-panel mb-6 overflow-hidden">
+<div class="flex border-b border-hub-700 overflow-x-auto no-scrollbar">
+<button class="tab-btn active flex items-center gap-2" data-tab="upload" onclick="switchTab('upload')">
+<i class="ph ph-upload-simple text-base"></i>
+<span>Upload File</span>
+</button>
+<button class="tab-btn flex items-center gap-2" data-tab="hex" onclick="switchTab('hex')">
+<i class="ph ph-terminal-window text-base"></i>
+<span>Hex input</span>
+</button>
+<button class="tab-btn flex items-center gap-2" data-tab="reference" onclick="switchTab('reference')">
+<i class="ph ph-book-open-text text-base"></i>
+<span>Reference table</span>
+</button>
+</div>
+<!-- Tab A: File Upload -->
+<div class="p-4 sm:p-6" id="tab-upload-content">
+<div class="drop-zone flex flex-col items-center justify-center py-12 sm:py-16 px-6 text-center" id="drop-zone">
+<div class="w-16 h-16 rounded-full bg-hub-accent/10 flex items-center justify-center mb-4">
+<i class="ph ph-cloud-arrow-up text-2xl text-hub-accent"></i>
+</div>
+<p class="text-base sm:text-lg font-medium text-slate-300 mb-2">Drag file here</p>
+<p class="text-sm text-slate-500 mb-4">or</p>
+<label class="inline-flex items-center gap-2 px-5 py-2.5 bg-hub-accent text-white rounded-lg font-medium text-sm cursor-pointer hover:bg-sky-400 transition-colors">
+<i class="ph ph-file-plus text-base"></i>
+                        Choose File
+                        <input class="hidden" id="file-input" onchange="handleFileSelect(event)" type="file"/>
+</label>
+<p class="text-xs text-slate-600 mt-3">Only the first 64 Bytes are read, large files can be analyzed instantly</p>
+</div>
+<!-- File info badge -->
+<div class="hidden mt-4 flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-lg border border-hub-700" id="file-info">
+<i class="ph ph-file text-hub-accent text-lg"></i>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-300 truncate" id="file-name"></p>
+<p class="text-xs text-slate-500" id="file-size"></p>
+</div>
+<button class="text-slate-500 hover:text-red-400 transition-colors p-1" onclick="clearDetection()">
+<i class="ph ph-x-circle text-lg"></i>
+</button>
+</div>
+</div>
+<!-- Tab B: Hex Input -->
+<div class="p-4 sm:p-6 hidden" id="tab-hex-content">
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-slate-400 mb-2">Enter Hex string</label>
+<div class="flex gap-2">
+<input class="flex-1 bg-[#0f172a] border border-hub-700 text-white rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:border-hub-accent focus:ring-1 focus:ring-hub-accent/30" id="hex-input" onkeydown="if(event.key==='Enter')lookupHex()" placeholder="For example: FFD8FFE0, 89504E47, 504B0304" type="text"/>
+<button class="px-5 py-3 bg-hub-accent text-white rounded-lg font-medium text-sm hover:bg-sky-400 transition-colors whitespace-nowrap" onclick="lookupHex()">
+                                Query
+                            </button>
+</div>
+<p class="text-xs text-slate-600 mt-1.5">Automatically remove whitespace, newlines and 0x prefixes</p>
+</div>
+<!-- Quick Search Chips -->
+<div>
+<p class="text-xs text-slate-500 mb-2">Quick query:</p>
+<div class="flex flex-wrap gap-2">
+<span class="chip" onclick="quickLookup('FFD8FF')">JPEG</span>
+<span class="chip" onclick="quickLookup('89504E47')">PNG</span>
+<span class="chip" onclick="quickLookup('47494638')">GIF</span>
+<span class="chip" onclick="quickLookup('25504446')">PDF</span>
+<span class="chip" onclick="quickLookup('504B0304')">ZIP</span>
+<span class="chip" onclick="quickLookup('52617221')">RAR</span>
+<span class="chip" onclick="quickLookup('377ABCAF271C')">7Z</span>
+<span class="chip" onclick="quickLookup('4D5A')">EXE</span>
+<span class="chip" onclick="quickLookup('7F454C46')">ELF</span>
+<span class="chip" onclick="quickLookup('CAFEBABE')">CLASS</span>
+<span class="chip" onclick="quickLookup('494433')">MP3</span>
+<span class="chip" onclick="quickLookup('1A45DFA3')">MKV</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab C: Reference Table -->
+<div class="p-4 sm:p-6 hidden" id="tab-reference-content">
+<div class="space-y-4">
+<!-- Search + Filter -->
+<div class="flex flex-col sm:flex-row gap-3">
+<div class="flex-1 relative">
+<i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-base"></i>
+<input class="search-input pl-9" id="ref-search" oninput="filterReferenceTable()" placeholder="Search file extension, MIME, Magic Number, description..." type="text"/>
+</div>
+<select class="bg-[#0f172a] border border-hub-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-hub-accent" id="category-filter" onchange="filterReferenceTable()">
+<option value="all">All categories</option>
+<option value="image">pictures</option>
+<option value="archive">compressed file</option>
+<option value="document">File</option>
+<option value="executable">executable file</option>
+<option value="audio">news</option>
+<option value="video">Video</option>
+<option value="font">Font</option>
+<option value="diskimage">disk image</option>
+<option value="other">Others</option>
+</select>
+</div>
+<!-- Results count -->
+<p class="text-xs text-slate-500" id="ref-count">A total of 0 information</p>
+<!-- Table -->
+<div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-hub-700 rounded-lg" style="scrollbar-width: thin;">
+<table class="sig-table">
+<thead>
+<tr>
+<th>File extension</th>
+<th>MIME type</th>
+<th>Magic Number</th>
+<th>offset</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody id="ref-table-body"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<!-- Results Panel -->
+<div class="hidden glass-panel p-4 sm:p-6 mb-6 fade-in" id="results-panel">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-bold text-white flex items-center gap-2">
+<i class="ph ph-check-circle text-hub-accent text-xl"></i>
+                    Analyze results
+                </h2>
+<div class="flex items-center gap-2 flex-wrap">
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 rounded-lg hover:bg-hub-accent/20 transition-colors" onclick="copySignature()">
+<i class="ph ph-copy-simple text-sm"></i> Copy Signature
+                    </button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-sig-info/10 text-sig-info border border-sig-info/20 rounded-lg hover:bg-sig-info/20 transition-colors" onclick="downloadTXT()">
+<i class="ph ph-download-simple text-sm"></i> TXT
+                    </button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-sig-ok/10 text-sig-ok border border-sig-ok/20 rounded-lg hover:bg-sig-ok/20 transition-colors" onclick="downloadJSON()">
+<i class="ph ph-download-simple text-sm"></i> JSON
+                    </button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors" onclick="clearDetection()">
+<i class="ph ph-trash-simple text-sm"></i> Clear
+                    </button>
+</div>
+</div>
+<!-- Container Hint / Mismatch Warning -->
+<div class="space-y-2 mb-4" id="warnings-container"></div>
+<!-- Result fields -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="result-field">
+<p class="text-xs text-slate-500 mb-1">File format</p>
+<p class="text-sm font-medium text-white" id="result-format">--</p>
+</div>
+<div class="result-field">
+<p class="text-xs text-slate-500 mb-1">File extension</p>
+<p class="text-sm font-medium text-white hex-display" id="result-ext">--</p>
+</div>
+<div class="result-field">
+<p class="text-xs text-slate-500 mb-1">MIME type</p>
+<p class="text-sm font-medium text-white" id="result-mime">--</p>
+</div>
+<div class="result-field">
+<p class="text-xs text-slate-500 mb-1">Magic Number</p>
+<p class="text-sm font-medium text-hub-accent hex-display" id="result-magic">--</p>
+</div>
+<div class="result-field">
+<p class="text-xs text-slate-500 mb-1">Offset</p>
+<p class="text-sm font-medium text-white" id="result-offset">--</p>
+</div>
+<div class="result-field">
+<p class="text-xs text-slate-500 mb-1">Signature length</p>
+<p class="text-sm font-medium text-white" id="result-length">--</p>
+</div>
+<div class="result-field hidden" id="result-size-container">
+<p class="text-xs text-slate-500 mb-1">File size</p>
+<p class="text-sm font-medium text-white" id="result-size">--</p>
+</div>
+</div>
+</div>
+<!-- Educational / SEO Content -->
+<div class="mt-10 space-y-6">
+<!-- FAQ -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-question text-hub-accent"></i>
+                    Frequently Asked Questions (FAQ)
+                </h2>
+<div class="space-y-2 divide-y divide-hub-700/50">
+<details class="faq-item">
+<summary class="text-slate-200">What is a Magic Number?</summary>
+<div class="faq-answer">
+                            Magic Number (magic number, also known as file signature) is a fixed sequence of bytes located at the beginning of the file, used to uniquely identify the file format. For example, a JPEG file always begins with <code class="text-hub-accent font-mono text-xs">FF D8 FF</code>, PNG is based on <code class="text-hub-accent font-mono text-xs">89 50 4E 47</code> Beginning. The operating system and applications use these bytes to determine how to correctly parse the file contents.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Why can't we just look at the file extension to determine the file format?</summary>
+<div class="faq-answer">
+                            The file extension is just a text label and can be changed by anyone. Hackers often disguise malicious programs as <code class="text-slate-400 font-mono text-xs">.jpg</code> or <code class="text-slate-400 font-mono text-xs">.pdf</code>, bypassing security checks. Magic Number is a binary characteristic of the file itself and cannot be forged by renaming it. Therefore, digital forensics and security analysis rely on Magic Numbers rather than file extensions.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">How to identify fake files?</summary>
+<div class="faq-answer">
+                            Use the "Upload File" function of this tool to upload suspicious files, and the system will automatically read its Magic Number and compare it with the true format. If the format of the result display does not match the file extension (for example, the file extension is <code class="text-slate-400 font-mono text-xs">.jpg</code> However, if the Magic Number is displayed as ZIP), it means that the file has been renamed to disguise it and should be handled with caution. This tool automatically flags such inconsistencies.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">What is the ZIP container format? Why are DOCX, APK, and EPUB all ZIP?</summary>
+<div class="faq-answer">
+                            Files (DOCX, XLSX, PPTX), Android installation packages (APK), e-books (EPUB) and other formats after Microsoft Office 2007 are essentially a ZIP compression container containing multiple XML files and resources. Their Magic Numbers are all <code class="text-hub-accent font-mono text-xs">50 4B 03 04</code>(ZIP signature). To further differentiate, it is necessary to analyze the internal structure of the container, such as checking whether there is <code class="text-slate-400 font-mono text-xs">[Content_Types].xml</code> or <code class="text-slate-400 font-mono text-xs">AndroidManifest.xml</code> and other characteristic files.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Are all Magic Numbers at the beginning of the file?</summary>
+<div class="faq-answer">
+                            Not necessarily. In most formats the Magic Number is located at offset 0 (beginning of the archive), but there are exceptions. For example, the Magic Number of a TAR archive is located at offset 257 bytes (string <code class="text-slate-400 font-mono text-xs">ustar</code>), the identification string for the ISO 9660 disc image is located at offset 32769. This tool will automatically detect Magic Numbers with different offsets to ensure identification accuracy.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Will this tool upload my files to the server?</summary>
+<div class="faq-answer">
+                            Not at all. This tool is a pure front-end application. All file reading and analysis are performed in your browser. Only the first 64 bytes of the file are read and no data is transmitted to the network. You can use it with confidence to analyze confidential files.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">What are the common Magic Numbers?</summary>
+<div class="faq-answer">
+                            Here are a few of the most common profile signatures:<br/>
+                            • <code class="text-hub-accent font-mono text-xs">FF D8 FF</code> — JPEG images<br/>
+                            • <code class="text-hub-accent font-mono text-xs">89 50 4E 47</code> — PNG images<br/>
+                            • <code class="text-hub-accent font-mono text-xs">25 50 44 46</code> — PDF file<br/>
+                            • <code class="text-hub-accent font-mono text-xs">50 4B 03 04</code> — ZIP archive<br/>
+                            • <code class="text-hub-accent font-mono text-xs">4D 5A</code> — Windows EXE executable file<br/>
+                            • <code class="text-hub-accent font-mono text-xs">7F 45 4C 46</code> — Linux ELF executable file<br/>
+                            • <code class="text-hub-accent font-mono text-xs">CA FE BA BE</code> — Java Class category file
+                        </div>
+</details>
+</div>
+</div>
+<!-- SEO Content -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-book-open text-hub-accent"></i>
+                    Understanding Magic Number: the cornerstone of file format recognition
+                </h2>
+<div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+<section>
+<h3 class="text-white font-bold text-base mb-2">What is a Magic Number?</h3>
+<p>A Magic Number, also known as a File Signature, is a fixed set of bytes defined in the file format standard and located at a specific offset in the file (usually the beginning). These bytes are like the "DNA" of the file and can uniquely identify its true format and are not affected by the file extension.</p>
+<p class="mt-2">For example, the first 4 bytes of any standard-compliant PDF file must be <code class="text-hub-accent font-mono text-xs">25 50 44 46</code>(i.e. the string "%PDF"). The first 8 bytes of any PNG image must be <code class="text-hub-accent font-mono text-xs">89 50 4E 47 0D 0A 1A 0A</code>。</p>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">Why can't we just rely on the extension?</h3>
+<p>The file extension (such as .jpg, .exe, .pdf) is just a label attribute in the file system, and anyone can change it at will by renaming it. Windows' default setting to hide known file extensions makes it even more difficult for users to detect. A real piece of malware might be named <code class="text-slate-400 font-mono text-xs">document.pdf.exe</code>, while Windows only displays "document.pdf", misleading users to click.</p>
+<p class="mt-2">Magic Numbers cannot be forged—unless the attacker completely forges the entire file format, the structure of the internal bytes cannot be changed. Therefore, in the field of information security, Magic Number check is one of the most basic and reliable file verification methods.</p>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">How to identify fake files?</h3>
+<p>When using this tool to analyze suspicious files, please follow these steps:</p>
+<ol class="list-decimal list-inside space-y-1 mt-2">
+<li>Upload suspicious files through the "Upload Files" tab</li>
+<li>Observe whether the "File Format" in the results is consistent with the actual file extension</li>
+<li>If a "⚠️ file extension is inconsistent with the actual format" warning appears, you should be highly vigilant.</li>
+<li>Use the "Copy Signature" function to record evidence, or download the JSON / TXT report for storage</li>
+</ol>
+<p class="mt-2">A typical camouflage case is to disguise a malicious executable file as an image or document file. For example, a name is <code class="text-slate-400 font-mono text-xs">photo.jpg</code> file if its Magic Number is <code class="text-hub-accent font-mono text-xs">4D 5A</code>(MZ executable signature), it is actually a Windows executable file.</p>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">Common file format classifications</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-white font-medium text-sm mb-1">🖼️ Image format</p>
+<p class="text-xs text-slate-500">JPEG、PNG、GIF、BMP、WebP、TIFF、HEIC、AVIF、ICO、PSD、SVG</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-white font-medium text-sm mb-1">📦 Compression and archiving</p>
+<p class="text-xs text-slate-500">ZIP、RAR、7z、GZip、BZip2、XZ、TAR、Zstandard</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-white font-medium text-sm mb-1">📄 File format</p>
+<p class="text-xs text-slate-500">PDF、DOC/DOCX、XLS/XLSX、PPT/PPTX、RTF、ODT、EPUB</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-white font-medium text-sm mb-1">⚙️Executable file</p>
+<p class="text-xs text-slate-500">Windows EXE/DLL、Linux ELF、macOS Mach-O、Java Class、APK</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-white font-medium text-sm mb-1">🎵 Audio format</p>
+<p class="text-xs text-slate-500">MP3、WAV、FLAC、OGG、AAC、WMA、MIDI、Opus</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-white font-medium text-sm mb-1">🎬Video format</p>
+<p class="text-xs text-slate-500">MP4、AVI、MKV、WebM、MOV、FLV、WMV、3GP</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- Toast Notification -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4" id="toast">
+<span class="text-lg" id="toast-icon">✅</span>
+<span class="text-sm font-medium text-slate-300" id="toast-message"></span>
+</div>
+<div id="component-footer"></div>
+<!-- System Bootstrap -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] ${filePath}:`, error);
+            }
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/file-signature-lookup';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) {
+                const trigger = e.target.closest('#sidebar-trigger-btn');
+                if (trigger) {
+                    window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar'));
+                }
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- Business Logic -->
+<script>
+        // ===================== SIGNATURE DATABASE =====================
+        const SIGNATURE_DB = [
+            // --- IMAGES ---
+            { ext: "jpg,jpeg",  mime: "image/jpeg",         magic: "FFD8FF",       offset: 0, category: "image",     description: "JPEG 圖片格式", container: null },
+            { ext: "png",       mime: "image/png",          magic: "89504E470D0A1A0A", offset: 0, category: "image", description: "PNG 可攜式網路圖形", container: null },
+            { ext: "gif",       mime: "image/gif",          magic: "474946383761", offset: 0, category: "image",     description: "GIF 圖形交換格式 (GIF89a)", container: null },
+            { ext: "gif",       mime: "image/gif",          magic: "474946383961", offset: 0, category: "image",     description: "GIF 圖形交換格式 (GIF87a)", container: null },
+            { ext: "bmp",       mime: "image/bmp",          magic: "424D",         offset: 0, category: "image",     description: "BMP 點陣圖格式", container: null },
+            { ext: "webp",      mime: "image/webp",         magic: "52494646",     offset: 0, category: "image",     description: "WebP 圖片格式", container: "riff" },
+            { ext: "tiff,tif",  mime: "image/tiff",         magic: "4D4D002A",     offset: 0, category: "image",     description: "TIFF 標記影像檔案 (Big-endian)", container: null },
+            { ext: "tiff,tif",  mime: "image/tiff",         magic: "49492A00",     offset: 0, category: "image",     description: "TIFF 標記影像檔案 (Little-endian)", container: null },
+            { ext: "ico",       mime: "image/x-icon",       magic: "00000100",     offset: 0, category: "image",     description: "ICO 圖示格式", container: null },
+            { ext: "heic,heif", mime: "image/heic",         magic: "66747970686569", offset: 4, category: "image",   description: "HEIC 高效率圖像格式", container: "ftyp" },
+            { ext: "avif",      mime: "image/avif",         magic: "66747970617669", offset: 4, category: "image",   description: "AVIF 圖片格式", container: "ftyp" },
+            { ext: "psd",       mime: "image/vnd.adobe.photoshop", magic: "38425053", offset: 0, category: "image", description: "Adobe Photoshop PSD 檔案", container: null },
+            { ext: "svg",       mime: "image/svg+xml",      magic: "3C737667",     offset: 0, category: "image",     description: "SVG 可縮放向量圖形", container: null },
+            { ext: "dng",       mime: "image/x-adobe-dng",  magic: "4D4D002A",     offset: 0, category: "image",     description: "Adobe DNG 數位負片 RAW 格式", container: null },
+            { ext: "cr2",       mime: "image/x-canon-cr2",  magic: "49492A00",     offset: 0, category: "image",     description: "Canon CR2 RAW 格式", container: null },
+            { ext: "nef",       mime: "image/x-nikon-nef",  magic: "4D4D002A",     offset: 0, category: "image",     description: "Nikon NEF RAW 格式", container: null },
+            { ext: "orf",       mime: "image/x-olympus-orf", magic: "4949524F",    offset: 0, category: "image",     description: "Olympus ORF RAW 格式", container: null },
+            { ext: "raf",       mime: "image/x-fuji-raf",   magic: "46554A49",     offset: 0, category: "image",     description: "Fuji RAF RAW 格式", container: null },
+            { ext: "xcf",       mime: "image/x-xcf",        magic: "67696D7020786366", offset: 0, category: "image", description: "GIMP XCF 圖像格式", container: null },
+            { ext: "jp2,jpx",   mime: "image/jp2",          magic: "0000000C6A5020200D0A870A", offset: 0, category: "image", description: "JPEG 2000 圖片格式", container: null },
+            { ext: "pcx",       mime: "image/x-pcx",        magic: "0A",           offset: 0, category: "image",     description: "PCX 點陣圖格式", container: null },
+            { ext: "tga",       mime: "image/x-tga",        magic: "000002",       offset: 0, category: "image",     description: "TGA/Targa 圖形格式", container: null },
+
+            // --- ARCHIVES ---
+            { ext: "zip",       mime: "application/zip",    magic: "504B0304",     offset: 0, category: "archive",   description: "ZIP 壓縮檔", container: "zip" },
+            { ext: "zip",       mime: "application/zip",    magic: "504B0506",     offset: 0, category: "archive",   description: "ZIP 壓縮檔 (Empty Archive)", container: "zip" },
+            { ext: "zip",       mime: "application/zip",    magic: "504B0708",     offset: 0, category: "archive",   description: "ZIP 壓縮檔 (Spanned/Split)", container: "zip" },
+            { ext: "rar",       mime: "application/vnd.rar", magic: "526172211A0700", offset: 0, category: "archive", description: "RAR 壓縮檔 (v4.x)", container: null },
+            { ext: "rar",       mime: "application/vnd.rar", magic: "526172211A070100", offset: 0, category: "archive", description: "RAR 壓縮檔 (v5.x)", container: null },
+            { ext: "7z",        mime: "application/x-7z-compressed", magic: "377ABCAF271C", offset: 0, category: "archive", description: "7-Zip 壓縮檔", container: null },
+            { ext: "gz",        mime: "application/gzip",   magic: "1F8B08",       offset: 0, category: "archive",   description: "GZip 壓縮檔", container: null },
+            { ext: "bz2",       mime: "application/x-bzip2", magic: "425A68",      offset: 0, category: "archive",   description: "BZip2 壓縮檔", container: null },
+            { ext: "xz",        mime: "application/x-xz",   magic: "FD377A585A00", offset: 0, category: "archive",   description: "XZ 壓縮檔", container: null },
+            { ext: "tar",       mime: "application/x-tar",  magic: "757374617200", offset: 257, category: "archive",  description: "TAR 歸檔檔 (ustar)", container: null },
+            { ext: "tar",       mime: "application/x-tar",  magic: "7573746172202000", offset: 257, category: "archive", description: "TAR 歸檔檔 (GNU tar)", container: null },
+            { ext: "zst",       mime: "application/zstd",   magic: "28B52FFD",     offset: 0, category: "archive",   description: "Zstandard 壓縮檔", container: null },
+            { ext: "cab",       mime: "application/vnd.ms-cab-compressed", magic: "4D534346", offset: 0, category: "archive", description: "Microsoft CAB 封裝檔", container: null },
+            { ext: "lz",        mime: "application/x-lzip", magic: "4C5A4950",     offset: 0, category: "archive",   description: "LZip 壓縮檔", container: null },
+            { ext: "lz4",       mime: "application/x-lz4",  magic: "04224D18",     offset: 0, category: "archive",   description: "LZ4 壓縮檔", container: null },
+            { ext: "lha,lzh",   mime: "application/x-lzh",  magic: "2D6C68302D",   offset: 2, category: "archive",   description: "LHA/LZH 壓縮檔", container: null },
+            { ext: "arj",       mime: "application/x-arj",  magic: "60EA",         offset: 0, category: "archive",   description: "ARJ 壓縮檔", container: null },
+            { ext: "ace",       mime: "application/x-ace-compressed", magic: "2A43454345", offset: 0, category: "archive", description: "ACE 壓縮檔", container: null },
+            { ext: "rpm",       mime: "application/x-rpm",  magic: "EDABEEDB",     offset: 0, category: "archive",   description: "RPM 套件檔", container: null },
+            { ext: "deb",       mime: "application/x-deb",  magic: "213C61726368", offset: 0, category: "archive",   description: "Debian DEB 套件檔", container: "ar" },
+            { ext: "iso",       mime: "application/x-iso9660-image", magic: "4344303031", offset: 32769, category: "archive", description: "ISO 9660 CD/DVD 映像檔", container: null },
+            { ext: "iso",       mime: "application/x-iso9660-image", magic: "4344303031", offset: 34817, category: "archive", description: "ISO 9660 CD/DVD 映像檔 (Mode 2)", container: null },
+
+            // --- DOCUMENTS ---
+            { ext: "pdf",       mime: "application/pdf",    magic: "25504446",     offset: 0, category: "document",  description: "PDF 可攜式文件格式", container: null },
+            { ext: "doc,xls,ppt", mime: "application/vnd.ms-office", magic: "D0CF11E0A1B11AE1", offset: 0, category: "document", description: "Microsoft Office OLE2 文件", container: "ole" },
+            { ext: "docx",      mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", magic: "504B0304", offset: 0, category: "document", description: "Microsoft Word OpenXML 文件", container: "zip" },
+            { ext: "xlsx",      mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", magic: "504B0304", offset: 0, category: "document", description: "Microsoft Excel OpenXML 試算表", container: "zip" },
+            { ext: "pptx",      mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", magic: "504B0304", offset: 0, category: "document", description: "Microsoft PowerPoint OpenXML 簡報", container: "zip" },
+            { ext: "rtf",       mime: "application/rtf",    magic: "7B5C727466",   offset: 0, category: "document",  description: "RTF 豐富文字格式", container: null },
+            { ext: "odt",       mime: "application/vnd.oasis.opendocument.text", magic: "504B0304", offset: 0, category: "document", description: "OpenDocument 文字文件 (ODT)", container: "zip" },
+            { ext: "ods",       mime: "application/vnd.oasis.opendocument.spreadsheet", magic: "504B0304", offset: 0, category: "document", description: "OpenDocument 試算表 (ODS)", container: "zip" },
+            { ext: "odp",       mime: "application/vnd.oasis.opendocument.presentation", magic: "504B0304", offset: 0, category: "document", description: "OpenDocument 簡報 (ODP)", container: "zip" },
+            { ext: "epub",      mime: "application/epub+zip", magic: "504B0304",   offset: 0, category: "document",  description: "EPUB 電子書", container: "zip" },
+            { ext: "mobi,azw",  mime: "application/x-mobipocket-ebook", magic: "4D4F4249", offset: 0, category: "document", description: "Mobipocket/AZW 電子書", container: null },
+            { ext: "fb2",       mime: "application/x-fictionbook+xml", magic: "3C3F786D6C20", offset: 0, category: "document", description: "FictionBook FB2 電子書 (XML)", container: null },
+            { ext: "tex",       mime: "application/x-tex",  magic: "5C646F63756D656E74636C617373", offset: 0, category: "document", description: "LaTeX 文件", container: null },
+            { ext: "wpd",       mime: "application/wordperfect", magic: "FF575043", offset: 0, category: "document",  description: "WordPerfect 文件", container: null },
+            { ext: "abw",       mime: "application/x-abiword", magic: "3C3F786D6C", offset: 0, category: "document",  description: "AbiWord 文件 (XML)", container: null },
+            { ext: "pages",     mime: "application/x-iwork-pages-sffpages", magic: "504B0304", offset: 0, category: "document", description: "Apple Pages 文件", container: "zip" },
+            { ext: "numbers",   mime: "application/x-iwork-numbers-sffnumbers", magic: "504B0304", offset: 0, category: "document", description: "Apple Numbers 試算表", container: "zip" },
+            { ext: "key",       mime: "application/x-iwork-keynote-sffkey", magic: "504B0304", offset: 0, category: "document", description: "Apple Keynote 簡報", container: "zip" },
+
+            // --- EXECUTABLES ---
+            { ext: "exe,dll,com,sys,ocx,scr", mime: "application/x-msdownload", magic: "4D5A", offset: 0, category: "executable", description: "Windows/DOS MZ 可執行檔", container: null },
+            { ext: "elf",       mime: "application/x-elf",  magic: "7F454C46",     offset: 0, category: "executable", description: "ELF 執行檔 (Linux/Unix)", container: null },
+            { ext: "macho",     mime: "application/x-mach-binary", magic: "FEEDFACE", offset: 0, category: "executable", description: "Mach-O 執行檔 (macOS 32-bit BE)", container: null },
+            { ext: "macho",     mime: "application/x-mach-binary", magic: "FEEDFACF", offset: 0, category: "executable", description: "Mach-O 執行檔 (macOS 64-bit BE)", container: null },
+            { ext: "macho",     mime: "application/x-mach-binary", magic: "CEFAEDFE", offset: 0, category: "executable", description: "Mach-O 執行檔 (macOS 32-bit LE)", container: null },
+            { ext: "macho",     mime: "application/x-mach-binary", magic: "CFFAEDFE", offset: 0, category: "executable", description: "Mach-O 執行檔 (macOS 64-bit LE)", container: null },
+            { ext: "apk",       mime: "application/vnd.android.package-archive", magic: "504B0304", offset: 0, category: "executable", description: "Android APK 安裝包", container: "zip" },
+            { ext: "dex",       mime: "application/x-dex",  magic: "6465780A30333500", offset: 0, category: "executable", description: "Android DEX 位元組碼", container: null },
+            { ext: "class",     mime: "application/java-vm", magic: "CAFEBABE",     offset: 0, category: "executable", description: "Java Class 類別檔", container: null },
+            { ext: "jar",       mime: "application/java-archive", magic: "504B0304", offset: 0, category: "executable", description: "Java JAR 封存檔", container: "zip" },
+            { ext: "swf",       mime: "application/x-shockwave-flash", magic: "465753", offset: 0, category: "executable", description: "Adobe Flash SWF (已淘汰)", container: null },
+            { ext: "wasm",      mime: "application/wasm",   magic: "0061736D",     offset: 0, category: "executable", description: "WebAssembly 二進位模組", container: null },
+            { ext: "msi",       mime: "application/x-msi",  magic: "D0CF11E0A1B11AE1", offset: 0, category: "executable", description: "Windows Installer MSI 套件", container: "ole" },
+            { ext: "chm",       mime: "application/x-chm",  magic: "49545346",     offset: 0, category: "executable", description: "Microsoft CHM 說明檔", container: null },
+            { ext: "crx",       mime: "application/x-chrome-extension", magic: "43723234", offset: 0, category: "executable", description: "Chrome Extension 封裝檔", container: null },
+            { ext: "xpi",       mime: "application/x-xpinstall", magic: "504B0304", offset: 0, category: "executable", description: "Firefox XPI 附加元件", container: "zip" },
+            { ext: "bin",       mime: "application/x-binary", magic: "42494E",      offset: 0, category: "executable", description: "Sega Mega Drive ROM (SMD)", container: null },
+            { ext: "nes",       mime: "application/x-nes-rom", magic: "4E45531A",   offset: 0, category: "executable", description: "NES 模擬器 ROM", container: null },
+            { ext: "sfc,smc",   mime: "application/x-snes-rom", magic: "0000FF00FFFF00FF", offset: 0, category: "executable", description: "SNES 模擬器 ROM (SMC Header)", container: null },
+
+            // --- AUDIO ---
+            { ext: "mp3",       mime: "audio/mpeg",         magic: "FFFB",         offset: 0, category: "audio",     description: "MP3 音訊 (MPEG Layer 3)", container: null },
+            { ext: "mp3",       mime: "audio/mpeg",         magic: "FFF3",         offset: 0, category: "audio",     description: "MP3 音訊 (MPEG Layer 3, No CRC)", container: null },
+            { ext: "mp3",       mime: "audio/mpeg",         magic: "FFF2",         offset: 0, category: "audio",     description: "MP3 音訊 (MPEG Layer 3, CRC)", container: null },
+            { ext: "mp3",       mime: "audio/mpeg",         magic: "494433",       offset: 0, category: "audio",     description: "MP3 音訊 (含 ID3v2 標籤)", container: null },
+            { ext: "wav",       mime: "audio/x-wav",        magic: "52494646",     offset: 0, category: "audio",     description: "WAV 波形音訊 (RIFF WAVE)", container: "riff" },
+            { ext: "flac",      mime: "audio/flac",         magic: "664C6143",     offset: 0, category: "audio",     description: "FLAC 無損音訊編碼", container: null },
+            { ext: "ogg",       mime: "audio/ogg",          magic: "4F676753",     offset: 0, category: "audio",     description: "OGG 音訊容器 (Vorbis/Opus)", container: null },
+            { ext: "opus",      mime: "audio/opus",         magic: "4F70757348656164", offset: 0, category: "audio", description: "Opus 音訊編碼", container: null },
+            { ext: "aac",       mime: "audio/aac",          magic: "FFF1",         offset: 0, category: "audio",     description: "AAC 進階音訊編碼 (ADTS)", container: null },
+            { ext: "aac",       mime: "audio/aac",          magic: "FFF9",         offset: 0, category: "audio",     description: "AAC 進階音訊編碼 (ADTS, MPEG-4)", container: null },
+            { ext: "wma",       mime: "audio/x-ms-wma",     magic: "3026B2758E66CF11A6D900AA0062CE6C", offset: 0, category: "audio", description: "Windows Media Audio (ASF)", container: "asf" },
+            { ext: "mid,midi",  mime: "audio/midi",         magic: "4D546864",     offset: 0, category: "audio",     description: "MIDI 樂器數位介面", container: null },
+            { ext: "amr",       mime: "audio/amr",          magic: "2321414D52",   offset: 0, category: "audio",     description: "AMR 自適應多速率音訊", container: null },
+            { ext: "m4a",       mime: "audio/mp4",          magic: "667479704D3441", offset: 4, category: "audio",   description: "M4A 音訊 (AAC/ALAC MP4)", container: "ftyp" },
+            { ext: "aiff,aif",  mime: "audio/x-aiff",       magic: "464F524D",     offset: 0, category: "audio",     description: "AIFF 音訊交換格式", container: null },
+            { ext: "au",        mime: "audio/basic",        magic: "2E736E64",     offset: 0, category: "audio",     description: "Sun AU 音訊格式", container: null },
+            { ext: "voc",       mime: "audio/x-voc",        magic: "437265617469766520566F696365", offset: 0, category: "audio", description: "Creative VOC 音訊", container: null },
+            { ext: "ra,ram",    mime: "audio/x-pn-realaudio", magic: "2E7261FD",   offset: 0, category: "audio",     description: "RealAudio 音訊", container: null },
+            { ext: "dff",       mime: "audio/x-dff",        magic: "46575244",     offset: 0, category: "audio",     description: "DSD 音訊 (DSDIFF)", container: null },
+            { ext: "dsf",       mime: "audio/x-dsf",        magic: "44534646",     offset: 0, category: "audio",     description: "DSD 音訊 (DSF)", container: null },
+
+            // --- VIDEO ---
+            { ext: "mp4,m4v",   mime: "video/mp4",          magic: "66747970",     offset: 4, category: "video",     description: "MP4/ISOBMFF 影片容器", container: "ftyp" },
+            { ext: "avi",       mime: "video/x-msvideo",    magic: "52494646",     offset: 0, category: "video",     description: "AVI 影片 (RIFF AVI)", container: "riff" },
+            { ext: "mkv",       mime: "video/x-matroska",   magic: "1A45DFA3",     offset: 0, category: "video",     description: "MKV Matroska 影片", container: null },
+            { ext: "webm",      mime: "video/webm",         magic: "1A45DFA3",     offset: 0, category: "video",     description: "WebM 影片 (Matroska)", container: null },
+            { ext: "mov,qt",    mime: "video/quicktime",    magic: "667479707174", offset: 4, category: "video",     description: "QuickTime MOV 影片", container: "ftyp" },
+            { ext: "flv",       mime: "video/x-flv",        magic: "464C5601",     offset: 0, category: "video",     description: "Flash Video (FLV)", container: null },
+            { ext: "wmv",       mime: "video/x-ms-wmv",     magic: "3026B2758E66CF11A6D900AA0062CE6C", offset: 0, category: "video", description: "Windows Media Video (ASF)", container: "asf" },
+            { ext: "3gp",       mime: "video/3gpp",         magic: "667479703367", offset: 4, category: "video",     description: "3GPP 手機影片", container: "ftyp" },
+            { ext: "mpeg,mpg",  mime: "video/mpeg",         magic: "000001BA",     offset: 0, category: "video",     description: "MPEG-1/2 影片 (Program Stream)", container: null },
+            { ext: "mpeg,mpg",  mime: "video/mpeg",         magic: "000001B3",     offset: 0, category: "video",     description: "MPEG-1/2 影片 (Elementary Stream)", container: null },
+            { ext: "ts,m2ts",   mime: "video/mp2t",         magic: "47",           offset: 0, category: "video",     description: "MPEG-TS 傳輸串流", container: null },
+            { ext: "mxf",       mime: "application/mxf",    magic: "060E2B34020501010D010201010200", offset: 0, category: "video", description: "MXF 素材交換格式 (Professional Video)", container: null },
+            { ext: "ogv",       mime: "video/ogg",          magic: "4F676753",     offset: 0, category: "video",     description: "OGV 影片 (Ogg Theora)", container: null },
+            { ext: "divx",      mime: "video/x-divx",       magic: "52494646",     offset: 0, category: "video",     description: "DivX 影片 (RIFF)", container: "riff" },
+            { ext: "rm,rmvb",   mime: "application/vnd.rn-realmedia", magic: "2E524D46", offset: 0, category: "video", description: "RealMedia 影片 (RealVideo)", container: null },
+
+            // --- FONTS ---
+            { ext: "ttf",       mime: "font/ttf",           magic: "000100000000", offset: 0, category: "font",      description: "TrueType 字型", container: null },
+            { ext: "otf",       mime: "font/otf",           magic: "4F54544F",     offset: 0, category: "font",      description: "OpenType 字型", container: null },
+            { ext: "woff",      mime: "font/woff",          magic: "774F4646",     offset: 0, category: "font",      description: "WOFF 網頁字型", container: null },
+            { ext: "woff2",     mime: "font/woff2",         magic: "774F4632",     offset: 0, category: "font",      description: "WOFF2 網頁字型 (v2)", container: null },
+            { ext: "eot",       mime: "application/vnd.ms-fontobject", magic: "4C505F10", offset: 0, category: "font", description: "Embedded OpenType 字型", container: null },
+            { ext: "pfa,pfb",   mime: "application/x-font-pcf", magic: "25215053", offset: 0, category: "font",      description: "PostScript Type 1 字型", container: null },
+
+            // --- DISK IMAGES ---
+            { ext: "dmg",       mime: "application/x-apple-diskimage", magic: "7801730D626260", offset: 0, category: "diskimage", description: "Apple DMG 磁碟映像", container: null },
+            { ext: "vmdk",      mime: "application/x-vmdk", magic: "4B444D",       offset: 0, category: "diskimage", description: "VMware VMDK 虛擬磁碟", container: null },
+            { ext: "vdi",       mime: "application/x-vdi",  magic: "3C3C3C204F7261636C652056444920496D616765", offset: 0, category: "diskimage", description: "VirtualBox VDI 虛擬磁碟", container: null },
+            { ext: "vhd",       mime: "application/x-vhd",  magic: "636F6E6563746978", offset: 0, category: "diskimage", description: "Microsoft VHD 虛擬硬碟", container: null },
+            { ext: "vhdx",      mime: "application/x-vhd",  magic: "7678687866696C65", offset: 0, category: "diskimage", description: "Microsoft VHDX 虛擬硬碟 (v2)", container: null },
+            { ext: "qcow2",     mime: "application/x-qcow2", magic: "514649FB",    offset: 0, category: "diskimage", description: "QEMU QCOW2 虛擬磁碟映像", container: null },
+            { ext: "qed",       mime: "application/x-qed",  magic: "51454400",     offset: 0, category: "diskimage", description: "QEMU QED 虛擬磁碟映像", container: null },
+            { ext: "hds",       mime: "application/x-hds",  magic: "48445300",     offset: 0, category: "diskimage", description: "Parallels HDS 虛擬磁碟", container: null },
+            { ext: "ova",       mime: "application/x-ovf",  magic: "70726F636573736564", offset: 0, category: "diskimage", description: "Open Virtual Appliance/Archive", container: null },
+
+            // --- OTHER ---
+            { ext: "sqlite,sqlite3,db", mime: "application/x-sqlite3", magic: "53514C69746520666F726D6174203300", offset: 0, category: "other", description: "SQLite 3 資料庫", container: null },
+            { ext: "sqlite2",   mime: "application/x-sqlite2", magic: "53514C69746520666F726D617420320000", offset: 0, category: "other", description: "SQLite 2 資料庫", container: null },
+            { ext: "pcap",      mime: "application/vnd.tcpdump.pcap", magic: "D4C3B2A1", offset: 0, category: "other", description: "PCAP 網路封包擷取檔 (LE)", container: null },
+            { ext: "pcap",      mime: "application/vnd.tcpdump.pcap", magic: "A1B2C3D4", offset: 0, category: "other", description: "PCAP 網路封包擷取檔 (BE)", container: null },
+            { ext: "pcapng",    mime: "application/x-pcapng", magic: "0A0D0D0A",   offset: 0, category: "other",     description: "PCAPNG 次世代封包擷取檔", container: null },
+            { ext: "pem,crt,key", mime: "application/x-pem-file", magic: "2D2D2D2D2D424547494E", offset: 0, category: "other", description: "PEM 憑證/金鑰 (Base64)", container: null },
+            { ext: "der",       mime: "application/x-x509-ca-cert", magic: "3082", offset: 0, category: "other",     description: "DER 二進位 X.509 憑證", container: null },
+            { ext: "pfx,p12",   mime: "application/x-pkcs12", magic: "3082",        offset: 0, category: "other",     description: "PKCS#12 個人資訊交換", container: null },
+            { ext: "torrent",   mime: "application/x-bittorrent", magic: "64733A",  offset: 0, category: "other",     description: "BitTorrent 種子檔", container: null },
+            { ext: "eml",       mime: "message/rfc822",     magic: "46726F6D2020",  offset: 0, category: "other",     description: "Email 電子郵件 (EML)", container: null },
+            { ext: "mht,mhtml", mime: "multipart/related",  magic: "46726F6D3A20",  offset: 0, category: "other",     description: "MHTML 網頁封存檔", container: null },
+            { ext: "msg",       mime: "application/vnd.ms-outlook", magic: "D0CF11E0A1B11AE1", offset: 0, category: "other", description: "Outlook MSG 郵件", container: "ole" },
+            { ext: "lnk",       mime: "application/x-ms-shortcut", magic: "4C000000", offset: 0, category: "other",   description: "Windows 捷徑 (.lnk)", container: null },
+            { ext: "srt",       mime: "application/x-subrip", magic: "310D0A",      offset: 0, category: "other",     description: "SRT 字幕檔", container: null },
+            { ext: "stl",       mime: "application/vnd.ms-pki.stl", magic: "0001000000FF", offset: 0, category: "other", description: "STL 3D 模型 (Binary)", container: null },
+            { ext: "obj",       mime: "application/x-wavefront-obj", magic: "2320",  offset: 0, category: "other", description: "Wavefront OBJ 3D 模型", container: null },
+            { ext: "blend",     mime: "application/x-blender", magic: "424C454E444552", offset: 0, category: "other", description: "Blender 3D 專案檔", container: null },
+            { ext: "max",       mime: "application/x-3ds",  magic: "4D4D",          offset: 0, category: "other",     description: "3ds Max 場景檔", container: null },
+            { ext: "skp",       mime: "application/x-sketchup", magic: "FFFE0B00",  offset: 0, category: "other",     description: "SketchUp 模型檔", container: null },
+            { ext: "dwg",       mime: "application/acad",   magic: "414331",        offset: 0, category: "other",     description: "AutoCAD DWG 圖檔", container: null },
+            { ext: "dxf",       mime: "application/x-dxf",  magic: "414243",        offset: 0, category: "other",     description: "AutoCAD DXF 交換檔", container: null },
+            { ext: "gpx",       mime: "application/gpx+xml", magic: "3C3F786D6C20", offset: 0, category: "other",     description: "GPS Exchange (GPX) XML", container: null },
+            { ext: "kml",       mime: "application/vnd.google-earth.kml+xml", magic: "3C3F786D6C", offset: 0, category: "other", description: "Google Earth KML", container: null },
+            { ext: "gbr",       mime: "application/x-gerber", magic: "4750",        offset: 0, category: "other",     description: "Gerber PCB 檔案", container: null },
+            { ext: "evtx",      mime: "application/x-evtx", magic: "456C6646696C6540", offset: 0, category: "other", description: "Windows Event Log (EVTX)", container: null },
+        ];
+
+        // Container hints
+        const CONTAINER_HINTS = {
+            zip: "📦 此為 ZIP 容器格式，可能為：APK (Android 安裝檔)、DOCX (Word 文件)、XLSX (Excel 試算表)、PPTX (PowerPoint 簡報)、ODT/ODS/ODP (OpenDocument)、EPUB (電子書)、JAR (Java 封存)、XPI (Firefox 附加元件)",
+            ole: "📦 此為 OLE2 複合文件容器，可能為：DOC (Word 文件)、XLS (Excel 試算表)、PPT (PowerPoint 簡報)、MSG (Outlook 郵件)、MSI (Windows Installer)",
+            riff: "📦 此為 RIFF 容器格式，可能為：AVI (影片)、WAV (音訊)、WebP (圖片)",
+            ftyp: "📦 此為 ISO BMFF (MP4) 容器格式，可能為：MP4 (影片)、M4V/M4A (iTunes)、MOV (QuickTime)、3GP (手機影片)、HEIC/HEIF (高效率圖片)、AVIF (新一代圖片格式)",
+            asf: "📦 此為 ASF 容器格式，可能為：WMV (影片)、WMA (音訊)"
+        };
+
+        // ===================== STATE =====================
+        let currentResult = null;
+        let currentFileName = null;
+        let currentFileSize = null;
+        let currentFileHex = null;
+
+        // ===================== UTILITIES =====================
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const message = document.getElementById('toast-message');
+            icon.textContent = isError ? '❌' : '✅';
+            message.textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'pointer-events-auto');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'pointer-events-auto');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2500);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 2 : 0) + ' ' + units[i];
+        }
+
+        function bytesToHex(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+        }
+
+        function formatHexDisplay(hex) {
+            return hex.match(/.{2}/g).join(' ') || hex;
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); showToast('已複製到剪貼簿'); }
+            catch (e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ===================== TAB SWITCHING =====================
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabId);
+            });
+            document.getElementById('tab-upload-content').classList.toggle('hidden', tabId !== 'upload');
+            document.getElementById('tab-hex-content').classList.toggle('hidden', tabId !== 'hex');
+            document.getElementById('tab-reference-content').classList.toggle('hidden', tabId !== 'reference');
+        }
+
+        // ===================== SIGNATURE LOOKUP =====================
+        function lookupByHexPrefix(hex, offset) {
+            let best = null;
+            for (const sig of SIGNATURE_DB) {
+                if (sig.offset !== offset) continue;
+                if (hex.length >= sig.magic.length && hex.startsWith(sig.magic)) {
+                    if (!best || sig.magic.length > best.magic.length || (sig.magic.length === best.magic.length && sig.ext.includes(best.ext.split(',')[0]))) {
+                        best = sig;
+                    }
+                }
+            }
+            return best;
+        }
+
+        function detectFromHex(hexStr) {
+            let clean = hexStr.replace(/0x/gi, '').replace(/[\s\r\n\t\-]/g, '').toUpperCase();
+            if (!/^[0-9A-F]+$/.test(clean)) {
+                showToast('無效的十六進位字串，請檢查輸入', true);
+                return null;
+            }
+            // Try matching at offset 0 first (most common), then try other offsets
+            for (let offset = 0; offset <= Math.min(clean.length / 2, 64); offset++) {
+                for (const sig of SIGNATURE_DB) {
+                    if (sig.offset !== offset || sig.magic.length > clean.length) continue;
+                    if (clean.startsWith(sig.magic)) {
+                        return { signature: sig, matchedHex: sig.magic };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function detectFromBuffer(buffer) {
+            const bytes = new Uint8Array(buffer);
+            const maxOffset = Math.min(bytes.length - 2, 64);
+            let bestResult = null;
+
+            for (let offset = 0; offset <= maxOffset; offset++) {
+                const remaining = bytes.length - offset;
+                const sigs = SIGNATURE_DB.filter(s => s.offset === offset);
+                if (sigs.length === 0) continue;
+
+                for (const sig of sigs) {
+                    const sigBytes = sig.magic.length / 2;
+                    if (sigBytes > remaining) continue;
+                    const hex = bytesToHex(bytes.slice(offset, offset + sigBytes));
+                    if (hex === sig.magic) {
+                        if (!bestResult || sig.magic.length > bestResult.signature.magic.length) {
+                            bestResult = { signature: sig, matchedHex: sig.magic };
+                        }
+                    }
+                }
+            }
+
+            // If no exact match, try prefix match
+            if (!bestResult) {
+                for (let offset = 0; offset <= maxOffset; offset++) {
+                    for (let len = 2; len <= Math.min(bytes.length - offset, 8); len++) {
+                        const hex = bytesToHex(bytes.slice(offset, offset + len));
+                        const sig = lookupByHexPrefix(hex, offset);
+                        if (sig) {
+                            if (!bestResult || sig.magic.length > bestResult.signature.magic.length) {
+                                bestResult = { signature: sig, matchedHex: hex };
+                            }
+                        }
+                    }
+                }
+            }
+
+            return bestResult;
+        }
+
+        // ===================== FILE UPLOAD HANDLING =====================
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) analyzeFile(file);
+        }
+
+        function analyzeFile(file) {
+            currentFileName = file.name;
+            currentFileSize = file.size;
+
+            // Update file info
+            document.getElementById('file-info').classList.remove('hidden');
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-size').textContent = formatFileSize(file.size);
+
+            // Read first 64 bytes
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const buffer = e.target.result;
+                currentFileHex = bytesToHex(new Uint8Array(buffer));
+                const result = detectFromBuffer(buffer);
+                displayResult(result, file);
+                switchTab('upload');
+            };
+            reader.onerror = function() {
+                showToast('讀取檔案失敗', true);
+            };
+            const slice = file.slice(0, 64);
+            reader.readAsArrayBuffer(slice);
+        }
+
+        // ===================== HEX INPUT HANDLING =====================
+        function lookupHex() {
+            const input = document.getElementById('hex-input').value.trim();
+            if (!input) {
+                showToast('請輸入 Hex 字串', true);
+                return;
+            }
+            const result = detectFromHex(input);
+            if (result) {
+                currentFileName = null;
+                currentFileSize = null;
+                currentFileHex = result.matchedHex;
+                displayResult(result);
+            } else {
+                showToast('未找到相符的檔案簽名', true);
+            }
+        }
+
+        function quickLookup(hex) {
+            document.getElementById('hex-input').value = hex;
+            lookupHex();
+        }
+
+        // ===================== DISPLAY RESULT =====================
+        function displayResult(result, file) {
+            if (!result) {
+                showToast('無法辨識此檔案格式', true);
+                return;
+            }
+
+            currentResult = result;
+            const sig = result.signature;
+
+            document.getElementById('results-panel').classList.remove('hidden');
+
+            // Format info
+            document.getElementById('result-format').textContent = sig.description;
+            document.getElementById('result-ext').textContent = '.' + sig.ext.replace(/,/g, ', .');
+            document.getElementById('result-mime').textContent = sig.mime || '--';
+            document.getElementById('result-magic').textContent = formatHexDisplay(result.matchedHex);
+            document.getElementById('result-offset').textContent = sig.offset === 0 ? '0 (檔案開頭)' : `${sig.offset} bytes`;
+            document.getElementById('result-length').textContent = (sig.magic.length / 2) + ' bytes';
+
+            // File size display
+            const sizeContainer = document.getElementById('result-size-container');
+            const sizeEl = document.getElementById('result-size');
+            if (currentFileSize !== null) {
+                sizeContainer.classList.remove('hidden');
+                sizeEl.textContent = formatFileSize(currentFileSize);
+            } else {
+                sizeContainer.classList.add('hidden');
+            }
+
+            // Container hints and warnings
+            const warningsContainer = document.getElementById('warnings-container');
+            warningsContainer.innerHTML = '';
+
+            // Container hint
+            if (sig.container && CONTAINER_HINTS[sig.container]) {
+                const hintEl = document.createElement('div');
+                hintEl.className = 'flex items-start gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-sm';
+                hintEl.innerHTML = `<span>${CONTAINER_HINTS[sig.container]}</span>`;
+                warningsContainer.appendChild(hintEl);
+            }
+
+            // Extension mismatch (file upload only)
+            if (file && file.name) {
+                const dotIdx = file.name.lastIndexOf('.');
+                if (dotIdx > 0) {
+                    const fileExt = file.name.substring(dotIdx + 1).toLowerCase();
+                    const validExts = sig.ext.split(',').map(e => e.trim().toLowerCase());
+                    if (!validExts.includes(fileExt)) {
+                        const mismatchEl = document.createElement('div');
+                        mismatchEl.className = 'flex items-start gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm';
+                        mismatchEl.innerHTML = `<i class="ph ph-warning-circle text-lg shrink-0 mt-0.5"></i><span><strong>⚠️ 副檔名與實際格式不一致</strong><br>副檔名 <code class="font-mono text-xs">.${fileExt}</code> 的真實格式為 <strong>${sig.description}</strong>，檔案可能已被重新命名或偽裝。</span>`;
+                        warningsContainer.appendChild(mismatchEl);
+                    }
+                }
+            }
+
+            showToast('分析完成！');
+        }
+
+        // ===================== ACTIONS =====================
+        function copySignature() {
+            if (!currentResult) return;
+            const sig = currentResult.signature;
+            const text = `Magic Number: ${formatHexDisplay(currentResult.matchedHex)}\nFormat: ${sig.description}\nExtension: .${sig.ext}\nMIME: ${sig.mime}\nOffset: ${sig.offset}`;
+            copyToClipboard(text);
+        }
+
+        function downloadTXT() {
+            if (!currentResult) return;
+            const sig = currentResult.signature;
+            const lines = [
+                '═══════════════════════════════════════',
+                '  File Signature Analysis Report',
+                '  ToolHub - File Signature (Magic Number) Lookup',
+                '═══════════════════════════════════════',
+                '',
+                `檔案格式 (Format):     ${sig.description}`,
+                `副檔名 (Extension):    .${sig.ext}`,
+                `MIME 類型:             ${sig.mime}`,
+                `魔術數字 (Magic Number): ${formatHexDisplay(currentResult.matchedHex)}`,
+                `偏移量 (Offset):       ${sig.offset}`,
+                `簽名長度:              ${sig.magic.length / 2} bytes`,
+                currentFileSize !== null ? `檔案大小:              ${formatFileSize(currentFileSize)}` : '',
+                currentFileName ? `檔案名稱:              ${currentFileName}` : '',
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/file-signature-lookup)`,
+                `Timestamp: ${new Date().toISOString()}`,
+                '───────────────────────────────────────'
+            ].filter(l => l !== '').join('\n');
+            downloadFile(lines, 'signature-analysis.txt', 'text/plain');
+            showToast('TXT 報告已下載');
+        }
+
+        function downloadJSON() {
+            if (!currentResult) return;
+            const sig = currentResult.signature;
+            const data = {
+                tool: 'ToolHub File Signature Lookup',
+                url: 'https://toolhuben.com/file-signature-lookup/',
+                timestamp: new Date().toISOString(),
+                analysis: {
+                    format: sig.description,
+                    extensions: sig.ext.split(',').map(e => e.trim()),
+                    mimeType: sig.mime,
+                    magicNumber: currentResult.matchedHex,
+                    magicNumberFormatted: formatHexDisplay(currentResult.matchedHex),
+                    offset: sig.offset,
+                    signatureLength: sig.magic.length / 2,
+                    category: sig.category,
+                    containerHint: CONTAINER_HINTS[sig.container] || null
+                },
+                fileName: currentFileName || null,
+                fileSize: currentFileSize,
+                fileSizeFormatted: currentFileSize !== null ? formatFileSize(currentFileSize) : null
+            };
+            downloadFile(JSON.stringify(data, null, 2), 'signature-analysis.json', 'application/json');
+            showToast('JSON 報告已下載');
+        }
+
+        function clearDetection() {
+            currentResult = null;
+            currentFileName = null;
+            currentFileSize = null;
+            currentFileHex = null;
+            document.getElementById('results-panel').classList.add('hidden');
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('hex-input').value = '';
+            document.getElementById('warnings-container').innerHTML = '';
+            showToast('已清除');
+        }
+
+        // ===================== REFERENCE TABLE =====================
+        function renderReferenceTable(entries) {
+            const tbody = document.getElementById('ref-table-body');
+            tbody.innerHTML = '';
+            document.getElementById('ref-count').textContent = `共 ${entries.length} 筆資料`;
+
+            entries.forEach(sig => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="font-medium text-white">.${sig.ext}</td>
+                    <td class="text-xs max-w-[200px] truncate" title="${sig.mime}">${sig.mime}</td>
+                    <td class="magic-cell">${formatHexDisplay(sig.magic)}</td>
+                    <td class="text-slate-500">${sig.offset}</td>
+                    <td class="text-slate-400 max-w-[220px]">${sig.description}</td>
+                `;
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', () => {
+                    const result = { signature: sig, matchedHex: sig.magic };
+                    displayResult(result);
+                    switchTab('upload');
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterReferenceTable() {
+            const query = document.getElementById('ref-search').value.toLowerCase().trim();
+            const category = document.getElementById('category-filter').value;
+
+            let filtered = SIGNATURE_DB;
+
+            if (category !== 'all') {
+                filtered = filtered.filter(s => s.category === category);
+            }
+
+            if (query) {
+                filtered = filtered.filter(s =>
+                    s.ext.toLowerCase().includes(query) ||
+                    s.mime.toLowerCase().includes(query) ||
+                    s.magic.toLowerCase().includes(query) ||
+                    s.description.toLowerCase().includes(query) ||
+                    s.category.toLowerCase().includes(query)
+                );
+            }
+
+            // Deduplicate by magic+offset for display
+            const seen = new Set();
+            filtered = filtered.filter(s => {
+                const key = s.magic + '_' + s.offset;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+
+            renderReferenceTable(filtered);
+        }
+
+        // ===================== DRAG & DROP =====================
+        function setupDragDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    analyzeFile(files[0]);
+                }
+            });
+
+            dropZone.addEventListener('click', (e) => {
+                if (e.target === dropZone || e.target.closest('.drop-zone')) {
+                    fileInput.click();
+                }
+            });
+        }
+
+        // ===================== INIT =====================
+        function initApp() {
+            setupDragDrop();
+            // Render full reference table on init
+            filterReferenceTable();
+        }
+
+        // Export for inline onclick usage
+        window.switchTab = switchTab;
+        window.handleFileSelect = handleFileSelect;
+        window.lookupHex = lookupHex;
+        window.quickLookup = quickLookup;
+        window.copySignature = copySignature;
+        window.downloadTXT = downloadTXT;
+        window.downloadJSON = downloadJSON;
+        window.clearDetection = clearDetection;
+        window.filterReferenceTable = filterReferenceTable;
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

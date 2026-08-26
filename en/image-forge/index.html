@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Image Forge | Free Online Tool - ToolHub</title>
+<meta content="Crop, resize, and re-export images natively in the browser, with support for common ratios, precise dimensions, and instant preview." name="description"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- 模塊專屬依賴：Cropper.js (業界標準的影像裁切矩陣) -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 檔案上傳拖曳區 */
+        .drag-active {
+            border-color: #38BDF8 !important;
+            background-color: rgba(56, 189, 248, 0.05) !important;
+        }
+
+        /* 互動選項卡 (Radio Pills) */
+        .radio-pill-input:checked + .radio-pill-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        /* Range Slider 美化 */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #38BDF8; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56,189,248,0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px; }
+
+        /* Cropper 畫布自訂樣式 */
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 4px; /* 柔和裁切框邊緣 */
+        }
+        .cropper-line { background-color: #38BDF8; }
+        .cropper-point {
+            background-color: #38BDF8;
+            border: 1px solid #E0F2FE;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.85), 0 0 10px rgba(56, 189, 248, 0.7);
+            opacity: 1;
+        }
+        .cropper-center { background-color: #38BDF8; }
+
+        /* Give Cropper.js reliable pointer ownership and finger-sized hit targets. */
+        #cropper-stage,
+        #cropper-stage .cropper-container,
+        #cropper-stage .cropper-canvas,
+        #cropper-stage .cropper-drag-box,
+        #cropper-stage .cropper-crop-box,
+        #cropper-stage .cropper-face {
+            touch-action: none !important;
+            overscroll-behavior: contain;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .cropper-point::after {
+            content: '';
+            position: absolute;
+            inset: -7px;
+        }
+
+        .cropper-line::after {
+            content: '';
+            position: absolute;
+        }
+
+        .cropper-line.line-e::after,
+        .cropper-line.line-w::after { inset: 0 -8px; }
+        .cropper-line.line-n::after,
+        .cropper-line.line-s::after { inset: -8px 0; }
+
+        @media (pointer: coarse), (max-width: 767px) {
+            .cropper-point {
+                width: 12px;
+                height: 12px;
+            }
+            .cropper-point::after { inset: -12px; }
+            .cropper-line.line-e::after,
+            .cropper-line.line-w::after { inset: 0 -14px; }
+            .cropper-line.line-n::after,
+            .cropper-line.line-s::after { inset: -14px 0; }
+        }
+        
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+                linear-gradient(135deg, #1e293b 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+                linear-gradient(135deg, transparent 75%, #1e293b 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #0f172a;
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/image-forge/" property="og:url"/>
+<meta content="Image Forge | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Crop, resize, and re-export images natively in the browser, with support for common ratios, precise dimensions, and instant preview." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Image Forge | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Crop, resize, and re-export images natively in the browser, with support for common ratios, precise dimensions, and instant preview." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Image Forge image cropping and scaling","url":"https://toolhuben.com/en/image-forge/","description":"Crop, resize, and re-export images natively in the browser, with support for common ratios, precise dimensions, and instant preview.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"author":{"@type":"Organization","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Image Forge image cropping and scaling","item":"https://toolhuben.com/en/image-forge/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What are the uses for Image Forge image cropping and scaling?","acceptedAnswer":{"@type":"Answer","text":"Image cropping and resizing tools allow you to recompose images to fit the needs of websites, communities, avatars, or documents. Cropping will remove the content of the picture, and enlarging cannot truly create details that do not exist in the original image, so you should try to start with a high-resolution original file."}},{"@type":"Question","name":"How to use Image Forge to crop and zoom images?","acceptedAnswer":{"@type":"Answer","text":"Add the original image and choose free crop or fixed aspect ratio; adjust the crop box, output size and format, and check the composition focus; preview edges and text at 100% before downloading."}},{"@type":"Question","name":"What should you pay attention to when using Image Forge to crop and zoom images?","acceptedAnswer":{"@type":"Answer","text":"Moderate sharpening can be done before thumbnailing, but excessive processing will produce halos. Materials with transparent backgrounds should be output as PNG or WebP, while photos can be output as JPEG depending on quality requirements."}},{"@type":"Question","name":"Will Image Forge image cropping and scaling upload data?","acceptedAnswer":{"@type":"Answer","text":"Image editing and output use the native Canvas, and the materials will not be uploaded."}},{"@type":"Question","name":"Do I need to install software or register an account?","acceptedAnswer":{"@type":"Answer","text":"No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed."}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/image-forge/" rel="canonical"/><link href="https://toolhuben.com/image-forge/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/image-forge/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/image-forge/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","建立理念":"Our Founding Idea","建議":"Recommendation","影像重鑄完成 (":"Image recast completed (","產生檔案失敗":"Failed to generate file","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","裁切失敗，請檢查影像範圍":"Cropping failed, please check the image range","請上傳有效的圖片檔案 (JPG, PNG, WebP)":"Please upload a valid image file (JPG, PNG, WebP)","請先載入影像":"Please load images first","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="aurora" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<!-- 1. 系統組件：Header -->
+<div id="component-header"></div>
+<!-- 2. 系統組件：Sidebar -->
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：Image Forge Matrix -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="bread crumbs" class="seo-upgrade-breadcrumb"><a href="/en/">Home</a><span>›</span><span>Image Forge image cropping and scaling</span></nav>
+<!-- 模塊標題區 -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-forge-scale/10 border border-forge-scale/30 text-xs text-forge-scale shadow-inner">
+<i class="ph-fill ph-bounding-box mr-1.5 text-sm"></i>
+                Optical image recasting and cutting matrix are now online
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Image Forge <span class="text-transparent bg-clip-text bg-gradient-to-r from-forge-crop to-forge-scale">&amp; Cropper</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                Accurately converge any image to the target dimension. Supports free cropping, strict aspect ratio locking, forced resolution output, and next-generation WebP image compression. 100% native computing guarantees privacy.
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ========================================== -->
+<!-- 左側：參數控制台 (Configuration Console)      -->
+<!-- ========================================== -->
+<div class="lg:col-span-4 flex flex-col gap-5">
+<!-- 上傳與重置區 -->
+<div class="glass-panel p-5 flex flex-col gap-4 shadow-xl relative overflow-hidden">
+<input accept="image/png, image/jpeg, image/webp, image/gif" class="hidden" id="file-input" type="file"/>
+<div class="w-full border-2 border-dashed border-hub-700 hover:border-hub-accent rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30 py-8" id="drop-zone">
+<div class="p-3 bg-hub-800 rounded-full mb-3 text-sky-400 shadow-lg border border-hub-700 relative group">
+<i class="ph ph-image text-3xl group-hover:scale-110 transition-transform"></i>
+</div>
+<p class="text-white font-bold text-sm mb-1">Load image (click or drag)</p>
+<p class="text-[10px] text-slate-500 font-mono">JPG, PNG, WebP (Zero-Knowledge)</p>
+</div>
+<div class="hidden flex justify-between items-center bg-hub-900/80 p-3 rounded-lg border border-hub-700/50" id="file-info">
+<div class="flex flex-col overflow-hidden">
+<span class="text-xs text-emerald-400 font-bold truncate max-w-[150px]" id="info-name">image.jpg</span>
+<span class="text-[10px] text-slate-400 font-mono" id="info-res">1920 x 1080</span>
+</div>
+<button class="text-xs text-red-400 hover:text-white bg-red-950/30 hover:bg-red-900/50 border border-red-900/50 px-3 py-1.5 rounded transition-colors" id="btn-reset">
+                            reset
+                        </button>
+</div>
+</div>
+<!-- 裁切比例約束 (Aspect Ratio Matrix) -->
+<div class="glass-panel p-5 flex flex-col gap-4 shadow-xl pointer-events-none opacity-50 transition-all duration-300" id="control-crop">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+<i class="ph-fill ph-crop text-forge-crop text-lg"></i> Aspect Ratio
+                    </h3>
+<div class="grid grid-cols-3 gap-2">
+<label class="cursor-pointer relative">
+<input checked="" class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="NaN"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">Free</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="1"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">1:1 (square)</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="1.7777777777777777"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">16:9 (landscape)</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="1.3333333333333333"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">4:3 (standard)</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="0.5625"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">9:16 (straight)</div>
+</label>
+<!-- 自訂比例 -->
+<label class="cursor-pointer relative" id="label-custom-ratio">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="custom"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-mono">Custom</div>
+</label>
+</div>
+<!-- 自訂比例輸入框 (預設 640x400) -->
+<div class="hidden flex items-center gap-2 mt-1 bg-hub-900/50 p-2 rounded-lg border border-hub-700/50" id="custom-ratio-box">
+<input class="w-full bg-hub-800 border border-hub-700 rounded px-2 py-1.5 text-white font-mono text-xs outline-none text-center focus:border-forge-crop" id="in-ratio-w" min="1" type="number" value="640"/>
+<span class="text-slate-500 font-bold">:</span>
+<input class="w-full bg-hub-800 border border-hub-700 rounded px-2 py-1.5 text-white font-mono text-xs outline-none text-center focus:border-forge-crop" id="in-ratio-h" min="1" type="number" value="400"/>
+<button class="bg-forge-crop/20 hover:bg-forge-crop/40 text-forge-crop border border-forge-crop/50 rounded px-3 py-1.5 text-xs font-bold transition-colors" id="btn-apply-ratio">Apply</button>
+</div>
+</div>
+<!-- 強制維度收斂與輸出格式 (Export Matrix) -->
+<div class="glass-panel p-5 flex flex-col gap-5 shadow-xl pointer-events-none opacity-50 transition-all duration-300" id="control-export">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+<i class="ph-fill ph-export text-forge-format text-lg"></i> Packaging and export settings
+                    </h3>
+<!-- The Killer Feature: 強制輸出解析度 -->
+<div class="space-y-3 bg-forge-scale/10 border border-forge-scale/30 rounded-xl p-3">
+<label class="flex items-center gap-2 cursor-pointer group w-full">
+<input class="rounded border-slate-600 text-forge-scale focus:ring-0 bg-hub-900 cursor-pointer" id="toggle-force-res" type="checkbox"/>
+<span class="text-xs font-bold text-forge-scale group-hover:text-violet-300 transition-colors uppercase tracking-wider">Force absolute resolution output</span>
+</label>
+<div class="flex items-center gap-2 opacity-50 pointer-events-none transition-opacity" id="force-res-box">
+<div class="flex-1 relative">
+<span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono">W</span>
+<input class="w-full bg-hub-900 border border-hub-700 rounded-md pl-6 pr-2 py-1.5 text-white font-mono text-xs outline-none focus:border-forge-scale" id="in-out-w" min="1" type="number" value="640"/>
+</div>
+<i class="ph ph-x text-slate-500 text-xs"></i>
+<div class="flex-1 relative">
+<span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono">H</span>
+<input class="w-full bg-hub-900 border border-hub-700 rounded-md pl-6 pr-2 py-1.5 text-white font-mono text-xs outline-none focus:border-forge-scale" id="in-out-h" min="1" type="number" value="400"/>
+</div>
+</div>
+<p class="text-[9px] text-slate-400 leading-relaxed">
+                            After checking this option, no matter how large or small you make the crop box on the right, the pixels of the final exported image will be<strong>Absolute convergence</strong> to the size specified above. It is extremely suitable for system backends that require strict upload specifications.
+                        </p>
+</div>
+<!-- 圖片格式 (Format) -->
+<div class="space-y-2 pt-1">
+<label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Format</label>
+<div class="flex gap-2">
+<label class="flex-1 cursor-pointer relative">
+<input checked="" class="peer sr-only radio-pill-input" name="out-format" type="radio" value="image/webp"/>
+<div class="radio-pill-label py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-bold">WebP</div>
+</label>
+<label class="flex-1 cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="out-format" type="radio" value="image/jpeg"/>
+<div class="radio-pill-label py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-bold">JPEG</div>
+</label>
+<label class="flex-1 cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="out-format" type="radio" value="image/png"/>
+<div class="radio-pill-label py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-bold">PNG</div>
+</label>
+</div>
+</div>
+<!-- 壓縮品質 (Quality) -->
+<div class="space-y-2" id="quality-container">
+<div class="flex justify-between text-xs">
+<span class="text-slate-400 font-bold">Compression Quality</span>
+<span class="text-forge-format font-mono font-bold" id="val-quality">85%</span>
+</div>
+<input id="slider-quality" max="1" min="0.1" step="0.05" type="range" value="0.85"/>
+<p class="text-[9px] text-slate-500 font-mono text-right">PNG is lossless compression and does not apply this parameter.</p>
+</div>
+<!-- 下載按鈕 -->
+<button class="mt-2 w-full px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.98]" id="btn-export">
+<i class="ph-bold ph-download-simple text-lg"></i> Perform recast and download
+                    </button>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：光學操作畫布 (Optical Canvas)           -->
+<!-- ========================================== -->
+<div class="lg:col-span-8 glass-panel flex flex-col overflow-hidden shadow-2xl h-[600px] sm:h-[750px] border border-hub-700 relative">
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center z-10">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-selection-plus text-sky-400 text-lg"></i> Interactive optical matrix
+                    </h3>
+<div class="flex gap-2">
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="zoom-in" title="Zoom in"><i class="ph ph-magnifying-glass-plus"></i></button>
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="zoom-out" title="zoom out"><i class="ph ph-magnifying-glass-minus"></i></button>
+<div class="w-px h-6 bg-hub-700 mx-1"></div>
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="rotate-left" title="Counterclockwise"><i class="ph ph-arrow-counter-clockwise"></i></button>
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="rotate-right" title="Rotate clockwise"><i class="ph ph-arrow-clockwise"></i></button>
+</div>
+</div>
+<!-- Cropper 畫布區 -->
+<div class="flex-grow w-full h-full bg-[#0a0f18] checkerboard relative flex items-center justify-center overflow-hidden" id="cropper-stage">
+<!-- 初始提示 -->
+<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none z-10" id="canvas-placeholder">
+<i class="ph-fill ph-bounding-box text-6xl mb-4 opacity-50"></i>
+<p class="text-sm font-mono">Waiting for images to load...</p>
+</div>
+<!-- 實際被 Cropper 接管的圖片 -->
+<img alt="Workspace" class="hidden max-w-full max-h-full" id="image-workspace" src=""/>
+</div>
+<!-- 底部狀態列 (動態顯示預估像素) -->
+<div class="bg-hub-900/80 px-4 py-2 border-t border-hub-700 flex justify-between items-center z-10 font-mono text-[10px] text-slate-400">
+<div class="flex items-center gap-3">
+<span id="stat-natural">Natural: --</span>
+<span class="text-hub-700">|</span>
+<span class="text-forge-crop font-bold" id="stat-cropped">Cropped: --</span>
+</div>
+<span class="text-forge-scale font-bold bg-forge-scale/20 px-2 py-0.5 rounded border border-forge-scale/30 hidden" id="stat-final">
+                        Final Output: 640 x 400
+                    </span>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="Image Forge image cropping and scaling tutorials and FAQs" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>Image Forge Complete User Guide to Image Cropping and Scaling</h2>
+<p>Image cropping and resizing tools allow you to recompose images to fit the needs of websites, communities, avatars, or documents. Cropping will remove the content of the picture, and enlarging cannot truly create details that do not exist in the original image, so you should try to start with a high-resolution original file.</p>
+<h3>Operation steps</h3>
+<ol><li>Add original image and choose free crop or fixed aspect ratio</li><li>Adjust crop box, output size and format, check composition focus</li><li>Preview edges and text at 100% before downloading</li></ol>
+<h3>Practical suggestions and limitations</h3>
+<p>Moderate sharpening can be done before thumbnailing, but excessive processing will produce halos. Materials with transparent backgrounds should be output as PNG or WebP, while photos can be output as JPEG depending on quality requirements.</p>
+<h3>Privacy and native processing</h3>
+<p>Image editing and output use the native Canvas, and the materials will not be uploaded.</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>Image Forge image cropping and scaling FAQ</h2>
+<details><summary>What are the uses for Image Forge image cropping and scaling?</summary><div class="seo-upgrade-answer">Image cropping and resizing tools allow you to recompose images to fit the needs of websites, communities, avatars, or documents. Cropping will remove the content of the picture, and enlarging cannot truly create details that do not exist in the original image, so you should try to start with a high-resolution original file.</div></details>
+<details><summary>How to use Image Forge to crop and zoom images?</summary><div class="seo-upgrade-answer">Add the original image and choose free crop or fixed aspect ratio; adjust the crop box, output size and format, and check the composition focus; preview edges and text at 100% before downloading.</div></details>
+<details><summary>What should you pay attention to when using Image Forge to crop and zoom images?</summary><div class="seo-upgrade-answer">Moderate sharpening can be done before thumbnailing, but excessive processing will produce halos. Materials with transparent backgrounds should be output as PNG or WebP, while photos can be output as JPEG depending on quality requirements.</div></details>
+<details><summary>Will Image Forge image cropping and scaling upload data?</summary><div class="seo-upgrade-answer">Image editing and output use the native Canvas, and the materials will not be uploaded.</div></details>
+<details><summary>Do I need to install software or register an account?</summary><div class="seo-upgrade-answer">No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed.</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/image-forge'; // 假設的新路徑
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：光學影像重鑄與裁切矩陣        -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const fileInput = document.getElementById('file-input');
+            const dropZone = document.getElementById('drop-zone');
+            const fileInfo = document.getElementById('file-info');
+            const infoName = document.getElementById('info-name');
+            const infoRes = document.getElementById('info-res');
+            const btnReset = document.getElementById('btn-reset');
+            
+            const controlCrop = document.getElementById('control-crop');
+            const controlExport = document.getElementById('control-export');
+            
+            const ratioRadios = document.getElementsByName('aspect-ratio');
+            const customRatioBox = document.getElementById('custom-ratio-box');
+            const inRatioW = document.getElementById('in-ratio-w');
+            const inRatioH = document.getElementById('in-ratio-h');
+            const btnApplyRatio = document.getElementById('btn-apply-ratio');
+
+            const toggleForceRes = document.getElementById('toggle-force-res');
+            const forceResBox = document.getElementById('force-res-box');
+            const inOutW = document.getElementById('in-out-w');
+            const inOutH = document.getElementById('in-out-h');
+
+            const formatRadios = document.getElementsByName('out-format');
+            const qualityContainer = document.getElementById('quality-container');
+            const sliderQuality = document.getElementById('slider-quality');
+            const valQuality = document.getElementById('val-quality');
+            const btnExport = document.getElementById('btn-export');
+
+            const imageWorkspace = document.getElementById('image-workspace');
+            const canvasPlaceholder = document.getElementById('canvas-placeholder');
+            
+            const statNatural = document.getElementById('stat-natural');
+            const statCropped = document.getElementById('stat-cropped');
+            const statFinal = document.getElementById('stat-final');
+
+            let cropper = null;
+            let currentFileName = 'image';
+
+            // --- 核心：解鎖儀表板 ---
+            const unlockDashboard = (file, src, width, height) => {
+                currentFileName = file.name.split('.').slice(0, -1).join('.');
+                
+                dropZone.classList.add('hidden');
+                fileInfo.classList.remove('hidden');
+                fileInfo.classList.add('flex');
+                infoName.textContent = file.name;
+                infoRes.textContent = `${width} x ${height}`;
+
+                controlCrop.classList.remove('pointer-events-none', 'opacity-50');
+                controlExport.classList.remove('pointer-events-none', 'opacity-50');
+                
+                canvasPlaceholder.classList.add('hidden');
+                imageWorkspace.src = src;
+                imageWorkspace.classList.remove('hidden');
+                
+                statNatural.textContent = `Natural: ${width} x ${height}`;
+
+                // 若之前有啟動過，先摧毀
+                if (cropper) cropper.destroy();
+
+                // 初始化 Cropper.js
+                // viewMode: 1 限制裁切框不能超過圖片範圍
+                // viewMode: 2 限制圖片不能小於容器 (我們用 1 較適合自由裁切)
+                cropper = new Cropper(imageWorkspace, {
+                    viewMode: 1,
+                    dragMode: 'crop',
+                    aspectRatio: NaN, // Free by default
+                    autoCropArea: 0.8,
+                    responsive: true,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    movable: true,
+                    zoomable: true,
+                    zoomOnTouch: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    minCropBoxWidth: 48,
+                    minCropBoxHeight: 48,
+                    toggleDragModeOnDblclick: false,
+                    crop(event) {
+                        // 即時更新裁切後像素狀態
+                        const width = Math.round(event.detail.width);
+                        const height = Math.round(event.detail.height);
+                        statCropped.textContent = `Cropped: ${width} x ${height}`;
+                        
+                        // 若未開啟強制維度，讓強制維度輸入框跟隨裁切框變動 (提供參考)
+                        if (!toggleForceRes.checked) {
+                            inOutW.value = width;
+                            inOutH.value = height;
+                        }
+                    },
+                });
+            };
+
+            const cropperStage = document.getElementById('cropper-stage');
+            ['touchstart', 'touchmove'].forEach((eventName) => {
+                cropperStage.addEventListener(eventName, (event) => {
+                    if (cropper && event.target.closest('.cropper-container')) event.preventDefault();
+                }, { passive: false });
+            });
+
+            // --- 檔案處理引擎 ---
+            const handleFile = (file) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    return showToast('請上傳有效的圖片檔案 (JPG, PNG, WebP)', true);
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        unlockDashboard(file, img.src, img.naturalWidth, img.naturalHeight);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-active'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); 
+                dropZone.classList.remove('drag-active');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+
+            // 系統重置
+            btnReset.addEventListener('click', () => {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                fileInput.value = '';
+                imageWorkspace.src = '';
+                imageWorkspace.classList.add('hidden');
+                canvasPlaceholder.classList.remove('hidden');
+                
+                dropZone.classList.remove('hidden');
+                fileInfo.classList.add('hidden');
+                fileInfo.classList.remove('flex');
+                
+                controlCrop.classList.add('pointer-events-none', 'opacity-50');
+                controlExport.classList.add('pointer-events-none', 'opacity-50');
+
+                statNatural.textContent = 'Natural: --';
+                statCropped.textContent = 'Cropped: --';
+                
+                // Reset radios
+                document.querySelector('input[name="aspect-ratio"][value="NaN"]').checked = true;
+                customRatioBox.classList.add('hidden');
+            });
+
+            // --- 比例約束邏輯 (Aspect Ratio) ---
+            Array.from(ratioRadios).forEach(r => {
+                r.addEventListener('change', (e) => {
+                    if (!cropper) return;
+                    const val = e.target.value;
+                    
+                    if (val === 'custom') {
+                        customRatioBox.classList.remove('hidden');
+                        customRatioBox.classList.add('flex');
+                        const ratio = parseFloat(inRatioW.value) / parseFloat(inRatioH.value);
+                        cropper.setAspectRatio(ratio);
+                    } else {
+                        customRatioBox.classList.add('hidden');
+                        customRatioBox.classList.remove('flex');
+                        cropper.setAspectRatio(parseFloat(val));
+                    }
+                });
+            });
+
+            btnApplyRatio.addEventListener('click', () => {
+                if (!cropper) return;
+                const w = parseFloat(inRatioW.value);
+                const h = parseFloat(inRatioH.value);
+                if(w > 0 && h > 0) cropper.setAspectRatio(w / h);
+            });
+
+            // 畫布操作工具列
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (!cropper) return;
+                    const action = e.currentTarget.dataset.action;
+                    switch(action) {
+                        case 'zoom-in': cropper.zoom(0.1); break;
+                        case 'zoom-out': cropper.zoom(-0.1); break;
+                        case 'rotate-left': cropper.rotate(-90); break;
+                        case 'rotate-right': cropper.rotate(90); break;
+                    }
+                });
+            });
+
+            // --- 強制維度與匯出邏輯 (The Killer Feature) ---
+            toggleForceRes.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    forceResBox.classList.remove('opacity-50', 'pointer-events-none');
+                    statFinal.classList.remove('hidden');
+                    updateFinalStat();
+                    
+                    // 如果勾選了強制解析度，自動將裁切框比例鎖定為目標比例，幫助使用者精準構圖
+                    const w = parseFloat(inOutW.value) || 1;
+                    const h = parseFloat(inOutH.value) || 1;
+                    if (cropper) cropper.setAspectRatio(w / h);
+                    
+                    // 自動切換 radio UI 狀態至 custom
+                    document.querySelector('input[name="aspect-ratio"][value="custom"]').checked = true;
+                    customRatioBox.classList.remove('hidden');
+                    customRatioBox.classList.add('flex');
+                    inRatioW.value = w;
+                    inRatioH.value = h;
+                    
+                } else {
+                    forceResBox.classList.add('opacity-50', 'pointer-events-none');
+                    statFinal.classList.add('hidden');
+                    if (cropper) cropper.setAspectRatio(NaN); // 解除鎖定
+                    document.querySelector('input[name="aspect-ratio"][value="NaN"]').checked = true;
+                    customRatioBox.classList.add('hidden');
+                }
+            });
+
+            const updateFinalStat = () => {
+                const w = inOutW.value;
+                const h = inOutH.value;
+                statFinal.textContent = `Force Output: ${w} x ${h}`;
+                
+                // 同步更新自訂比例
+                inRatioW.value = w;
+                inRatioH.value = h;
+                if(cropper && toggleForceRes.checked && w>0 && h>0) cropper.setAspectRatio(w / h);
+            };
+
+            inOutW.addEventListener('input', updateFinalStat);
+            inOutH.addEventListener('input', updateFinalStat);
+
+            // 壓縮品質邏輯
+            sliderQuality.addEventListener('input', (e) => {
+                valQuality.textContent = `${Math.round(e.target.value * 100)}%`;
+            });
+            
+            Array.from(formatRadios).forEach(r => {
+                r.addEventListener('change', (e) => {
+                    if (e.target.value === 'image/png') {
+                        qualityContainer.classList.add('opacity-50', 'pointer-events-none');
+                    } else {
+                        qualityContainer.classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                });
+            });
+
+            // 執行匯出
+            btnExport.addEventListener('click', () => {
+                if (!cropper) return showToast('請先載入影像', true);
+
+                const format = document.querySelector('input[name="out-format"]:checked').value;
+                const quality = parseFloat(sliderQuality.value);
+                const isForced = toggleForceRes.checked;
+
+                let exportOptions = {
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                };
+
+                // 強制收斂維度
+                if (isForced) {
+                    const w = parseInt(inOutW.value);
+                    const h = parseInt(inOutH.value);
+                    if (w > 0 && h > 0) {
+                        exportOptions.width = w;
+                        exportOptions.height = h;
+                    }
+                }
+
+                // 產生 Final Canvas
+                const canvas = cropper.getCroppedCanvas(exportOptions);
+                if (!canvas) return showToast('裁切失敗，請檢查影像範圍', true);
+
+                // 如果原圖是 PNG (有透明通道)，但使用者選擇匯出 JPEG，背景預設會變黑。我們強制填白
+                if (format === 'image/jpeg') {
+                    const ctx = canvas.getContext('2d');
+                    // 我們需要一個新畫布來塗白底
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.width = canvas.width;
+                    newCanvas.height = canvas.height;
+                    const newCtx = newCanvas.getContext('2d');
+                    newCtx.fillStyle = '#fff';
+                    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+                    newCtx.drawImage(canvas, 0, 0);
+                    
+                    newCanvas.toBlob((blob) => { triggerDownload(blob, format); }, format, quality);
+                } else {
+                    // PNG 或 WebP (支援透明)
+                    canvas.toBlob((blob) => { triggerDownload(blob, format); }, format, quality);
+                }
+            });
+
+            const triggerDownload = (blob, format) => {
+                if (!blob) return showToast('產生檔案失敗', true);
+                
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                
+                // 決定副檔名
+                let ext = 'png';
+                if (format === 'image/jpeg') ext = 'jpg';
+                if (format === 'image/webp') ext = 'webp';
+
+                link.href = url;
+                link.download = `${currentFileName}_forged.${ext}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showToast(`影像重鑄完成 (${(blob.size / 1024).toFixed(1)} KB)`);
+            };
+
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

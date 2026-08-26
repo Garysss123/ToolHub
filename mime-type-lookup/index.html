@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIME Type Lookup MIME 類型查詢對照表 | ToolHub - 開發者必備工具</title>
+    <meta name="description" content="免費線上 MIME Type 查詢對照工具。涵蓋 Text、Image、Audio、Video、Application 等 10 大類別超過 150 種 MIME Type，提供 Extension ↔ MIME 雙向查詢、HTTP Header 預覽、即時搜尋與收藏功能。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="MIME Type, Content-Type, 副檔名查詢, HTTP Header, 檔案類型, application/json, text/html, image/png, Web 開發, 伺服器設定">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#8B5CF6',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #8B5CF6; }
+
+        .search-input {
+            width: 100%;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            outline: none;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 0.9rem;
+        }
+        .search-input:focus {
+            border-color: #8B5CF6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        .search-input::placeholder { color: #475569; }
+
+        .category-tab {
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .category-tab:hover { color: #e2e8f0; background: rgba(139, 92, 246, 0.05); }
+        .category-tab.active { background: rgba(139, 92, 246, 0.12); color: #8B5CF6; border-color: rgba(139, 92, 246, 0.25); }
+
+        .mime-card {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .mime-card:hover {
+            border-color: rgba(139, 92, 246, 0.3);
+            background: #1E293B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .mime-card .mime-badge {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #8B5CF6;
+        }
+        .mime-card .ext-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.35rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.72rem;
+            font-weight: 500;
+        }
+
+        .detail-panel {
+            border-top: 1px solid #1e293b;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+        }
+        .detail-panel dt { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.6rem; }
+        .detail-panel dt:first-child { margin-top: 0; }
+        .detail-panel dd { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; margin-top: 0.15rem; }
+        .detail-panel code {
+            background: #1e293b;
+            color: #8B5CF6;
+            padding: 0.1rem 0.35rem;
+            border-radius: 0.2rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.82rem;
+        }
+
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #8B5CF6; border-color: #8B5CF6; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        .header-preview {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+        }
+        .header-preview .hl-key { color: #8B5CF6; }
+        .header-preview .hl-colon { color: #475569; }
+        .header-preview .hl-value { color: #e2e8f0; }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary { list-style: none; cursor: pointer; user-select: none; }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #8B5CF6;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #8B5CF6;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(139, 92, 246, 0.05);
+            border-left: 3px solid #8B5CF6;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .search-input { font-size: 0.82rem; }
+            .category-tab { font-size: 0.72rem; padding: 0.3rem 0.6rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/mime-type-lookup/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/mime-type-lookup/">
+    <meta property="og:title" content="MIME Type Lookup MIME 類型查詢對照表">
+    <meta property="og:description" content="免費線上 MIME Type 查詢對照工具。涵蓋 Text、Image、Audio、Video、Application 等 10 大類別超過 150 種 MIME Type，提供 Extension ↔ MIME 雙向查詢、HTTP Header 預覽、即時搜尋與收藏功能。純前端本地運算，保障隱私安全。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MIME Type Lookup MIME 類型查詢對照表">
+    <meta name="twitter:description" content="免費線上 MIME Type 查詢對照工具。涵蓋 Text、Image、Audio、Video、Application 等 10 大類別超過 150 種 MIME Type，提供 Extension ↔ MIME 雙向查詢、HTTP Header 預覽、即時搜尋與收藏功能。純前端本地運算，保障隱私安全。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"MIME Type Lookup","url":"https://toolhuben.com/mime-type-lookup/","applicationCategory":"DeveloperApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"MIME Type Lookup","item":"https://toolhuben.com/mime-type-lookup/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/mime-type-lookup/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/mime-type-lookup/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/mime-type-lookup/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#8B5CF6;--classic-accent-rgb:139,92,246" data-tool-visual data-classic-tool data-classic-layout="neon">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+        <nav class="seo-upgrade-breadcrumb" aria-label="麵包屑"><a href="/">首頁</a><span>›</span><span>MIME Type Lookup MIME 類型查詢對照表</span></nav>
+
+        <!-- Hero -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-violet-400">
+                <span class="flex w-2 h-2 bg-violet-400 rounded-full animate-pulse mr-2"></span>
+                涵蓋 10 大類別 · 150+ MIME Type · Extension ↔ MIME 雙向查詢
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                MIME Type Lookup <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-600">MIME 類型查詢對照表</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                快速查詢各種副檔名對應的 MIME Type，支援 <strong class="text-violet-400">Extension → MIME</strong> 與 <strong class="text-violet-400">MIME → Extension</strong> 雙向查詢。<br class="hidden sm:block"/>
+                內建 <strong class="text-violet-400">HTTP Header 預覽</strong>，Web 開發與 API 設計必備工具。
+            </p>
+        </div>
+
+        <!-- Tool Card -->
+        <div id="tool-card" class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-6">
+
+            <!-- Search -->
+            <div class="p-4 sm:p-5 border-b border-hub-700">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg"></i>
+                    <input type="text" id="search-input" class="search-input" placeholder="搜尋副檔名（pdf、png、jpg）、MIME Type（application/json）、關鍵字（image、video、audio）..." autocomplete="off">
+                    <button id="clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors hidden">
+                        <i class="ph ph-x-circle text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-hub-700/50 overflow-x-auto no-scrollbar">
+                <button class="category-tab active" data-category="all">全部 <span id="count-all" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="text">Text <span id="count-text" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="image">Image <span id="count-image" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="audio">Audio <span id="count-audio" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="video">Video <span id="count-video" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="application">Application <span id="count-application" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="font">Font <span id="count-font" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="archive">Archive <span id="count-archive" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="document">Document <span id="count-document" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="programming">Programming <span id="count-programming" class="opacity-60">0</span></button>
+                <button class="category-tab" data-category="other">Other <span id="count-other" class="opacity-60">0</span></button>
+            </div>
+
+            <!-- Bottom bar -->
+            <div class="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-400 hover:text-white transition-colors select-none">
+                        <div class="relative">
+                            <input type="checkbox" id="fav-toggle" class="sr-only toggle-checkbox">
+                            <div class="toggle-bg block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors"></div>
+                            <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                        </div>
+                        <i class="ph ph-star text-violet-400 text-sm"></i> 只顯示收藏
+                    </label>
+                    <button id="recent-btn" class="text-xs text-slate-500 hover:text-violet-400 transition-colors flex items-center gap-1">
+                        <i class="ph ph-clock-counter-clockwise"></i> 最近查詢
+                    </button>
+                </div>
+                <span id="result-count" class="text-xs text-slate-500"></span>
+            </div>
+        </div>
+
+        <!-- Recent Queries Panel -->
+        <div id="recent-panel" class="hidden bg-hub-800/60 border border-hub-700 rounded-xl p-4 mb-4 fade-in">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider"><i class="ph ph-clock-counter-clockwise text-violet-400 mr-1"></i> 最近查詢</span>
+                <button id="clear-recent" class="text-xs text-slate-500 hover:text-red-400 transition-colors">清除記錄</button>
+            </div>
+            <div id="recent-list" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- MIME Type Grid -->
+        <div id="codes-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
+
+        <!-- ===== HTTP Header Preview Section ===== -->
+        <div class="mt-12 max-w-4xl mx-auto">
+            <div class="text-center mb-6">
+                <h2 class="text-xl md:text-2xl font-bold text-white mb-2">📋 HTTP Header 預覽</h2>
+                <p class="text-slate-400 text-sm">點擊上方任一 MIME Type 後，這裡會顯示對應的 HTTP Header 範例</p>
+            </div>
+            <div id="header-preview" class="bg-hub-800/60 border border-hub-700 rounded-xl p-5 min-h-[120px] flex items-center justify-center">
+                <p class="text-slate-500 text-sm"><i class="ph ph-arrow-up mr-1"></i> 點擊 MIME Type 卡片查看 HTTP Header</p>
+            </div>
+        </div>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <div class="mt-16 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ 常見問題 <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-600">FAQ</span></h2>
+                <p class="text-slate-400 text-sm">關於 MIME Type 的常見疑問與解答</p>
+            </div>
+            <div class="space-y-3">
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 MIME Type？為什麼重要？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">MIME Type</strong>（Multipurpose Internet Mail Extensions Type）是一種標準化的標籤，用於標識檔案的格式與內容類型。最初設計用於電子郵件附件，後來被 HTTP 協定廣泛採用，成為 Web 通訊的基礎。</p>
+                        <p class="mt-2">MIME Type 的格式為 <strong class="text-violet-400"><code>type/subtype</code></strong>，例如 <code>text/html</code>、<code>application/json</code>、<code>image/png</code>。</p>
+                        <p class="mt-2"><strong class="text-white">為什麼重要？</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">瀏覽器顯示判斷</strong> — 瀏覽器根據 Content-Type 決定如何渲染內容（HTML、圖片、下載）</li>
+                            <li><strong class="text-white">API 開發</strong> — REST API 使用 Content-Type 與 Accept 標頭進行內容協商</li>
+                            <li><strong class="text-white">檔案上傳驗證</strong> — 伺服器透過 MIME Type 驗證上傳檔案類型</li>
+                            <li><strong class="text-white">伺服器設定</strong> — Web 伺服器（Nginx、Apache）需要正確設定 MIME Type 映射</li>
+                            <li><strong class="text-white">安全性</strong> — 錯誤的 MIME Type 可能導致 MIME 類型混淆攻擊</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Content-Type 與 Accept 標頭有什麼不同？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>兩者都是 HTTP 中與 MIME Type 相關的標頭，但用途不同：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-violet-400"><code>Content-Type</code></strong>（請求/回應標頭）</p>
+                            <p>告訴接收方 <strong class="text-white">「這是什麼類型的資料」</strong>。在回應中，伺服器用它告訴瀏覽器如何解析回應內容。在請求中，客戶端用它告訴伺服器請求主體的格式。</p>
+                        </div>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-violet-400"><code>Accept</code></strong>（請求標頭）</p>
+                            <p>告訴伺服器 <strong class="text-white">「客戶端可以接受哪些類型的資料」</strong>。伺服器根據 Accept 標頭的值來決定回傳哪種格式的回應。</p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">簡單記憶法：</strong>Content-Type 是「我給你什麼」，Accept 是「我想要什麼」。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>如何正確設定伺服器的 MIME Type？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>不同 Web 伺服器有不同的 MIME Type 設定方式：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-violet-400">Nginx</strong></p>
+                            <code>include mime.types;</code><br/>
+                            <code>types { application/javascript js; }</code>
+                        </div>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-violet-400">Apache</strong></p>
+                            <code>AddType application/javascript .js</code><br/>
+                            <code>AddType text/html .html</code>
+                        </div>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-violet-400">Node.js / Express</strong></p>
+                            <code>res.type('json')</code><br/>
+                            <code>res.set('Content-Type', 'application/json')</code>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">⚠️ 注意：</strong>錯誤的 MIME Type 設定可能導致瀏覽器無法正確解析檔案，甚至引發安全問題。例如，將使用者上傳的檔案以 <code>text/html</code> 提供可能導致 XSS 攻擊。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 application/octet-stream？什麼時候使用？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">application/octet-stream</strong> 是二進位資料的通用 MIME Type，相當於「未知的二進位檔案」。當伺服器無法確定檔案的具體類型時，會使用這個 MIME Type。</p>
+                        <p class="mt-2"><strong class="text-white">常見使用場景：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">強制下載</strong> — 當設定 <code>Content-Type: application/octet-stream</code> 時，瀏覽器會強制下載檔案而非嘗試顯示</li>
+                            <li><strong class="text-white">檔案下載功能</strong> — 許多下載功能使用此 MIME Type 配合 <code>Content-Disposition: attachment</code> 標頭</li>
+                            <li><strong class="text-white">未知檔案類型</strong> — 當伺服器不認識檔案副檔名時的安全預設值</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">💡 建議：</strong>應盡量使用具體的 MIME Type 而非 application/octet-stream，以便瀏覽器和客戶端能正確處理檔案。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>MIME Type 與副檔名有什麼關係？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>MIME Type 與副檔名是<strong class="text-white">相互對應</strong>的關係，但並非 100% 一對一：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-violet-400">一對多</strong> — 一個 MIME Type 可能對應多個副檔名（如 <code>audio/mpeg</code> 對應 <code>.mp3</code>、<code>.mpga</code>）</li>
+                            <li><strong class="text-violet-400">多對一</strong> — 一個副檔名也可能對應多種 MIME Type（如 <code>.xml</code> 可以是 <code>text/xml</code> 或 <code>application/xml</code>）</li>
+                            <li><strong class="text-violet-400">Web 伺服器映射</strong> — Nginx、Apache 等伺服器透過 MIME Type 映射表來決定如何處理每種副檔名的請求</li>
+                        </ul>
+                        <p class="mt-2">這就是為什麼這個工具支援 <strong class="text-white">Extension → MIME</strong> 與 <strong class="text-white">MIME → Extension</strong> 雙向查詢的原因 — 讓您可以從任何一個方向找到對應的資訊。</p>
+                        <p class="mt-2"><strong class="text-white">💡 實用提醒：</strong>伺服器是根據副檔名查找 MIME Type 來設定 Content-Type 標頭。如果映射表不完整，可能會回傳錯誤的 MIME Type 或直接使用 application/octet-stream。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是「MIME 類型混淆攻擊」？如何防範？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">MIME 類型混淆攻擊（MIME Type Confusion Attack）</strong> 是一種安全漏洞，攻擊者透過將惡意檔案偽裝成其他類型來繞過安全檢查。</p>
+                        <p class="mt-2"><strong class="text-white">常見攻擊手法：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>上傳含 JavaScript 的 <code>.html</code> 檔案但標記為 <code>image/png</code></li>
+                            <li>利用伺服器錯誤的 MIME Type 設定讓瀏覽器將文字檔案當作 HTML 執行</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">防範措施：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>使用 <code>X-Content-Type-Options: nosniff</code> 標頭防止瀏覽器 MIME 嗅探</li>
+                            <li>上傳檔案時驗證真實的 MIME Type（檢查檔案魔術位元組）而非僅依賴 Content-Type</li>
+                            <li>檔案下載時使用 <code>Content-Disposition: attachment</code></li>
+                            <li>限制可上傳的副檔名白名單</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>WebP、AVIF 等現代圖片格式的 MIME Type 是什麼？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>現代網頁圖片格式及其對應的 MIME Type：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">WebP</strong> — <code>image/webp</code>（Google 開發，支援有損/無損壓縮與透明度）</li>
+                            <li><strong class="text-white">AVIF</strong> — <code>image/avif</code>（基於 AV1 編碼，壓縮率優於 WebP）</li>
+                            <li><strong class="text-white">SVG</strong> — <code>image/svg+xml</code>（向量圖形，可縮放）</li>
+                            <li><strong class="text-white">ICO</strong> — <code>image/x-icon</code>（網頁圖示格式）</li>
+                            <li><strong class="text-white">HEIF / HEIC</strong> — <code>image/heif</code> / <code>image/heic</code>（Apple 生態系常用）</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">⚠️ 注意：</strong>較新的格式（如 AVIF、WebP）可能需要較舊的伺服器軟體手動新增 MIME Type 映射，否則可能回傳 <code>application/octet-stream</code> 導致瀏覽器無法正確顯示。</p>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+
+        <!-- ===== SEO ARTICLE ===== -->
+        <div class="mt-16 max-w-4xl mx-auto seo-article">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 MIME Type 完全指南</h2>
+                <p class="text-slate-400 text-sm">深入了解 MIME Type 的運作原理與最佳實踐</p>
+            </div>
+            <div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+
+                <h2>什麼是 MIME Type？</h2>
+                <p><strong>MIME Type</strong>（Multipurpose Internet Mail Extensions Type）是網際網路通訊中用來標識檔案格式的標準化標籤。它的歷史可以追溯到 1992 年，最初是為了解決電子郵件附件無法傳送二進位資料的問題而設計。隨著 HTTP 協定的普及，MIME Type 被 Web 全面採用，成為瀏覽器、伺服器和 API 之間溝通內容格式的基礎語言。</p>
+                <p>一個 MIME Type 由兩部分組成：<strong class="text-violet-400">主類型（type）</strong> 與 <strong class="text-violet-400">子類型（subtype）</strong>，中間以斜線分隔。例如 <code>text/html</code> 表示「文字類型的 HTML 格式」。</p>
+                <p>在 HTTP 通訊中，MIME Type 主要透過兩個標頭傳遞：<code>Content-Type</code>（告知接收方當前內容的格式）和 <code>Accept</code>（告知伺服器客戶端可以接受的格式）。這套機制稱為 <strong class="text-white">內容協商（Content Negotiation）</strong>。</p>
+
+                <h2>MIME Type 分類總覽</h2>
+                <p>MIME Type 分為十大類別，每種類別代表一類數位內容：</p>
+
+                <h3>Text（文字類）</h3>
+                <p>文字類 MIME Type 用於標示純文字或標記語言檔案。最常見的是 <code>text/html</code>（HTML 網頁）、<code>text/css</code>（樣式表）、<code>text/plain</code>（純文字）和 <code>text/csv</code>（逗號分隔值）。文字類的編碼資訊通常透過 <code>charset</code> 參數額外指定，如 <code>text/html; charset=utf-8</code>。</p>
+
+                <h3>Image（圖片類）</h3>
+                <p>圖片類 MIME Type 涵蓋所有靜態與動態圖片格式。常見的包括 <code>image/png</code>（可攜式網路圖形）、<code>image/jpeg</code>（JPEG 照片）、<code>image/gif</code>（GIF 動畫/靜態圖）、<code>image/svg+xml</code>（向量圖形）和 <code>image/webp</code>（Google 開發的現代圖片格式）。</p>
+                <p>現代網頁開發中，選擇正確的圖片格式與 MIME Type 對 <strong class="text-white">頁面載入速度</strong> 和 <strong class="text-white">SEO 評分</strong> 有直接影響。WebP 和 AVIF 格式因其優異的壓縮率，已成為效能優化的首選。</p>
+
+                <h3>Audio（音訊類）與 Video（影片類）</h3>
+                <p>多媒體 MIME Type 用於串流和下載音訊/影片檔案。<code>audio/mpeg</code>（MP3）是最普及的音訊格式，而 <code>video/mp4</code>（MP4）是現代影片的標準格式。其他常見的還有 <code>audio/ogg</code>、<code>audio/wav</code>、<code>video/webm</code> 等。</p>
+                <p>在 HTML5 中，<code>&lt;audio&gt;</code> 與 <code>&lt;video&gt;</code> 元素依賴正確的 Content-Type 來決定是否能播放媒體檔案。</p>
+
+                <h3>Application（應用程式類）</h3>
+                <p>這是最多樣化的類別，涵蓋各種結構化資料、程式碼與二進位格式。<code>application/json</code> 是現代 REST API 的核心格式，<code>application/javascript</code>（或 <code>text/javascript</code>）用於 JavaScript 檔案，<code>application/pdf</code> 則是最廣泛使用的文件格式。</p>
+                <p><code>application/octet-stream</code> 是特殊的通用二進位 MIME Type，當伺服器無法確定檔案類型時使用，通常會觸發瀏覽器的下載行為而非顯示。</p>
+
+                <h3>Font（字型類）</h3>
+                <p>網頁字型（Web Font）的 MIME Type 對於使用自訂字型的網站至關重要。常見的包括 <code>font/ttf</code>（TrueType）、<code>font/otf</code>（OpenType）、<code>font/woff</code> 和 <code>font/woff2</code>（Web Open Font Format）。WOFF2 因其最佳的壓縮率，是目前網頁字型的首選格式。</p>
+
+                <h3>Archive（壓縮檔類）與 Document（文件類）</h3>
+                <p>壓縮檔類涵蓋 <code>application/zip</code>、<code>application/gzip</code>、<code>application/x-tar</code> 等。文件類則包括 <code>application/pdf</code>、<code>application/msword</code>（.doc）、<code>application/vnd.openxmlformats-officedocument.wordprocessingml.document</code>（.docx）等。</p>
+
+                <h2>Content-Type 與 HTTP Header 的實際應用</h2>
+                <p>在 HTTP 通訊中，Content-Type 標頭決定了瀏覽器如何處理伺服器回傳的內容。如果伺服器回傳 <code>Content-Type: text/html</code>，瀏覽器會將內容解析為 HTML。如果回傳 <code>Content-Type: application/json</code>，瀏覽器知道這是 JSON 資料，通常需要由 JavaScript 處理。</p>
+
+                <div class="highlight-box">
+                    <p><strong>實戰範例：</strong></p>
+                    <p>當您請求一個 <code>.jpg</code> 圖片時，伺服器的回應包含：</p>
+                    <p><code>Content-Type: image/jpeg</code></p>
+                    <p>瀏覽器收到這個標頭後，知道要將內容當作 JPEG 圖片渲染，而非下載。這就是 MIME Type 在日常瀏覽中的運作方式。</p>
+                </div>
+
+                <h2>檔案上傳與 MIME Type 驗證</h2>
+                <p>在處理檔案上傳時，MIME Type 驗證是安全防護的重要環節。但開發者需要注意：<strong class="text-white">客戶端發送的 Content-Type 可以被偽造</strong>。因此僅依賴 HTTP 請求中的 Content-Type 來驗證檔案類型是不安全的。</p>
+                <p>最佳實踐是在伺服器端檢查檔案的<strong class="text-white">魔術位元組（Magic Bytes）</strong> — 每個檔案格式在開頭都有獨特的位元組序列。例如，JPEG 檔案開頭為 <code>FF D8 FF</code>，PNG 為 <code>89 50 4E 47</code>。這種驗證方式遠比依賴 Content-Type 標頭安全。</p>
+
+                <h2>MIME Type 安全性與最佳實踐</h2>
+                <p>為了防止 MIME 類型混淆攻擊，業界發展出多種防護機制：</p>
+                <ul>
+                    <li><strong>X-Content-Type-Options: nosniff</strong> — 告訴瀏覽器不要進行 MIME 嗅探，嚴格遵守伺服器回傳的 Content-Type</li>
+                    <li><strong>Content-Disposition: attachment</strong> — 強制瀏覽器下載檔案而非嘗試顯示</li>
+                    <li><strong>正確的 MIME 映射表</strong> — 確保伺服器為每種副檔名回傳正確的 Content-Type</li>
+                    <li><strong>Content Security Policy (CSP)</strong> — 透過 CSP 標頭限制可以載入的資源類型</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <p><strong>總結：</strong>MIME Type 是 Web 開發的基礎知識，從 HTTP 標頭設定、檔案上傳驗證到前端資源載入，無不與 MIME Type 息息相關。正確理解與運用 MIME Type，不僅能讓您的網站運作更正常，還能提升安全性與使用者體驗。使用 ToolHub 的 MIME Type Lookup 工具，快速查詢任何副檔名或 MIME Type 的對應關係。</p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div id="component-footer"></div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-violet-400" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- ================ SYSTEM INIT ================ -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/mime-type-lookup';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ================ BUSINESS LOGIC ================ -->
+    <script>
+        // ===== CATEGORY COLORS =====
+        const CATEGORY_META = {
+            text: { hex: '#3B82F6', name: 'blue', label: 'Text 文字' },
+            image: { hex: '#10B981', name: 'green', label: 'Image 圖片' },
+            audio: { hex: '#F59E0B', name: 'amber', label: 'Audio 音訊' },
+            video: { hex: '#EF4444', name: 'red', label: 'Video 影片' },
+            application: { hex: '#8B5CF6', name: 'violet', label: 'Application 應用程式' },
+            font: { hex: '#EC4899', name: 'pink', label: 'Font 字型' },
+            archive: { hex: '#F97316', name: 'orange', label: 'Archive 壓縮檔' },
+            document: { hex: '#14B8A6', name: 'teal', label: 'Document 文件' },
+            programming: { hex: '#06B6D4', name: 'cyan', label: 'Programming 程式' },
+            other: { hex: '#64748B', name: 'slate', label: 'Other 其他' },
+        };
+
+        // ===== DATA =====
+        const MIME_DATA = [
+            // === TEXT ===
+            { mime: 'text/html', ext: 'html', category: 'text', desc: 'HTML 超文本標記語言檔案', usage: '網頁內容, 郵件模板, 文件' },
+            { mime: 'text/html', ext: 'htm', category: 'text', desc: 'HTML 超文本標記語言檔案', usage: '網頁內容（副檔名相容）' },
+            { mime: 'text/css', ext: 'css', category: 'text', desc: 'CSS 階層式樣式表', usage: '網頁樣式設定, UI 主題' },
+            { mime: 'text/plain', ext: 'txt', category: 'text', desc: '純文字檔案', usage: 'Log 日誌, Readme, 設定備註' },
+            { mime: 'text/csv', ext: 'csv', category: 'text', desc: '逗號分隔值檔案', usage: '資料匯出/匯入, Excel 開啟, 數據交換' },
+            { mime: 'text/markdown', ext: 'md', category: 'text', desc: 'Markdown 標記語言', usage: '文件撰寫, README, 技術部落格' },
+            { mime: 'text/xml', ext: 'xml', category: 'text', desc: 'XML 可擴展標記語言', usage: '資料交換, RSS Feed, SVG, 設定檔' },
+            { mime: 'text/xml', ext: 'xsl', category: 'text', desc: 'XSL 樣式表轉換語言', usage: 'XML 轉換, 文件格式化' },
+            { mime: 'text/xml', ext: 'xsd', category: 'text', desc: 'XML Schema 定義', usage: 'XML 結構驗證, 資料模型' },
+            { mime: 'text/calendar', ext: 'ics', category: 'text', desc: 'iCalendar 行事曆格式', usage: '行事曆事件, 會議邀請' },
+            { mime: 'text/vtt', ext: 'vtt', category: 'text', desc: 'WebVTT 字幕格式', usage: 'HTML5 影片字幕, 影片標題' },
+            { mime: 'text/x-yaml', ext: 'yaml', category: 'text', desc: 'YAML 資料序列化格式', usage: '設定檔, CI/CD 設定, Docker Compose' },
+            { mime: 'text/x-yaml', ext: 'yml', category: 'text', desc: 'YAML 資料序列化格式', usage: '設定檔, CI/CD 設定' },
+            { mime: 'text/x-php', ext: 'php', category: 'programming', desc: 'PHP 程式碼', usage: '伺服器端 Web 應用, CMS' },
+
+            // === IMAGE ===
+            { mime: 'image/png', ext: 'png', category: 'image', desc: 'PNG 可攜式網路圖形', usage: '網頁圖片, UI 圖示, 截圖, 透明圖' },
+            { mime: 'image/jpeg', ext: 'jpg', category: 'image', desc: 'JPEG 聯合照片專家小組格式', usage: '照片, 複雜圖像, 網頁圖片' },
+            { mime: 'image/jpeg', ext: 'jpeg', category: 'image', desc: 'JPEG 聯合照片專家小組格式', usage: '照片, 高品質圖像' },
+            { mime: 'image/gif', ext: 'gif', category: 'image', desc: 'GIF 圖形交換格式', usage: '簡單動畫, 表情圖, 低色彩圖' },
+            { mime: 'image/webp', ext: 'webp', category: 'image', desc: 'WebP Google 開發的現代圖片格式', usage: '網頁圖片, 效能優化, 替代 JPEG/PNG' },
+            { mime: 'image/svg+xml', ext: 'svg', category: 'image', desc: 'SVG 可縮放向量圖形', usage: '圖示, Logo, 插圖, 向量動畫' },
+            { mime: 'image/avif', ext: 'avif', category: 'image', desc: 'AVIF 基於 AV1 的圖片格式', usage: '次世代網頁圖片, 高壓縮率' },
+            { mime: 'image/bmp', ext: 'bmp', category: 'image', desc: 'BMP 點陣圖', usage: 'Windows 傳統格式, 未壓縮圖像' },
+            { mime: 'image/tiff', ext: 'tiff', category: 'image', desc: 'TIFF 標記影像檔案格式', usage: '印刷出版, 掃描文件, 專業攝影' },
+            { mime: 'image/tiff', ext: 'tif', category: 'image', desc: 'TIFF 標記影像檔案格式', usage: '印刷出版, 掃描文件' },
+            { mime: 'image/x-icon', ext: 'ico', category: 'image', desc: 'ICO 圖示格式', usage: '網站 favicon, Windows 圖示' },
+            { mime: 'image/heic', ext: 'heic', category: 'image', desc: 'HEIC 高效率圖像格式', usage: 'Apple 裝置照片, iOS 相機' },
+            { mime: 'image/heif', ext: 'heif', category: 'image', desc: 'HEIF 高效率圖像檔案格式', usage: '現代照片格式, iOS 生態系' },
+
+            // === AUDIO ===
+            { mime: 'audio/mpeg', ext: 'mp3', category: 'audio', desc: 'MP3 音訊格式', usage: '音樂串流, 播客, 音訊下載' },
+            { mime: 'audio/mpeg', ext: 'mpga', category: 'audio', desc: 'MPEG 音訊', usage: 'MPEG 音訊串流' },
+            { mime: 'audio/wav', ext: 'wav', category: 'audio', desc: 'WAV 波形音訊', usage: '無損音訊, 錄音, 專業製作' },
+            { mime: 'audio/ogg', ext: 'ogg', category: 'audio', desc: 'OGG 容器音訊（Vorbis 編碼）', usage: '開源音訊, HTML5 音訊, 遊戲' },
+            { mime: 'audio/aac', ext: 'aac', category: 'audio', desc: 'AAC 進階音訊編碼', usage: 'YouTube, iOS, 現代音訊串流' },
+            { mime: 'audio/flac', ext: 'flac', category: 'audio', desc: 'FLAC 免費無損音訊編碼', usage: '無損音樂, 音訊檔案' },
+            { mime: 'audio/webm', ext: 'webm', category: 'audio', desc: 'WebM 音訊（Vorbis/Opus 編碼）', usage: 'HTML5 音訊, 現代網頁' },
+            { mime: 'audio/midi', ext: 'midi', category: 'audio', desc: 'MIDI 樂器數位介面', usage: '電子音樂, 鈴聲' },
+            { mime: 'audio/midi', ext: 'mid', category: 'audio', desc: 'MIDI 樂器數位介面', usage: '電子音樂' },
+
+            // === VIDEO ===
+            { mime: 'video/mp4', ext: 'mp4', category: 'video', desc: 'MP4 影片格式（H.264/H.265）', usage: '網路影片, YouTube, 串流平台' },
+            { mime: 'video/webm', ext: 'webm', category: 'video', desc: 'WebM 影片格式（VP8/VP9/AV1）', usage: 'HTML5 影片, 現代網頁' },
+            { mime: 'video/ogg', ext: 'ogv', category: 'video', desc: 'OGV/Ogg 影片容器（Theora 編碼）', usage: '開源影片, HTML5 影片' },
+            { mime: 'video/avi', ext: 'avi', category: 'video', desc: 'AVI 音訊視訊交錯格式', usage: 'Windows 傳統影片格式' },
+            { mime: 'video/mpeg', ext: 'mpeg', category: 'video', desc: 'MPEG 影片', usage: '傳統影片, DVD' },
+            { mime: 'video/mpeg', ext: 'mpg', category: 'video', desc: 'MPEG 影片', usage: '傳統影片' },
+            { mime: 'video/quicktime', ext: 'mov', category: 'video', desc: 'QuickTime 影片', usage: 'Apple 生態系, 專業影片編輯' },
+            { mime: 'video/x-msvideo', ext: 'avi', category: 'video', desc: 'AVI 影片（舊版）', usage: 'Windows 影片' },
+            { mime: 'video/x-matroska', ext: 'mkv', category: 'video', desc: 'MKV Matroska 影片', usage: '高畫質影片, 多軌道' },
+
+            // === APPLICATION ===
+            { mime: 'application/json', ext: 'json', category: 'application', desc: 'JSON 資料格式', usage: 'REST API, 設定檔, 資料交換, Web 儲存' },
+            { mime: 'application/javascript', ext: 'js', category: 'application', desc: 'JavaScript 程式碼', usage: '網頁前端邏輯, Node.js 應用' },
+            { mime: 'application/javascript', ext: 'mjs', category: 'application', desc: 'ES Module JavaScript', usage: '現代 JavaScript 模組' },
+            { mime: 'application/pdf', ext: 'pdf', category: 'application', desc: 'PDF 可攜式文件格式', usage: '文件分發, 報告, 表單, 電子書' },
+            { mime: 'application/xml', ext: 'xml', category: 'application', desc: 'XML 可擴展標記語言', usage: '資料交換, 設定檔, Web Services' },
+            { mime: 'application/zip', ext: 'zip', category: 'application', desc: 'ZIP 壓縮檔', usage: '檔案壓縮, 軟體發布, 資料傳輸' },
+            { mime: 'application/gzip', ext: 'gz', category: 'application', desc: 'GZip 壓縮檔', usage: 'Linux 壓縮, 網頁壓縮傳輸' },
+            { mime: 'application/x-www-form-urlencoded', ext: '', category: 'application', desc: 'URL 編碼表單資料', usage: 'HTML 表單提交, POST 請求' },
+            { mime: 'application/octet-stream', ext: 'bin', category: 'application', desc: '二進位資料（通用）', usage: '強制下載, 未知檔案類型, 二進位傳輸' },
+            { mime: 'application/octet-stream', ext: '', category: 'application', desc: '二進位資料（通用）', usage: '預設 MIME Type, 檔案下載' },
+            { mime: 'application/wasm', ext: 'wasm', category: 'application', desc: 'WebAssembly 二進位格式', usage: '高效能網頁應用, 程式碼執行' },
+            { mime: 'application/ld+json', ext: 'jsonld', category: 'application', desc: 'JSON-LD 關聯資料', usage: 'SEO 結構化資料, Schema.org' },
+            { mime: 'application/graphql', ext: '', category: 'application', desc: 'GraphQL API 查詢', usage: 'GraphQL API 請求' },
+            { mime: 'application/grpc', ext: '', category: 'application', desc: 'gRPC 遠端程序呼叫', usage: '微服務通訊, 高效能 API' },
+
+            // === FONT ===
+            { mime: 'font/ttf', ext: 'ttf', category: 'font', desc: 'TrueType 字型', usage: '網頁字型, 文件排版' },
+            { mime: 'font/otf', ext: 'otf', category: 'font', desc: 'OpenType 字型', usage: '專業排版, 網頁字型' },
+            { mime: 'font/woff', ext: 'woff', category: 'font', desc: 'WOFF Web Open Font Format', usage: '網頁字型（標準壓縮）' },
+            { mime: 'font/woff2', ext: 'woff2', category: 'font', desc: 'WOFF2 Web Open Font Format 2', usage: '網頁字型（最佳壓縮）' },
+            { mime: 'font/collection', ext: 'ttc', category: 'font', desc: 'TrueType 字型集合', usage: '多字型集合檔案' },
+
+            // === ARCHIVE ===
+            { mime: 'application/zip', ext: 'zip', category: 'archive', desc: 'ZIP 壓縮檔', usage: '檔案壓縮, 軟體發布' },
+            { mime: 'application/x-tar', ext: 'tar', category: 'archive', desc: 'TAR 歸檔檔', usage: 'Linux 歸檔, Docker 映像層' },
+            { mime: 'application/gzip', ext: 'gz', category: 'archive', desc: 'GZip 壓縮', usage: 'Linux 壓縮, 檔案傳輸' },
+            { mime: 'application/x-7z-compressed', ext: '7z', category: 'archive', desc: '7-Zip 壓縮檔', usage: '高壓縮率歸檔, 檔案備份' },
+            { mime: 'application/x-rar-compressed', ext: 'rar', category: 'archive', desc: 'RAR 壓縮檔', usage: '高壓縮率歸檔, 檔案分享' },
+            { mime: 'application/x-bzip2', ext: 'bz2', category: 'archive', desc: 'bzip2 壓縮檔', usage: 'Linux 壓縮, 原始碼發布' },
+            { mime: 'application/x-brotli', ext: 'br', category: 'archive', desc: 'Brotli 壓縮', usage: '網頁壓縮（HTTPS）, 現代瀏覽器' },
+
+            // === DOCUMENT ===
+            { mime: 'application/pdf', ext: 'pdf', category: 'document', desc: 'PDF 可攜式文件格式', usage: '文件分發, 報告, 合約' },
+            { mime: 'application/msword', ext: 'doc', category: 'document', desc: 'Microsoft Word 文件', usage: '文件編輯, Office 文件' },
+            { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx', category: 'document', desc: 'Microsoft Word OpenXML 文件', usage: '現代 Word 文件' },
+            { mime: 'application/vnd.ms-excel', ext: 'xls', category: 'document', desc: 'Microsoft Excel 試算表', usage: '試算表, 資料分析' },
+            { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ext: 'xlsx', category: 'document', desc: 'Microsoft Excel OpenXML 試算表', usage: '現代 Excel 試算表' },
+            { mime: 'application/vnd.ms-powerpoint', ext: 'ppt', category: 'document', desc: 'Microsoft PowerPoint 簡報', usage: '簡報, 投影片' },
+            { mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', ext: 'pptx', category: 'document', desc: 'PowerPoint OpenXML 簡報', usage: '現代簡報文件' },
+            { mime: 'application/vnd.oasis.opendocument.text', ext: 'odt', category: 'document', desc: 'OpenDocument 文字文件', usage: '開源文件格式, LibreOffice' },
+            { mime: 'application/vnd.oasis.opendocument.spreadsheet', ext: 'ods', category: 'document', desc: 'OpenDocument 試算表', usage: '開源試算表' },
+            { mime: 'application/rtf', ext: 'rtf', category: 'document', desc: 'RTF 豐富文字格式', usage: '跨平台文件交換' },
+            { mime: 'application/epub+zip', ext: 'epub', category: 'document', desc: 'EPUB 電子書', usage: '電子書分發, 閱讀器' },
+
+            // === PROGRAMMING ===
+            { mime: 'application/javascript', ext: 'js', category: 'programming', desc: 'JavaScript 程式碼', usage: '前端邏輯, Node.js 後端' },
+            { mime: 'application/json', ext: 'json', category: 'programming', desc: 'JSON 資料格式', usage: 'API, 設定檔, 資料序列化' },
+            { mime: 'application/wasm', ext: 'wasm', category: 'programming', desc: 'WebAssembly 模組', usage: '高效能網頁應用' },
+            { mime: 'text/html', ext: 'html', category: 'programming', desc: 'HTML 標記語言', usage: '網頁結構, 模板' },
+            { mime: 'text/css', ext: 'css', category: 'programming', desc: 'CSS 樣式表', usage: '網頁樣式' },
+            { mime: 'text/xml', ext: 'xml', category: 'programming', desc: 'XML 標記語言', usage: '資料, 設定檔' },
+            { mime: 'text/x-php', ext: 'php', category: 'programming', desc: 'PHP 程式碼', usage: '伺服器端 Web' },
+            { mime: 'text/x-python', ext: 'py', category: 'programming', desc: 'Python 程式碼', usage: '資料科學, Web 後端, 腳本' },
+            { mime: 'text/x-python', ext: 'pyc', category: 'programming', desc: 'Python 編譯位元組碼', usage: '編譯後 Python' },
+            { mime: 'text/x-java', ext: 'java', category: 'programming', desc: 'Java 原始碼', usage: 'Java 應用開發' },
+            { mime: 'text/x-java', ext: 'class', category: 'programming', desc: 'Java 編譯類別檔', usage: 'Java 執行檔' },
+            { mime: 'text/x-ruby', ext: 'rb', category: 'programming', desc: 'Ruby 程式碼', usage: 'Web 開發, 腳本' },
+            { mime: 'text/x-go', ext: 'go', category: 'programming', desc: 'Go 程式碼', usage: 'Go 語言開發' },
+            { mime: 'text/x-rust', ext: 'rs', category: 'programming', desc: 'Rust 原始碼', usage: 'Rust 系統開發' },
+            { mime: 'text/x-sh', ext: 'sh', category: 'programming', desc: 'Shell 腳本', usage: 'Linux 腳本, DevOps' },
+
+            // === OTHER ===
+            { mime: 'multipart/form-data', ext: '', category: 'other', desc: '多部分表單資料', usage: '檔案上傳, 複雜表單提交' },
+            { mime: 'multipart/byteranges', ext: '', category: 'other', desc: 'HTTP 位元組範圍回應', usage: '分段下載, 影片串流' },
+            { mime: 'multipart/alternative', ext: '', category: 'other', desc: '多部分替代內容', usage: '郵件 HTML+純文字雙版本' },
+            { mime: 'application/x-httpd-php', ext: 'php', category: 'other', desc: 'PHP 伺服器端腳本', usage: 'PHP Web 應用' },
+            { mime: 'application/x-shockwave-flash', ext: 'swf', category: 'other', desc: 'Adobe Flash 動畫', usage: 'Flash 內容（已淘汰）' },
+            { mime: 'application/xml-dtd', ext: 'dtd', category: 'other', desc: 'XML Document Type Definition', usage: 'XML 結構定義' },
+        ];
+
+        const COMMON_MIMES = new Set([
+            'application/json', 'text/html', 'text/css', 'text/plain',
+            'application/javascript', 'image/png', 'image/jpeg',
+            'image/svg+xml', 'image/webp', 'application/pdf',
+            'application/xml', 'application/zip', 'application/octet-stream',
+            'audio/mpeg', 'video/mp4'
+        ]);
+
+        // ===== STATE =====
+        let favorites = (() => { try { return JSON.parse(localStorage.getItem('mime-favorites') || '[]'); } catch(e) { return []; } })();
+        let recentQueries = (() => { try { return JSON.parse(localStorage.getItem('mime-recent') || '[]'); } catch(e) { return []; } })();
+        let activeCategory = 'all';
+        let searchQuery = '';
+        let showFavoritesOnly = false;
+        let debounceTimer = null;
+
+        const grid = document.getElementById('codes-grid');
+        const searchInput = document.getElementById('search-input');
+        const clearSearch = document.getElementById('clear-search');
+        const favToggle = document.getElementById('fav-toggle');
+        const recentBtn = document.getElementById('recent-btn');
+        const recentPanel = document.getElementById('recent-panel');
+        const recentList = document.getElementById('recent-list');
+        const clearRecent = document.getElementById('clear-recent');
+        const resultCount = document.getElementById('result-count');
+        const headerPreview = document.getElementById('header-preview');
+
+        function updateCategoryCounts() {
+            const all = MIME_DATA.length;
+            document.getElementById('count-all').textContent = all;
+            Object.keys(CATEGORY_META).forEach(cat => {
+                const count = MIME_DATA.filter(s => s.category === cat).length;
+                const el = document.getElementById(`count-${cat}`);
+                if (el) el.textContent = count;
+            });
+        }
+
+        function getFilteredCodes() {
+            let codes = MIME_DATA;
+            if (activeCategory !== 'all') {
+                codes = codes.filter(s => s.category === activeCategory);
+            }
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                codes = codes.filter(s =>
+                    s.mime.toLowerCase().includes(q) ||
+                    s.ext.toLowerCase().includes(q) ||
+                    s.desc.toLowerCase().includes(q) ||
+                    s.category.toLowerCase().includes(q) ||
+                    s.usage.toLowerCase().includes(q)
+                );
+            }
+            if (showFavoritesOnly) {
+                codes = codes.filter(s => favorites.includes(s.mime));
+            }
+            return codes;
+        }
+
+        function renderHeaderPreview(mimeType) {
+            const s = MIME_DATA.find(d => d.mime === mimeType);
+            if (!s) return;
+            const lines = [
+                '<span class="hl-key">Content-Type</span><span class="hl-colon">:</span> <span class="hl-value">' + s.mime + '</span>',
+                '<span class="hl-key">Accept</span><span class="hl-colon">:</span> <span class="hl-value">' + s.mime + '</span>'
+            ];
+            if (s.ext) {
+                lines.push('');
+                lines.push('<span class="text-slate-500">// Extension: .' + s.ext + '</span>');
+            }
+            const prevHTML = headerPreview.innerHTML;
+            headerPreview.innerHTML = '<div class="header-preview w-full">' + lines.join('<br>') + '</div>';
+            headerPreview.classList.remove('flex', 'items-center', 'justify-center');
+            headerPreview.classList.add('p-0');
+            headerPreview.style.minHeight = 'auto';
+        }
+
+        function renderCards() {
+            const codes = getFilteredCodes();
+            const sorted = [...codes].sort((a, b) => {
+                const aCommon = COMMON_MIMES.has(a.mime);
+                const bCommon = COMMON_MIMES.has(b.mime);
+                if (aCommon && !bCommon) return -1;
+                if (!aCommon && bCommon) return 1;
+                return a.mime.localeCompare(b.mime);
+            });
+
+            if (sorted.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-16">
+                        <i class="ph ph-magnifying-glass text-4xl text-slate-600 block mb-3"></i>
+                        <p class="text-slate-500 text-sm">${searchQuery ? '沒有符合條件的 MIME Type，請嘗試其他關鍵字' : showFavoritesOnly ? '還沒有收藏任何 MIME Type，點擊 ⭐ 圖示開始收藏' : '暫無資料'}</p>
+                    </div>
+                `;
+                resultCount.textContent = '顯示 0 個項目';
+                return;
+            }
+
+            let html = '';
+            for (const s of sorted) {
+                const cc = CATEGORY_META[s.category] || CATEGORY_META.other;
+                const isFav = favorites.includes(s.mime);
+                const isCommon = COMMON_MIMES.has(s.mime);
+                const allExts = MIME_DATA.filter(d => d.mime === s.mime && d.ext).map(d => d.ext);
+                const uniqueExts = [...new Set(allExts)].filter(Boolean);
+
+                html += `
+                    <div class="mime-card${isCommon ? ' ring-1 ring-violet-500/20' : ''}" data-mime="${s.mime}" data-category="${s.category}">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="mime-badge truncate">${s.mime}</span>
+                                    ${isCommon ? '<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 shrink-0">⭐ 常用</span>' : ''}
+                                </div>
+                                ${s.ext ? `<span class="ext-badge bg-slate-800 text-slate-300 border border-slate-700">.${s.ext}</span>` : '<span class="text-xs text-slate-600">（無特定副檔名）</span>'}
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0 ml-2">
+                                <button class="p-1.5 rounded-lg hover:bg-violet-500/10 transition-colors favorite-btn" onclick="event.stopPropagation();toggleFavorite('${s.mime}')" title="${isFav ? '取消收藏' : '加入收藏'}">
+                                    <i class="ph ${isFav ? 'ph-fill ph-star' : 'ph-star'} text-lg ${isFav ? 'text-violet-400' : 'text-slate-500'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <span class="tag-pill" style="background:${cc.hex}15;color:${cc.hex};border:1px solid ${cc.hex}30">${cc.label}</span>
+                            <span class="tag-pill bg-slate-500/10 text-slate-400 border border-slate-500/20"><i class="ph ph-file-text text-xs"></i> ${s.desc}</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mb-2"><i class="ph ph-lightbulb mr-1"></i>${s.usage}</div>
+                        <div class="flex items-center justify-between" onclick="event.stopPropagation()">
+                            <button class="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors expand-btn" onclick="event.stopPropagation();toggleDetail(this.closest('.mime-card'))">
+                                <i class="ph ph-caret-down text-sm transition-transform"></i> 查看詳細
+                            </button>
+                            <div class="flex items-center gap-1">
+                                <button class="px-2 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 text-xs font-medium transition-colors" onclick="event.stopPropagation();copyMIME('${s.mime}')"><i class="ph ph-copy mr-0.5"></i> MIME</button>
+                                ${s.ext ? `<button class="px-2 py-1 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 text-xs font-medium transition-colors" onclick="event.stopPropagation();copyExt('${s.ext}')"><i class="ph ph-copy mr-0.5"></i> .${s.ext}</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="detail-panel hidden">
+                            <dl>
+                                <dt>📋 MIME Type</dt>
+                                <dd><code>${s.mime}</code></dd>
+                                ${s.ext ? `<dt>🔤 副檔名</dt><dd><code>.${s.ext}</code></dd>` : ''}
+                                ${uniqueExts.length > 1 ? `<dt>🔤 其他副檔名</dt><dd>${uniqueExts.map(e => `<code>.${e}</code>`).join(' ')}</dd>` : ''}
+                                <dt>📂 類別</dt>
+                                <dd><span class="tag-pill" style="background:${cc.hex}15;color:${cc.hex};border:1px solid ${cc.hex}30">${cc.label}</span></dd>
+                                <dt>📝 說明</dt>
+                                <dd>${s.desc}</dd>
+                                <dt>💡 常見用途</dt>
+                                <dd>${s.usage}</dd>
+                                <dt>🌐 HTTP Header</dt>
+                                <dd>
+                                    <div class="header-preview mt-1">
+                                        <span class="hl-key">Content-Type</span><span class="hl-colon">:</span> <span class="hl-value">${s.mime}</span><br>
+                                        <span class="hl-key">Accept</span><span class="hl-colon">:</span> <span class="hl-value">${s.mime}</span>
+                                        ${s.ext ? `<br><span class="text-slate-500">// Extension: .${s.ext}</span>` : ''}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+            resultCount.textContent = `顯示 ${sorted.length} 個項目`;
+        }
+
+        function toggleFavorite(mime) {
+            const idx = favorites.indexOf(mime);
+            if (idx > -1) {
+                favorites.splice(idx, 1);
+            } else {
+                favorites.push(mime);
+            }
+            try { localStorage.setItem('mime-favorites', JSON.stringify(favorites)); } catch(e) {}
+            renderCards();
+            showToast(idx > -1 ? '已取消收藏' : '已加入收藏');
+        }
+
+        function copyMIME(mime) {
+            navigator.clipboard.writeText(mime).then(() => {
+                showToast('已複製 MIME Type：' + mime);
+            }).catch(() => fallbackCopy(mime));
+        }
+
+        function copyExt(ext) {
+            const text = '.' + ext;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已複製副檔名：' + text);
+            }).catch(() => fallbackCopy(text));
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('已複製到剪貼簿');
+        }
+
+        function addRecent(mime) {
+            recentQueries = recentQueries.filter(c => c !== mime);
+            recentQueries.unshift(mime);
+            if (recentQueries.length > 10) recentQueries = recentQueries.slice(0, 10);
+            try { localStorage.setItem('mime-recent', JSON.stringify(recentQueries)); } catch(e) {}
+        }
+
+        function renderRecent() {
+            if (recentQueries.length === 0) {
+                recentList.innerHTML = '<span class="text-xs text-slate-600">尚無查詢記錄</span>';
+                return;
+            }
+            let html = '';
+            for (const mime of recentQueries) {
+                const s = MIME_DATA.find(d => d.mime === mime);
+                if (!s) continue;
+                const cc = CATEGORY_META[s.category] || CATEGORY_META.other;
+                html += `<button class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors" style="background:${cc.hex}12;color:${cc.hex};border:1px solid ${cc.hex}25" onclick="searchByMIME('${mime}')">${mime}</button>`;
+            }
+            recentList.innerHTML = html;
+        }
+
+        function searchByMIME(mime) {
+            searchInput.value = mime;
+            searchQuery = mime;
+            clearSearch.classList.remove('hidden');
+            activeCategory = 'all';
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-category="all"]').classList.add('active');
+            recentPanel.classList.add('hidden');
+            renderCards();
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-violet-400';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // ===== EVENT BINDINGS =====
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                searchQuery = searchInput.value.trim();
+                clearSearch.classList.toggle('hidden', !searchQuery);
+                renderCards();
+            }, 150);
+        });
+
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearch.classList.add('hidden');
+            renderCards();
+            searchInput.focus();
+        });
+
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeCategory = tab.dataset.category;
+                if (showFavoritesOnly && activeCategory !== 'all') {
+                    favToggle.checked = false;
+                    showFavoritesOnly = false;
+                }
+                renderCards();
+            });
+        });
+
+        favToggle.addEventListener('change', () => {
+            showFavoritesOnly = favToggle.checked;
+            renderCards();
+            showToast(showFavoritesOnly ? '只顯示收藏的 MIME Type' : '顯示所有 MIME Type');
+        });
+
+        recentBtn.addEventListener('click', () => {
+            recentPanel.classList.toggle('hidden');
+            if (!recentPanel.classList.contains('hidden')) {
+                renderRecent();
+            }
+        });
+
+        clearRecent.addEventListener('click', () => {
+            recentQueries = [];
+            try { localStorage.setItem('mime-recent', JSON.stringify(recentQueries)); } catch(e) {}
+            renderRecent();
+            showToast('已清除查詢記錄');
+        });
+
+        // Click card to show header preview
+        function toggleDetail(card) {
+            // Accordion: close all other cards first
+            const allCards = card.parentElement.querySelectorAll('.mime-card');
+            allCards.forEach(c => {
+                if (c !== card && c.classList.contains('expanded')) {
+                    c.classList.remove('expanded');
+                    const d = c.querySelector('.detail-panel');
+                    if (d) d.classList.add('hidden');
+                    const b = c.querySelector('.expand-btn i');
+                    if (b) b.classList.remove('rotate-180');
+                }
+            });
+            // Toggle clicked card
+            card.classList.toggle('expanded');
+            const detail = card.querySelector('.detail-panel');
+            const btn = card.querySelector('.expand-btn i');
+            if (detail) detail.classList.toggle('hidden');
+            if (btn) btn.classList.toggle('rotate-180');
+            // Track recent query & header preview
+            const mime = card.dataset.mime;
+            addRecent(mime);
+            renderHeaderPreview(mime);
+        }
+
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.mime-card');
+            if (card && !e.target.closest('.favorite-btn') && !e.target.closest('.expand-btn') && !e.target.closest('button')) {
+                toggleDetail(card);
+            }
+        });
+
+        // ===== INIT =====
+        updateCategoryCounts();
+        renderCards();
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

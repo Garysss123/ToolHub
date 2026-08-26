@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Date Calculator | Free Online Tool - ToolHub</title>
+<meta content="Free online date calculator. Supports date difference calculation, date addition and subtraction, business days, age calculation, countdown days, leap year judgment, and ISO Week Number. Built-in calendar preview to intuitively display date ranges." name="description"/>
+<meta content="Date Calculator, 日期計算, 日期差, 工作天, Business Days, 年齡計算, 倒數天數, 閏年, ISO Week, 日曆, ToolHub" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.85); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 500; transition: all 0.2s;
+            border: 1px solid transparent; white-space: nowrap; color: #94A3B8;
+        }
+        .tab-btn:hover { background: rgba(245,158,11,0.05); color: #E2E8F0; }
+        .tab-btn.active {
+            background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3);
+            color: #FBBF24;
+        }
+
+        .result-card {
+            background: rgba(15,23,42,0.6); border: 1px solid #1E293B;
+            border-radius: 0.75rem; padding: 1rem;
+        }
+        .result-value {
+            font-size: 1.75rem; font-weight: 700; color: #FBBF24; font-family: "Fira Code", monospace;
+        }
+        .result-label { font-size: 0.75rem; color: #64748B; margin-top: 0.125rem; }
+
+        input[type="date"], input[type="number"] {
+            background: #0f172a; border: 1px solid #1E293B; border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem; color: #E2E8F0; font-size: 0.875rem;
+            outline: none; font-family: "Fira Code", monospace; width: 100%;
+        }
+        input[type="date"]:focus, input[type="number"]:focus { border-color: #F59E0B; }
+
+        .btn-primary {
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            color: white; font-weight: 600; font-size: 0.8125rem;
+            transition: all 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(245,158,11,0.25); }
+        .btn-secondary {
+            padding: 0.375rem 0.875rem; border-radius: 0.5rem;
+            background: rgba(30,41,59,0.5); border: 1px solid #1E293B;
+            color: #94A3B8; font-size: 0.75rem; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-secondary:hover { background: rgba(30,41,59,0.8); color: #E2E8F0; border-color: #334155; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #F59E0B; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        /* Calendar Preview */
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-cell {
+            text-align: center; padding: 0.25rem; font-size: 0.75rem;
+            border-radius: 0.25rem; transition: all 0.15s;
+        }
+        .cal-header { color: #64748B; font-weight: 600; font-size: 0.65rem; padding: 0.25rem 0; }
+        .cal-day { color: #94A3B8; cursor: default; }
+        .cal-day.other-month { color: #334155; }
+        .cal-day.range-start { background: #F59E0B; color: #0B1120; font-weight: 700; border-radius: 50%; }
+        .cal-day.range-end { background: #D97706; color: #fff; font-weight: 700; border-radius: 50%; }
+        .cal-day.in-range { background: rgba(245,158,11,0.15); color: #FBBF24; }
+        .cal-day.today { outline: 1px solid #F59E0B; outline-offset: -1px; }
+
+        @media (max-width: 640px) {
+            .result-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/date-calculator/" property="og:url"/>
+<meta content="Date Calculator | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free online date calculator. Supports date difference calculation, date addition and subtraction, business days, age calculation, countdown days, leap year judgment, and ISO Week Number. Built-in calendar preview to intuitively display date ranges." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Date Calculator | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free online date calculator. Supports date difference calculation, date addition and subtraction, business days, age calculation, countdown days, leap year judgment, and ISO Week Number. Built-in calendar preview to intuitively display date ranges." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Date Calculator","url":"https://toolhuben.com/en/date-calculator/","description":"Free online date calculator. Supports date difference calculation, date addition and subtraction, business days, age calculation, countdown days, leap year judgment, and ISO Week Number. Built-in calendar preview to intuitively display date ranges.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Date Calculator","item":"https://toolhuben.com/en/date-calculator/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/date-calculator/" rel="canonical"/><link href="https://toolhuben.com/date-calculator/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/date-calculator/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/date-calculator/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","=== 倒數計時結果 ===":"=== Countdown results ===","=== 工作天計算結果 ===":"=== Working day calculation results ===","=== 年齡計算結果 ===":"=== Age calculation result ===","=== 日期加減結果 ===":"=== Date addition and subtraction results ===","=== 日期差計算結果 ===":"=== Date difference calculation result ===","=== 日期資訊結果 ===":"=== Date information results ===","⏰ 目標時間已過":"⏰ Target time has passed","❌ 否":"❌ No","✅ 是":"✅ Yes","一":"one","三":"three","下次生日:":"Next birthday:","不足":"Incomplete","二":"two","五":"five","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","六":"Six","出生日期不能晚於目標日期":"Date of birth cannot be later than target date","分鐘:":"Minutes:","剩餘天數:":"Number of days remaining:","四":"Four","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","天:":"Day:","天數:":"Number of days:","天）":"days)","季度:":"Quarter:","小時:":"Hours:","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","工作天:":"Working days:","已清除":"cleared","已下載 CSV":"Downloaded CSV","已下載 TXT":"Downloaded TXT","年數:":"Years:","年齡:":"Age:","建立理念":"Our Founding Idea","建議":"Recommendation","年":"year","年內第幾天:":"Day of the year:","日":"day","月":"month","月數:":"Number of months:","歲":"years old","沒有結果可下載":"No results available for download","沒有結果可複製":"No results to copy","當年天數:":"Number of days in the year:","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","目標：":"Goal:","秒:":"Seconds:","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","結果日期:":"Result date:","總天數:":"Total days:","缺少":"Missing","請輸入出生日期":"Please enter date of birth","請輸入有效的日期":"Please enter a valid date","請輸入目標日期":"Please enter target date","週數:":"Week number:","週末/休息日:":"Weekends/rest days:","開始日期需早於結束日期":"Start date needs to be before end date","閏年:":"Leap year:","顯示":"Showing","（剩":"(Left","🎉 就是今天！":"🎉 Today is the day!","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen font-sans" data-classic-layout="aurora" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#F59E0B;--classic-accent-rgb:245,158,11">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+<!-- Hero -->
+<div class="text-center space-y-3 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 rounded-full bg-hub-800 border border-hub-700 text-xs text-dc">
+<span class="flex w-2 h-2 bg-dc rounded-full animate-pulse mr-2"></span>
+                Pure front-end date calculation · Supports working days, age, countdown, ISO Week
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Date Calculator
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-dc to-amber-400"> date calculator</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                Free, no-installation online date calculation tool. Calculate date difference, calendar addition and subtraction, business days, age, countdown days, and support leap year judgment and ISO Week Number. Built-in calendar preview to intuitively display date ranges.
+            </p>
+</div>
+<!-- Main Tabs -->
+<div class="flex flex-wrap gap-1.5 mb-4 border-b border-hub-700 pb-3" id="main-tabs">
+<button class="tab-btn active" data-tab="diff"><i class="w-3.5 h-3.5 inline" data-lucide="arrow-left-right"></i> date difference</button>
+<button class="tab-btn" data-tab="addsub"><i class="w-3.5 h-3.5 inline" data-lucide="plus-minus"></i> Date addition and subtraction</button>
+<button class="tab-btn" data-tab="bizdays"><i class="w-3.5 h-3.5 inline" data-lucide="briefcase"></i> working days</button>
+<button class="tab-btn" data-tab="age"><i class="w-3.5 h-3.5 inline" data-lucide="cake"></i> age</button>
+<button class="tab-btn" data-tab="countdown"><i class="w-3.5 h-3.5 inline" data-lucide="timer"></i> Countdown</button>
+<button class="tab-btn" data-tab="info"><i class="w-3.5 h-3.5 inline" data-lucide="info"></i> date information</button>
+</div>
+<!-- ============================ -->
+<!-- Tab: Date Difference          -->
+<!-- ============================ -->
+<div class="tab-content" data-tab="diff">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="arrow-left-right"></i> Date difference calculation
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-5">
+<div><label class="text-xs text-slate-500 mb-1 block">start date</label><input id="diff-start" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">end date</label><input id="diff-end" type="date"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-diff"><i class="w-3.5 h-3.5" data-lucide="calculator"></i> Calculate date difference</button>
+<div class="grid grid-cols-5 gap-3 result-grid" id="diff-results">
+<div class="result-card text-center"><div class="result-value" id="diff-days">0</div><div class="result-label">Total days</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-weeks">0</div><div class="result-label">Week number</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-months">0</div><div class="result-label">Number of months</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-years">0</div><div class="result-label">years</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-hours">0</div><div class="result-label">hours</div></div>
+</div>
+<!-- Calendar Preview -->
+<div class="mt-5 hidden" id="diff-calendar">
+<label class="text-xs text-slate-500 mb-2 block">📅 Calendar preview</label>
+<div class="cal-grid" id="diff-cal-grid"></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Add / Subtract           -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="addsub">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="plus-minus"></i> Date addition and subtraction
+                </h2>
+<div class="grid md:grid-cols-3 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">start date</label><input id="addsub-date" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">Quantity</label><input id="addsub-amount" min="1" type="number" value="30"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">unit</label>
+<select class="w-full bg-[#0f172a] border border-hub-700 rounded-lg px-3 py-2.5 text-white font-mono text-sm outline-none focus:border-dc" id="addsub-unit">
+<option value="days">Days</option>
+<option value="weeks">Weeks</option>
+<option value="months">Months</option>
+<option value="years">Years</option>
+</select>
+</div>
+</div>
+<div class="flex gap-2 mb-5">
+<button class="btn-primary" id="btn-add"><i class="w-3.5 h-3.5" data-lucide="plus"></i> plus</button>
+<button class="btn-secondary" id="btn-sub"><i class="w-3.5 h-3.5" data-lucide="minus"></i> subtract</button>
+</div>
+<div class="result-card text-center">
+<div class="result-label">result date</div>
+<div class="result-value text-2xl" id="addsub-result">—</div>
+<div class="text-xs text-slate-600 mt-1" id="addsub-detail"></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Business Days            -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="bizdays">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="briefcase"></i> Working day calculation
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">start date</label><input id="biz-start" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">end date</label><input id="biz-end" type="date"/></div>
+</div>
+<div class="flex flex-wrap gap-3 mb-4">
+<label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+<input class="accent-dc" id="biz-sat" type="checkbox"/> Work on Saturday
+                    </label>
+<label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+<input class="accent-dc" id="biz-sun" type="checkbox"/> Work on Sunday
+                    </label>
+</div>
+<button class="btn-primary mb-5" id="btn-biz"><i class="w-3.5 h-3.5" data-lucide="calculator"></i> Calculate working days</button>
+<div class="grid grid-cols-2 gap-3 result-grid">
+<div class="result-card text-center"><div class="result-value" id="biz-work">0</div><div class="result-label">working days</div></div>
+<div class="result-card text-center"><div class="result-value" id="biz-weekend">0</div><div class="result-label">Weekends/rest days</div></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Age Calculator           -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="age">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="cake"></i> age calculation
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">date of birth</label><input id="age-birth" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">Target date (default is today)</label><input id="age-target" type="date"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-age"><i class="w-3.5 h-3.5" data-lucide="calculator"></i> Calculate age</button>
+<div class="grid grid-cols-3 gap-3 result-grid mb-4">
+<div class="result-card text-center"><div class="result-value" id="age-years">0</div><div class="result-label">Age (years)</div></div>
+<div class="result-card text-center"><div class="result-value" id="age-months">0</div><div class="result-label">Number of months</div></div>
+<div class="result-card text-center"><div class="result-value" id="age-days">0</div><div class="result-label">days</div></div>
+</div>
+<div class="result-card text-center">
+<div class="text-xs text-slate-500">🎂Countdown to next birthday</div>
+<div class="result-value text-xl" id="age-next">—</div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Countdown                -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="countdown">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="timer"></i> countdown
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">target date</label><input id="cd-target" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">target time</label><input id="cd-time" type="time" value="00:00"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-cd"><i class="w-3.5 h-3.5" data-lucide="clock"></i> Calculate the reciprocal</button>
+<div class="grid grid-cols-4 gap-3 result-grid mb-4">
+<div class="result-card text-center"><div class="result-value" id="cd-days">0</div><div class="result-label">day</div></div>
+<div class="result-card text-center"><div class="result-value" id="cd-hours">0</div><div class="result-label">hours</div></div>
+<div class="result-card text-center"><div class="result-value" id="cd-mins">0</div><div class="result-label">minutes</div></div>
+<div class="result-card text-center"><div class="result-value" id="cd-secs">0</div><div class="result-label">seconds</div></div>
+</div>
+<div class="text-xs text-slate-600 text-center" id="cd-status"></div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Date Info                -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="info">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="info"></i> Date information (leap year/week/quarter)
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">Date</label><input id="info-date" type="date"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-info"><i class="w-3.5 h-3.5" data-lucide="search"></i> Query date information</button>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 result-grid mb-4">
+<div class="result-card text-center"><div class="result-value text-base" id="info-leap">—</div><div class="result-label">Is it a leap year?</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-year-days">—</div><div class="result-label">Number of days in the year</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-week">—</div><div class="result-label">ISO Week #</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-quarter">—</div><div class="result-label">quarter</div></div>
+</div>
+<div class="grid grid-cols-2 gap-3 result-grid">
+<div class="result-card text-center"><div class="result-value text-base" id="info-doy">—</div><div class="result-label">Day of the year</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-days-left">—</div><div class="result-label">Number of days remaining in the year</div></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- FAQ                             -->
+<!-- ============================ -->
+<section class="mt-12 glass-panel p-6 md:p-8" itemscope="" itemtype="https://schema.org/FAQPage">
+<h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+<i class="w-5 h-5 text-dc" data-lucide="help-circle"></i> Frequently Asked Questions
+            </h2>
+<div class="space-y-2 divide-y divide-hub-700/50">
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">How is the date difference calculated? Does it include start and end days?</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            This tool calculates the "full days difference" between two dates, excluding the time component of the start date. For example from <strong>2026-07-01</strong> Arrive <strong>2026-07-10</strong>, the result is <strong>9 days</strong>(instead of 10 days).<br/><br/>
+                            This is an international standard calculation method, which is consistent with SQL's <code class="text-dc font-mono text-xs px-1">DATEDIFF()</code>, JavaScript <code class="text-dc font-mono text-xs px-1">Date</code> Object,Excel's <code class="text-dc font-mono text-xs px-1">DAYS()</code> The functions are consistent. If you need to include both ends of the date (Inclusive), you can manually +1.
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">How are business days calculated?</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            Working days usually refer to the sum of "Monday to Friday", excluding Saturday and Sunday (weekends). This tool provides flexible settings. You can check "Work on Saturday" or "Work on Sunday" according to your needs to adjust the definition of working days.<br/><br/>
+<strong>Please note:</strong> This tool does not currently include a national holiday database, so it is not possible to exclude national holidays in a specific country. If your project needs to take into account national holidays, you can deduct the corresponding days based on the calculation results. National holiday API integration may be added in a future release.
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">What is ISO Week Number?</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            The week system defined by ISO 8601 is the international standard week numbering method. Its core rules are as follows:<br/><br/>
+<strong>• Every week starts on Monday</strong><br/>
+<strong>• Week number 1 is the week containing the first Thursday of the year</strong><br/>
+                            This also means that if the first day of the year (January 1) falls on a Friday, Saturday or Sunday, it may fall into ISO week 52 or 53 of the previous year.<br/><br/>
+                            ISO Week Number is widely used in European business and scheduling systems, supply chain management, and scenarios that require unified weeks across the year.
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">What are the rules for determining leap years?</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            According to the Gregorian Calendar, the rules for determining leap years are as follows:<br/><br/>
+<strong>1.</strong> AD years are divisible by 4 → may be leap years<br/>
+<strong>2.</strong> But if it is divisible by 100 → not a leap year (century year rule)<br/>
+<strong>3.</strong> But if it is divisible by 400 → it is still a leap year (such as 2000)<br/><br/>
+                            Example:<br/>
+                            • 2024 → ✅ Leap year (divisible by 4, but not by 100)<br/>
+                            • 1900 → ❌ Non-leap year (divisible by 100, not divisible by 400)<br/>
+                            • Year 2000 → ✅ Leap year (divisible by 400)<br/><br/>
+                            There are 366 days in a leap year, 29 of which are in February.
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">Is age calculated based on actual years or imaginary years?</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            This tool adopts internationally accepted <strong>Chronological Age</strong> Calculated as the number of complete years between birth date and target date. The calculation principle of actual age is:<br/><br/>
+<strong>•</strong> If target date month &gt; birth month → age = target year - birth year<br/>
+<strong>•</strong> If month of target date = month of birth and date &gt;= date of birth → age = target year - year of birth<br/>
+<strong>•</strong> Otherwise → age = target year - birth year - 1<br/><br/>
+                            This is consistent with the age calculation used in passports, visas, legal documents, and medical records.
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">How is the Day of Year calculated?</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            Day of Year (DOY, day of the year) refers to the number of days from January 1 of the year to the specified date, starting with <strong>January 1st is day 1</strong>。<br/><br/>
+                            For example:<br/>
+                            • January 1 → Day 1<br/>
+                            • February 1 (normal years) → Day 32<br/>
+                            • December 31 (normal years) → Day 365<br/><br/>
+                            Day of Year is commonly used in astronomical calculations, meteorological data analysis, scientific research and agricultural scheduling. The number of remaining days is the total number of days in the year minus DOY.
+                        </div>
+</div>
+</details>
+</div>
+</section>
+<!-- ============================ -->
+<!-- SEO Article                    -->
+<!-- ============================ -->
+<section class="mt-12 glass-panel p-6 md:p-8">
+<h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+<i class="w-5 h-5 text-dc" data-lucide="book-open"></i> Basic knowledge and application of date calculation
+            </h2>
+<article class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+<p>Date calculation is one of the most common needs in daily life and work. Whether it is deadline tracking for project management, seniority calculation for human resources, interest calculation days for finance, or birthday countdowns and anniversary reminders in personal life, accurate date calculation is crucial.</p>
+<h3 class="text-white font-bold text-lg mt-6">Core concepts of date calculation</h3>
+<p>Although date calculation seems simple, it actually contains many details. The most basic "date difference" calculation involves different agreements such as whether to include the start date and whether to include the end date. In business scenarios, different computing conventions (such as Actual/360, Actual/365, 30/360, etc.) will produce different results.</p>
+<p>The calculation of working days is more complicated than a simple date difference. It needs to consider the definition of working days per week, national holidays, make-up days and other factors. In cross-border projects, work calendars in different countries may be completely different, which is why international project management software usually has built-in support for multi-country work calendars.</p>
+<h3 class="text-white font-bold text-lg mt-6">ISO 8601 and date standardization</h3>
+<p>ISO 8601 is a date and time representation standard developed by the International Organization for Standardization. It not only defines the date format (YYYY-MM-DD), but also defines the week number (ISO Week), time representation, time zone processing, etc. Using the ISO 8601 standard can avoid confusion caused by differences in date formats in different regions (such as American MM/DD/YYYY and European DD/MM/YYYY).</p>
+<p>This tool fully adopts the ISO 8601 standard for date calculation and display, ensuring the accuracy and international applicability of the results. Get consistent calculation results no matter where you are.</p>
+<h3 class="text-white font-bold text-lg mt-6">Practical application scenarios</h3>
+<p><strong>Project management:</strong> Use date difference calculations to track project schedules and calculate milestone intervals; use working day calculations to exclude weekends and more accurately estimate task completion time.</p>
+<p><strong>Human Resources:</strong> Calculate employee seniority, days on the job, and probation expiration date; use age calculations to confirm compliance with legal age requirements.</p>
+<p><strong>Personal life:</strong> Set countdowns for important dates (wedding anniversary, exam date, travel departure date) and calculate how much time has elapsed between two dates.</p>
+<p><strong>Finance Finance:</strong> Calculate the number of days for interest accumulation, bill maturity date, and installment payment interval.</p>
+</article>
+</section>
+<!-- SEO Completeness Upgrade 2026 -->
+<article aria-label="Date Calculator Date Calculator Supplementary Guide" class="seo-upgrade">
+<section class="seo-upgrade-card"><h2>Date Calculator Date Calculator Instructions for Use</h2><p>Free online date calculator. Supports date difference calculation, date addition and subtraction, business days, age calculation, countdown days, leap year judgment, and ISO Week Number. Built-in calendar preview to intuitively display date ranges.</p><h3>Recommended operating procedures</h3><ol><li>Confirm the input format, units and necessary fields first to avoid incorrect data being transmitted all the way to the results.</li><li>Adjust tool options and read instant tips to cross-check with representative boundary values.</li><li>Double-check the results before copying or downloading; for use in formal processes, complete validation in the target environment.</li></ol><h3>Quality and privacy</h3><p>This tool executes natively in the browser and does not rely on backend processing. The results will be affected by input quality, browser support and related technical specifications. Please keep the original version and backup of important data.</p></section>
+</article>
+</main>
+<div id="component-footer"></div>
+<!-- Action Bar (sticky bottom) -->
+<div class="fixed bottom-0 left-0 right-0 z-40 bg-hub-900/90 backdrop-blur border-t border-hub-700 px-4 py-2 flex items-center justify-center gap-2" id="action-bar">
+<span class="text-xs text-slate-600 mr-2 hidden sm:inline">Operation:</span>
+<button class="btn-secondary text-[11px]" id="action-copy"><i class="w-3 h-3" data-lucide="copy"></i> Copy results</button>
+<button class="btn-secondary text-[11px]" id="action-download-txt"><i class="w-3 h-3" data-lucide="download"></i> TXT</button>
+<button class="btn-secondary text-[11px]" id="action-download-csv"><i class="w-3 h-3" data-lucide="table"></i> CSV</button>
+<button class="btn-secondary text-[11px]" id="action-clear"><i class="w-3 h-3" data-lucide="trash-2"></i> Clear</button>
+</div>
+<!-- Toast -->
+<div class="fixed bottom-16 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="w-4 h-4 text-dc" data-lucide="check-circle" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- ========================================== -->
+<!-- System Init                                 -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elId, path) {
+            try {
+                const r = await fetch(path);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const html = await r.text();
+                const c = document.getElementById(elId);
+                c.innerHTML = html;
+                c.querySelectorAll('script').forEach(s => {
+                    const ns = document.createElement('script');
+                    Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(s.innerHTML));
+                    s.parentNode.replaceChild(ns, s);
+                });
+            } catch(e) { console.error(`[System Error] ${path}:`, e); }
+        }
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const t = e.target.closest('#sidebar-trigger-btn'), cl = e.target.closest('#sidebar-close-btn'), ol = e.target.closest('#sidebar-overlay');
+                if (t || cl || ol) {
+                    const c = document.getElementById('sidebar-container'), o = document.getElementById('sidebar-overlay');
+                    if (c && o) {
+                        const isClosed = c.classList.contains('translate-x-full');
+                        if (isClosed && t) { o.classList.remove('pointer-events-none'); requestAnimationFrame(() => { c.classList.remove('translate-x-full'); o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); }
+                        else if (!isClosed && (cl || ol || t)) { c.classList.add('translate-x-full'); o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => o.classList.add('pointer-events-none'), 300); }
+                    }
+                }
+            });
+        }
+        function setupSidebarActiveState() {
+            const cp = '/date-calculator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const h = item.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg'); if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation(); setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- Date Calculator Engine                      -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Shared Helpers ---
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+
+            function showToast(msg, isErr = false) {
+                const icon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                if (isErr) { toast.classList.replace('bg-slate-800', 'bg-red-950'); toast.classList.replace('border-slate-700', 'border-red-900'); icon.className = 'w-4 h-4 text-red-500'; }
+                else { toast.classList.replace('bg-red-950', 'bg-slate-800'); toast.classList.replace('border-red-900', 'border-slate-700'); icon.className = 'w-4 h-4 text-dc'; }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => { toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); }, 2000);
+            }
+
+            function todayStr() {
+                return new Date().toISOString().split('T')[0];
+            }
+
+            function parseDate(str) {
+                if (!str) return null;
+                const d = new Date(str + 'T00:00:00');
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            function daysBetween(a, b) {
+                const ms = b.getTime() - a.getTime();
+                return Math.round(ms / 86400000);
+            }
+
+            function isLeapYear(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
+
+            function daysInYear(y) { return isLeapYear(y) ? 366 : 365; }
+
+            function getISOWeek(date) {
+                const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            }
+
+            function getQuarter(date) { return Math.floor(date.getMonth() / 3) + 1; }
+
+            function getDayOfYear(date) {
+                const start = new Date(date.getFullYear(), 0, 0);
+                return Math.floor((date - start) / 86400000);
+            }
+
+            function daysLeftInYear(date) {
+                return daysInYear(date.getFullYear()) - getDayOfYear(date);
+            }
+
+            function formatDate(d) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            function formatDateReadable(d) {
+                return d.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+            }
+
+            // --- Tab system ---
+            const mainTabs = document.querySelectorAll('#main-tabs .tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            mainTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    mainTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    tabContents.forEach(tc => tc.classList.toggle('hidden', tc.dataset.tab !== tab.dataset.tab));
+                });
+            });
+
+            // --- Init dates ---
+            document.querySelectorAll('input[type="date"]').forEach(el => {
+                if (!el.value) el.value = todayStr();
+            });
+
+            // =============================
+            // Calendar Preview
+            // =============================
+            function renderCalendar(containerId, startDate, endDate) {
+                const container = document.getElementById(containerId);
+                const parent = container.closest('.tab-content') || container.closest('.glass-panel');
+                if (!startDate || !endDate) { container.innerHTML = ''; parent.querySelector('#' + containerId.replace('-grid', '')).classList.add('hidden'); return; }
+
+                parent.querySelector('#' + containerId.replace('-grid', '')).classList.remove('hidden');
+
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                if (start > end) return;
+
+                // Show month of start date
+                const year = start.getFullYear();
+                const month = start.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const startDow = firstDay.getDay(); // 0=Sun
+                const daysInMonth = lastDay.getDate();
+
+                const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                let html = `<div class="text-xs text-slate-400 font-bold text-center mb-2">${year} 年 ${month + 1} 月</div>`;
+                html += '<div class="cal-grid">';
+                weekdays.forEach(wd => html += `<div class="cal-cell cal-header">${wd}</div>`);
+
+                // Previous month padding
+                for (let i = 0; i < startDow; i++) {
+                    html += '<div class="cal-cell cal-day other-month"></div>';
+                }
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateObj = new Date(year, month, d);
+                    const dateStr = formatDate(dateObj);
+                    let cls = 'cal-cell cal-day';
+                    if (formatDate(dateObj) === formatDate(start)) cls += ' range-start';
+                    else if (formatDate(dateObj) === formatDate(end)) cls += ' range-end';
+                    else if (dateObj >= start && dateObj <= end) cls += ' in-range';
+
+                    const today = todayStr();
+                    if (dateStr === today) cls += ' today';
+
+                    html += `<div class="${cls}">${d}</div>`;
+                }
+                html += '</div>';
+                // If end date is in a different month, show that month
+                if (end.getMonth() !== start.getMonth() || end.getFullYear() !== start.getFullYear()) {
+                    const year2 = end.getFullYear();
+                    const month2 = end.getMonth();
+                    const firstDay2 = new Date(year2, month2, 1);
+                    const lastDay2 = new Date(year2, month2 + 1, 0);
+                    const startDow2 = firstDay2.getDay();
+                    const daysInMonth2 = lastDay2.getDate();
+
+                    html += `<div class="text-xs text-slate-400 font-bold text-center mb-2 mt-3">${year2} 年 ${month2 + 1} 月</div>`;
+                    html += '<div class="cal-grid">';
+                    weekdays.forEach(wd => html += `<div class="cal-cell cal-header">${wd}</div>`);
+                    for (let i = 0; i < startDow2; i++) {
+                        html += '<div class="cal-cell cal-day other-month"></div>';
+                    }
+                    for (let d = 1; d <= daysInMonth2; d++) {
+                        const dateObj = new Date(year2, month2, d);
+                        const dateStr = formatDate(dateObj);
+                        let cls = 'cal-cell cal-day';
+                        if (formatDate(dateObj) === formatDate(start)) cls += ' range-start';
+                        else if (formatDate(dateObj) === formatDate(end)) cls += ' range-end';
+                        else if (dateObj >= start && dateObj <= end) cls += ' in-range';
+
+                        if (dateStr === todayStr()) cls += ' today';
+                        html += `<div class="${cls}">${d}</div>`;
+                    }
+                    html += '</div>';
+                }
+                container.innerHTML = html;
+            }
+
+            // =============================
+            // Date Difference
+            // =============================
+            document.getElementById('btn-diff').addEventListener('click', () => {
+                const s = parseDate(document.getElementById('diff-start').value);
+                const e = parseDate(document.getElementById('diff-end').value);
+                if (!s || !e) { showToast('請輸入有效的日期', true); return; }
+                if (s > e) { showToast('開始日期需早於結束日期', true); return; }
+
+                const totalDays = daysBetween(s, e);
+                document.getElementById('diff-days').textContent = totalDays.toLocaleString();
+                document.getElementById('diff-weeks').textContent = (totalDays / 7).toFixed(1);
+                document.getElementById('diff-hours').textContent = (totalDays * 24).toLocaleString();
+
+                // Months and years
+                let months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+                if (e.getDate() < s.getDate()) months--;
+                document.getElementById('diff-months').textContent = months;
+                document.getElementById('diff-years').textContent = (months / 12).toFixed(1);
+
+                renderCalendar('diff-cal-grid', s, e);
+            });
+
+            // =============================
+            // Add / Subtract
+            // =============================
+            function calcAddSub(sign) {
+                const d = parseDate(document.getElementById('addsub-date').value);
+                if (!d) { showToast('請輸入有效的日期', true); return; }
+                const amount = parseInt(document.getElementById('addsub-amount').value) || 0;
+                const unit = document.getElementById('addsub-unit').value;
+                let result = new Date(d);
+                if (unit === 'days') result.setDate(result.getDate() + amount * sign);
+                else if (unit === 'weeks') result.setDate(result.getDate() + amount * 7 * sign);
+                else if (unit === 'months') result.setMonth(result.getMonth() + amount * sign);
+                else if (unit === 'years') result.setFullYear(result.getFullYear() + amount * sign);
+
+                document.getElementById('addsub-result').textContent = formatDate(result);
+                document.getElementById('addsub-detail').textContent = formatDateReadable(result);
+            }
+            document.getElementById('btn-add').addEventListener('click', () => calcAddSub(1));
+            document.getElementById('btn-sub').addEventListener('click', () => calcAddSub(-1));
+
+            // =============================
+            // Business Days
+            // =============================
+            document.getElementById('btn-biz').addEventListener('click', () => {
+                const s = parseDate(document.getElementById('biz-start').value);
+                const e = parseDate(document.getElementById('biz-end').value);
+                if (!s || !e) { showToast('請輸入有效的日期', true); return; }
+                if (s > e) { showToast('開始日期需早於結束日期', true); return; }
+
+                const satWork = document.getElementById('biz-sat').checked;
+                const sunWork = document.getElementById('biz-sun').checked;
+                let work = 0, weekend = 0;
+                const cur = new Date(s);
+                while (cur <= e) {
+                    const dow = cur.getDay();
+                    if (dow === 0 && !sunWork) weekend++;
+                    else if (dow === 6 && !satWork) weekend++;
+                    else work++;
+                    cur.setDate(cur.getDate() + 1);
+                }
+                document.getElementById('biz-work').textContent = work.toLocaleString();
+                document.getElementById('biz-weekend').textContent = weekend.toLocaleString();
+            });
+
+            // =============================
+            // Age Calculator
+            // =============================
+            document.getElementById('btn-age').addEventListener('click', () => {
+                const birth = parseDate(document.getElementById('age-birth').value);
+                let target = parseDate(document.getElementById('age-target').value);
+                if (!target) target = new Date();
+                if (!birth) { showToast('請輸入出生日期', true); return; }
+                if (birth > target) { showToast('出生日期不能晚於目標日期', true); return; }
+
+                let years = target.getFullYear() - birth.getFullYear();
+                let months = target.getMonth() - birth.getMonth();
+                let days = target.getDate() - birth.getDate();
+                if (days < 0) { months--; const prevMonth = new Date(target.getFullYear(), target.getMonth(), 0); days += prevMonth.getDate(); }
+                if (months < 0) { years--; months += 12; }
+
+                const totalDays = daysBetween(birth, target);
+                const totalMonths = years * 12 + months;
+
+                document.getElementById('age-years').textContent = years;
+                document.getElementById('age-months').textContent = totalMonths;
+                document.getElementById('age-days').textContent = totalDays.toLocaleString();
+
+                // Next birthday
+                const nextBday = new Date(target.getFullYear(), birth.getMonth(), birth.getDate());
+                if (nextBday <= target) nextBday.setFullYear(nextBday.getFullYear() + 1);
+                const daysToBday = daysBetween(target, nextBday);
+                document.getElementById('age-next').textContent = daysToBday === 0 ? '🎉 就是今天！' : `${formatDate(nextBday)}（剩 ${daysToBday} 天）`;
+            });
+
+            // =============================
+            // Countdown
+            // =============================
+            document.getElementById('btn-cd').addEventListener('click', () => {
+                const dateStr = document.getElementById('cd-target').value;
+                const timeStr = document.getElementById('cd-time').value;
+                if (!dateStr) { showToast('請輸入目標日期', true); return; }
+                const target = new Date(dateStr + 'T' + (timeStr || '00:00') + ':00');
+                const now = new Date();
+                const diff = target - now;
+                if (diff <= 0) {
+                    document.getElementById('cd-days').textContent = '0';
+                    document.getElementById('cd-hours').textContent = '0';
+                    document.getElementById('cd-mins').textContent = '0';
+                    document.getElementById('cd-secs').textContent = '0';
+                    document.getElementById('cd-status').textContent = '⏰ 目標時間已過';
+                    return;
+                }
+                const totalSecs = Math.floor(diff / 1000);
+                const days = Math.floor(totalSecs / 86400);
+                const hours = Math.floor((totalSecs % 86400) / 3600);
+                const mins = Math.floor((totalSecs % 3600) / 60);
+                const secs = totalSecs % 60;
+
+                document.getElementById('cd-days').textContent = days.toLocaleString();
+                document.getElementById('cd-hours').textContent = hours;
+                document.getElementById('cd-mins').textContent = mins;
+                document.getElementById('cd-secs').textContent = secs;
+                document.getElementById('cd-status').textContent = `目標：${formatDateReadable(target)}`;
+            });
+
+            // =============================
+            // Date Info
+            // =============================
+            document.getElementById('btn-info').addEventListener('click', () => {
+                const d = parseDate(document.getElementById('info-date').value);
+                if (!d) { showToast('請輸入有效的日期', true); return; }
+                const y = d.getFullYear();
+                const leap = isLeapYear(y);
+                document.getElementById('info-leap').textContent = leap ? '✅ 是' : '❌ 否';
+                document.getElementById('info-year-days').textContent = daysInYear(y);
+                document.getElementById('info-week').textContent = getISOWeek(d);
+                document.getElementById('info-quarter').textContent = `Q${getQuarter(d)}`;
+                document.getElementById('info-doy').textContent = getDayOfYear(d);
+                document.getElementById('info-days-left').textContent = daysLeftInYear(d);
+            });
+
+            // =============================
+            // Action Bar
+            // =============================
+            function getActiveResultText() {
+                let lines = [];
+                const activeTab = document.querySelector('#main-tabs .tab-btn.active');
+                if (!activeTab) return '';
+                const tab = activeTab.dataset.tab;
+                if (tab === 'diff') {
+                    lines.push('=== 日期差計算結果 ===');
+                    lines.push(`總天數: ${document.getElementById('diff-days').textContent}`);
+                    lines.push(`週數: ${document.getElementById('diff-weeks').textContent}`);
+                    lines.push(`月數: ${document.getElementById('diff-months').textContent}`);
+                    lines.push(`年數: ${document.getElementById('diff-years').textContent}`);
+                    lines.push(`小時: ${document.getElementById('diff-hours').textContent}`);
+                } else if (tab === 'addsub') {
+                    lines.push('=== 日期加減結果 ===');
+                    lines.push(`結果日期: ${document.getElementById('addsub-result').textContent}`);
+                } else if (tab === 'bizdays') {
+                    lines.push('=== 工作天計算結果 ===');
+                    lines.push(`工作天: ${document.getElementById('biz-work').textContent}`);
+                    lines.push(`週末/休息日: ${document.getElementById('biz-weekend').textContent}`);
+                } else if (tab === 'age') {
+                    lines.push('=== 年齡計算結果 ===');
+                    lines.push(`年齡: ${document.getElementById('age-years').textContent} 歲`);
+                    lines.push(`月數: ${document.getElementById('age-months').textContent}`);
+                    lines.push(`天數: ${document.getElementById('age-days').textContent}`);
+                    lines.push(`下次生日: ${document.getElementById('age-next').textContent}`);
+                } else if (tab === 'countdown') {
+                    lines.push('=== 倒數計時結果 ===');
+                    lines.push(`天: ${document.getElementById('cd-days').textContent}`);
+                    lines.push(`小時: ${document.getElementById('cd-hours').textContent}`);
+                    lines.push(`分鐘: ${document.getElementById('cd-mins').textContent}`);
+                    lines.push(`秒: ${document.getElementById('cd-secs').textContent}`);
+                } else if (tab === 'info') {
+                    lines.push('=== 日期資訊結果 ===');
+                    lines.push(`閏年: ${document.getElementById('info-leap').textContent}`);
+                    lines.push(`當年天數: ${document.getElementById('info-year-days').textContent}`);
+                    lines.push(`ISO Week: ${document.getElementById('info-week').textContent}`);
+                    lines.push(`季度: ${document.getElementById('info-quarter').textContent}`);
+                    lines.push(`年內第幾天: ${document.getElementById('info-doy').textContent}`);
+                    lines.push(`剩餘天數: ${document.getElementById('info-days-left').textContent}`);
+                }
+                return lines.join('\n');
+            }
+
+            document.getElementById('action-copy').addEventListener('click', () => {
+                const text = getActiveResultText();
+                if (!text) { showToast('沒有結果可複製', true); return; }
+                navigator.clipboard.writeText(text).then(() => showToast('已複製'));
+            });
+
+            document.getElementById('action-download-txt').addEventListener('click', () => {
+                const text = getActiveResultText();
+                if (!text) { showToast('沒有結果可下載', true); return; }
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `date-calculator_${todayStr()}.txt`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast('已下載 TXT');
+            });
+
+            document.getElementById('action-download-csv').addEventListener('click', () => {
+                const text = getActiveResultText();
+                if (!text) { showToast('沒有結果可下載', true); return; }
+                // Convert to CSV format
+                const lines = text.split('\n');
+                const csv = lines.map(l => `"${l.replace(/"/g,'""')}"`).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `date-calculator_${todayStr()}.csv`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast('已下載 CSV');
+            });
+
+            document.getElementById('action-clear').addEventListener('click', () => {
+                document.querySelectorAll('input[type="date"]').forEach(el => el.value = todayStr());
+                document.querySelectorAll('input[type="number"]').forEach(el => el.value = el.id === 'addsub-amount' ? '30' : el.value);
+                document.querySelectorAll('.result-value').forEach(el => el.textContent = '0');
+                document.getElementById('addsub-result').textContent = '—';
+                document.getElementById('addsub-detail').textContent = '';
+                document.getElementById('cd-status').textContent = '';
+                document.getElementById('age-next').textContent = '—';
+                document.getElementById('diff-cal-grid').innerHTML = '';
+                document.getElementById('diff-calendar').classList.add('hidden');
+                showToast('已清除');
+            });
+
+            // Auto-calculate on first load
+            setTimeout(() => {
+                document.getElementById('btn-diff').click();
+                document.getElementById('btn-biz').click();
+                document.getElementById('btn-age').click();
+                document.getElementById('btn-info').click();
+            }, 100);
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

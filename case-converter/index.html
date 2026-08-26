@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Converter 文字大小寫轉換器 | ToolHub - 程式命名助手與格式轉換</title>
+    <meta name="description" content="免費線上文字大小寫轉換工具。支援 UPPERCASE、lowercase、Title Case、camelCase、PascalCase、snake_case、kebab-case 等 12 種格式。內建 Programming Naming Helper，一鍵檢視所有命名慣例。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="Case Converter, 大小寫轉換, 文字轉換, camelCase, PascalCase, snake_case, kebab-case, 命名慣例, 程式命名, 線上工具">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
+
+        .editor-textarea {
+            width: 100%;
+            min-height: 280px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s;
+        }
+        .editor-textarea:focus {
+            border-color: #F59E0B;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+        .editor-textarea::placeholder { color: #475569; }
+
+        .output-textarea {
+            width: 100%;
+            min-height: 280px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            border-radius: 0.75rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .output-textarea::placeholder { color: #475569; }
+
+        /* Format buttons */
+        .format-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .format-btn:hover {
+            background: #1E293B;
+            color: #F59E0B;
+            border-color: #F59E0B;
+        }
+        .format-btn.active {
+            background: rgba(245, 158, 11, 0.15);
+            color: #F59E0B;
+            border-color: #F59E0B;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+        }
+
+        /* Naming helper cards */
+        .naming-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+        .naming-card:hover {
+            border-color: #F59E0B/30;
+            background: #151F32;
+        }
+        .naming-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #F59E0B;
+            margin-bottom: 0.25rem;
+        }
+        .naming-value {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            word-break: break-all;
+        }
+
+        /* Stats badges */
+        .stat-badge {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            text-align: center;
+        }
+        .stat-badge .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #F59E0B;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .stat-badge .stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        /* Format detection badge */
+        .format-detection {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: #F59E0B;
+            font-weight: 500;
+        }
+
+        /* Toggle switches */
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #F59E0B; border-color: #F59E0B; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        /* Animation */
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes flash-success {
+            0% { background-color: rgba(245, 158, 11, 0.15); }
+            100% { background-color: transparent; }
+        }
+        .flash-active { animation: flash-success 0.5s ease-out; }
+
+        /* Tab system */
+        .view-tab {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            border: 1px solid transparent;
+        }
+        .view-tab:hover { color: #e2e8f0; }
+        .view-tab.active {
+            background: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        /* SEO Article Styles */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #F59E0B;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #F59E0B;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(245, 158, 11, 0.05);
+            border-left: 3px solid #F59E0B;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .editor-textarea { min-height: 200px; }
+            .output-textarea { min-height: 200px; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/case-converter/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/case-converter/">
+    <meta property="og:title" content="Case Converter 文字大小寫轉換器">
+    <meta property="og:description" content="免費線上文字大小寫轉換工具。支援 UPPERCASE、lowercase、Title Case、camelCase、PascalCase、snake_case、kebab-case 等 12 種格式。內建 Programming Naming Helper，一鍵檢視所有命名慣例。純前端本地運算，保障隱私安全。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Case Converter 文字大小寫轉換器">
+    <meta name="twitter:description" content="免費線上文字大小寫轉換工具。支援 UPPERCASE、lowercase、Title Case、camelCase、PascalCase、snake_case、kebab-case 等 12 種格式。內建 Programming Naming Helper，一鍵檢視所有命名慣例。純前端本地運算，保障隱私安全。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Case Converter 文字大小寫轉換器","url":"https://toolhuben.com/case-converter/","description":"免費線上文字大小寫轉換工具。支援 UPPERCASE、lowercase、Title Case、camelCase、PascalCase、snake_case、kebab-case 等 12 種格式。內建 Programming Naming Helper，一鍵檢視所有命名慣例。純前端本地運算，保障隱私安全。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Case Converter 文字大小寫轉換器","item":"https://toolhuben.com/case-converter/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/case-converter/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/case-converter/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/case-converter/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248" data-tool-visual data-classic-tool data-classic-layout="editorial">
+
+    <!-- 1. Header -->
+    <div id="component-header"></div>
+    <!-- 2. Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. Core Module: Case Converter -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- Module Title -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-amber-400">
+                <span class="flex w-2 h-2 bg-amber-400 rounded-full animate-pulse mr-2"></span>
+                12 種大小寫格式 · 即時轉換引擎
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Case Converter <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">文字大小寫轉換器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                快速轉換各種英文大小寫格式，適用於程式開發、SEO、內容創作與日常文字處理。<br class="hidden sm:block"/>
+                內建 <strong class="text-amber-400">Programming Naming Helper</strong>，一次檢視所有程式命名慣例。
+            </p>
+        </div>
+
+        <!-- Main Tool Area -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+
+            <!-- View Tab Bar -->
+            <div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">轉換模式</span>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button id="tab-single" class="view-tab active" data-view="single">
+                        <i class="ph ph-arrows-left-right mr-1.5 text-xs"></i>單一格式
+                    </button>
+                    <button id="tab-helper" class="view-tab" data-view="helper">
+                        <i class="ph ph-grid-four mr-1.5 text-xs"></i>Naming Helper
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tool Content -->
+            <div class="flex flex-col lg:flex-row min-h-[500px]">
+
+                <!-- ===== LEFT PANEL: Input ===== -->
+                <div class="w-full lg:w-3/5 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- Input Label Row -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-text-aa text-amber-400 text-lg"></i> 原始文字
+                        </label>
+                        <span id="input-stats" class="text-xs text-slate-500 font-mono">0 chars · 0 words</span>
+                    </div>
+
+                    <!-- Input Textarea -->
+                    <textarea id="input-textarea" class="editor-textarea font-sans" placeholder="在此輸入文字，即時轉換...&#10;&#10;支援：純文字、Markdown、HTML、程式碼" spellcheck="false"></textarea>
+
+                    <!-- Extra Options -->
+                    <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-faders-horizontal text-amber-400 text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">額外選項</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-trim" class="sr-only toggle-checkbox">
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                Trim 首尾空白
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-remove-spaces" class="sr-only toggle-checkbox">
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                移除多餘空白
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-newlines" class="sr-only toggle-checkbox" checked>
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                保留換行
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                <div class="relative">
+                                    <input type="checkbox" id="opt-indent" class="sr-only toggle-checkbox">
+                                    <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                    <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                </div>
+                                保留縮排
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Format Buttons Grid -->
+                    <div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-text-italic text-amber-400 text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">選擇轉換格式</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                            <button class="format-btn" data-format="uppercase">UPPERCASE</button>
+                            <button class="format-btn active" data-format="lowercase">lowercase</button>
+                            <button class="format-btn" data-format="title">Title Case</button>
+                            <button class="format-btn" data-format="sentence">Sentence case</button>
+                            <button class="format-btn" data-format="capitalize">Capitalize</button>
+                            <button class="format-btn" data-format="toggle">Toggle Case</button>
+                            <button class="format-btn" data-format="camel">camelCase</button>
+                            <button class="format-btn" data-format="pascal">PascalCase</button>
+                            <button class="format-btn" data-format="snake">snake_case</button>
+                            <button class="format-btn" data-format="screaming">SCREAMING_SNAKE</button>
+                            <button class="format-btn" data-format="kebab">kebab-case</button>
+                            <button class="format-btn" data-format="train">Train-Case</button>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap items-center gap-2 pt-2">
+                        <button id="btn-copy" class="px-4 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 text-xs font-medium transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-copy"></i> Copy
+                        </button>
+                        <button id="btn-download" class="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/50 text-emerald-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-download-simple"></i> Download TXT
+                        </button>
+                        <button id="btn-clear" class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-trash"></i> Clear
+                        </button>
+                        <button id="btn-sample" class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-file-text"></i> Sample Text
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ===== RIGHT PANEL: Output ===== -->
+                <div class="w-full lg:w-2/5 border-t lg:border-t-0 lg:border-l border-hub-700 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- Output Label -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-check-square text-amber-400 text-lg"></i>
+                            <span id="output-label">轉換結果</span>
+                        </label>
+                        <div id="format-detection" class="format-detection hidden">
+                            <i class="ph ph-magic-wand"></i>
+                            <span id="detected-format">lowercase</span>
+                        </div>
+                    </div>
+
+                    <!-- SINGLE VIEW: Output Textarea -->
+                    <div id="view-single" class="flex flex-col gap-3 flex-grow">
+                        <textarea id="output-textarea" class="output-textarea font-mono flex-grow" readonly placeholder="轉換結果將顯示在此處..."></textarea>
+
+                        <!-- Stats Badges -->
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="stat-badge">
+                                <div class="stat-value" id="stat-chars">0</div>
+                                <div class="stat-label">Characters</div>
+                            </div>
+                            <div class="stat-badge">
+                                <div class="stat-value" id="stat-words">0</div>
+                                <div class="stat-label">Words</div>
+                            </div>
+                            <div class="stat-badge">
+                                <div class="stat-value" id="stat-lines">0</div>
+                                <div class="stat-label">Lines</div>
+                            </div>
+                            <div class="stat-badge">
+                                <div class="stat-value text-xs text-amber-400" id="stat-format">—</div>
+                                <div class="stat-label">Format</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HELPER VIEW: Naming Helper Grid -->
+                    <div id="view-helper" class="hidden flex-col gap-3 overflow-y-auto flex-grow" style="max-height: 500px;">
+                        <div class="text-xs text-slate-500 mb-1">所有命名慣例一次檢視：</div>
+                        <div id="helper-grid" class="space-y-2">
+                            <!-- Filled dynamically -->
+                            <div class="text-center text-slate-500 text-sm py-8">
+                                <i class="ph ph-arrow-left text-2xl block mb-2"></i>
+                                請在左側輸入文字
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <div class="mt-12 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ 常見問題 <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">FAQ</span></h2>
+                <p class="text-slate-400 text-sm">關於文字大小寫轉換與程式命名慣例的常見疑問</p>
+            </div>
+
+            <div class="space-y-3">
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>camelCase 是什麼？在哪些地方使用？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">camelCase</strong>（駝峰式大小寫）是一種將複合詞組拼接的命名慣例，第一個單字首字母小寫，後續每個單字首字母大寫，其餘字母小寫，且不包含任何分隔符號。</p>
+                        <p class="mt-2">範例：<code class="text-amber-400">helloWorld</code>、<code class="text-amber-400">userFirstName</code>、<code class="text-amber-400">getUserData</code></p>
+                        <p class="mt-2">主要使用場景：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">JavaScript / TypeScript</strong> — 變數、函式名稱（如 <code>myVariable</code>、<code>calculateTotal()</code>）</li>
+                            <li><strong class="text-white">Java</strong> — 方法與區域變數（如 <code>toString()</code>、<code>studentName</code>）</li>
+                            <li><strong class="text-white">JSON</strong> — 屬性鍵值（雖然也常用 snake_case）</li>
+                            <li><strong class="text-white">C# / PHP</strong> — 區域變數與參數</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>PascalCase 與 camelCase 有什麼不同？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>兩者最大的差異在於<strong class="text-white">第一個單字的首字母</strong>：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-amber-400">camelCase</strong>：首字小寫 → <code>helloWorld</code></p>
+                            <p class="mt-1"><strong class="text-amber-400">PascalCase</strong>：首字大寫 → <code>HelloWorld</code></p>
+                        </div>
+                        <p class="mt-2">PascalCase（又稱 UpperCamelCase）通常用於：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">類別名稱</strong> — 如 <code>UserController</code>、<code>DatabaseManager</code></li>
+                            <li><strong class="text-white">C# / .NET</strong> — 類別、方法、屬性皆使用 PascalCase</li>
+                            <li><strong class="text-white">React 元件</strong> — 如 <code>function UserProfile()</code></li>
+                            <li><strong class="text-white">TypeScript 型別與介面</strong> — 如 <code>interface UserData</code></li>
+                            <li><strong class="text-white">列舉 (Enum)</strong> — 如 <code>enum Color { Red, Green, Blue }</code></li>
+                        </ul>
+                        <p class="mt-2">簡單記憶法：如果第一個字母大寫就是 PascalCase，小寫就是 camelCase。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>snake_case 與 kebab-case 的差異是什麼？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>兩者都使用分隔符號來連接單字，但使用的符號不同：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-amber-400">snake_case</strong>：使用底線 <code>_</code> → <code>hello_world_example</code></p>
+                            <p class="mt-1"><strong class="text-amber-400">kebab-case</strong>：使用連字號 <code>-</code> → <code>hello-world-example</code></p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">snake_case</strong> 常見於：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">Python</strong> — 變數與函式名稱（官方 PEP 8 推薦）</li>
+                            <li><strong class="text-white">Ruby</strong> — 方法與符號名稱</li>
+                            <li><strong class="text-white">資料庫</strong> — 資料表與欄位名稱（如 <code>user_id</code>、<code>created_at</code>）</li>
+                            <li><strong class="text-white">環境變數</strong> — 如 <code>DATABASE_URL</code>（常搭配大寫）</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">kebab-case</strong> 常見於：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">URL 路徑</strong> — 如 <code>/my-blog-post</code>（SEO 友善）</li>
+                            <li><strong class="text-white">HTML/CSS</strong> — class 名稱與自訂屬性（如 <code>data-user-id</code>）</li>
+                            <li><strong class="text-white">檔案名稱</strong> — 如 <code>my-component.tsx</code></li>
+                            <li><strong class="text-white">npm 套件名稱</strong> — 如 <code>express-validator</code></li>
+                        </ul>
+                        <p class="mt-2">⚠️ kebab-case 無法在大多數程式語言的變數名稱中使用（因為減號會被解讀為減法運算子）。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Title Case 與 Sentence case 有什麼不同？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>兩種格式用於不同情境，主要差異在於哪些單字需要大寫：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-amber-400">Title Case</strong>：每個主要單字首字母大寫 → <code>The Quick Brown Fox Jumps Over the Lazy Dog</code></p>
+                            <p class="mt-1"><strong class="text-amber-400">Sentence case</strong>：僅首字大寫，其餘小寫 → <code>The quick brown fox jumps over the lazy dog</code></p>
+                        </div>
+                        <p class="mt-2"><strong class="text-white">Title Case</strong>（標題大小寫）：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>每個實詞（名詞、動詞、形容詞、副詞）的首字母大寫</li>
+                            <li>冠詞（a, an, the）、連接詞（and, but, or）和介系詞（in, on, at）通常小寫</li>
+                            <li>用於：<strong class="text-white">文章標題</strong>、<strong class="text-white">書籍名稱</strong>、<strong class="text-white">新聞頭條</strong>、<strong class="text-white">按鈕標籤</strong></li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">Sentence case</strong>（句子大小寫）：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>僅句子第一個單字首字母大寫，專有名詞保持大寫</li>
+                            <li>用於：<strong class="text-white">一般文章內容</strong>、<strong class="text-white">電子郵件</strong>、<strong class="text-white">產品描述</strong>、<strong class="text-white">UI 提示文字</strong></li>
+                        </ul>
+                        <p class="mt-2">💡 簡單來說：Title Case 是「每個單字都大寫」，Sentence case 是「只有開頭大寫」。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>SCREAMING_SNAKE_CASE 是什麼？什麼時候用？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">SCREAMING_SNAKE_CASE</strong>（大寫底線式）就是將 snake_case 全部轉為大寫。所有字母大寫，單字間以底線分隔。</p>
+                        <div class="highlight-box mt-2">
+                            <p>範例：<code class="text-amber-400">MAX_CONNECTIONS</code>、<code class="text-amber-400">DATABASE_HOST</code>、<code class="text-amber-400">API_SECRET_KEY</code></p>
+                        </div>
+                        <p class="mt-2">主要使用場景：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">常數 (Constants)</strong> — 永不改變的值（如 <code>MAX_RETRY_COUNT = 3</code>）</li>
+                            <li><strong class="text-white">環境變數</strong> — 作業系統與 Docker 的環境變數慣例</li>
+                            <li><strong class="text-white">列舉值 (Enum)</strong> — 部分語言中列舉成員使用大寫底線</li>
+                            <li><strong class="text-white">巨集 (Macros)</strong> — C/C++ 的前處理器巨集</li>
+                            <li><strong class="text-white">設定檔 Key</strong> — 如 <code>NODE_ENV=production</code></li>
+                        </ul>
+                        <p class="mt-2">「SCREAMING」這個名稱很形象 — 就像在「大聲喊叫」這些變數名稱，強調它們是特別重要的常數。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>這個工具支援中文或其他非英文文字嗎？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>英文大小寫轉換（如 UPPERCASE、lowercase）<strong class="text-white">不影響中文、日文、韓文等非拉丁文字</strong>，這些文字會保持原樣。</p>
+                        <p class="mt-2">對於程式命名慣例（camelCase、snake_case 等），工具會：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>將非英文字母視為單字邊界</li>
+                            <li>中文與其他非拉丁文字會以單詞形式保留</li>
+                            <li>對於混合中英文的內容（如 <code>取得UserData</code>），英文部分會進行轉換，中文部分保持不變</li>
+                        </ul>
+                        <p class="mt-2">💡 這是一個 <strong class="text-white">純前端工具</strong>，您的所有文字資料都在瀏覽器中處理，不會上傳到任何伺服器，請放心使用。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Toggle Case 是什麼功能？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">Toggle Case</strong>（切換大小寫）會反轉每個英文字母的大小寫狀態。大寫字母變成小寫，小寫字母變成大寫。</p>
+                        <div class="highlight-box mt-2">
+                            <p>範例：<code class="text-amber-400">Hello World</code> → <code class="text-amber-400">hELLO wORLD</code></p>
+                            <p class="mt-1">範例：<code class="text-amber-400">JavaScript</code> → <code class="text-amber-400">jAVAsCRIPT</code></p>
+                        </div>
+                        <p class="mt-2">這個功能在以下情況很實用：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>不小心按到了 Caps Lock 打錯字時快速修正</li>
+                            <li>需要從某個全大寫或全小寫的來源反轉文字</li>
+                            <li>創造特殊風格的文字效果</li>
+                        </ul>
+                        <p class="mt-2">實際上很少在程式開發中使用，但作為文字處理工具來說是一個經典又方便的即時救星！</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- ===== SEO ARTICLE ===== -->
+        <div class="mt-12 max-w-4xl mx-auto seo-article">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 程式命名慣例完全指南</h2>
+                <p class="text-slate-400 text-sm">深入了解各種大小寫格式與命名慣例，寫出更專業的程式碼</p>
+            </div>
+
+            <div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2>為什麼程式命名慣例如此重要？</h2>
+                <p>在軟體開發中，<strong>命名慣例 (Naming Conventions)</strong> 是撰寫可維護程式碼的基石。無論是變數、函式、類別還是檔案名稱，一致的命名風格能讓團隊成員快速理解程式碼意圖，減少溝通成本與潛在錯誤。</p>
+                <p>根據研究，開發者花費 <strong>70% 的時間在閱讀程式碼</strong>，而非撰寫程式碼。良好的命名習慣能極大提升程式碼的可讀性與可維護性。</p>
+
+                <div class="highlight-box">
+                    <p><strong>💡 核心原則：</strong>命名應清楚表達用途，而非如何實現。變數名稱如 <code>userList</code> 比 <code>arr</code> 更容易理解，函式名稱如 <code>getUserById()</code> 比 <code>processData()</code> 更具描述性。</p>
+                </div>
+
+                <h2>常見程式命名慣例總覽</h2>
+                <p>以下是程式開發中最常用的命名慣例及其適用語言：</p>
+
+                <h3>camelCase（駝峰式）</h3>
+                <p>camelCase 是 <strong>JavaScript、TypeScript 與 Java</strong> 生態系中最廣泛使用的命名慣例。其名稱來自於大小寫交替的外觀像駱駝的駝峰。第一個單字以小寫開頭，後續單字以大寫開頭，不使用任何分隔符號。</p>
+                <p><strong>使用情境：</strong></p>
+                <ul>
+                    <li><strong>JavaScript/TypeScript</strong>：變數與函式名稱（<code>const userName = 'John'</code>、<code>function fetchData()</code>）</li>
+                    <li><strong>Java</strong>：方法與區域變數（<code>public void getUserInfo()</code>）</li>
+                    <li><strong>Swift</strong>：變數與函式名稱</li>
+                    <li><strong>JSON 屬性鍵</strong>：雖然 API 可能使用 snake_case，但 JS 前端習慣使用 camelCase</li>
+                </ul>
+
+                <h3>PascalCase（大寫駝峰式）</h3>
+                <p>PascalCase 與 camelCase 類似，但<strong>第一個單字也以大寫開頭</strong>。在物件導向程式設計中，PascalCase 幾乎是所有語言的類別命名標準。</p>
+                <p><strong>使用情境：</strong></p>
+                <ul>
+                    <li><strong>C#</strong>：類別、方法、屬性、命名空間皆使用 PascalCase</li>
+                    <li><strong>React 元件</strong>：<code>function UserProfile()</code></li>
+                    <li><strong>TypeScript</strong>：型別、介面、列舉（<code>type UserData</code>、<code>interface IUser</code>）</li>
+                    <li><strong>Java</strong>：類別名稱（<code>public class UserController</code>）</li>
+                    <li><strong>Flutter/Dart</strong>：Widget 類別名稱</li>
+                </ul>
+
+                <h3>snake_case（蛇形式）</h3>
+                <p>snake_case 使用底線 <code>_</code> 分隔單字，所有字母小寫。它在 <strong>Python 生態系</strong>中佔有主導地位，也是資料庫設計的常見選擇。</p>
+                <p><strong>使用情境：</strong></p>
+                <ul>
+                    <li><strong>Python</strong>：PEP 8 規範推薦使用 snake_case 命名變數與函式</li>
+                    <li><strong>Ruby</strong>：方法與符號名稱</li>
+                    <li><strong>SQL／資料庫</strong>：資料表與欄位（<code>created_at</code>、<code>user_id</code>）</li>
+                    <li><strong>Rust</strong>：函式與變數名稱</li>
+                    <li><strong>PHP</strong>：部分框架使用 snake_case（如 CodeIgniter）</li>
+                </ul>
+
+                <h3>SCREAMING_SNAKE_CASE（大寫蛇形式）</h3>
+                <p>這是 snake_case 的「全大寫」版本，主要用於宣告<strong>常數與環境變數</strong>。</p>
+                <p><strong>使用情境：</strong></p>
+                <ul>
+                    <li><strong>常數宣告</strong>：<code>MAX_RETRY_COUNT = 3</code></li>
+                    <li><strong>環境變數</strong>：<code>DATABASE_URL</code>、<code>API_KEY</code></li>
+                    <li><strong>C/C++ 巨集</strong>：<code>#define BUFFER_SIZE 1024</code></li>
+                    <li><strong>Docker</strong>：Dockerfile 中的 ENV 變數</li>
+                    <li><strong>CI/CD</strong>：GitHub Actions 環境變數慣例</li>
+                </ul>
+
+                <h3>kebab-case（烤肉串式）</h3>
+                <p>kebab-case 使用連字號 <code>-</code> 分隔單字，所有字母小寫。因為連字號在大多數程式語言中會被解讀為減法運算子，所以<strong>kebab-case 極少用於程式碼內部的命名</strong>，但其在 Web 開發檔案與 URL 中非常普遍。</p>
+                <p><strong>使用情境：</strong></p>
+                <ul>
+                    <li><strong>HTML/CSS</strong>：class 名稱（<code>.my-component</code>）、自訂屬性（<code>data-user-id</code>）</li>
+                    <li><strong>檔案與目錄名稱</strong>：<code>my-component.tsx</code>、<code>user-profile-page</code></li>
+                    <li><strong>URL Slug</strong>：<code>/how-to-install-nodejs</code>（SEO 最佳化）</li>
+                    <li><strong>npm 套件名稱</strong>：<code>lodash-es</code>、<code>express-validator</code></li>
+                    <li><strong>Vue.js</strong>：元件標籤名稱建議使用 kebab-case</li>
+                </ul>
+
+                <h2>如何選擇適合的命名慣例？</h2>
+                <p>選擇命名慣例時，建議遵循以下原則：</p>
+                <ol>
+                    <li><strong>遵循語言生態系慣例</strong> — 每個語言都有其社群公認的規範（如 Python 的 PEP 8、JavaScript 的 Airbnb Style Guide）</li>
+                    <li><strong>保持專案一致性</strong> — 在同一個專案中使用統一的命名風格，不要混用</li>
+                    <li><strong>參考框架/函式庫的命名風格</strong> — 使用 React 時跟隨 React 的 camelCase 慣例</li>
+                    <li><strong>考慮團隊習慣</strong> — 團隊內部的命名慣例優先於個人偏好</li>
+                    <li><strong>善用格式化工具</strong> — 使用 ESLint、Prettier 等工具自動規範命名與格式</li>
+                </ol>
+
+                <div class="highlight-box">
+                    <p><strong>📌 實用建議：</strong>初學者建議先掌握 camelCase（變數/函式）與 PascalCase（類別/元件）的區別，這是最常用也最重要的兩個命名慣例。熟悉後再逐步學習 snake_case 與 kebab-case 的應用場景。</p>
+                </div>
+
+                <h2>使用 Case Converter 提升開發效率</h2>
+                <p>ToolHub 的 Case Converter 不僅支援上述所有命名慣例的 <strong>即時轉換</strong>，其 <strong>Programming Naming Helper</strong> 模式更可以一次顯示所有格式的轉換結果，讓開發者在命名變數、函式或檔案時快速參考。無論是從 API 回傳的 snake_case 資料轉換為前端使用的 camelCase，還是為新專案建立一致的命名規範，這個工具都能大幅提升您的工作效率。</p>
+                <p>立即嘗試在左側輸入文字，體驗 12 種大小寫格式的即時轉換！</p>
+            </div>
+        </div>
+    
+        <!-- SEO Completeness Upgrade 2026 -->
+        <article class="seo-upgrade" aria-label="Case Converter 文字大小寫轉換器補充指南">
+          <section class="seo-upgrade-card"><h2>Case Converter 文字大小寫轉換器使用說明</h2><p>免費線上文字大小寫轉換工具。支援 UPPERCASE、lowercase、Title Case、camelCase、PascalCase、snake_case、kebab-case 等 12 種格式。內建 Programming Naming Helper，一鍵檢視所有命名慣例。純前端本地運算，保障隱私安全。</p><h3>建議操作流程</h3><ol><li>先確認輸入格式、單位與必要欄位，避免讓錯誤資料一路傳到結果。</li><li>調整工具選項並閱讀即時提示，使用代表性的邊界值交叉檢查。</li><li>複製或下載前再次核對結果；若要用於正式流程，請在目標環境完成驗證。</li></ol><h3>品質與隱私</h3><p>此工具在瀏覽器本機執行，不依賴後端處理。結果會受到輸入品質、瀏覽器支援與相關技術規格影響，重要資料請保留原始版本與備份。</p></section>
+          
+        </article>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-amber-400" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. Footer -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- System Init Script -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/case-converter';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Case Converter Business Logic -->
+    <!-- ========================================== -->
+    <style>
+        input[type="checkbox"]:checked ~ .toggle-bg { background-color: #F59E0B; border-color: #F59E0B; }
+        input[type="checkbox"]:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM References ---
+            const inputTextarea = document.getElementById('input-textarea');
+            const outputTextarea = document.getElementById('output-textarea');
+            const helperGrid = document.getElementById('helper-grid');
+            const formatBtns = document.querySelectorAll('.format-btn');
+            const viewSingle = document.getElementById('view-single');
+            const viewHelper = document.getElementById('view-helper');
+            const tabSingle = document.getElementById('tab-single');
+            const tabHelper = document.getElementById('tab-helper');
+
+            const statChars = document.getElementById('stat-chars');
+            const statWords = document.getElementById('stat-words');
+            const statLines = document.getElementById('stat-lines');
+            const statFormat = document.getElementById('stat-format');
+            const inputStats = document.getElementById('input-stats');
+            const formatDetection = document.getElementById('format-detection');
+            const detectedFormat = document.getElementById('detected-format');
+            const outputLabel = document.getElementById('output-label');
+
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+            const btnClear = document.getElementById('btn-clear');
+            const btnSample = document.getElementById('btn-sample');
+
+            const optTrim = document.getElementById('opt-trim');
+            const optRemoveSpaces = document.getElementById('opt-remove-spaces');
+            const optNewlines = document.getElementById('opt-newlines');
+            const optIndent = document.getElementById('opt-indent');
+
+            let currentFormat = 'lowercase';
+
+            // --- Conversion Functions ---
+            const convertCase = (text, format, options = {}) => {
+                let result = text;
+
+                // Pre-processing
+                if (options.trim) result = result.trim();
+                if (options.removeExtraSpaces) result = result.replace(/\s+/g, ' ');
+                if (!options.preserveNewlines) result = result.replace(/\n/g, ' ');
+                if (!options.preserveIndent) result = result.replace(/^[ \t]+/gm, '').replace(/[ \t]+$/gm, '');
+
+                switch (format) {
+                    case 'uppercase':
+                        return result.toUpperCase();
+                    case 'lowercase':
+                        return result.toLowerCase();
+                    case 'title':
+                        return toTitleCase(result);
+                    case 'sentence':
+                        return toSentenceCase(result);
+                    case 'capitalize':
+                        return toCapitalizeEachWord(result);
+                    case 'toggle':
+                        return toToggleCase(result);
+                    case 'camel':
+                        return toCamelCase(result);
+                    case 'pascal':
+                        return toPascalCase(result);
+                    case 'snake':
+                        return toSnakeCase(result);
+                    case 'screaming':
+                        return toScreamingSnakeCase(result);
+                    case 'kebab':
+                        return toKebabCase(result);
+                    case 'train':
+                        return toTrainCase(result);
+                    default:
+                        return result;
+                }
+            };
+
+            // Helper: split text into words
+            const splitWords = (text) => {
+                // Split by whitespace, punctuation, CamelCase boundaries, and non-alphanumeric chars
+                const words = [];
+                // First, split by common delimiters and handle CamelCase
+                const segments = text.match(/[A-Z]?[a-z0-9]+|[A-Z]+(?=[A-Z][a-z]|\d|\b)|[a-z0-9]+/g);
+                if (segments) {
+                    for (const seg of segments) {
+                        if (seg.trim()) words.push(seg.trim());
+                    }
+                } else if (text.trim()) {
+                    words.push(text.trim());
+                }
+                return words;
+            };
+
+            // Split by whitespace for simple case conversions
+            const splitByWhitespace = (text) => {
+                return text.split(/\s+/).filter(w => w.length > 0);
+            };
+
+            const toTitleCase = (text) => {
+                const minorWords = ['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'by', 'in', 'of', 'with', 'up', 'as', 'it', 'is', 'so'];
+                const words = splitByWhitespace(text);
+                return words.map((word, i) => {
+                    if (i > 0 && minorWords.includes(word.toLowerCase())) return word.toLowerCase();
+                    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+                }).join(' ');
+            };
+
+            const toSentenceCase = (text) => {
+                const sentences = text.split(/([.!?]\s*)/);
+                let result = '';
+                let isNewSentence = true;
+                for (const part of sentences) {
+                    if (/^[.!?]/.test(part)) {
+                        result += part;
+                        isNewSentence = true;
+                    } else if (isNewSentence) {
+                        result += part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+                        isNewSentence = false;
+                    } else {
+                        result += part.toLowerCase();
+                    }
+                }
+                return result;
+            };
+
+            const toCapitalizeEachWord = (text) => {
+                return text.replace(/\b\w/g, char => char.toUpperCase());
+            };
+
+            const toToggleCase = (text) => {
+                return text.split('').map(char => {
+                    if (char >= 'a' && char <= 'z') return char.toUpperCase();
+                    if (char >= 'A' && char <= 'Z') return char.toLowerCase();
+                    return char;
+                }).join('');
+            };
+
+            const toCamelCase = (text) => {
+                const words = splitWords(text);
+                if (words.length === 0) return '';
+                return words[0].toLowerCase() + words.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+            };
+
+            const toPascalCase = (text) => {
+                const words = splitWords(text);
+                return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+            };
+
+            const toSnakeCase = (text) => {
+                const words = splitWords(text);
+                return words.map(w => w.toLowerCase()).join('_');
+            };
+
+            const toScreamingSnakeCase = (text) => {
+                const words = splitWords(text);
+                return words.map(w => w.toUpperCase()).join('_');
+            };
+
+            const toKebabCase = (text) => {
+                const words = splitWords(text);
+                return words.map(w => w.toLowerCase()).join('-');
+            };
+
+            const toTrainCase = (text) => {
+                const words = splitWords(text);
+                return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('-');
+            };
+
+            // Detect current format of text
+            const detectFormat = (text) => {
+                if (!text.trim()) return null;
+                // Try each format and see which one matches
+                const candidates = [
+                    { id: 'uppercase', check: (t) => t === t.toUpperCase() && t !== t.toLowerCase() },
+                    { id: 'lowercase', check: (t) => t === t.toLowerCase() && t !== t.toUpperCase() },
+                    { id: 'camel', check: (t) => /^[a-z]+[A-Z][a-zA-Z]*$/.test(t) },
+                    { id: 'pascal', check: (t) => /^[A-Z][a-z]+[A-Z][a-zA-Z]*$/.test(t) },
+                    { id: 'snake', check: (t) => /^[a-z]+(_[a-z]+)+$/.test(t) },
+                    { id: 'screaming', check: (t) => /^[A-Z]+(_[A-Z]+)+$/.test(t) },
+                    { id: 'kebab', check: (t) => /^[a-z]+(-[a-z]+)+$/.test(t) },
+                    { id: 'train', check: (t) => /^[A-Z][a-z]+(-[A-Z][a-z]+)+$/.test(t) },
+                ];
+                // Check single line
+                const lines = text.split('\n').filter(l => l.trim());
+                if (lines.length === 0) return null;
+                const firstLine = lines[0].trim();
+                for (const c of candidates) {
+                    if (c.check(firstLine)) return c.id;
+                }
+                // Check if it looks like a title
+                if (/^[A-Z][a-z]+ [A-Z][a-z]+/.test(firstLine)) return 'title';
+                // Check if sentence case
+                if (/^[A-Z][a-z]+ /.test(firstLine)) return 'sentence';
+                return null;
+            };
+
+            // Get format display name
+            const formatNames = {
+                uppercase: 'UPPERCASE',
+                lowercase: 'lowercase',
+                title: 'Title Case',
+                sentence: 'Sentence case',
+                capitalize: 'Capitalize',
+                toggle: 'Toggle Case',
+                camel: 'camelCase',
+                pascal: 'PascalCase',
+                snake: 'snake_case',
+                screaming: 'SCREAMING_SNAKE',
+                kebab: 'kebab-case',
+                train: 'Train-Case'
+            };
+
+            // --- Update Output ---
+            const updateOutput = () => {
+                const input = inputTextarea.value;
+                const options = {
+                    trim: optTrim.checked,
+                    removeExtraSpaces: optRemoveSpaces.checked,
+                    preserveNewlines: optNewlines.checked,
+                    preserveIndent: optIndent.checked,
+                };
+
+                // Update input stats
+                const chars = input.length;
+                const words = input.trim() ? input.trim().split(/\s+/).length : 0;
+                const lines = input ? input.split('\n').length : 0;
+                inputStats.textContent = `${chars} chars · ${words} words`;
+
+                // Detect format
+                const detected = detectFormat(input);
+                if (detected && input.trim()) {
+                    formatDetection.classList.remove('hidden');
+                    detectedFormat.textContent = formatNames[detected] || detected;
+                } else {
+                    formatDetection.classList.add('hidden');
+                }
+
+                // Convert
+                const result = convertCase(input, currentFormat, options);
+                outputTextarea.value = result;
+
+                // Update stats
+                statChars.textContent = result.length;
+                statWords.textContent = result.trim() ? result.trim().split(/\s+/).length : 0;
+                statLines.textContent = result ? result.split('\n').length : 0;
+                statFormat.textContent = formatNames[currentFormat] || currentFormat;
+                outputLabel.textContent = `轉換結果 (${formatNames[currentFormat] || currentFormat})`;
+
+                // Update Naming Helper
+                updateHelper(input, options);
+            };
+
+            // --- Naming Helper ---
+            const updateHelper = (input, options) => {
+                if (!input.trim()) {
+                    helperGrid.innerHTML = `
+                        <div class="text-center text-slate-500 text-sm py-8">
+                            <i class="ph ph-arrow-left text-2xl block mb-2"></i>
+                            請在左側輸入文字
+                        </div>
+                    `;
+                    return;
+                }
+
+                const formats = [
+                    { id: 'camel', label: 'camelCase' },
+                    { id: 'pascal', label: 'PascalCase' },
+                    { id: 'snake', label: 'snake_case' },
+                    { id: 'screaming', label: 'SCREAMING_SNAKE_CASE' },
+                    { id: 'kebab', label: 'kebab-case' },
+                    { id: 'train', label: 'Train-Case' },
+                    { id: 'uppercase', label: 'UPPERCASE' },
+                    { id: 'lowercase', label: 'lowercase' },
+                    { id: 'title', label: 'Title Case' },
+                    { id: 'sentence', label: 'Sentence case' },
+                    { id: 'capitalize', label: 'Capitalize Each Word' },
+                    { id: 'toggle', label: 'Toggle Case' },
+                ];
+
+                let html = '';
+                for (const fmt of formats) {
+                    const value = convertCase(input, fmt.id, options);
+                    const isActive = fmt.id === currentFormat;
+                    html += `
+                        <div class="naming-card cursor-pointer ${isActive ? 'ring-1 ring-amber-500/40' : ''}" data-format="${fmt.id}">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="naming-label">${fmt.label}</span>
+                                ${isActive ? '<span class="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full">目前選中</span>' : ''}
+                            </div>
+                            <div class="naming-value">${value || '<span class="text-slate-600">—</span>'}</div>
+                        </div>
+                    `;
+                }
+
+                helperGrid.innerHTML = html;
+
+                // Click handler for helper cards
+                helperGrid.querySelectorAll('.naming-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const format = card.dataset.format;
+                        if (format) {
+                            setActiveFormat(format);
+                            // Switch to single view
+                            switchView('single');
+                        }
+                    });
+                });
+            };
+
+            // --- Set Active Format ---
+            const setActiveFormat = (format) => {
+                currentFormat = format;
+                formatBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.format === format);
+                });
+                updateOutput();
+            };
+
+            // --- Switch View ---
+            const switchView = (view) => {
+                if (view === 'single') {
+                    viewSingle.classList.remove('hidden');
+                    viewHelper.classList.add('hidden');
+                    tabSingle.classList.add('active');
+                    tabHelper.classList.remove('active');
+                } else {
+                    viewSingle.classList.add('hidden');
+                    viewHelper.classList.remove('hidden');
+                    tabSingle.classList.remove('active');
+                    tabHelper.classList.add('active');
+                    // Re-render helper
+                    const options = {
+                        trim: optTrim.checked,
+                        removeExtraSpaces: optRemoveSpaces.checked,
+                        preserveNewlines: optNewlines.checked,
+                        preserveIndent: optIndent.checked,
+                    };
+                    updateHelper(inputTextarea.value, options);
+                }
+            };
+
+            // --- Event Binding ---
+            // Format buttons
+            formatBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setActiveFormat(btn.dataset.format);
+                });
+            });
+
+            // View tabs
+            tabSingle.addEventListener('click', () => switchView('single'));
+            tabHelper.addEventListener('click', () => switchView('helper'));
+
+            // Input textarea - real-time
+            inputTextarea.addEventListener('input', updateOutput);
+
+            // Options
+            [optTrim, optRemoveSpaces, optNewlines, optIndent].forEach(opt => {
+                opt.addEventListener('change', updateOutput);
+            });
+
+            // Copy
+            btnCopy.addEventListener('click', () => {
+                if (!outputTextarea.value) {
+                    showToast('沒有可複製的內容', true);
+                    return;
+                }
+                navigator.clipboard.writeText(outputTextarea.value).then(() => {
+                    showToast('已複製到剪貼簿');
+                }).catch(() => {
+                    // Fallback
+                    outputTextarea.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('已複製到剪貼簿');
+                });
+            });
+
+            // Download
+            btnDownload.addEventListener('click', () => {
+                if (!outputTextarea.value) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                const blob = new Blob([outputTextarea.value], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_${formatNames[currentFormat] || 'converted'}_${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('已下載 TXT 檔案');
+            });
+
+            // Clear
+            btnClear.addEventListener('click', () => {
+                if (!inputTextarea.value && !outputTextarea.value) {
+                    showToast('已經沒有內容了', true);
+                    return;
+                }
+                inputTextarea.value = '';
+                updateOutput();
+                showToast('已清除所有內容');
+            });
+
+            // Sample Text
+            btnSample.addEventListener('click', () => {
+                const samples = [
+                    'hello world example',
+                    'the quick brown fox jumps over the lazy dog',
+                    'userProfileData fetchAPI getResponse',
+                    'MY_CONFIG maxLimit DEFAULT_VALUE',
+                    'convert-this-text to-different-cases',
+                ];
+                const sample = samples[Math.floor(Math.random() * samples.length)];
+                inputTextarea.value = sample;
+                updateOutput();
+                showToast('已載入範例文字');
+            });
+
+            // --- Toast ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                const toastMsg = document.getElementById('toast-msg');
+
+                toastMsg.textContent = msg;
+
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-amber-400';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // Initialize with sample
+            inputTextarea.value = 'hello world example';
+            updateOutput();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

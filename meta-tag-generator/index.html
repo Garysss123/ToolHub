@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Tag Generator — ToolHub</title>
+    <meta name="description" content="免費線上 Meta Tag 產生器，支援 Open Graph、Twitter Card、Canonical URL、Viewport 等網站 Meta 標籤，一鍵複製與下載 HTML。">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                            meta: '#4F46E5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(30, 41, 59, 0.8);
+        }
+
+        .form-input, .form-textarea, .form-select {
+            background: rgba(11, 17, 32, 0.7);
+            border: 1px solid rgba(30, 41, 59, 0.9);
+            color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.625rem 0.875rem;
+            width: 100%;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #6366F1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .form-input::placeholder, .form-textarea::placeholder { color: #475569; }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2rem;
+        }
+        .form-select option { background: #151F32; color: #e2e8f0; }
+
+        .input-group-label {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-bottom: 0.375rem;
+        }
+        .input-hint {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        .section-card {
+            background: rgba(21, 31, 50, 0.6);
+            border: 1px solid rgba(30, 41, 59, 0.6);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: border-color 0.3s ease;
+        }
+        .section-card:hover { border-color: rgba(99, 102, 241, 0.2); }
+        .section-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+        }
+
+        .preview-panel {
+            background: rgba(11, 17, 32, 0.9);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 0.75rem;
+        }
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+        }
+        .preview-body {
+            padding: 1rem;
+            max-height: 60vh;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .preview-body .tag { color: #818CF8; }
+        .preview-body .attr { color: #F472B6; }
+        .preview-body .val { color: #34D399; }
+        .preview-body .comment { color: #64748b; font-style: italic; }
+
+        .btn-meta {
+            background: linear-gradient(135deg, #6366F1, #4F46E5);
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-meta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.3);
+        }
+        .btn-meta:active { transform: translateY(0); }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            border-radius: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-outline:hover {
+            border-color: #6366F1;
+            background: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.2);
+        }
+
+        .tag-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 0.25rem 0.625rem;
+            border-radius: 999px;
+        }
+
+        .faq-item {
+            border: 1px solid rgba(30, 41, 59, 0.6);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            transition: border-color 0.3s ease;
+            background: rgba(21, 31, 50, 0.4);
+        }
+        .faq-item:hover { border-color: rgba(99, 102, 241, 0.2); }
+        .faq-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            color: #e2e8f0;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            text-align: left;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .faq-btn:hover { color: #a5b4fc; }
+        .faq-chevron {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #64748b;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+        .faq-item.open .faq-chevron { transform: rotate(180deg); color: #818CF8; }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.35s ease;
+            padding: 0 1.25rem;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+        .faq-item.open .faq-answer {
+            max-height: 400px;
+            padding: 0 1.25rem 1.25rem;
+        }
+
+        .article-card {
+            background: rgba(21, 31, 50, 0.5);
+            border: 1px solid rgba(30, 41, 59, 0.5);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+        .article-card:hover {
+            border-color: rgba(99, 102, 241, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.1);
+        }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(1rem);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            background: rgba(21, 31, 50, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #e2e8f0;
+        }
+        .toast-msg.show { opacity: 1; transform: translateY(0); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeIn 0.4s ease forwards; }
+
+        @media (max-width: 768px) {
+            .preview-body { max-height: 40vh; font-size: 0.75rem; }
+            .section-card { padding: 1rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/meta-tag-generator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/meta-tag-generator/">
+    <meta property="og:title" content="Meta Tag Generator">
+    <meta property="og:description" content="產生 Open Graph、Twitter Card、Canonical 與完整 HTML Meta 標籤。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Meta Tag Generator">
+    <meta name="twitter:description" content="產生 Open Graph、Twitter Card、Canonical 與完整 HTML Meta 標籤。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Meta Tag Generator — ToolHub","url":"https://toolhuben.com/meta-tag-generator/","description":"免費線上 Meta Tag 產生器，支援 Open Graph、Twitter Card、Canonical URL、Viewport 等網站 Meta 標籤，一鍵複製與下載 HTML。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Meta Tag Generator — ToolHub","item":"https://toolhuben.com/meta-tag-generator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/meta-tag-generator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/meta-tag-generator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/meta-tag-generator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="text-slate-300 font-sans min-h-screen flex flex-col" style="--classic-accent:#4F46E5;--classic-accent-rgb:79,70,229" data-tool-visual data-classic-tool data-classic-layout="blueprint">
+
+    <!-- Component loaders -->
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast-msg"></div>
+
+    <main class="flex-grow pt-10 pb-20 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- Hero -->
+            <div class="text-center mb-8 sm:mb-12 animate-in">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs sm:text-sm font-medium mb-4">
+                    <span class="flex w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
+                    Meta Tag Generator
+                </div>
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4 tracking-tight">
+                    網站 Meta 標籤
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">產生器</span>
+                </h1>
+                <p class="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                    填寫表單即時產生標準的 HTML Meta 標籤，支援 Open Graph、Twitter Card、Canonical URL 等完整 SEO 元素，一鍵複製貼上。
+                </p>
+            </div>
+
+            <!-- Main grid: Form + Preview -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+                <!-- LEFT: Form (3/5) -->
+                <div class="lg:col-span-3 space-y-5">
+
+                    <!-- === Basic Info === -->
+                    <div class="section-card">
+                        <div class="section-card-title">
+                            <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i>
+                            <span>基本資訊</span>
+                        </div>
+                        <div class="space-y-4">
+                            <!-- Website Title -->
+                            <div>
+                                <label class="input-group-label">
+                                    <i data-lucide="heading" class="w-3.5 h-3.5"></i>
+                                    Website Title <span class="text-xs text-slate-600 font-normal">(標題)</span>
+                                    <span class="text-red-400">*</span>
+                                </label>
+                                <input type="text" id="input-title" class="form-input" placeholder="我的網站 | 最棒的工具平台" oninput="generateMeta()" value="ToolHub | 免費線上實用工具箱">
+                            </div>
+                            <!-- Description -->
+                            <div>
+                                <label class="input-group-label">
+                                    <i data-lucide="align-left" class="w-3.5 h-3.5"></i>
+                                    Description <span class="text-xs text-slate-600 font-normal">(描述)</span>
+                                    <span class="text-red-400">*</span>
+                                </label>
+                                <textarea id="input-description" class="form-textarea" rows="3" placeholder="簡短描述網站內容，建議 50-160 字元" oninput="generateMeta()" maxlength="320">ToolHub 提供多款免費線上工具，包含開發者工具、AI 模型、電子工程與 3D 列印校準。純前端本地運算，保障隱私安全。</textarea>
+                                <div class="input-hint text-right"><span id="desc-count">72</span> / 320 字元</div>
+                            </div>
+                            <!-- Keywords -->
+                            <div>
+                                <label class="input-group-label">
+                                    <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+                                    Keywords <span class="text-xs text-slate-600 font-normal">(關鍵字)</span>
+                                </label>
+                                <input type="text" id="input-keywords" class="form-input" placeholder="線上工具, 免費工具, 開發者工具" oninput="generateMeta()" value="線上工具, 免費工具, 開發者工具, 網站優化">
+                                <div class="input-hint">
+                                    <i data-lucide="alert-circle" class="w-3 h-3 inline"></i>
+                                    提示：Keywords 已非 Google 主要排名因素，但仍可能被部分搜尋引擎使用。
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <!-- Author -->
+                                <div>
+                                    <label class="input-group-label">
+                                        <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                                        Author <span class="text-xs text-slate-600 font-normal">(作者)</span>
+                                    </label>
+                                    <input type="text" id="input-author" class="form-input" placeholder="ToolHub Team" oninput="generateMeta()" value="ToolHub Team">
+                                </div>
+                                <!-- Language -->
+                                <div>
+                                    <label class="input-group-label">
+                                        <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                                        Language <span class="text-xs text-slate-600 font-normal">(語言)</span>
+                                    </label>
+                                    <select id="input-language" class="form-select" onchange="generateMeta()">
+                                        <option value="zh-TW" selected>zh-TW (繁體中文)</option>
+                                        <option value="zh-CN">zh-CN (簡體中文)</option>
+                                        <option value="en">en (English)</option>
+                                        <option value="ja">ja (日本語)</option>
+                                        <option value="ko">ko (한국어)</option>
+                                        <option value="es">es (Español)</option>
+                                        <option value="fr">fr (Français)</option>
+                                        <option value="de">de (Deutsch)</option>
+                                        <option value="pt">pt (Português)</option>
+                                        <option value="ru">ru (Русский)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Canonical URL -->
+                            <div>
+                                <label class="input-group-label">
+                                    <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                                    Canonical URL <span class="text-xs text-slate-600 font-normal">(標準網址)</span>
+                                </label>
+                                <input type="url" id="input-canonical" class="form-input" placeholder="https://example.com/" oninput="generateMeta()" value="https://toolhuben.com/">
+                                <div class="input-hint">指定搜尋引擎索引的標準 URL，避免重複內容問題。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- === Open Graph === -->
+                    <div class="section-card">
+                        <div class="section-card-title">
+                            <i data-lucide="share-2" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Open Graph</span>
+                            <span class="text-xs font-normal text-slate-500 ml-1">(社交分享)</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-group-label">og:title</label>
+                                    <input type="text" id="input-og-title" class="form-input" placeholder="同網站標題" oninput="generateMeta()" value="">
+                                </div>
+                                <div>
+                                    <label class="input-group-label">og:type</label>
+                                    <select id="input-og-type" class="form-select" onchange="generateMeta()">
+                                        <option value="website">website</option>
+                                        <option value="article">article</option>
+                                        <option value="product">product</option>
+                                        <option value="profile">profile</option>
+                                        <option value="video.movie">video.movie</option>
+                                        <option value="video.episode">video.episode</option>
+                                        <option value="music.song">music.song</option>
+                                        <option value="music.album">music.album</option>
+                                        <option value="book">book</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="input-group-label">og:description</label>
+                                <textarea id="input-og-desc" class="form-textarea" rows="2" placeholder="同 Description，建議不超過 200 字元" oninput="generateMeta()" maxlength="300"></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-group-label">og:image</label>
+                                    <input type="url" id="input-og-image" class="form-input" placeholder="https://example.com/og-image.jpg" oninput="generateMeta()">
+                                </div>
+                                <div>
+                                    <label class="input-group-label">og:url</label>
+                                    <input type="url" id="input-og-url" class="form-input" placeholder="同 Canonical URL" oninput="generateMeta()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- === Twitter Card === -->
+                    <div class="section-card">
+                        <div class="section-card-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+                            <span>Twitter Card</span>
+                            <span class="text-xs font-normal text-slate-500 ml-1">(X 分享)</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="input-group-label">twitter:card</label>
+                                <select id="input-tw-card" class="form-select" onchange="generateMeta()">
+                                    <option value="summary_large_image">summary_large_image (大圖)</option>
+                                    <option value="summary">summary (小圖)</option>
+                                    <option value="app">app</option>
+                                    <option value="player">player</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-group-label">twitter:title</label>
+                                    <input type="text" id="input-tw-title" class="form-input" placeholder="同 og:title" oninput="generateMeta()">
+                                </div>
+                                <div>
+                                    <label class="input-group-label">twitter:image</label>
+                                    <input type="url" id="input-tw-image" class="form-input" placeholder="https://example.com/tw-image.jpg" oninput="generateMeta()">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="input-group-label">twitter:description</label>
+                                <textarea id="input-tw-desc" class="form-textarea" rows="2" placeholder="同 og:description" oninput="generateMeta()" maxlength="200"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- === Other Settings === -->
+                    <div class="section-card">
+                        <div class="section-card-title">
+                            <i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i>
+                            <span>其他設定</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-group-label">
+                                        <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+                                        Viewport
+                                    </label>
+                                    <input type="text" id="input-viewport" class="form-input" value="width=device-width, initial-scale=1" oninput="generateMeta()">
+                                </div>
+                                <div>
+                                    <label class="input-group-label">
+                                        <i data-lucide="text" class="w-3.5 h-3.5"></i>
+                                        Charset
+                                    </label>
+                                    <select id="input-charset" class="form-select" onchange="generateMeta()">
+                                        <option value="UTF-8" selected>UTF-8</option>
+                                        <option value="UTF-16">UTF-16</option>
+                                        <option value="ISO-8859-1">ISO-8859-1</option>
+                                        <option value="Big5">Big5 (繁體中文)</option>
+                                        <option value="GB2312">GB2312 (簡體中文)</option>
+                                        <option value="Shift_JIS">Shift_JIS (日文)</option>
+                                        <option value="EUC-KR">EUC-KR (韓文)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-group-label">
+                                        <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+                                        Theme Color
+                                    </label>
+                                    <div class="flex gap-2">
+                                        <input type="color" id="input-theme-color" class="w-10 h-10 rounded-lg cursor-pointer border border-hub-700 bg-transparent" value="#0B1120" oninput="generateMeta()">
+                                        <input type="text" id="input-theme-color-text" class="form-input" value="#0B1120" oninput="syncColor(this); generateMeta()">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="input-group-label">
+                                        <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                                        Favicon
+                                    </label>
+                                    <input type="url" id="input-favicon" class="form-input" placeholder="/favicon.ico" oninput="generateMeta()" value="/favicon.ico">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="input-group-label">
+                                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                                    Robots <span class="text-xs text-slate-600 font-normal">(搜尋引擎索引)</span>
+                                </label>
+                                <select id="input-robots" class="form-select" onchange="generateMeta()">
+                                    <option value="index, follow">index, follow (允許索引與追蹤)</option>
+                                    <option value="noindex, follow">noindex, follow (不索引但追蹤)</option>
+                                    <option value="index, nofollow">index, nofollow (索引但不追蹤)</option>
+                                    <option value="noindex, nofollow">noindex, nofollow (不索引不追蹤)</option>
+                                    <option value="noarchive">noarchive (不建立快取)</option>
+                                    <option value="nosnippet">nosnippet (不顯示摘要)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Preview (2/5) -->
+                <div class="lg:col-span-2 lg:sticky lg:top-24">
+                    <div class="preview-panel">
+                        <div class="preview-header">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="eye" class="w-4 h-4 text-indigo-400"></i>
+                                <span class="text-sm font-medium text-slate-200">即時預覽</span>
+                                <span class="tag-counter" id="tag-count">
+                                    <i data-lucide="code" class="w-3 h-3"></i>
+                                    <span id="total-tags">0</span> 個標籤
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="copyMeta()" class="btn-outline !px-3 !py-1.5 !text-xs" title="複製所有 Meta 標籤">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    <span class="hidden sm:inline">複製</span>
+                                </button>
+                                <button onclick="downloadMeta()" class="btn-meta !px-3 !py-1.5 !text-xs" title="下載 HTML">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                    <span class="hidden sm:inline">下載</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="preview-content" class="preview-body">
+                            <span class="comment">&lt;!-- 填寫表單後即時預覽 --&gt;</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 mt-2 flex items-center gap-1">
+                        <i data-lucide="info" class="w-3 h-3"></i>
+                        所有資料僅在瀏覽器中處理，不會上傳至任何伺服器。
+                    </p>
+                </div>
+            </div>
+
+            <!-- === FAQ === -->
+            <div class="mt-16">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs sm:text-sm font-medium mb-3">
+                        <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+                        常見問題
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">Meta Tag 常見問題</h2>
+                </div>
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>Meta Tag 是什麼？為什麼對 SEO 很重要？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><strong>Meta Tag</strong>（Meta 標籤）是 HTML 文件 &lt;head&gt; 中的特殊標籤，提供網頁的後設資料給瀏覽器與搜尋引擎。雖然多數 Meta Tag 不會直接顯示在網頁上，但它們對 SEO 至關重要：<br><br>
+                        • <strong>Title Tag</strong>：搜尋結果中的藍色標題，是最重要的 SEO 排名因素之一。<br>
+                        • <strong>Meta Description</strong>：搜尋結果中的摘要文字，影響點擊率。<br>
+                        • <strong>Open Graph / Twitter Card</strong>：控制社群平台上的分享預覽。<br>
+                        • <strong>Canonical URL</strong>：防止重複內容問題，確保搜尋引擎索引正確的頁面。<br><br>
+                        正確的 Meta 標籤設定能提升搜尋引擎排名、增加社群分享曝光、改善使用者點擊意願。</div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>Open Graph 是什麼？有什麼用途？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><strong>Open Graph（OG）</strong> 是 Facebook 在 2010 年推出的通訊協定，讓網頁在 Facebook、LINE、LinkedIn 等社群平台上分享時，能顯示豐富的預覽資訊（標題、描述、圖片）。<br><br>
+                        • <strong>og:title</strong>：自訂分享標題，建議維持 40-60 字元。<br>
+                        • <strong>og:description</strong>：分享描述，建議 2-4 句話，不超過 200 字元。<br>
+                        • <strong>og:image</strong>：分享圖片，建議 1200×630 像素，會大幅增加點擊率。<br>
+                        • <strong>og:type</strong>：內容類型（website、article、product 等），幫助平台正確呈現。<br><br>
+                        設定正確的 OG 標籤，可以讓網站連結在社群平台上更加美觀且具吸引力，有效提升社群流量。</div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>Twitter Card 是什麼？和 Open Graph 有什麼不同？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><strong>Twitter Card</strong> 是 X（原 Twitter）的分享預覽協定，功能類似 Open Graph，但專為 X 平台設計。<br><br>
+                        • <strong>summary_large_image</strong>：大圖模式，適合內容網站與部落格。<br>
+                        • <strong>summary</strong>：小圖模式，適合個人資料或簡單頁面。<br><br>
+                        <strong>兩者差異</strong>：<br>
+                        • OG 被多數平台廣泛支援（Facebook、LINE、LinkedIn、Slack 等）。<br>
+                        • Twitter Card 只影響 X 平台上的分享預覽。<br>
+                        • <strong>最佳做法</strong>：同時設定兩者，確保在所有平台都有最佳分享效果。如果未設定 Twitter Card，X 會自動使用 OG 資訊，但效果較差。</div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>Canonical URL 是什麼？為什麼重要？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><strong>Canonical URL</strong>（標準網址，rel="canonical"）是用來告訴搜尋引擎：當有多個 URL 指向相同或非常相似的內容時，哪一個才是「正式」的版本。<br><br>
+                        <strong>為什麼重要？</strong><br>
+                        • 防止因重複內容導致的 SEO 懲罰。<br>
+                        • 確保搜尋排名權重集中在單一 URL。<br>
+                        • 常見情境：https vs http、www vs non-www、UTM 參數追蹤、列印版本、分頁等。<br><br>
+                        <strong>使用方式</strong>：<br>
+                        <code>&lt;link rel="canonical" href="https://example.com/original-page/" /&gt;</code><br><br>
+                        每個頁面都應該有自指的 canonical URL（即使沒有重複內容問題），這是最佳實踐。</div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>Keywords 標籤對 SEO 還有用嗎？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><strong>簡短答案：Google 已不使用 Keywords Meta Tag 作為排名因素。</strong><br><br>
+                        Google 在 2009 年正式宣布不再將 Keywords Meta Tag 用於排名，原因是該標籤長期被 SEO 操作者大量濫用與堆砌關鍵字。<br><br>
+                        • <strong>Bing / Yahoo</strong>：仍可能使用 Keywords 標籤作為排名參考之一（但權重極低）。<br>
+                        • <strong>Yandex</strong>（俄羅斯）：曾表示 Keywords 在某些情況下仍有參考價值。<br>
+                        • <strong>百度</strong>（中國）：可能仍使用 Keywords 作為輔助信號。<br><br>
+                        <strong>建議</strong>：可以維持 Keywords 標籤（無害），但不要花時間最佳化它。專注在 Title、Description、內容品質與使用者體驗才是正確的 SEO 策略。</div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>如何檢查我的網站 Meta 標籤是否正確？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer">檢查網站 Meta 標籤有幾種方式：<br><br>
+                        <strong>1. 瀏覽器開發者工具</strong>：右鍵 → 檢查 (Inspect) → 看 &lt;head&gt; 區域。<br><br>
+                        <strong>2. 查看網頁原始碼</strong>：Ctrl+U（Windows）或 Cmd+U（Mac）直接看 HTML 原始碼。<br><br>
+                        <strong>3. 使用 ToolHub 工具</strong>：<br>
+                        • <a href="/seo-meta-checker/" class="text-indigo-400 hover:text-indigo-300 underline">SEO Meta 標籤檢查器</a> — 貼上 HTML 立即分析所有 Meta 標籤與 SEO 評分。<br>
+                        • <a href="/website-seo-audit/" class="text-indigo-400 hover:text-indigo-300 underline">Website SEO 全面健檢</a> — 深入分析網站整體 SEO 健康度。<br><br>
+                        <strong>4. 社群平台偵錯工具</strong>：<br>
+                        • Facebook Sharing Debugger<br>
+                        • Twitter Card Validator<br>
+                        • LinkedIn Post Inspector</div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-btn" onclick="toggleFaq(this)">
+                            <span>同一頁面可以同時有 OG 和 Twitter Card 嗎？</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><strong>可以，而且建議這麼做！</strong> Open Graph 和 Twitter Card 可以共存於同一個頁面，兩者不會互相干擾。<br><br>
+                        <strong>最佳做法</strong>：<br>
+                        • 設定完整的 Open Graph 標籤（被最多平台支援）。<br>
+                        • 另外加上 Twitter Card 標籤（特定為 X 平台最佳化）。<br>
+                        • Twitter Card 的值可以與 OG 相同或不同。<br><br>
+                        <strong>注意事項</strong>：<br>
+                        • Twitter 會回退使用 OG 標籤（如果沒有 Twitter Card 標籤），但效果較差。<br>
+                        • 如果兩者都設定，Twitter 優先使用 Twitter Card 標籤。<br>
+                        • Facebook、LINE、LinkedIn 等則使用 OG 標籤，不受 Twitter Card 影響。<br><br>
+                        使用這個產生器，只需填寫各欄位，即可自動產生兩者的完整標籤。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === SEO Knowledge === -->
+            <div class="mt-16">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs sm:text-sm font-medium mb-3">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                        SEO 知識庫
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">深入學習 Meta 標籤</h2>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="article-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <i data-lucide="bookmark" class="w-4 h-4 text-indigo-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2">Meta Tag 完整指南</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">從基礎到進階，全面了解 HTML Meta 標籤的種類、用途與最佳設定方式。包含 Title、Description、Keywords、Viewport 等核心標籤的詳細說明。</p>
+                    </div>
+                    <div class="article-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <i data-lucide="share-2" class="w-4 h-4 text-indigo-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2">Open Graph 優化教學</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">學會設定完美的 OG 標籤，讓網站連結在 Facebook、LINE、LinkedIn 等社群平台呈現最佳效果，提升社群分享流量與點擊率。</p>
+                    </div>
+                    <div class="article-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2">Twitter Card 設定教學</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">了解 Twitter Card 的四種模式（summary、summary_large_image、app、player），掌握在 X 平台上的最佳分享設定。</p>
+                    </div>
+                    <div class="article-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <i data-lucide="link" class="w-4 h-4 text-indigo-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2">Canonical 標籤最佳實踐</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">深入解析 Canonical URL 的運作原理、常見使用情境、與 301 重新導向的差異，以及多國語言網站的處理方式。</p>
+                    </div>
+                    <div class="article-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <i data-lucide="search" class="w-4 h-4 text-indigo-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2">如何優化網站 Meta 資訊</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">完整的網站 Meta 資訊優化策略，從 Title 寫作技巧、Description 吸引點擊的方法，到 OG 圖片設計要點，一次掌握所有關鍵。</p>
+                    </div>
+                    <div class="article-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <i data-lucide="globe" class="w-4 h-4 text-indigo-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2">Robots Meta Tag 與 SEO</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">了解 Robots Meta Tag 的各種指令（index、follow、archive、snippet 等），以及如何正確設定搜尋引擎的爬取與索引行為。</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="component-footer"></div>
+
+    <script>
+        // ====== Shared: Load Components ======
+        async function loadComponent(id, url) {
+            try {
+                const r = await fetch(url);
+                if (!r.ok) throw new Error('fetch failed');
+                const html = await r.text();
+                document.getElementById(id).innerHTML = html;
+                const scripts = document.getElementById(id).querySelectorAll('script');
+                scripts.forEach(s => {
+                    const ns = document.createElement('script');
+                    ns.textContent = s.textContent;
+                    document.body.appendChild(ns);
+                });
+            } catch (e) {
+                console.warn('Component load skipped:', url);
+            }
+        }
+        loadComponent('component-header', '/components/header.html');
+        loadComponent('component-sidebar', '/components/sidebar.html');
+        loadComponent('component-footer', '/components/footer.html');
+
+        // ====== Toast ======
+        let toastTimer;
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast-msg show';
+            if (type === 'success') t.style.borderColor = '#34D399';
+            else if (type === 'error') t.style.borderColor = '#EF4444';
+            else t.style.borderColor = '#6366F1';
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // ====== Sidebar active state (MutationObserver) ======
+        function watchSidebar() {
+            const container = document.getElementById('component-sidebar');
+            if (!container) return;
+            const obs = new MutationObserver(() => {
+                const navs = container.querySelectorAll('.nav-item');
+                let found = false;
+                navs.forEach(a => {
+                    a.classList.remove('text-white', 'border-indigo-500');
+                    if (a.getAttribute('href') === '/meta-tag-generator') {
+                        a.classList.add('text-white', 'border-indigo-500');
+                        found = true;
+                    }
+                });
+                if (found) obs.disconnect();
+            });
+            obs.observe(container, { childList: true, subtree: true });
+        }
+        watchSidebar();
+
+        // ====== Sync color picker and text input ======
+        function syncColor(el) {
+            const picker = document.getElementById('input-theme-color');
+            const text = document.getElementById('input-theme-color-text');
+            if (el === picker) text.value = picker.value;
+            else picker.value = el.value;
+        }
+
+        // ====== FAQ Toggle ======
+        function toggleFaq(btn) {
+            const item = btn.closest('.faq-item');
+            const isOpen = item.classList.contains('open');
+            // Close all
+            document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+            if (!isOpen) item.classList.add('open');
+        }
+
+        // ====== Generate Meta Tags ======
+        function esc(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function generateMeta() {
+            const val = id => document.getElementById(id)?.value || '';
+
+            const title = val('input-title');
+            const desc = val('input-description');
+            const keywords = val('input-keywords');
+            const author = val('input-author');
+            const lang = val('input-language');
+            const canonical = val('input-canonical');
+            const ogTitle = val('input-og-title') || title;
+            const ogDesc = val('input-og-desc') || desc;
+            const ogImage = val('input-og-image');
+            const ogUrl = val('input-og-url') || canonical;
+            const ogType = val('input-og-type');
+            const twCard = val('input-tw-card');
+            const twTitle = val('input-tw-title') || ogTitle;
+            const twDesc = val('input-tw-desc') || ogDesc;
+            const twImage = val('input-tw-image') || ogImage;
+            const viewport = val('input-viewport');
+            const charset = val('input-charset');
+            const themeColor = val('input-theme-color');
+            const favicon = val('input-favicon');
+            const robots = val('input-robots');
+
+            // Update desc char count
+            const dc = document.getElementById('desc-count');
+            if (dc) dc.textContent = desc.length;
+
+            let html = '';
+            let count = 0;
+
+            function add(line) { html += line + '\n'; count++; }
+
+            html += '<span class="comment">&lt;!-- ====== Meta Tags (Generated by ToolHub) ====== --&gt;</span>\n';
+
+            if (charset) { add(`<span class="tag">&lt;meta</span> <span class="attr">charset</span>=<span class="val">"${esc(charset)}"</span><span class="tag">&gt;</span>`); }
+            if (viewport) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"viewport"</span> <span class="attr">content</span>=<span class="val">"${esc(viewport)}"</span><span class="tag">&gt;</span>`); }
+            if (title) { add(`<span class="tag">&lt;title&gt;</span>${esc(title)}<span class="tag">&lt;/title&gt;</span>`); }
+            if (desc) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"description"</span> <span class="attr">content</span>=<span class="val">"${esc(desc)}"</span><span class="tag">&gt;</span>`); }
+            if (keywords) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"keywords"</span> <span class="attr">content</span>=<span class="val">"${esc(keywords)}"</span><span class="tag">&gt;</span>`); }
+            if (author) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"author"</span> <span class="attr">content</span>=<span class="val">"${esc(author)}"</span><span class="tag">&gt;</span>`); }
+            if (robots) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"robots"</span> <span class="attr">content</span>=<span class="val">"${esc(robots)}"</span><span class="tag">&gt;</span>`); }
+            if (lang) { add(`<span class="tag">&lt;meta</span> <span class="attr">http-equiv</span>=<span class="val">"content-language"</span> <span class="attr">content</span>=<span class="val">"${esc(lang)}"</span><span class="tag">&gt;</span>`);
+                        add(`<span class="tag">&lt;html</span> <span class="attr">lang</span>=<span class="val">"${esc(lang)}"</span><span class="tag">&gt;</span> <span class="comment">&lt;!-- add to &lt;html&gt; tag --&gt;</span>`); }
+            if (themeColor) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"theme-color"</span> <span class="attr">content</span>=<span class="val">"${esc(themeColor)}"</span><span class="tag">&gt;</span>`); }
+            if (favicon) { add(`<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"icon"</span> <span class="attr">href</span>=<span class="val">"${esc(favicon)}"</span><span class="tag">&gt;</span>`); }
+            if (canonical) { add(`<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"canonical"</span> <span class="attr">href</span>=<span class="val">"${esc(canonical)}"</span><span class="tag">&gt;</span>`); }
+
+            // Open Graph
+            if (ogTitle || ogDesc || ogImage || ogUrl) {
+                html += '\n<span class="comment">&lt;!-- Open Graph --&gt;</span>\n';
+                if (ogTitle) { add(`<span class="tag">&lt;meta</span> <span class="attr">property</span>=<span class="val">"og:title"</span> <span class="attr">content</span>=<span class="val">"${esc(ogTitle)}"</span><span class="tag">&gt;</span>`); }
+                if (ogDesc) { add(`<span class="tag">&lt;meta</span> <span class="attr">property</span>=<span class="val">"og:description"</span> <span class="attr">content</span>=<span class="val">"${esc(ogDesc)}"</span><span class="tag">&gt;</span>`); }
+                if (ogImage) { add(`<span class="tag">&lt;meta</span> <span class="attr">property</span>=<span class="val">"og:image"</span> <span class="attr">content</span>=<span class="val">"${esc(ogImage)}"</span><span class="tag">&gt;</span>`); }
+                if (ogUrl) { add(`<span class="tag">&lt;meta</span> <span class="attr">property</span>=<span class="val">"og:url"</span> <span class="attr">content</span>=<span class="val">"${esc(ogUrl)}"</span><span class="tag">&gt;</span>`); }
+                if (ogType) { add(`<span class="tag">&lt;meta</span> <span class="attr">property</span>=<span class="val">"og:type"</span> <span class="attr">content</span>=<span class="val">"${esc(ogType)}"</span><span class="tag">&gt;</span>`); }
+            }
+
+            // Twitter Card
+            if (twTitle || twDesc || twImage) {
+                html += '\n<span class="comment">&lt;!-- Twitter Card --&gt;</span>\n';
+                if (twCard) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"twitter:card"</span> <span class="attr">content</span>=<span class="val">"${esc(twCard)}"</span><span class="tag">&gt;</span>`); }
+                if (twTitle) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"twitter:title"</span> <span class="attr">content</span>=<span class="val">"${esc(twTitle)}"</span><span class="tag">&gt;</span>`); }
+                if (twDesc) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"twitter:description"</span> <span class="attr">content</span>=<span class="val">"${esc(twDesc)}"</span><span class="tag">&gt;</span>`); }
+                if (twImage) { add(`<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"twitter:image"</span> <span class="attr">content</span>=<span class="val">"${esc(twImage)}"</span><span class="tag">&gt;</span>`); }
+            }
+
+            const preview = document.getElementById('preview-content');
+            if (preview) preview.innerHTML = html;
+
+            const total = document.getElementById('total-tags');
+            if (total) total.textContent = count;
+        }
+
+        // ====== Copy Meta Tags (plain text) ======
+        function getPlainText() {
+            const val = id => document.getElementById(id)?.value || '';
+            const title = val('input-title');
+            const desc = val('input-description');
+            const keywords = val('input-keywords');
+            const author = val('input-author');
+            const lang = val('input-language');
+            const canonical = val('input-canonical');
+            const ogTitle = val('input-og-title') || title;
+            const ogDesc = val('input-og-desc') || desc;
+            const ogImage = val('input-og-image');
+            const ogUrl = val('input-og-url') || canonical;
+            const ogType = val('input-og-type');
+            const twCard = val('input-tw-card');
+            const twTitle = val('input-tw-title') || ogTitle;
+            const twDesc = val('input-tw-desc') || ogDesc;
+            const twImage = val('input-tw-image') || ogImage;
+            const viewport = val('input-viewport');
+            const charset = val('input-charset');
+            const themeColor = val('input-theme-color');
+            const favicon = val('input-favicon');
+            const robots = val('input-robots');
+
+            let text = '<!-- ====== Meta Tags (Generated by ToolHub) ====== -->\n';
+
+            function add(line) { text += line + '\n'; }
+
+            if (charset) add(`<meta charset="${charset}">`);
+            if (viewport) add(`<meta name="viewport" content="${viewport}">`);
+            if (title) add(`<title>${title}</title>`);
+            if (desc) add(`<meta name="description" content="${desc}">`);
+            if (keywords) add(`<meta name="keywords" content="${keywords}">`);
+            if (author) add(`<meta name="author" content="${author}">`);
+            if (robots) add(`<meta name="robots" content="${robots}">`);
+            if (lang) { add(`<meta http-equiv="content-language" content="${lang}">`);
+                        add(`<html lang="${lang}"> <!-- add to <html> tag -->`); }
+            if (themeColor) add(`<meta name="theme-color" content="${themeColor}">`);
+            if (favicon) add(`<link rel="icon" href="${favicon}">`);
+            if (canonical) add(`<link rel="canonical" href="${canonical}">`);
+
+            if (ogTitle || ogDesc || ogImage || ogUrl) {
+                text += '\n<!-- Open Graph -->\n';
+                if (ogTitle) add(`<meta property="og:title" content="${ogTitle}">`);
+                if (ogDesc) add(`<meta property="og:description" content="${ogDesc}">`);
+                if (ogImage) add(`<meta property="og:image" content="${ogImage}">`);
+                if (ogUrl) add(`<meta property="og:url" content="${ogUrl}">`);
+                if (ogType) add(`<meta property="og:type" content="${ogType}">`);
+            }
+
+            if (twTitle || twDesc || twImage) {
+                text += '\n<!-- Twitter Card -->\n';
+                if (twCard) add(`<meta name="twitter:card" content="${twCard}">`);
+                if (twTitle) add(`<meta name="twitter:title" content="${twTitle}">`);
+                if (twDesc) add(`<meta name="twitter:description" content="${twDesc}">`);
+                if (twImage) add(`<meta name="twitter:image" content="${twImage}">`);
+            }
+
+            return text;
+        }
+
+        function copyMeta() {
+            const text = getPlainText();
+            if (!text.trim() || text === '<!-- ====== Meta Tags (Generated by ToolHub) ====== -->\n') {
+                showToast('請先填寫表單內容', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('✅ Meta 標籤已複製到剪貼簿！', 'success');
+            }).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('✅ Meta 標籤已複製到剪貼簿！', 'success');
+            });
+        }
+
+        // ====== Download HTML ======
+        function downloadMeta() {
+            const text = getPlainText();
+            if (!text.trim() || text === '<!-- ====== Meta Tags (Generated by ToolHub) ====== -->\n') {
+                showToast('請先填寫表單內容', 'error');
+                return;
+            }
+            const full = `<!DOCTYPE html>\n<html lang="${document.getElementById('input-language').value || 'zh-TW'}">\n<head>\n${text}\n</head>\n<body>\n  <!-- Your content here -->\n</body>\n</html>`;
+            const blob = new Blob([full], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'meta-tags.html';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast('✅ HTML 檔案已下載！', 'success');
+        }
+
+        // ====== Init ======
+        document.addEventListener('DOMContentLoaded', () => {
+            // Init color picker sync
+            const colorPicker = document.getElementById('input-theme-color');
+            const colorText = document.getElementById('input-theme-color-text');
+            if (colorPicker && colorText) {
+                colorText.addEventListener('input', function() { syncColor(this); generateMeta(); });
+                colorPicker.addEventListener('input', function() { syncColor(this); generateMeta(); });
+            }
+            // Init description char counter
+            const desc = document.getElementById('input-description');
+            if (desc) desc.addEventListener('input', function() {
+                document.getElementById('desc-count').textContent = this.value.length;
+            });
+            generateMeta();
+            // Init Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+                // Re-run after components load
+                setTimeout(() => lucide.createIcons(), 1000);
+            }
+        });
+
+        // Re-init icons after components load
+        document.addEventListener('componentsLoaded', () => {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Number Converter 進位制轉換器 | ToolHub - Binary Octal Decimal Hex 互轉工具</title>
+    <meta name="description" content="免費線上 Base Number Converter 進位制轉換器。支援 Binary（二進位）、Octal（八進位）、Decimal（十進位）、Hexadecimal（十六進位）即時互轉。內建 Signed/Unsigned 模式、8/16/32/64-bit 位元寬度、Overflow 檢查、ASCII/Unicode 字元顯示、位元屬性分析。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="Base Number Converter, 進位制轉換, Binary 轉換, 二進位轉十進位, 十六進位轉換, Octal, Hexadecimal, 進位轉換器, 數字系統轉換, 二進位計算機, 程式設計工具, 編碼轉換">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#F97316',
+                        },
+                        base: {
+                            bg: 'rgba(249, 115, 22, 0.12)',
+                            border: 'rgba(249, 115, 22, 0.3)',
+                            text: '#F97316',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F97316; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        .base-input {
+            width: 100%;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            padding: 0.75rem 1rem;
+            outline: none;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: 'Fira Code', monospace;
+            font-size: 1.1rem;
+        }
+        .base-input:focus {
+            border-color: #F97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+        .base-input::placeholder { color: #475569; }
+        .base-input.error {
+            border-color: #EF4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        .base-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+        .base-label .badge {
+            padding: 0.1rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.65rem;
+            font-weight: 500;
+            letter-spacing: 0;
+        }
+
+        .mode-btn {
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .mode-btn:hover { color: #e2e8f0; background: rgba(249, 115, 22, 0.05); }
+        .mode-btn.active { background: rgba(249, 115, 22, 0.15); color: #F97316; border-color: rgba(249, 115, 22, 0.3); }
+
+        .prop-card {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .prop-card:hover {
+            border-color: rgba(249, 115, 22, 0.2);
+            background: #1E293B;
+        }
+        .prop-card .value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            font-family: 'Fira Code', monospace;
+        }
+        .prop-card .label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+        .prop-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .toggle-track {
+            width: 44px;
+            height: 24px;
+            background-color: #334155;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+        .toggle-track.active { background-color: #F97316; }
+        .toggle-dot {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 9999px;
+            transition: transform 0.2s;
+        }
+        .toggle-track.active .toggle-dot { transform: translateX(20px); }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .action-btn:hover { color: #e2e8f0; background: rgba(249, 115, 22, 0.08); border-color: rgba(249, 115, 22, 0.25); }
+        .action-btn svg { width: 1rem; height: 1rem; }
+
+        .grouped-binary {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            padding: 0.5rem 1rem;
+            background: rgba(11, 17, 32, 0.5);
+            border-radius: 0.5rem;
+            border: 1px solid #1e293b;
+            margin-top: 0.4rem;
+            word-break: break-all;
+            line-height: 1.6;
+            min-height: 2.4rem;
+        }
+        .grouped-binary .gap-4bit { margin-right: 0.35rem; }
+        .grouped-binary .gap-byte { background: rgba(249, 115, 22, 0.08); border-radius: 0.25rem; padding: 0 0.15rem; }
+
+        .overflow-banner {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #FCA5A5;
+        }
+        .overflow-banner.show { display: flex; }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            cursor: pointer;
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            background: #151F32;
+            border: 1px solid #1e293b;
+            font-weight: 500;
+            color: #e2e8f0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .faq-item summary:hover { border-color: rgba(249, 115, 22, 0.3); }
+        .faq-item[open] summary { border-color: rgba(249, 115, 22, 0.3); border-radius: 0.75rem 0.75rem 0 0; }
+        .faq-item .faq-content { padding: 1rem 1.25rem; background: #151F32; border: 1px solid #1e293b; border-top: none; border-radius: 0 0 0.75rem 0.75rem; color: #94a3b8; font-size: 0.9rem; line-height: 1.7; }
+        .faq-item .chevron-icon { transition: transform 0.3s; }
+        .faq-item[open] .chevron-icon { transform: rotate(180deg); }
+
+        /* Character display card */
+        .char-display-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            min-height: 5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .char-display-card .char {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .char-display-card .char-label {
+            font-size: 0.65rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+        .char-display-card .char-empty {
+            color: #475569;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 640px) {
+            .base-input { font-size: 0.95rem; padding: 0.6rem 0.75rem; }
+            .mode-btn { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
+            .prop-card .value { font-size: 1rem; }
+            .prop-card { padding: 0.5rem; }
+            .char-display-card .char { font-size: 2rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/base-number-converter/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/base-number-converter/">
+    <meta property="og:title" content="Base Number Converter 進位制轉換器">
+    <meta property="og:description" content="免費線上 Base Number Converter 進位制轉換器。支援 Binary（二進位）、Octal（八進位）、Decimal（十進位）、Hexadecimal（十六進位）即時互轉。內建 Signed/Unsigned 模式、8/16/32/64-bit 位元寬度、Overflow 檢查、ASCII/Unicode 字元顯示、位元屬性分析。純前端本地運算，保障隱私安全。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Base Number Converter 進位制轉換器">
+    <meta name="twitter:description" content="免費線上 Base Number Converter 進位制轉換器。支援 Binary（二進位）、Octal（八進位）、Decimal（十進位）、Hexadecimal（十六進位）即時互轉。內建 Signed/Unsigned 模式、8/16/32/64-bit 位元寬度、Overflow 檢查、ASCII/Unicode 字元顯示、位元屬性分析。純前端本地運算，保障隱私安全。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Base Number Converter 進位制轉換器","url":"https://toolhuben.com/base-number-converter/","description":"免費線上 Base Number Converter 進位制轉換器。支援 Binary（二進位）、Octal（八進位）、Decimal（十進位）、Hexadecimal（十六進位）即時互轉。內建 Signed/Unsigned 模式、8/16/32/64-bit 位元寬度、Overflow 檢查、ASCII/Unicode 字元顯示、位元屬性分析。純前端本地運算，保障隱私安全。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Base Number Converter 進位制轉換器","item":"https://toolhuben.com/base-number-converter/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/base-number-converter/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/base-number-converter/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/base-number-converter/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#F97316;--classic-accent-rgb:249,115,22" data-tool-visual data-classic-tool data-classic-layout="aurora">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ==================== HERO ==================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                純前端本地運算 · 保障您的資料隱私
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Base Number <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500">進位制轉換器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                在 Binary（二進位）、Octal（八進位）、Decimal（十進位）、Hexadecimal（十六進位）之間即時互轉。<br class="hidden sm:block">
+                支援 Signed/Unsigned 模式、多種位元寬度、Overflow 檢查與位元屬性分析。
+            </p>
+        </div>
+
+        <!-- ==================== MAIN TOOL CARD ==================== -->
+        <div class="glass-panel shadow-2xl shadow-black/50 overflow-hidden mb-8">
+            <!-- Header -->
+            <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                <i class="ph ph-arrows-left-right text-hub-accent text-lg"></i>
+                <span class="text-sm font-bold text-white">進位制轉換器</span>
+                <span class="text-[10px] text-slate-500 ml-auto">即時同步 · 多模式</span>
+            </div>
+
+            <div class="p-4 sm:p-6 space-y-5">
+
+                <!-- Controls Row: Signed/Unsigned + Bit Width -->
+                <div class="flex flex-wrap items-center gap-4 sm:gap-6">
+                    <!-- Signed/Unsigned Toggle -->
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-medium text-slate-400">Signed</span>
+                        <div id="signed-toggle" class="toggle-track active" data-signed="true">
+                            <div class="toggle-dot"></div>
+                        </div>
+                        <span class="text-xs font-medium text-slate-400">Unsigned</span>
+                    </div>
+                    <div class="h-6 w-px bg-hub-700 hidden sm:block"></div>
+                    <!-- Bit Width Buttons -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-500 mr-1">Bit Width:</span>
+                        <button class="mode-btn" data-bits="8">8-bit</button>
+                        <button class="mode-btn" data-bits="16">16-bit</button>
+                        <button class="mode-btn active" data-bits="32">32-bit</button>
+                        <button class="mode-btn" data-bits="64">64-bit</button>
+                    </div>
+                </div>
+
+                <!-- Input Fields Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Binary -->
+                    <div>
+                        <div class="base-label">
+                            <span class="text-hub-accent"><i class="ph ph-code"></i></span>
+                            <span>Binary</span>
+                            <span class="badge bg-hub-700 text-slate-300">(base-2)</span>
+                        </div>
+                        <input id="input-binary" class="base-input font-mono" placeholder="e.g. 0b101010 or 101010" spellcheck="false" autocomplete="off">
+                        <div id="binary-grouped" class="grouped-binary" style="display:none"></div>
+                    </div>
+                    <!-- Octal -->
+                    <div>
+                        <div class="base-label">
+                            <span class="text-hub-accent"><i class="ph ph-number-circle-five"></i></span>
+                            <span>Octal</span>
+                            <span class="badge bg-hub-700 text-slate-300">(base-8)</span>
+                        </div>
+                        <input id="input-octal" class="base-input font-mono" placeholder="e.g. 0o52 or 52" spellcheck="false" autocomplete="off">
+                    </div>
+                    <!-- Decimal -->
+                    <div>
+                        <div class="base-label">
+                            <span class="text-hub-accent"><i class="ph ph-number-circle-one"></i></span>
+                            <span>Decimal</span>
+                            <span class="badge bg-hub-700 text-slate-300">(base-10)</span>
+                        </div>
+                        <input id="input-decimal" class="base-input font-mono" placeholder="e.g. 42" spellcheck="false" autocomplete="off">
+                    </div>
+                    <!-- Hexadecimal -->
+                    <div>
+                        <div class="base-label">
+                            <span class="text-hub-accent"><i class="ph ph-number-circle-six"></i></span>
+                            <span>Hexadecimal</span>
+                            <span class="badge bg-hub-700 text-slate-300">(base-16)</span>
+                        </div>
+                        <input id="input-hex" class="base-input font-mono" placeholder="e.g. 0x2A or 2A" spellcheck="false" autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- Overflow Banner -->
+                <div id="overflow-banner" class="overflow-banner">
+                    <i class="ph-fill ph-warning-circle text-lg"></i>
+                    <span id="overflow-message">Value exceeds the range for the current mode.</span>
+                </div>
+
+                <!-- Range Info -->
+                <div class="flex flex-wrap gap-3 text-xs text-slate-500" id="range-info">
+                    <span>Range: <span id="range-min" class="text-slate-300 font-mono">-2,147,483,648</span> ~ <span id="range-max" class="text-slate-300 font-mono">2,147,483,647</span></span>
+                    <span class="hidden sm:inline">·</span>
+                    <span>Min: <span id="val-min" class="text-slate-300 font-mono">-2,147,483,648</span></span>
+                    <span>·</span>
+                    <span>Max: <span id="val-max" class="text-slate-300 font-mono">2,147,483,647</span></span>
+                </div>
+
+                <!-- Properties Grid -->
+                <div>
+                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="ph ph-infinity text-hub-accent"></i> 位元屬性
+                    </div>
+                    <div class="grid grid-cols-5 sm:grid-cols-5 gap-2">
+                        <div class="prop-card">
+                            <div class="icon text-sky-400"><i class="ph ph-ruler"></i></div>
+                            <div class="value" id="prop-bit-length">0</div>
+                            <div class="label">Bit Length</div>
+                        </div>
+                        <div class="prop-card">
+                            <div class="icon text-emerald-400"><i class="ph ph-hard-drives"></i></div>
+                            <div class="value" id="prop-byte-size">0</div>
+                            <div class="label">Byte Size</div>
+                        </div>
+                        <div class="prop-card">
+                            <div class="icon" id="prop-even-icon" style="color:#94a3b8"><i class="ph ph-minus"></i></div>
+                            <div class="value" id="prop-even">-</div>
+                            <div class="label">Even</div>
+                        </div>
+                        <div class="prop-card">
+                            <div class="icon" id="prop-power-icon" style="color:#94a3b8"><i class="ph ph-minus"></i></div>
+                            <div class="value" id="prop-power">-</div>
+                            <div class="label">Power of 2</div>
+                        </div>
+                        <div class="prop-card">
+                            <div class="icon" id="prop-prime-icon" style="color:#94a3b8"><i class="ph ph-minus"></i></div>
+                            <div class="value" id="prop-prime">-</div>
+                            <div class="label">Prime</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Programmer Mode: ASCII / Unicode -->
+                <div id="programmer-section">
+                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="ph ph-terminal-window text-hub-accent"></i> Programmer Mode — 字元對應
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="char-display-card">
+                            <div id="ascii-char" class="char-empty"><i class="ph ph-text-aa"></i></div>
+                            <div class="char-label">ASCII</div>
+                        </div>
+                        <div class="char-display-card">
+                            <div id="unicode-char" class="char-empty"><i class="ph ph-globe"></i></div>
+                            <div class="char-label">Unicode</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-hub-700/50">
+                    <button id="btn-copy" class="action-btn"><i class="ph ph-copy"></i> Copy All</button>
+                    <button id="btn-download" class="action-btn"><i class="ph ph-download"></i> Download TXT</button>
+                    <button id="btn-clear" class="action-btn"><i class="ph ph-trash"></i> Clear</button>
+                    <button id="btn-sample" class="action-btn"><i class="ph ph-magic-wand"></i> Sample Data</button>
+                    <button id="btn-swap" class="action-btn"><i class="ph ph-arrows-clockwise"></i> Swap Input Base</button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==================== VISUALIZATION: Binary Groups & Byte Groups ==================== -->
+        <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-8" id="visualization-panel" style="display:none">
+            <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                <i class="ph ph-grid-four text-hub-accent text-lg"></i>
+                <span class="text-sm font-bold text-white">視覺化</span>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4">
+                <div>
+                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Binary Group（每 4 bit 分組）</div>
+                    <div id="viz-binary-4bit" class="grouped-binary text-base">—</div>
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Byte 分組（每 8 bit）</div>
+                    <div id="viz-binary-8bit" class="grouped-binary text-base">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== FAQ ==================== -->
+        <div class="glass-panel p-6 shadow-xl">
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+                <i class="ph-fill ph-question-mark text-hub-accent"></i> 進位制轉換 常見問題 FAQ
+            </h3>
+            <div class="space-y-4" itemscope itemtype="https://schema.org/FAQPage">
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q1: 什麼是 Binary（二進位）？為什麼電腦使用二進位？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                <strong class="text-white">Binary（二進位）</strong>是一種以 2 為基底的數字系統，僅使用 <strong class="text-white">0</strong> 和 <strong class="text-white">1</strong> 兩個數字來表示所有數值。電腦之所以使用二進位，是因為其硬體元件（電晶體）天然具有兩種穩定狀態：<strong class="text-white">通電（1）</strong> 和 <strong class="text-white">斷電（0）</strong>。這種二元狀態的設計使得數位電路設計簡單、可靠，且抗干擾能力強。例如，十進位的 <code class="text-hub-accent">42</code> 在二進位中表示為 <code class="text-hub-accent">101010</code>。
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q2: 什麼是 Octal（八進位）和 Hexadecimal（十六進位）？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                <strong class="text-white">Octal（八進位）</strong>以 8 為基底，使用 0–7 八個數字。在 Unix/Linux 系統中，檔案權限常用八進位表示（如 <code class="text-hub-accent">0755</code>）。<br><br>
+                                <strong class="text-white">Hexadecimal（十六進位）</strong>以 16 為基底，使用 0–9 和 A–F 十六個符號。十六進位常用於記憶體位址、RGB 顏色值（如 <code class="text-hub-accent">#FF5733</code>）、MAC 位址等。由於一位十六進位可表示 4 位二進位，它成為閱讀和書寫二進位最方便的替代方案。
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q3: 為什麼程式設計中常用十六進位而不是其他進位？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                十六進位在程式設計中廣泛使用，主要有以下原因：<br>
+                                <strong class="text-white">1. 與二進位的完美對應</strong>：一位十六進位正好對應 4 位二進位，轉換非常直觀。例如 <code class="text-hub-accent">0xF</code> = <code class="text-hub-accent">1111</code>。<br>
+                                <strong class="text-white">2. 簡潔性</strong>：一個位元組（8 位元）只需 2 位十六進位就能表示（如 <code class="text-hub-accent">0xFF</code>），而二進位需要 8 位。<br>
+                                <strong class="text-white">3. 除錯與記憶體檢視</strong>：在記憶體傾印（Memory Dump）和 Hex Editor 中，十六進位是標準的顯示格式。<br>
+                                <strong class="text-white">4. 顏色表示</strong>：網頁設計中的 <code class="text-hub-accent">#RRGGBB</code> 格式就是十六進位的最佳應用範例。<br>
+                                相比之下，八進位因為 3 位一組的對應方式不如十六進位的 4 位一組方便，因此在現代程式設計中的使用頻率較低。
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q4: Signed 和 Unsigned 模式有什麼區別？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                <strong class="text-white">Unsigned（無號數）</strong>：只能表示 0 和正整數。N 位元可表示的範圍為 0 到 2<sup>N</sup>−1。例如 8-bit Unsigned 的範圍是 0∼255。<br><br>
+                                <strong class="text-white">Signed（有號數）</strong>：可表示正數和負數。最常見的是採用<strong class="text-white">二補數（Two's Complement）</strong>表示法。N 位元可表示的範圍為 −2<sup>N−1</sup> 到 2<sup>N−1</sup>−1。例如 8-bit Signed 的範圍是 −128∼127。<br><br>
+                                二補數的優點是加減法可以使用同樣的硬體電路，不需要區分正負號。二補數的計算方式為：將所有位元反相（0 變 1，1 變 0）後再加 1。例如 −1 在 8-bit 二補數中表示為 <code class="text-hub-accent">11111111</code>。
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q5: 什麼是 Overflow？什麼時候會發生？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                <strong class="text-white">Overflow（溢位）</strong>是指運算結果超出當前資料型別所能表示的範圍。例如：<br>
+                                • 在 8-bit Unsigned 模式中輸入 <code class="text-hub-accent">256</code>，最大值為 255，因此發生 Overflow。<br>
+                                • 在 8-bit Signed 模式中輸入 <code class="text-hub-accent">128</code>，最大值為 127，同樣發生 Overflow。<br>
+                                • 在 32-bit Signed 模式中輸入 <code class="text-hub-accent">2,147,483,648</code>，超出範圍。<br><br>
+                                Overflow 在程式設計中是重要的安全性考量。整數溢位可能導致緩衝區溢位漏洞、數值繞回（如從最大值加 1 變成最小值）等問題。本工具會在發生 Overflow 時即時顯示紅色警告，幫助您避免這類錯誤。
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q6: 如何將一個十進位數字轉換為二進位？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                將十進位轉換為二進位最常用的方法是<strong class="text-white">除以 2 取餘法</strong>：<br>
+                                1. 將數字除以 2，記錄餘數（0 或 1）。<br>
+                                2. 將商數繼續除以 2，記錄餘數。<br>
+                                3. 重複步驟 2 直到商數為 0。<br>
+                                4. 將所有餘數從最後一次到第一次反向排列。<br><br>
+                                範例：將十進位 42 轉為二進位<br>
+                                <code class="text-slate-300">42 ÷ 2 = 21 餘 0</code><br>
+                                <code class="text-slate-300">21 ÷ 2 = 10 餘 1</code><br>
+                                <code class="text-slate-300">10 ÷ 2 = 5 餘 0</code><br>
+                                <code class="text-slate-300">5 ÷ 2 = 2 餘 1</code><br>
+                                <code class="text-slate-300">2 ÷ 2 = 1 餘 0</code><br>
+                                <code class="text-slate-300">1 ÷ 2 = 0 餘 1</code><br>
+                                結果（反向排列）：<code class="text-hub-accent">101010</code>
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item">
+                    <details>
+                        <summary itemprop="name">
+                            <span>Q7: 本工具會將我的資料上傳到伺服器嗎？</span>
+                            <i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+                        </summary>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                完全不會。本工具是<strong class="text-white">純前端應用</strong>，所有的進位制轉換、位元計算和屬性分析都在您的瀏覽器中本地完成，沒有任何資料被傳送到伺服器。您可以放心使用任何敏感數值，即使離線狀態下也能正常運作。
+                            </p>
+                        </div>
+                    </details>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==================== SEO ARTICLE ==================== -->
+        <div class="glass-panel p-6 shadow-xl mt-8">
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+                <i class="ph ph-book-open text-hub-accent"></i> 進位制轉換教學：從二進位到十六進位的完整指南
+            </h3>
+            <div class="space-y-5 text-slate-400 text-sm leading-relaxed">
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">什麼是 Binary（二進位）？</h4>
+                    <p>
+                        Binary（二進位）是電腦科學和數位電路的基石。它以 <strong class="text-white">2</strong> 為基底，僅使用兩個數字 <strong class="text-white">0</strong> 和 <strong class="text-white">1</strong> 來表示所有數值。每個二進位數字稱為一個「位元（bit）」，而 8 個位元組成一個「位元組（byte）」。
+                    </p>
+                    <p class="mt-2">
+                        二進位的運作原理與十進位類似，只是基底不同。在十進位中，每一位的權重是 10 的次方（個位 10<sup>0</sup>、十位 10<sup>1</sup>、百位 10<sup>2</sup>⋯⋯）；在二進位中，每一位的權重是 2 的次方（2<sup>0</sup>、2<sup>1</sup>、2<sup>2</sup>⋯⋯）。
+                    </p>
+                    <p class="mt-2">
+                        例如：<code class="text-hub-accent">101010</code> (二進位) = 1×2<sup>5</sup> + 0×2<sup>4</sup> + 1×2<sup>3</sup> + 0×2<sup>2</sup> + 1×2<sup>1</sup> + 0×2<sup>0</sup> = 32 + 0 + 8 + 0 + 2 + 0 = <strong class="text-white">42</strong>（十進位）。
+                    </p>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">什麼是 Octal（八進位）？</h4>
+                    <p>
+                        Octal（八進位）以 <strong class="text-white">8</strong> 為基底，使用 0 到 7 共八個數字。在早期的電腦系統中，八進位曾被廣泛使用，因為 3 位二進位可以精確對應 1 位八進位（2<sup>3</sup> = 8）。
+                    </p>
+                    <p class="mt-2">
+                        在現代，八進位最常見的應用場景是 <strong class="text-white">Unix/Linux 檔案權限設定</strong>，例如 <code class="text-hub-accent">chmod 755</code> 中的 <code class="text-hub-accent">755</code> 就是一個八進位數字，表示檔案擁有者有讀寫執行權限（7），群組和其他使用者有讀和執行權限（5）。
+                    </p>
+                    <p class="mt-2">
+                        在 JavaScript 和 Python 中，以 <code class="text-hub-accent">0o</code> 前綴開頭的數字表示八進位（如 <code class="text-hub-accent">0o52</code> = 十進位 42）。
+                    </p>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">什麼是 Hexadecimal（十六進位）？</h4>
+                    <p>
+                        Hexadecimal（十六進位）以 <strong class="text-white">16</strong> 為基底，使用 0–9 和 A–F 共十六個符號，其中 A=10、B=11、C=12、D=13、E=14、F=15。由於一位十六進位正好對應 4 位二進位（2<sup>4</sup> = 16），它是一種非常高效的二進位簡寫方式。
+                    </p>
+                    <p class="mt-2">
+                        十六進位的常見應用包括：<br>
+                        • <strong class="text-white">記憶體位址</strong>：如 <code class="text-hub-accent">0x7FFF</code><br>
+                        • <strong class="text-white">網頁顏色</strong>：如 <code class="text-hub-accent">#FF6B35</code><br>
+                        • <strong class="text-white">MAC 位址</strong>：如 <code class="text-hub-accent">00:1A:2B:3C:4D:5E</code><br>
+                        • <strong class="text-white">機器碼和組合語言</strong>：指令和記憶體位址的標準表示法
+                    </p>
+                    <p class="mt-2">
+                        在程式碼中，十六進位通常以 <code class="text-hub-accent">0x</code> 前綴開頭，這是源自 C 語言的慣例，並被大多數現代語言繼承。
+                    </p>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">進位制轉換速查表（0–16）</h4>
+                    <div class="overflow-x-auto mt-3">
+                        <table class="w-full text-xs font-mono border-collapse">
+                            <thead>
+                                <tr class="text-slate-500 border-b border-hub-700">
+                                    <th class="text-left py-2 px-3">Decimal</th>
+                                    <th class="text-left py-2 px-3">Binary</th>
+                                    <th class="text-left py-2 px-3">Octal</th>
+                                    <th class="text-left py-2 px-3">Hex</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reference-table" class="text-slate-300"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">為什麼程式設計常用十六進位？</h4>
+                    <p>
+                        程式設計師偏愛十六進位的主要原因可以歸結為兩個字：<strong class="text-white">效率</strong>。一個位元組（8 位元）的內容用二進位需要寫 8 個數字（如 <code class="text-hub-accent">11111111</code>），但用十六進位只需要 2 個（<code class="text-hub-accent">0xFF</code>）。
+                    </p>
+                    <p class="mt-2">
+                        更重要的是，十六進位和二進位之間的轉換幾乎不需要計算。只需記住 4 位二進位對應的十六進位值（<code class="text-hub-accent">0000</code>=0 到 <code class="text-hub-accent">1111</code>=F），就可以在任何時候快速轉換。這就是為什麼低階程式設計、除錯工具和網路協定分析都大量採用十六進位。
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">完成</span>
+    </div>
+
+    <!-- 頁尾 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式                               -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/base-number-converter';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => { container.classList.remove('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 核心業務邏輯：進位制轉換引擎              -->
+    <!-- ========================================== -->
+    <script>
+        // ============================================================
+        // 1. 狀態管理
+        // ============================================================
+        let isUpdating = false;
+        let currentSigned = true;   // true = signed, false = unsigned
+        let currentBits = 32;
+
+        // ============================================================
+        // 2. 範圍計算
+        // ============================================================
+        function getRange(bits, signed) {
+            if (signed) {
+                const min = -(2n ** BigInt(bits - 1));
+                const max = (2n ** BigInt(bits - 1)) - 1n;
+                return { min, max };
+            } else {
+                const min = 0n;
+                const max = (2n ** BigInt(bits)) - 1n;
+                return { min, max };
+            }
+        }
+
+        // ============================================================
+        // 3. 解析輸入
+        // ============================================================
+        function parseNumberInput(str, base) {
+            if (!str || str.trim() === '') return { value: null, valid: false };
+            let s = str.trim();
+            let negative = false;
+            if (s.startsWith('-')) { negative = true; s = s.slice(1); }
+            if (s.startsWith('+')) { s = s.slice(1); }
+
+            let radix;
+            let digits;
+
+            switch (base) {
+                case 'binary':
+                    // Strip 0b prefix if present
+                    if (/^0[bB]/i.test(s)) s = s.slice(2);
+                    radix = 2;
+                    if (!/^[01]+$/.test(s)) return { value: null, valid: false };
+                    break;
+                case 'octal':
+                    if (/^0[oO]/i.test(s)) s = s.slice(2);
+                    else if (s.startsWith('0') && s.length > 1 && /^0[0-7]+$/.test(s)) s = s.slice(1); // leading 0
+                    radix = 8;
+                    if (!/^[0-7]+$/.test(s)) return { value: null, valid: false };
+                    break;
+                case 'decimal':
+                    radix = 10;
+                    if (!/^\d+$/.test(s)) return { value: null, valid: false };
+                    break;
+                case 'hex':
+                    if (/^0[xX]/i.test(s)) s = s.slice(2);
+                    radix = 16;
+                    if (!/^[0-9a-fA-F]+$/.test(s)) return { value: null, valid: false };
+                    break;
+                default:
+                    return { value: null, valid: false };
+            }
+
+            try {
+                let value = 0n;
+                const digitsStr = s.toLowerCase();
+                const hexChars = '0123456789abcdef';
+                for (const ch of digitsStr) {
+                    const idx = hexChars.indexOf(ch);
+                    if (idx === -1 || idx >= radix) return { value: null, valid: false };
+                    value = value * BigInt(radix) + BigInt(idx);
+                }
+                if (negative) value = -value;
+                return { value, valid: true };
+            } catch (e) {
+                return { value: null, valid: false };
+            }
+        }
+
+        // ============================================================
+        // 4. 格式化輸出
+        // ============================================================
+        function formatInBase(value, base, signed, bits) {
+            if (value === null || value === undefined) return '';
+            const range = getRange(bits, signed);
+            let v = value;
+
+            // For display purposes, apply bit mask for unsigned mode to show the bit pattern
+            // But for signed mode, we use the actual value
+
+            switch (base) {
+                case 'binary':
+                    return toBinaryString(v, signed, bits);
+                case 'octal':
+                    return toOctalString(v, signed, bits);
+                case 'decimal':
+                    return v.toString();
+                case 'hex':
+                    return toHexString(v, signed, bits);
+                default:
+                    return v.toString();
+            }
+        }
+
+        function toBinaryString(value, signed, bits) {
+            const range = getRange(bits, signed);
+            if (value < range.min || value > range.max) return value.toString(2);
+            if (signed && value < 0n) {
+                // Two's complement
+                const mask = (2n ** BigInt(bits)) - 1n;
+                const twos = value & mask;
+                return twos.toString(2).padStart(bits, '0');
+            }
+            return value.toString(2);
+        }
+
+        function toOctalString(value, signed, bits) {
+            const range = getRange(bits, signed);
+            if (value < range.min || value > range.max) return value.toString(8);
+            if (signed && value < 0n) {
+                const mask = (2n ** BigInt(bits)) - 1n;
+                const twos = value & mask;
+                return twos.toString(8).padStart(Math.ceil(bits / 3), '0');
+            }
+            return value.toString(8);
+        }
+
+        function toHexString(value, signed, bits) {
+            const range = getRange(bits, signed);
+            if (value < range.min || value > range.max) return value.toString(16).toUpperCase();
+            if (signed && value < 0n) {
+                const mask = (2n ** BigInt(bits)) - 1n;
+                const twos = value & mask;
+                return twos.toString(16).toUpperCase().padStart(bits / 4, '0');
+            }
+            return value.toString(16).toUpperCase();
+        }
+
+        // ============================================================
+        // 5. 屬性計算
+        // ============================================================
+        function computeProperties(value) {
+            if (value === null || value === undefined) {
+                return { bitLength: 0, byteSize: 0, isEven: null, isPowerOfTwo: null, isPrime: null };
+            }
+
+            const absV = value < 0n ? -value : value;
+
+            // Bit length: number of bits needed to represent abs value
+            const bitLength = absV === 0n ? 0 : absV.toString(2).length;
+
+            // Byte size
+            const byteSize = bitLength === 0 ? 0 : Math.ceil(bitLength / 8);
+
+            // Is even
+            const isEven = (value & 1n) === 0n;
+
+            // Is power of two
+            const isPowerOfTwo = absV > 0n && (absV & (absV - 1n)) === 0n;
+
+            // Is prime (only for positive numbers up to 10^12 for performance)
+            let isPrime = null;
+            if (value < 0n) {
+                isPrime = false;
+            } else if (value <= 1n) {
+                isPrime = false;
+            } else if (value <= 3n) {
+                isPrime = true;
+            } else if (value % 2n === 0n || value % 3n === 0n) {
+                isPrime = false;
+            } else if (value <= 1000000000000n) { // 10^12
+                isPrime = true;
+                let i = 5n;
+                while (i * i <= value) {
+                    if (value % i === 0n || value % (i + 2n) === 0n) {
+                        isPrime = false;
+                        break;
+                    }
+                    i += 6n;
+                }
+            } else {
+                // For very large values, we can't easily determine primality
+                isPrime = 'N/A';
+            }
+
+            return { bitLength, byteSize, isEven, isPowerOfTwo, isPrime };
+        }
+
+        // ============================================================
+        // 6. 主轉換引擎
+        // ============================================================
+        function performConversion(changedField, rawValue) {
+            if (isUpdating) return;
+            isUpdating = true;
+
+            try {
+                // Parse the value from the changed field
+                let base;
+                switch (changedField) {
+                    case 'binary': base = 'binary'; break;
+                    case 'octal': base = 'octal'; break;
+                    case 'decimal': base = 'decimal'; break;
+                    case 'hex': base = 'hex'; break;
+                    default: isUpdating = false; return;
+                }
+
+                const parsed = parseNumberInput(rawValue, base);
+                const range = getRange(currentBits, currentSigned);
+
+                // Get elements
+                const elBinary = document.getElementById('input-binary');
+                const elOctal = document.getElementById('input-octal');
+                const elDecimal = document.getElementById('input-decimal');
+                const elHex = document.getElementById('input-hex');
+                const elOverflow = document.getElementById('overflow-banner');
+                const elOverMsg = document.getElementById('overflow-message');
+                const elRangeMin = document.getElementById('range-min');
+                const elRangeMax = document.getElementById('range-max');
+                const elValMin = document.getElementById('val-min');
+                const elValMax = document.getElementById('val-max');
+                const elVizPanel = document.getElementById('visualization-panel');
+                const elBinary4bit = document.getElementById('viz-binary-4bit');
+                const elBinary8bit = document.getElementById('viz-binary-8bit');
+
+                // Update range display
+                elRangeMin.textContent = formatNumberWithCommas(range.min);
+                elRangeMax.textContent = formatNumberWithCommas(range.max);
+                elValMin.textContent = formatNumberWithCommas(range.min);
+                elValMax.textContent = formatNumberWithCommas(range.max);
+
+                if (!parsed.valid) {
+                    // Don't clear if field is empty
+                    if (rawValue.trim() === '') {
+                        // Clear all outputs
+                        if (changedField !== 'binary') elBinary.value = '';
+                        if (changedField !== 'octal') elOctal.value = '';
+                        if (changedField !== 'decimal') elDecimal.value = '';
+                        if (changedField !== 'hex') elHex.value = '';
+                        elOverflow.classList.remove('show');
+                        clearProperties();
+                        elVizPanel.style.display = 'none';
+                        clearProgrammer();
+                        document.getElementById('binary-grouped').style.display = 'none';
+                    } else {
+                        // Invalid input — mark current field with error
+                        // Don't clear other fields, just show invalid
+                        elOverflow.classList.remove('show');
+                        clearProperties();
+                        elVizPanel.style.display = 'none';
+                        clearProgrammer();
+                        document.getElementById('binary-grouped').style.display = 'none';
+                    }
+                    isUpdating = false;
+                    return;
+                }
+
+                const value = parsed.value;
+                const hasOverflow = value < range.min || value > range.max;
+
+                // Update overflow banner
+                if (hasOverflow) {
+                    elOverflow.classList.add('show');
+                    elOverMsg.textContent = `Value ${formatNumberWithCommas(value)} exceeds the ${currentBits}-bit ${currentSigned ? 'Signed' : 'Unsigned'} range (${formatNumberWithCommas(range.min)} ~ ${formatNumberWithCommas(range.max)}).`;
+                } else {
+                    elOverflow.classList.remove('show');
+                }
+
+                // Format and update each field
+                if (changedField !== 'binary') {
+                    elBinary.value = toBinaryString(value, currentSigned, currentBits);
+                }
+                if (changedField !== 'octal') {
+                    elOctal.value = toOctalString(value, currentSigned, currentBits);
+                }
+                if (changedField !== 'decimal') {
+                    elDecimal.value = value.toString();
+                }
+                if (changedField !== 'hex') {
+                    elHex.value = toHexString(value, currentSigned, currentBits);
+                }
+
+                // Update grouped binary display
+                const binStr = toBinaryString(value, currentSigned, currentBits);
+                updateGroupedBinary(binStr);
+
+                // Update visualization
+                if (!hasOverflow && value >= 0n) {
+                    elVizPanel.style.display = 'block';
+                    const binFull = value.toString(2);
+                    elBinary4bit.textContent = binFull.split('').reverse().reduce((acc, c, i) => {
+                        if (i > 0 && i % 4 === 0) acc = ' ' + acc;
+                        return c + acc;
+                    }, '') || '0';
+                    elBinary8bit.textContent = binFull.split('').reverse().reduce((acc, c, i) => {
+                        if (i > 0 && i % 8 === 0) acc = ' ' + acc;
+                        return c + acc;
+                    }, '') || '0';
+                } else {
+                    elVizPanel.style.display = 'none';
+                }
+
+                // Update properties
+                const props = computeProperties(value);
+                updateProperties(props);
+
+                // Update programmer mode (ASCII/Unicode)
+                updateProgrammer(value);
+
+            } finally {
+                isUpdating = false;
+            }
+        }
+
+        // ============================================================
+        // 7. UI 更新輔助函數
+        // ============================================================
+        function formatNumberWithCommas(n) {
+            if (typeof n === 'bigint') {
+                const s = n.toString();
+                return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function updateGroupedBinary(binStr) {
+            const el = document.getElementById('binary-grouped');
+            if (!binStr || binStr === '0') {
+                el.style.display = 'none';
+                return;
+            }
+            // Group by 4 bits from right
+            const grouped = binStr.split('').reverse().reduce((acc, c, i) => {
+                if (i > 0 && i % 4 === 0) acc = ' ' + acc;
+                return c + acc;
+            }, '');
+            el.textContent = grouped;
+            el.style.display = 'block';
+        }
+
+        function clearProperties() {
+            document.getElementById('prop-bit-length').textContent = '0';
+            document.getElementById('prop-byte-size').textContent = '0';
+            document.getElementById('prop-even').textContent = '-';
+            document.getElementById('prop-even-icon').innerHTML = '<i class="ph ph-minus"></i>';
+            document.getElementById('prop-even-icon').style.color = '#94a3b8';
+            document.getElementById('prop-power').textContent = '-';
+            document.getElementById('prop-power-icon').innerHTML = '<i class="ph ph-minus"></i>';
+            document.getElementById('prop-power-icon').style.color = '#94a3b8';
+            document.getElementById('prop-prime').textContent = '-';
+            document.getElementById('prop-prime-icon').innerHTML = '<i class="ph ph-minus"></i>';
+            document.getElementById('prop-prime-icon').style.color = '#94a3b8';
+        }
+
+        function updateProperties(props) {
+            document.getElementById('prop-bit-length').textContent = props.bitLength;
+
+            let byteText = props.byteSize.toString();
+            document.getElementById('prop-byte-size').textContent = byteText;
+
+            // Even
+            if (props.isEven === null) {
+                document.getElementById('prop-even').textContent = '-';
+                document.getElementById('prop-even-icon').innerHTML = '<i class="ph ph-minus"></i>';
+                document.getElementById('prop-even-icon').style.color = '#94a3b8';
+            } else if (props.isEven) {
+                document.getElementById('prop-even').textContent = 'Yes';
+                document.getElementById('prop-even-icon').innerHTML = '<i class="ph ph-check-circle"></i>';
+                document.getElementById('prop-even-icon').style.color = '#22c55e';
+            } else {
+                document.getElementById('prop-even').textContent = 'No';
+                document.getElementById('prop-even-icon').innerHTML = '<i class="ph ph-x-circle"></i>';
+                document.getElementById('prop-even-icon').style.color = '#ef4444';
+            }
+
+            // Power of 2
+            if (props.isPowerOfTwo === null) {
+                document.getElementById('prop-power').textContent = '-';
+                document.getElementById('prop-power-icon').innerHTML = '<i class="ph ph-minus"></i>';
+                document.getElementById('prop-power-icon').style.color = '#94a3b8';
+            } else if (props.isPowerOfTwo) {
+                document.getElementById('prop-power').textContent = 'Yes';
+                document.getElementById('prop-power-icon').innerHTML = '<i class="ph ph-check-circle"></i>';
+                document.getElementById('prop-power-icon').style.color = '#22c55e';
+            } else {
+                document.getElementById('prop-power').textContent = 'No';
+                document.getElementById('prop-power-icon').innerHTML = '<i class="ph ph-x-circle"></i>';
+                document.getElementById('prop-power-icon').style.color = '#ef4444';
+            }
+
+            // Prime
+            if (props.isPrime === null || props.isPrime === 'N/A') {
+                document.getElementById('prop-prime').textContent = props.isPrime === 'N/A' ? 'N/A' : '-';
+                document.getElementById('prop-prime-icon').innerHTML = '<i class="ph ph-minus"></i>';
+                document.getElementById('prop-prime-icon').style.color = '#94a3b8';
+            } else if (props.isPrime) {
+                document.getElementById('prop-prime').textContent = 'Yes';
+                document.getElementById('prop-prime-icon').innerHTML = '<i class="ph ph-check-circle"></i>';
+                document.getElementById('prop-prime-icon').style.color = '#22c55e';
+            } else {
+                document.getElementById('prop-prime').textContent = 'No';
+                document.getElementById('prop-prime-icon').innerHTML = '<i class="ph ph-x-circle"></i>';
+                document.getElementById('prop-prime-icon').style.color = '#ef4444';
+            }
+        }
+
+        function clearProgrammer() {
+            document.getElementById('ascii-char').innerHTML = '<span class="char-empty"><i class="ph ph-text-aa"></i></span>';
+            document.getElementById('unicode-char').innerHTML = '<span class="char-empty"><i class="ph ph-globe"></i></span>';
+        }
+
+        function updateProgrammer(value) {
+            const elAscii = document.getElementById('ascii-char');
+            const elUnicode = document.getElementById('unicode-char');
+
+            if (value === null || value === undefined || value < 0n || value > 0x10FFFFn) {
+                clearProgrammer();
+                return;
+            }
+
+            const numVal = Number(value);
+
+            // ASCII (0-127) or extended ASCII (0-255)
+            if (numVal >= 0 && numVal <= 255) {
+                if (numVal >= 32 && numVal <= 126) {
+                    elAscii.innerHTML = `<span class="char" style="font-family:'Fira Code',monospace">${String.fromCharCode(numVal)}</span>`;
+                } else if (numVal === 0) {
+                    elAscii.innerHTML = `<span class="char-empty">NUL</span>`;
+                } else if (numVal === 10) {
+                    elAscii.innerHTML = `<span class="char-empty">LF (\\n)</span>`;
+                } else if (numVal === 13) {
+                    elAscii.innerHTML = `<span class="char-empty">CR (\\r)</span>`;
+                } else if (numVal === 9) {
+                    elAscii.innerHTML = `<span class="char-empty">TAB (\\t)</span>`;
+                } else if (numVal === 127) {
+                    elAscii.innerHTML = `<span class="char-empty">DEL</span>`;
+                } else {
+                    elAscii.innerHTML = `<span class="char-empty">控制字元 (${numVal})</span>`;
+                }
+            } else {
+                elAscii.innerHTML = `<span class="char-empty">超出 ASCII 範圍</span>`;
+            }
+
+            // Unicode
+            if (numVal >= 0 && numVal <= 0x10FFFF) {
+                try {
+                    const unicodeStr = String.fromCodePoint(numVal);
+                    elUnicode.innerHTML = `
+                        <span class="char" style="font-family:'Fira Code',monospace">${unicodeStr}</span>
+                        <div style="font-size:0.65rem;color:#64748b;margin-top:0.15rem">U+${numVal.toString(16).toUpperCase().padStart(4, '0')}</div>
+                    `;
+                } catch (e) {
+                    elUnicode.innerHTML = `<span class="char-empty">無效的 Unicode</span>`;
+                }
+            } else {
+                elUnicode.innerHTML = `<span class="char-empty">超出 Unicode 範圍</span>`;
+            }
+        }
+
+        // ============================================================
+        // 8. 工具函數
+        // ============================================================
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-msg').textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // ============================================================
+        // 9. 參考表格生成
+        // ============================================================
+        function generateReferenceTable() {
+            const tbody = document.getElementById('reference-table');
+            for (let i = 0; i <= 16; i++) {
+                const bin = i.toString(2).padStart(4, '0');
+                const oct = i.toString(8);
+                const hex = i.toString(16).toUpperCase();
+                const row = document.createElement('tr');
+                row.className = 'border-b border-hub-700/30 hover:bg-hub-800/50';
+                row.innerHTML = `
+                    <td class="py-1.5 px-3">${i}</td>
+                    <td class="py-1.5 px-3 text-hub-accent">${bin}</td>
+                    <td class="py-1.5 px-3">${oct}</td>
+                    <td class="py-1.5 px-3 text-hub-accent">${hex}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        // ============================================================
+        // 10. 事件綁定
+        // ============================================================
+
+        // Input field events
+        document.getElementById('input-binary').addEventListener('input', function() {
+            performConversion('binary', this.value);
+        });
+        document.getElementById('input-octal').addEventListener('input', function() {
+            performConversion('octal', this.value);
+        });
+        document.getElementById('input-decimal').addEventListener('input', function() {
+            performConversion('decimal', this.value);
+        });
+        document.getElementById('input-hex').addEventListener('input', function() {
+            performConversion('hex', this.value);
+        });
+
+        // Signed/Unsigned toggle
+        document.getElementById('signed-toggle').addEventListener('click', function() {
+            currentSigned = !currentSigned;
+            this.classList.toggle('active', currentSigned);
+            this.dataset.signed = currentSigned;
+            // Trigger re-conversion from the active field
+            const activeField = getActiveField();
+            if (activeField) {
+                performConversion(activeField.id.replace('input-', ''), activeField.value);
+            } else {
+                // Default: use decimal if nothing is filled
+                const el = document.getElementById('input-decimal');
+                performConversion('decimal', el.value);
+            }
+        });
+
+        // Bit width buttons
+        document.querySelectorAll('[data-bits]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('[data-bits]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentBits = parseInt(this.dataset.bits);
+                const activeField = getActiveField();
+                if (activeField) {
+                    performConversion(activeField.id.replace('input-', ''), activeField.value);
+                } else {
+                    const el = document.getElementById('input-decimal');
+                    performConversion('decimal', el.value);
+                }
+            });
+        });
+
+        function getActiveField() {
+            const fields = [
+                document.getElementById('input-decimal'),
+                document.getElementById('input-binary'),
+                document.getElementById('input-octal'),
+                document.getElementById('input-hex')
+            ];
+            for (const f of fields) {
+                if (f.value.trim() !== '') return f;
+            }
+            return null;
+        }
+
+        // Copy all
+        document.getElementById('btn-copy').addEventListener('click', function() {
+            const bin = document.getElementById('input-binary').value;
+            const oct = document.getElementById('input-octal').value;
+            const dec = document.getElementById('input-decimal').value;
+            const hex = document.getElementById('input-hex').value;
+            const text = `Binary: ${bin}\nOctal: ${oct}\nDecimal: ${dec}\nHex: ${hex}`;
+            if (!bin && !oct && !dec && !hex) {
+                showToast('尚無資料可複製', true);
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已複製到剪貼簿', false);
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('已複製到剪貼簿', false);
+            });
+        });
+
+        // Download TXT
+        document.getElementById('btn-download').addEventListener('click', function() {
+            const bin = document.getElementById('input-binary').value;
+            const oct = document.getElementById('input-octal').value;
+            const dec = document.getElementById('input-decimal').value;
+            const hex = document.getElementById('input-hex').value;
+            const bitLen = document.getElementById('prop-bit-length').textContent;
+
+            if (!bin && !oct && !dec && !hex) {
+                showToast('尚無資料可下載', true);
+                return;
+            }
+
+            const mode = currentSigned ? 'Signed' : 'Unsigned';
+            const report =
+`========================================
+Base Number Converter - 進位制轉換報告
+========================================
+產生時間: ${new Date().toLocaleString('zh-TW')}
+模式: ${mode} ${currentBits}-bit
+Bit Length: ${bitLen}
+
+Binary:       ${bin || '-'}
+Octal:        ${oct || '-'}
+Decimal:      ${dec || '-'}
+Hexadecimal:  ${hex || '-'}
+========================================
+`;
+
+            const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `base-converter-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast('報表已下載', false);
+        });
+
+        // Clear
+        document.getElementById('btn-clear').addEventListener('click', function() {
+            document.getElementById('input-binary').value = '';
+            document.getElementById('input-octal').value = '';
+            document.getElementById('input-decimal').value = '';
+            document.getElementById('input-hex').value = '';
+            document.getElementById('overflow-banner').classList.remove('show');
+            document.getElementById('binary-grouped').style.display = 'none';
+            document.getElementById('visualization-panel').style.display = 'none';
+            clearProperties();
+            clearProgrammer();
+            // Reset range display
+            const range = getRange(currentBits, currentSigned);
+            document.getElementById('range-min').textContent = formatNumberWithCommas(range.min);
+            document.getElementById('range-max').textContent = formatNumberWithCommas(range.max);
+            document.getElementById('val-min').textContent = formatNumberWithCommas(range.min);
+            document.getElementById('val-max').textContent = formatNumberWithCommas(range.max);
+            showToast('已清除所有欄位', false);
+        });
+
+        // Sample data
+        document.getElementById('btn-sample').addEventListener('click', function() {
+            document.getElementById('input-decimal').value = '255';
+            performConversion('decimal', '255');
+            showToast('已載入範例資料（255）', false);
+        });
+
+        // Swap input base: cycle through fields
+        document.getElementById('btn-swap').addEventListener('click', function() {
+            const fields = [
+                document.getElementById('input-binary'),
+                document.getElementById('input-octal'),
+                document.getElementById('input-decimal'),
+                document.getElementById('input-hex')
+            ];
+            const names = ['Binary', 'Octal', 'Decimal', 'Hex'];
+            // Find which field has focus or is non-empty
+            let activeIdx = -1;
+            for (let i = 0; i < fields.length; i++) {
+                if (fields[i] === document.activeElement) {
+                    activeIdx = i;
+                    break;
+                }
+            }
+            if (activeIdx === -1) {
+                // No focused field, find the first non-empty
+                for (let i = 0; i < fields.length; i++) {
+                    if (fields[i].value.trim() !== '') {
+                        activeIdx = i;
+                        break;
+                    }
+                }
+            }
+            if (activeIdx === -1) activeIdx = 0;
+            const nextIdx = (activeIdx + 1) % fields.length;
+            fields[nextIdx].focus();
+            fields[nextIdx].select();
+            showToast(`切換至 ${names[nextIdx]}`, false);
+        });
+
+        // ============================================================
+        // 11. 初始化
+        // ============================================================
+        function initApp() {
+            generateReferenceTable();
+            const range = getRange(currentBits, currentSigned);
+            document.getElementById('range-min').textContent = formatNumberWithCommas(range.min);
+            document.getElementById('range-max').textContent = formatNumberWithCommas(range.max);
+            document.getElementById('val-min').textContent = formatNumberWithCommas(range.min);
+            document.getElementById('val-max').textContent = formatNumberWithCommas(range.max);
+            // Load sample on first visit
+            document.getElementById('input-decimal').value = '42';
+            performConversion('decimal', '42');
+        }
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

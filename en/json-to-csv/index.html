@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JSON to CSV | Free Online Tool - ToolHub</title>
+<meta content="Quickly convert JSON data to CSV format for easy import into Excel, Google Sheets, and data analysis tools. Supports nested JSON automatic flattening, custom delimiters, UTF-8 BOM, and CSV table preview." name="description"/>
+<meta content="JSON轉CSV, JSON to CSV, JSON轉換器, CSV產生器, Excel匯入, Google Sheets, 資料分析, 巢狀JSON展平, Nested JSON Flatten, 線上轉換工具" name="keywords"/>
+<meta content="ToolHub" name="author"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F97316; }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
+        }
+
+        .editor-textarea::placeholder {
+            color: #475569;
+        }
+
+        .csv-output {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.8rem;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        /* 表格預覽 */
+        .table-preview {
+            overflow-x: auto;
+            font-size: 0.8rem;
+        }
+        .table-preview table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .table-preview th {
+            background: #1E293B;
+            color: #F97316;
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            border-bottom: 2px solid #334155;
+            white-space: nowrap;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .table-preview td {
+            padding: 0.4rem 0.75rem;
+            border-bottom: 1px solid #1E293B;
+            color: #E2E8F0;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .table-preview tr:hover td {
+            background: rgba(249, 115, 22, 0.04);
+        }
+        .table-preview tr:nth-child(even) td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .error-marker {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #EF4444;
+        }
+
+        .status-valid { color: #34D399; }
+        .status-invalid { color: #EF4444; }
+        .status-idle { color: #64748b; }
+
+        .radio-group label {
+            transition: all 0.15s ease;
+        }
+        .radio-group input[type="radio"]:checked + span {
+            color: #F97316;
+        }
+        .option-checkbox {
+            accent-color: #F97316;
+        }
+
+        .error-detail {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-family: '"Fira Code"', monospace;
+        }
+
+        /* 巢狀展平提示 */
+        .flatten-banner {
+            background: rgba(249, 115, 22, 0.08);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .faq-content.open {
+            max-height: 600px;
+        }
+        .faq-chevron {
+            transition: transform 0.3s ease;
+        }
+        .faq-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        @media (max-width: 767px) {
+            .editor-textarea { min-height: 380px; font-size: 0.8rem; }
+            .csv-output { min-height: 380px; font-size: 0.75rem; }
+            .flex-grow.relative { min-height: 380px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .flex-grow.relative { min-height: 400px; }
+            .editor-textarea { min-height: 400px; }
+            .csv-output { min-height: 400px; }
+        }
+        @media (min-width: 1024px) {
+            .flex-grow.relative { min-height: 600px; }
+            .editor-textarea { min-height: 600px; }
+            .csv-output { min-height: 600px; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/json-to-csv/" property="og:url"/>
+<meta content="JSON to CSV | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Quickly convert JSON data to CSV format for easy import into Excel, Google Sheets, and data analysis tools. Supports nested JSON automatic flattening, custom delimiters, UTF-8 BOM, and CSV table preview." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="JSON to CSV | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Quickly convert JSON data to CSV format for easy import into Excel, Google Sheets, and data analysis tools. Supports nested JSON automatic flattening, custom delimiters, UTF-8 BOM, and CSV table preview." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"JSON to CSV Converter","url":"https://toolhuben.com/en/json-to-csv/","description":"Quickly convert JSON data to CSV format for easy import into Excel, Google Sheets, and data analysis tools. Supports nested JSON automatic flattening, custom delimiters, UTF-8 BOM, and CSV table preview.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"JSON to CSV Converter","item":"https://toolhuben.com/en/json-to-csv/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/json-to-csv/" rel="canonical"/><link href="https://toolhuben.com/json-to-csv/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/json-to-csv/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/json-to-csv/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","0 筆資料":"0 information","0 行":"0 lines","JSON 語法錯誤":"JSON syntax error","JSON 已格式化":"JSON formatted","[System Error] 模組":"[System Error] Module","⚠️ 轉換錯誤：":"⚠️Conversion error:","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清空全部內容":"All content has been cleared","已載入範例，立即體驗 JSON 轉 CSV！":"The sample has been loaded, try JSON to CSV now!","建立理念":"Our Founding Idea","建議":"Recommendation","待輸入":"To be entered","格式化失敗":"Format failed","沒有內容可格式化":"No content to format","沒有可以下載的內容":"There is nothing to download","沒有可以複製的內容":"Nothing to copy","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","第":"No.","筆資料":"pen information","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","行":"OK","行末尾有多餘逗號，JSON 不允許最後一個屬性後有逗號。":"There is an extra comma at the end of the line, JSON does not allow commas after the last attribute.","載入失敗:":"Loading failed:","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","(空陣列，無資料可轉換)":"(empty array, no data to convert)","CSV 已複製到剪貼簿":"CSV copied to clipboard","JSON 有錯誤，無法格式化":"JSON has errors and cannot be formatted","JSON 語法不正確，請確認 Key 使用雙引號且格式正確。":"The JSON syntax is incorrect, please make sure the Key uses double quotes and is in the correct format.","出現非預期的逗號，請檢查逗號位置是否正確。":"An unexpected comma appears. Please check whether the comma position is correct.","字串中含有無效的控制字符或錯誤的跳脫序列。":"The string contains invalid control characters or incorrect escape sequences.","已載入範例 JSON（含巢狀結構）":"Sample JSON loaded (including nested structure)","數字格式不正確（如前導零、多餘小數點等）。":"Number format is incorrect (e.g. leading zeros, extra decimal points, etc.).","檔案已下載":"File downloaded","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","空陣列，無資料可顯示":"Empty array, no data to display","總時長":"Total duration","缺少閉合方括號 ]，請檢查陣列結構是否完整。":"The closing square bracket is missing], please check whether the array structure is complete.","缺少閉合花括號 }，請檢查物件結構是否完整。":"The closing curly brace } is missing, please check whether the object structure is complete.","行在陣列/物件末尾有多餘逗號。":"Row has extra comma at end of array/object.","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="terminal" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#F97316;--classic-accent-rgb:249,115,22">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 核心模塊：JSON to CSV Converter -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Hero -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-jc">
+<span class="flex w-2 h-2 bg-hub-jc rounded-full animate-pulse mr-2"></span>
+                Format conversion engine is ready
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                JSON <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-jc to-orange-300">to CSV</span> Converter
+            </h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                Instantly convert JSON data to CSV format for easy import into Excel, Google Sheets, and data analysis tools. Supports nested JSON automatic flattening (Nested Flatten), custom delimiters, and UTF-8 BOM. Pure front-end processing to ensure data privacy.
+            </p>
+</div>
+<!-- 主控台 -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+<!-- 工具列 -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-hub-900/80 border-b border-hub-700 p-3 sm:p-4 gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-sample">
+<i class="ph ph-lightbulb text-base"></i> Example
+                    </button>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-red-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-clear">
+<i class="ph ph-trash text-base"></i> Clear
+                    </button>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 hover:text-hub-jc font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-format">
+<i class="ph ph-magic-wand text-base"></i> Format
+                    </button>
+</div>
+<div class="flex flex-wrap items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-hub-700 pt-3 sm:pt-0">
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-copy">
+<i class="ph ph-copy text-base"></i> Copy
+                    </button>
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/50 text-orange-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-download-csv">
+<i class="ph ph-download-simple text-base"></i> .csv
+                    </button>
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/50 text-orange-300 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-download-txt">
+<i class="ph ph-file-text text-base"></i> .txt
+                    </button>
+</div>
+</div>
+<!-- 選項列 -->
+<div class="bg-hub-900/50 border-b border-hub-700 px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+<span class="text-slate-500 font-medium uppercase tracking-wider mr-1">CSV options</span>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-header" type="checkbox"/>
+                    Output Header
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-quote" type="checkbox"/>
+                    Quote string
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input class="option-checkbox rounded" id="opt-bom" type="checkbox"/>
+                    UTF-8 BOM
+                </label>
+<div class="flex items-center gap-2 text-slate-400">
+<span class="text-slate-500">Separator:</span>
+<label class="radio-group flex items-center gap-1 cursor-pointer hover:text-slate-200">
+<input checked="" class="accent-hub-jc" name="delimiter" type="radio" value=","/>
+<span>,</span>
+</label>
+<label class="radio-group flex items-center gap-1 cursor-pointer hover:text-slate-200">
+<input class="accent-hub-jc" name="delimiter" type="radio" value=";"/>
+<span>;</span>
+</label>
+<label class="radio-group flex items-center gap-1 cursor-pointer hover:text-slate-200">
+<input class="accent-hub-jc" name="delimiter" type="radio" value="\t"/>
+<span>\t</span>
+</label>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<span class="text-slate-500">Null value:</span>
+<select class="bg-hub-900 border border-hub-700 text-slate-300 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-hub-jc" id="opt-null">
+<option value="">empty string</option>
+<option value="null">null</option>
+<option value="N/A">N/A</option>
+<option value="0">0</option>
+</select>
+</div>
+<div class="h-4 w-px bg-hub-700 hidden sm:block"></div>
+<span class="flex items-center gap-1 font-mono" id="json-validity">
+<span class="w-2 h-2 rounded-full bg-slate-600" id="validity-dot"></span>
+<span class="text-slate-500" id="validity-text">To be entered</span>
+</span>
+</div>
+<!-- 錯誤詳情面板 (預設隱藏) -->
+<div class="hidden bg-red-950/30 border-b border-red-900/30 px-4 py-2.5" id="error-panel">
+<div class="error-detail flex flex-wrap items-center gap-x-4 gap-y-1">
+<span class="text-red-400 font-medium flex items-center gap-1">
+<i class="ph ph-warning-circle text-sm"></i>
+<span id="error-type">syntax error</span>
+</span>
+<span class="text-red-300 text-xs font-mono" id="error-location">Line 0</span>
+<span class="text-slate-400 text-xs" id="error-message">—</span>
+</div>
+</div>
+<!-- 巢狀展平提示 (預設隱藏) -->
+<div class="hidden bg-orange-950/20 border-b border-orange-900/25 px-4 py-2.5" id="flatten-panel">
+<div class="flatten-banner flex flex-wrap items-center gap-x-4 gap-y-1">
+<span class="text-orange-400 font-medium flex items-center gap-1">
+<i class="ph ph-tree-structure text-sm"></i>
+<span>Nested JSON is automatically flattened</span>
+</span>
+<span class="text-slate-400 text-xs">Nested objects have been flattened into flat fields using dot notation for easy export to CSV.</span>
+</div>
+</div>
+<!-- 分割區域 -->
+<div class="flex flex-col lg:flex-row flex-grow">
+<!-- 左側：JSON 編輯器 -->
+<div class="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-hub-700 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-brackets-curly text-hub-jc text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">JSON Input</span>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="json-size">0 bytes</span>
+</div>
+<div class="flex-grow relative">
+<textarea class="editor-textarea w-full h-full absolute inset-0" id="json-input" placeholder='Enter JSON content here... Example: [ { "id": 1, "name": "Alice", "profile": { "age": 28, "city": "Taipei" } } ]' spellcheck="false"></textarea>
+</div>
+</div>
+<!-- 右側：CSV 輸出區域 -->
+<div class="w-full lg:w-1/2 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-table text-hub-jc text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">CSV Output</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 font-mono" id="csv-size">0 bytes</span>
+<div class="h-4 w-px bg-hub-700"></div>
+<div class="flex bg-hub-900 rounded-lg border border-hub-700 p-0.5 text-xs">
+<button class="px-2 py-0.5 rounded-md bg-hub-jc text-white font-medium transition-all" id="view-raw">Raw</button>
+<button class="px-2 py-0.5 rounded-md text-slate-400 hover:text-white transition-all" id="view-table">Table</button>
+</div>
+</div>
+</div>
+<div class="flex-grow relative">
+<textarea class="csv-output w-full h-full absolute inset-0" id="csv-output" placeholder="The converted CSV will appear here..." readonly="" spellcheck="false"></textarea>
+<div class="table-preview w-full h-full absolute inset-0 hidden overflow-auto p-4" id="table-preview" style="background-color: #0B1120;"></div>
+</div>
+</div>
+</div>
+<!-- 底部狀態列 -->
+<div class="bg-hub-900 border-t border-hub-700 p-3 sm:px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div class="flex items-center gap-1.5" id="status-indicator">
+<div class="w-2 h-2 rounded-full bg-slate-500" id="status-dot"></div>
+<span class="text-slate-400 uppercase tracking-wider text-[10px]" id="status-text">Ready</span>
+</div>
+<div class="h-3 w-px bg-hub-700"></div>
+<span class="text-slate-500" id="line-count">0 lines</span>
+<div class="h-3 w-px bg-hub-700"></div>
+<span class="text-slate-500" id="row-count">0 information</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="hidden sm:inline flex items-center gap-1"><i class="ph ph-info text-xs"></i> Pure front-end local processing, the data does not leave your browser</span>
+</div>
+</div>
+</div>
+<!-- ==================== -->
+<!-- FAQ 常見問題區       -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="text-center mb-10">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-3">JSON to CSV conversion FAQ</h2>
+<p class="text-slate-400 text-sm">Popular questions about JSON, CSV format conversion and Excel import</p>
+</div>
+<div class="space-y-3" id="faq-container">
+<!-- FAQ 1 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is the difference between JSON and CSV? When should you switch?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>JSON and CSV are two data formats with completely different purposes:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">JSON</strong>(JavaScript Object Notation) is a structured data format that supports nested objects and arrays and is suitable for data exchange and API communication between programs.</li>
+<li><strong class="text-slate-300">CSV</strong>(Comma-Separated Values) is a plain text table format. Each row represents a record and each column represents a field. It is a common format for import and export of Excel, Google Sheets, and databases.</li>
+</ul>
+<p class="mt-2">The following situations are suitable for converting JSON to CSV:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>API data needs to be imported into Excel or Google Sheets for analysis</li>
+<li>Prepare data sets for machine learning or statistical analysis</li>
+<li>Share structured data with non-technical people (CSV can be opened directly in Excel)</li>
+<li>Import data into the database (MySQL and PostgreSQL support CSV import)</li>
+<li>Generate reports or spreadsheets for review by decision makers</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- FAQ 2 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">How to convert nested JSON to CSV? What is Flatten?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>CSV is a two-dimensional table format (rows × columns) and cannot directly represent nested structures. Use this tool <strong class="text-slate-300">Dot Notation Flattening</strong> Technology to automatically convert nested objects into flat fields:</p>
+<div class="grid sm:grid-cols-2 gap-3 my-2">
+<div class="bg-[#0B1120] p-3 rounded-lg">
+<p class="text-xs text-slate-500 mb-1">JSON input</p>
+<pre class="text-xs font-mono text-slate-300">{
+  "user": {
+    "name": "Gary",
+    "age": 30
+  }
+}</pre>
+</div>
+<div class="bg-[#0B1120] p-3 rounded-lg">
+<p class="text-xs text-slate-500 mb-1">CSV output</p>
+<pre class="text-xs font-mono text-slate-300">user.name,user.age
+Gary,30</pre>
+</div>
+</div>
+<p>Flattening rules:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">object</strong> → Recursive flattening, Key is concatenated with points, for example <code class="text-hub-jc">profile.address.city</code></li>
+<li><strong class="text-slate-300">Array</strong> → Save as JSON string in a single cell to avoid field explosion</li>
+<li><strong class="text-slate-300">Null</strong> → Processed according to null value setting (empty string / null / N/A / 0)</li>
+</ul>
+<p class="text-xs text-slate-500 mt-2">When flattening occurs, an orange tip will appear at the top of the tool: "Nested JSON has been automatically flattened."</p>
+</div>
+</div>
+</div>
+<!-- FAQ 3 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">How to import CSV into Excel? What is UTF-8 BOM?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>There are several ways to import CSV into Excel:</p>
+<ol class="list-decimal pl-5 space-y-1">
+<li><strong class="text-slate-300">Open directly:</strong> After downloading the .csv file, open it directly with Excel (select UTF-8 encoding)</li>
+<li><strong class="text-slate-300">Import from data:</strong> Excel → Data → Import from text/CSV → Select file → Specify delimiter and encoding</li>
+<li><strong class="text-slate-300">Drag to Google Sheets:</strong> Simply drag the .csv file into Google Sheets to automatically parse it</li>
+</ol>
+<p class="mt-2"><strong class="text-slate-300">What is UTF-8 BOM?</strong></p>
+<p>BOM (Byte Order Mark) is located at the beginning of the file <code class="text-hub-jc">﻿</code> mark. For CSV files:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Enable BOM</strong> → Excel will automatically recognize UTF-8 encoding and correctly display Chinese, Japanese and other Unicode characters</li>
+<li><strong class="text-slate-300">No BOM</strong> → Excel may be opened with the system default encoding (such as Big5), resulting in garbled characters</li>
+</ul>
+<p class="text-xs text-slate-500 mt-1">💡 If the Chinese characters are garbled after importing the CSV into Excel, please enable the "UTF-8 BOM" option and download again.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 4 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is the difference between CSV delimiters (comma, semicolon, tab)?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>The "C" in CSV stands for Comma, but in fact CSV can use different delimiters:</p>
+<ul class="list-disc pl-5 space-y-2">
+<li>
+<strong class="text-slate-300">comma(,)</strong> — The most common standard, default for Excel and Google Sheets. However, if the data contains commas (such as the address "Taipei City, Taiwan"), it must be wrapped in quotation marks.
+                                </li>
+<li>
+<strong class="text-slate-300">Semicolon (;)</strong> — The default delimiter in Excel in some European regions (since the comma is used as a decimal point). If your CSV doesn't break into columns correctly in Excel, try semicolons.
+                                </li>
+<li>
+<strong class="text-slate-300">Tab（\t）</strong> — Also known as TSV (Tab-Separated Values). If commas and semicolons appear frequently in your data, Tab is the safest choice. Many database import tools prioritize TSV.
+                                </li>
+</ul>
+<p class="text-xs text-slate-500 mt-1">💡 Not sure which one to use? Use commas first. If Excel does not display properly, try using semicolons instead.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 5 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What should I do if data is lost or formatted incorrectly when converting JSON to CSV?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>Here are some of the most common problems and solutions:</p>
+<ul class="list-disc pl-5 space-y-2">
+<li>
+<strong class="text-slate-300">Nest object data missing?</strong>
+                                    This tool automatically flattens nested JSON (e.g. <code class="text-hub-jc">profile.age</code>), but if the JSON structure is too complex (such as more than 5 levels of deep nesting), it is recommended to simplify the data before converting.
+                                </li>
+<li>
+<strong class="text-slate-300">Array data is truncated?</strong>
+                                    Array fields are kept in a single cell as a JSON string (e.g. <code class="text-hub-jc">"["a","b","c"]"</code>), it may not be automatically expanded after importing into Excel. You can process further in Excel using "Data → From Table/Range".
+                                </li>
+<li>
+<strong class="text-slate-300">Chinese characters become garbled characters?</strong>
+                                    Enable the "UTF-8 BOM" option and re-download, Excel will correctly recognize UTF-8 encoding.
+                                </li>
+<li>
+<strong class="text-slate-300">CSV all crammed into one column in Excel?</strong>
+                                    Use "semicolon (;)" or "Tab (\t)" as the delimiter instead, or manually specify the delimiter when importing into Excel.
+                                </li>
+</ul>
+</div>
+</div>
+</div>
+<!-- FAQ 6 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Is this tool safe to use? Will the data be uploaded?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-green-400">100% safe.</strong> This tool adopts a pure front-end (Client-side) architecture, and all JSON parsing and CSV conversion are completed in your browser.<strong class="text-slate-300">No data will be uploaded to any server</strong>。</p>
+<p>This means:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Your customer data, API responses, and trade secrets never leave your computer</li>
+<li>No internet connection is required to perform the conversion (except when loading the page for the first time)</li>
+<li>No backend servers store or process your content</li>
+<li>Even ToolHub administrators cannot access the data you enter</li>
+</ul>
+<p class="mt-2">Whether you're analyzing customer lists, processing financial data, or transforming confidential API responses, it's safe to do it here.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ==================== -->
+<!-- SEO 教學文章區        -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="bg-hub-800/40 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2 class="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3">
+<i class="ph ph-book-open-text text-hub-jc text-2xl"></i>
+                    From JSON to CSV: A Complete Guide to Data Analysis and Spreadsheet Conversion
+                </h2>
+<div class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+<p>
+                        In modern data processing workflows,<strong class="text-white">JSON</strong>(JavaScript Object Notation) with <strong class="text-white">CSV</strong>(Comma-Separated Values) represent two key stages of data exchange: JSON is the communication format between machines, and CSV is the bridge between analysts and spreadsheets. Mastering the conversion from JSON to CSV is a core skill in data analysis, back-end development and business intelligence.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">What is JSON?</h3>
+<p>
+                        JSON is a lightweight, language-agnostic data exchange format. it uses<strong class="text-slate-300">key value pair</strong>（<code class="text-hub-jc">{"key": "value"}</code>) and<strong class="text-slate-300">Array</strong>（<code class="text-hub-jc">[item1, item2]</code>) to organize the data. The core advantage of JSON is that it<strong class="text-slate-300">structuring ability</strong>——It can use nested objects to express complex data relationships, which CSV cannot do directly.
+                    </p>
+<p>
+                        In modern web development, JSON is everywhere: responses to RESTful APIs, database query results (MongoDB, PostgreSQL JSONB), configuration files (Node.js <code class="text-hub-jc">package.json</code>), instant messaging (WebSocket), etc. But when you need to import this data into Excel or perform statistical analysis, you need to convert JSON to CSV format.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">What is CSV?</h3>
+<p>
+                        CSV is a plain text representation of tabular data. Dating back to the 1970s, it is one of the oldest and most widely supported data exchange formats. CSV’s design is minimalist:<strong class="text-slate-300">One record per row, one field per column, separated by commas</strong>。
+                    </p>
+<p>
+                        The advantage of CSV is that it<strong class="text-slate-300">universality</strong>: Excel, Google Sheets, Numbers, database management tools, Python Pandas, R, MATLAB... Almost all tools that process tabular data support CSV. It is the "universal language" in the data ecosystem, suitable for long-term archiving and cross-platform exchange.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Detailed comparison of JSON and CSV</h3>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-brackets-curly text-hub-jc"></i>
+<h4 class="font-medium text-white">JSON</h4>
+</div>
+<ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+<li>Supports nested structures and complex data relationships</li>
+<li>Supports multiple data types (string, number, Boolean, Null, array, object)</li>
+<li>Machine parsing is highly efficient and is an API standard format.</li>
+<li>Not suitable for direct import into spreadsheet</li>
+<li>Larger file (contains structured markup)</li>
+</ul>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-table text-hub-jc"></i>
+<h4 class="font-medium text-white">CSV</h4>
+</div>
+<ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+<li>Flat two-dimensional table, one record per row</li>
+<li>Only plain text data is supported (all values are treated as strings)</li>
+<li>Humans can directly open and edit with Excel</li>
+<li>Suitable for data analysis, statistics and reports</li>
+<li>The files are streamlined and take up little space</li>
+</ul>
+</div>
+</div>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Practical example: nested JSON → CSV automatic flattening</h3>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<h4 class="font-medium text-white text-sm mb-2">JSON input (including nested objects)</h4>
+<pre class="text-xs font-mono text-slate-300 bg-[#0B1120] p-3 rounded-lg overflow-x-auto">[ { "id": 1, "name": "Alice Chen", "email": "alice@example.com", "profile": { "age": 28, "city": "Taipei", "department": "Engineering" }, "skills": ["JavaScript", "Python"], "active": true }, { "id": 2, "name": "Bob Wang", "email": "bob@example.com", "profile": { "age": 35, "city": "Taichung", "department": "Design" }, "skills": ["Figma", "UI/UX"], "active": false } ]</pre>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<h4 class="font-medium text-white text-sm mb-2">CSV output (auto-flattening)</h4>
+<pre class="text-xs font-mono text-slate-300 bg-[#0B1120] p-3 rounded-lg overflow-x-auto">"id","name","email","profile.age","profile.city","profile.department","skills","active" "1","Alice Chen","alice@example.com","28","Taipei","Engineering","[""JavaScript"",""Python""]","true" "2","Bob Wang","bob@example.com","35","Taichung","Design","[""Figma"",""UI/UX""]","false"</pre>
+</div>
+</div>
+<p class="text-xs text-slate-500">Nested objects automatically flatten to <code class="text-hub-jc">profile.age</code>、<code class="text-hub-jc">profile.city</code> fields; arrays are retained as JSON strings.</p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Application of CSV in data analysis scenarios</h3>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Excel / Google Sheets</strong>: Directly open or import CSV, and use pivot analysis tables, charts, and formulas to explore data</li>
+<li><strong class="text-slate-300">Python Pandas</strong>：<code class="text-hub-jc">pd.read_csv()</code> Is the most common way to load data in data science projects</li>
+<li><strong class="text-slate-300">Database import</strong>:MySQL <code class="text-hub-jc">LOAD DATA INFILE</code>, PostgreSQL <code class="text-hub-jc">COPY</code> All commands natively support CSV</li>
+<li><strong class="text-slate-300">BI tools</strong>: Tableau, Power BI, Looker Studio and other business intelligence tools all support CSV as a data source</li>
+<li><strong class="text-slate-300">machine learning</strong>: CSV is the standard format for Kaggle competitions, dataset publishing, and model training input.</li>
+</ul>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Why choose ToolHub’s JSON to CSV Converter?</h3>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Nested JSON automatic flattening:</strong> Exclusively supports point-based flattening of nested objects (<code class="text-hub-jc">user.name</code>、<code class="text-hub-jc">profile.address.city</code>), eliminating the need to manually handle complex structures.</li>
+<li><strong class="text-slate-300">Flexible CSV options:</strong> Output Header, custom delimiters (comma/semicolon/Tab), Quote control, UTF-8 BOM, and null value processing to meet the needs of different tools.</li>
+<li><strong class="text-slate-300">Dual view mode:</strong> There are two modes of Raw CSV source code and Table preview to confirm the conversion results instantly.</li>
+<li><strong class="text-slate-300">Excel Compatible:</strong> UTF-8 BOM ensures that Chinese and Unicode characters are displayed correctly in Excel.</li>
+<li><strong class="text-slate-300">Zero server architecture:</strong> All conversions are 100% done in the browser and your data is never leaked.</li>
+</ul>
+<p class="mt-4 text-slate-500 text-xs border-t border-hub-700 pt-4">
+                        Whether you're importing API responses into Excel for analysis, preparing data sets for use in machine learning, or need to convert structured data into reporting formats, ToolHub's JSON to CSV Converter can complete the task accurately, safely, and efficiently. Start converting now and experience a seamless transition from JSON to CSV.
+                    </p>
+</div>
+</div>
+</section>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-jc" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 組件載入區 -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- 系統級中樞神經                              -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/json-to-csv';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                    const parentGroup = item.closest('.nav-group');
+                    if (parentGroup) {
+                        const content = parentGroup.querySelector('.group-content');
+                        const chevron = parentGroup.querySelector('.chevron');
+                        if (content && chevron) {
+                            setTimeout(() => {
+                                content.style.maxHeight = content.scrollHeight + 'px';
+                                chevron.classList.add('rotate-180');
+                            }, 50);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：JSON to CSV 轉換引擎        -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // === DOM 節點映射 ===
+            const jsonInput = document.getElementById('json-input');
+            const csvOutput = document.getElementById('csv-output');
+            const tableView = document.getElementById('table-preview');
+
+            const btnSample = document.getElementById('btn-sample');
+            const btnClear = document.getElementById('btn-clear');
+            const btnFormat = document.getElementById('btn-format');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownloadCsv = document.getElementById('btn-download-csv');
+            const btnDownloadTxt = document.getElementById('btn-download-txt');
+
+            const optHeader = document.getElementById('opt-header');
+            const optQuote = document.getElementById('opt-quote');
+            const optBom = document.getElementById('opt-bom');
+            const delimRadios = document.querySelectorAll('input[name="delimiter"]');
+            const optNull = document.getElementById('opt-null');
+
+            const btnViewRaw = document.getElementById('view-raw');
+            const btnViewTable = document.getElementById('view-table');
+
+            const validityDot = document.getElementById('validity-dot');
+            const validityText = document.getElementById('validity-text');
+            const errorPanel = document.getElementById('error-panel');
+            const errorType = document.getElementById('error-type');
+            const errorLocation = document.getElementById('error-location');
+            const errorMessage = document.getElementById('error-message');
+
+            const flattenPanel = document.getElementById('flatten-panel');
+
+            const jsonSize = document.getElementById('json-size');
+            const csvSize = document.getElementById('csv-size');
+            const lineCount = document.getElementById('line-count');
+            const rowCount = document.getElementById('row-count');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            // 當前視圖狀態
+            let currentView = 'raw'; // 'raw' | 'table'
+
+            // === JSON 錯誤分析 (來自 json-to-yaml) ===
+            function analyzeJSONError(input) {
+                const lines = input.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    const trimmed = lines[i].trim();
+                    if (/,\s*$/.test(trimmed) && i + 1 < lines.length) {
+                        const nextTrimmed = lines[i + 1].trim();
+                        if (nextTrimmed === '}' || nextTrimmed === ']' || nextTrimmed.startsWith('}') || nextTrimmed.startsWith(']')) {
+                            return {
+                                line: i + 1,
+                                column: trimmed.length,
+                                type: 'Trailing comma',
+                                detail: `第 ${i + 1} 行末尾有多餘逗號，JSON 不允許最後一個屬性後有逗號。`
+                            };
+                        }
+                    }
+                    const trailingMatch = trimmed.match(/.*,\s*[}\]][\s,]*$/);
+                    if (trailingMatch && !trimmed.match(/["'`]/)) {
+                        const commaPos = trimmed.lastIndexOf(',');
+                        const afterComma = trimmed.substring(commaPos + 1).trim();
+                        if (afterComma === '}' || afterComma === ']' || afterComma.startsWith('}') || afterComma.startsWith(']')) {
+                            return {
+                                line: i + 1,
+                                column: commaPos + 2,
+                                type: 'Trailing comma',
+                                detail: `第 ${i + 1} 行在陣列/物件末尾有多餘逗號。`
+                            };
+                        }
+                    }
+                }
+                try {
+                    JSON.parse(input);
+                    return null;
+                } catch (e) {
+                    const posMatch = e.message.match(/position\s+(\d+)/);
+                    if (!posMatch) {
+                        return { line: 1, column: 1, type: 'Parse error', detail: e.message };
+                    }
+                    const pos = parseInt(posMatch[1]);
+                    const beforePos = input.substring(0, pos);
+                    const line = beforePos.split('\n').length;
+                    const lastNewline = beforePos.lastIndexOf('\n');
+                    const column = pos - lastNewline;
+                    let errorType = 'Syntax error';
+                    let detail = e.message.replace(/\(in JSON at position\s+\d+\)/, '').replace(/JSON\.parse:\s*/, '').trim();
+                    if (detail.includes('Unexpected token') && detail.includes(',')) {
+                        errorType = 'Unexpected comma';
+                        detail = '出現非預期的逗號，請檢查逗號位置是否正確。';
+                    } else if (detail.includes('Expected') && detail.includes('}')) {
+                        errorType = 'Missing bracket';
+                        detail = '缺少閉合花括號 }，請檢查物件結構是否完整。';
+                    } else if (detail.includes('Expected') && detail.includes(']')) {
+                        errorType = 'Missing bracket';
+                        detail = '缺少閉合方括號 ]，請檢查陣列結構是否完整。';
+                    } else if (detail.includes('string') || detail.includes('quote') || detail.includes('token')) {
+                        errorType = 'Invalid syntax';
+                        detail = 'JSON 語法不正確，請確認 Key 使用雙引號且格式正確。';
+                    } else if (detail.includes('control character') || detail.includes('escape')) {
+                        errorType = 'Invalid character';
+                        detail = '字串中含有無效的控制字符或錯誤的跳脫序列。';
+                    } else if (detail.includes('number')) {
+                        errorType = 'Invalid number';
+                        detail = '數字格式不正確（如前導零、多餘小數點等）。';
+                    }
+                    detail = detail.charAt(0).toUpperCase() + detail.slice(1);
+                    return { line, column, type: errorType, detail };
+                }
+            }
+
+            // === 巢狀 JSON 展平 ===
+            function flattenJSON(obj, prefix = '', result = {}, depth = 0) {
+                if (depth > 10) {
+                    result[prefix] = JSON.stringify(obj);
+                    return result;
+                }
+                if (Array.isArray(obj)) {
+                    // 陣列保留為 JSON 字串
+                    result[prefix] = JSON.stringify(obj);
+                    return result;
+                }
+                if (typeof obj === 'object' && obj !== null) {
+                    const keys = Object.keys(obj);
+                    if (keys.length === 0) {
+                        result[prefix] = '';
+                        return result;
+                    }
+                    let hasNested = false;
+                    for (const key of keys) {
+                        const newKey = prefix ? `${prefix}.${key}` : key;
+                        const val = obj[key];
+                        if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                            hasNested = true;
+                        }
+                        flattenJSON(val, newKey, result, depth + 1);
+                    }
+                    return result;
+                }
+                result[prefix] = obj;
+                return result;
+            }
+
+            // === 偵測是否有巢狀物件 ===
+            function hasNestedObject(arr) {
+                for (const item of arr) {
+                    if (typeof item === 'object' && item !== null) {
+                        for (const key of Object.keys(item)) {
+                            const val = item[key];
+                            if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // === CSV 轉換核心 ===
+            function jsonToCSV() {
+                const json = jsonInput.value;
+                const isEmpty = !json.trim();
+
+                const jsonBytes = new TextEncoder().encode(json).length;
+                jsonSize.textContent = formatBytes(jsonBytes);
+
+                if (isEmpty) {
+                    csvOutput.value = '';
+                    tableView.innerHTML = '';
+                    setValidationStatus('idle', '待輸入');
+                    hideError();
+                    hideFlatten();
+                    updateStats('');
+                    updateStatus(false);
+                    return;
+                }
+
+                const error = analyzeJSONError(json);
+
+                if (error) {
+                    setValidationStatus('invalid', 'Invalid JSON');
+                    showError(error);
+                    csvOutput.value = '';
+                    tableView.innerHTML = '';
+                    updateStatus(false);
+                    return;
+                }
+
+                setValidationStatus('valid', 'Valid JSON');
+                hideError();
+
+                try {
+                    const parsed = JSON.parse(json);
+                    // 確保資料是陣列
+                    let data = Array.isArray(parsed) ? parsed : [parsed];
+
+                    if (data.length === 0) {
+                        csvOutput.value = '(空陣列，無資料可轉換)';
+                        tableView.innerHTML = '<div class="text-slate-500 text-sm p-4">空陣列，無資料可顯示</div>';
+                        updateStats('');
+                        updateStatus(false);
+                        return;
+                    }
+
+                    // 檢查是否有巢狀物件
+                    const isNested = hasNestedObject(data);
+                    if (isNested) {
+                        showFlatten();
+                    } else {
+                        hideFlatten();
+                    }
+
+                    // 展平每筆資料
+                    const flattened = data.map(item => flattenJSON(item));
+
+                    // 收集所有唯一 Key（保持出現順序）
+                    const keyOrder = new Map();
+                    let keyIndex = 0;
+                    for (const row of flattened) {
+                        for (const key of Object.keys(row)) {
+                            if (!keyOrder.has(key)) {
+                                keyOrder.set(key, keyIndex++);
+                            }
+                        }
+                    }
+                    const allKeys = [...keyOrder.keys()];
+
+                    // 獲取選項
+                    const delimiter = getDelimiter();
+                    const includeHeader = optHeader.checked;
+                    const quoteStrings = optQuote.checked;
+                    const addBom = optBom.checked;
+                    const nullPlaceholder = optNull.value;
+
+                    // 建立 CSV 行
+                    const rows = [];
+
+                    if (includeHeader) {
+                        const headerRow = allKeys.map(k => quoteStrings ? `"${k}"` : k).join(delimiter);
+                        rows.push(headerRow);
+                    }
+
+                    for (const row of flattened) {
+                        const values = allKeys.map(key => {
+                            let val = key in row ? row[key] : '';
+                            if (val === null || val === undefined) {
+                                val = nullPlaceholder;
+                            }
+                            val = String(val);
+                            if (quoteStrings) {
+                                return `"${val.replace(/"/g, '""')}"`;
+                            }
+                            return val;
+                        });
+                        rows.push(values.join(delimiter));
+                    }
+
+                    let csvStr = rows.join('\n');
+                    if (addBom) {
+                        csvStr = '﻿' + csvStr;
+                    }
+
+                    csvOutput.value = csvStr;
+
+                    // 更新表格預覽
+                    renderTablePreview(allKeys, flattened, delimiter, includeHeader, quoteStrings, nullPlaceholder);
+
+                    updateStats(csvStr);
+                    updateStatus(true, data.length);
+
+                } catch (e) {
+                    csvOutput.value = `⚠️ 轉換錯誤：${e.message}`;
+                    tableView.innerHTML = '';
+                    updateStatus(false);
+                }
+            }
+
+            function getDelimiter() {
+                const checked = document.querySelector('input[name="delimiter"]:checked');
+                if (!checked) return ',';
+                const val = checked.value;
+                if (val === '\\t') return '\t';
+                return val;
+            }
+
+            // === 表格預覽 ===
+            function renderTablePreview(keys, flattenedData, delimiter, showHeader, quoteStrings, nullPlaceholder) {
+                let html = '<table>';
+                if (showHeader) {
+                    html += '<thead><tr>';
+                    for (const key of keys) {
+                        html += `<th>${escapeHtml(key)}</th>`;
+                    }
+                    html += '</tr></thead>';
+                }
+                html += '<tbody>';
+                for (const row of flattenedData) {
+                    html += '<tr>';
+                    for (const key of keys) {
+                        let val = key in row ? row[key] : '';
+                        if (val === null || val === undefined) val = nullPlaceholder;
+                        html += `<td title="${escapeHtml(String(val))}">${escapeHtml(String(val))}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+                tableView.innerHTML = html;
+            }
+
+            function escapeHtml(str) {
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            // === 視圖切換 ===
+            function switchView(view) {
+                currentView = view;
+                if (view === 'raw') {
+                    csvOutput.classList.remove('hidden');
+                    tableView.classList.add('hidden');
+                    btnViewRaw.className = 'px-2 py-0.5 rounded-md bg-hub-jc text-white font-medium transition-all';
+                    btnViewTable.className = 'px-2 py-0.5 rounded-md text-slate-400 hover:text-white transition-all';
+                } else {
+                    csvOutput.classList.add('hidden');
+                    tableView.classList.remove('hidden');
+                    btnViewTable.className = 'px-2 py-0.5 rounded-md bg-hub-jc text-white font-medium transition-all';
+                    btnViewRaw.className = 'px-2 py-0.5 rounded-md text-slate-400 hover:text-white transition-all';
+                }
+            }
+
+            // === UI 更新 ===
+            function setValidationStatus(state, text) {
+                validityText.textContent = text;
+                if (state === 'valid') {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-green-400';
+                    validityText.className = 'text-green-400 font-mono text-xs font-bold';
+                } else if (state === 'invalid') {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-red-400 status-pulse';
+                    validityText.className = 'text-red-400 font-mono text-xs font-bold';
+                } else {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-slate-600';
+                    validityText.className = 'text-slate-500 font-mono text-xs';
+                }
+            }
+
+            function showError(error) {
+                errorPanel.classList.remove('hidden');
+                errorType.textContent = error.type || 'Syntax error';
+                errorLocation.textContent = `Line ${error.line}, Col ${error.column}`;
+                errorMessage.textContent = error.detail || 'JSON 語法錯誤';
+            }
+
+            function hideError() {
+                errorPanel.classList.add('hidden');
+            }
+
+            function showFlatten() {
+                flattenPanel.classList.remove('hidden');
+            }
+
+            function hideFlatten() {
+                flattenPanel.classList.add('hidden');
+            }
+
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 bytes';
+                if (bytes < 1024) return bytes + ' bytes';
+                return (bytes / 1024).toFixed(1) + ' KB';
+            }
+
+            function updateStats(csv) {
+                if (!csv) {
+                    lineCount.textContent = '0 行';
+                    csvSize.textContent = '0 bytes';
+                    rowCount.textContent = '0 筆資料';
+                    return;
+                }
+                const lines = csv.split('\n').length;
+                lineCount.textContent = `${lines} 行`;
+                const csvBytes = new TextEncoder().encode(csv).length;
+                csvSize.textContent = formatBytes(csvBytes);
+            }
+
+            function updateStatus(hasContent, rowCnt) {
+                if (hasContent) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-hub-jc status-pulse';
+                    statusText.textContent = 'Converted';
+                    statusText.className = 'text-hub-jc uppercase tracking-wider text-[10px] font-bold';
+                    rowCount.textContent = `${rowCnt || 0} 筆資料`;
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                    statusText.textContent = 'Ready';
+                    statusText.className = 'text-slate-400 uppercase tracking-wider text-[10px]';
+                    rowCount.textContent = '0 筆資料';
+                }
+            }
+
+            // === Toast ===
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-jc';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // === 格式化 JSON ===
+            function formatJSON() {
+                const json = jsonInput.value.trim();
+                if (!json) {
+                    showToast('沒有內容可格式化', true);
+                    return;
+                }
+                const error = analyzeJSONError(json);
+                if (error) {
+                    showToast('JSON 有錯誤，無法格式化', true);
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(json);
+                    jsonInput.value = JSON.stringify(parsed, null, 2);
+                    jsonToCSV();
+                    showToast('JSON 已格式化');
+                } catch (e) {
+                    showToast('格式化失敗', true);
+                }
+            }
+
+            // === 範例 JSON ===
+            const sampleJSON = `[
+  {
+    "id": 1001,
+    "name": "Alice Chen",
+    "email": "alice.chen@example.com",
+    "phone": "+886-912-345-678",
+    "profile": {
+      "age": 28,
+      "city": "台北市",
+      "district": "大安區",
+      "department": "Engineering",
+      "position": "Senior Developer",
+      "experience": 5
+    },
+    "skills": ["JavaScript", "TypeScript", "React", "Node.js", "Python"],
+    "languages": ["中文", "English", "日本語"],
+    "active": true,
+    "joinDate": "2023-03-15"
+  },
+  {
+    "id": 1002,
+    "name": "Bob Wang",
+    "email": "bob.wang@example.com",
+    "phone": "+886-987-654-321",
+    "profile": {
+      "age": 35,
+      "city": "台中市",
+      "district": "西屯區",
+      "department": "Design",
+      "position": "UX Lead",
+      "experience": 8
+    },
+    "skills": ["Figma", "Sketch", "Adobe XD", "UI/UX Research", "Prototyping"],
+    "languages": ["中文", "English"],
+    "active": true,
+    "joinDate": "2021-07-01"
+  },
+  {
+    "id": 1003,
+    "name": "Catherine Liu",
+    "email": "catherine.liu@example.com",
+    "phone": "+886-921-111-222",
+    "profile": {
+      "age": 32,
+      "city": "高雄市",
+      "district": "左營區",
+      "department": "Marketing",
+      "position": "Marketing Manager",
+      "experience": 7
+    },
+    "skills": ["SEO", "Content Strategy", "Google Analytics", "Social Media"],
+    "languages": ["中文", "English", "Français"],
+    "active": false,
+    "joinDate": "2020-11-20"
+  },
+  {
+    "id": 1004,
+    "name": "David Lin",
+    "email": "david.lin@example.com",
+    "phone": "+886-933-555-777",
+    "profile": {
+      "age": 26,
+      "city": "新北市",
+      "district": "板橋區",
+      "department": "Engineering",
+      "position": "Junior Developer",
+      "experience": 2
+    },
+    "skills": ["Java", "Spring Boot", "MySQL", "Docker"],
+    "languages": ["中文", "English"],
+    "active": true,
+    "joinDate": "2024-01-10"
+  }
+]`;
+
+            // === 綁定事件 ===
+            jsonInput.addEventListener('input', jsonToCSV);
+
+            // 選項變更
+            optHeader.addEventListener('change', () => { if (jsonInput.value.trim()) jsonToCSV(); });
+            optQuote.addEventListener('change', () => { if (jsonInput.value.trim()) jsonToCSV(); });
+            optBom.addEventListener('change', () => { if (jsonInput.value.trim()) jsonToCSV(); });
+            optNull.addEventListener('change', () => { if (jsonInput.value.trim()) jsonToCSV(); });
+            delimRadios.forEach(r => r.addEventListener('change', () => { if (jsonInput.value.trim()) jsonToCSV(); }));
+
+            // 視圖切換
+            btnViewRaw.addEventListener('click', () => switchView('raw'));
+            btnViewTable.addEventListener('click', () => switchView('table'));
+
+            // 範例
+            btnSample.addEventListener('click', () => {
+                jsonInput.value = sampleJSON;
+                jsonToCSV();
+                showToast('已載入範例 JSON（含巢狀結構）');
+            });
+
+            // 清空
+            btnClear.addEventListener('click', () => {
+                jsonInput.value = '';
+                jsonToCSV();
+                showToast('已清空全部內容');
+            });
+
+            // 格式化
+            btnFormat.addEventListener('click', formatJSON);
+
+            // 複製
+            btnCopy.addEventListener('click', () => {
+                const content = csvOutput.value.trim();
+                if (!content) { showToast('沒有可以複製的內容', true); return; }
+                navigator.clipboard.writeText(content).then(() => {
+                    showToast('CSV 已複製到剪貼簿');
+                }).catch(() => {
+                    csvOutput.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('CSV 已複製到剪貼簿');
+                });
+            });
+
+            // 下載 .csv
+            btnDownloadCsv.addEventListener('click', () => downloadCSV('csv'));
+            btnDownloadTxt.addEventListener('click', () => downloadCSV('txt'));
+
+            function downloadCSV(ext) {
+                const content = csvOutput.value;
+                if (!content.trim()) { showToast('沒有可以下載的內容', true); return; }
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Export_${Date.now()}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`.${ext} 檔案已下載`);
+            }
+
+            // Tab 縮排
+            jsonInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const target = e.target;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    target.value = target.value.substring(0, start) + '    ' + target.value.substring(end);
+                    target.selectionStart = target.selectionEnd = start + 4;
+                    jsonToCSV();
+                }
+            });
+
+            // FAQ 手風琴
+            document.querySelectorAll('.faq-question').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const item = btn.closest('.faq-item');
+                    const content = item.querySelector('.faq-content');
+                    const chevron = btn.querySelector('.faq-chevron');
+                    content.classList.toggle('open');
+                    chevron.classList.toggle('rotated');
+                });
+            });
+
+            // 初始載入範例
+            jsonInput.value = sampleJSON;
+            jsonToCSV();
+            switchView('raw');
+            showToast('已載入範例，立即體驗 JSON 轉 CSV！');
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

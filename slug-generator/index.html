@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slug Generator - SEO 友善 URL Slug 線上產生工具 | ToolHub</title>
+    <meta name="description" content="免費線上 Slug 產生器，將文字快速轉換為 SEO 友善的 URL Slug。支援自訂分隔符號、大小寫轉換、移除數字/表情符號/特殊符號，批次產生模式。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="Slug Generator, URL Slug, SEO, Slug 產生器, URL 優化, 網址優化, SEO 友善網址, 文字轉 Slug, 批次產生, 線上工具">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Slug Generator - SEO 友善 URL Slug 線上產生工具 | ToolHub">
+    <meta property="og:description" content="將文字快速轉換為 SEO 友善的 URL Slug，支援多種格式、自訂分隔符號、大小寫轉換及批次產生。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/slug-generator/">
+    <meta property="og:image" content="https://toolhuben.com/og-image.png">
+    <meta property="og:locale" content="zh_TW">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Slug Generator - SEO 友善 URL Slug 線上產生工具 | ToolHub">
+    <meta name="twitter:description" content="將文字快速轉換為 SEO 友善的 URL Slug，支援多種格式、自訂分隔符號、大小寫轉換及批次產生。">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://toolhuben.com/slug-generator/">
+
+    <!-- JSON-LD Schema.org -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Slug Generator",
+        "description": "將文字快速轉換為 SEO 友善的 URL Slug，支援自訂分隔符號、大小寫轉換與批次產生模式。",
+        "url": "https://toolhuben.com/slug-generator/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "TWD"
+        },
+        "author": {
+            "@type": "Organization",
+            "name": "ToolHub"
+        }
+    }
+    </script>
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                            slug: '#48C6EF',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #48C6EF; }
+
+        .slug-input {
+            width: 100%;
+            min-height: 260px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .slug-input:focus {
+            border-color: #48C6EF;
+            box-shadow: 0 0 0 3px rgba(72, 198, 239, 0.1);
+        }
+        .slug-input::placeholder { color: #475569; }
+
+        .slug-output {
+            width: 100%;
+            min-height: 260px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.8;
+            font-size: 0.9rem;
+            border-radius: 0.75rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            word-break: break-all;
+        }
+        .slug-output::placeholder { color: #475569; }
+
+        /* Option buttons */
+        .opt-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .opt-btn:hover {
+            background: #1E293B;
+            color: #48C6EF;
+            border-color: #48C6EF;
+        }
+        .opt-btn.active {
+            background: rgba(72, 198, 239, 0.15);
+            color: #48C6EF;
+            border-color: #48C6EF;
+            box-shadow: 0 0 10px rgba(72, 198, 239, 0.15);
+        }
+
+        /* Checkbox toggle */
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #48C6EF; border-color: #48C6EF; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        .section-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        /* Stats badges */
+        .stat-badge {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            text-align: center;
+        }
+        .stat-badge .stat-value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #48C6EF;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .stat-badge .stat-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        /* Right panel separator indicator */
+        .arrow-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #48C6EF;
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        /* Animation */
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes flash-success {
+            0% { background-color: rgba(72, 198, 239, 0.15); }
+            100% { background-color: transparent; }
+        }
+        .flash-active { animation: flash-success 0.5s ease-out; }
+
+        /* SEO Article Styles */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #48C6EF;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #48C6EF;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(72, 198, 239, 0.05);
+            border-left: 3px solid #48C6EF;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .slug-input { min-height: 180px; }
+            .slug-output { min-height: 180px; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/slug-generator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/slug-generator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/slug-generator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#48C6EF;--classic-accent-rgb:72,198,239" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <!-- 1. Header -->
+    <div id="component-header"></div>
+    <!-- 2. Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. Core Module: Slug Generator -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-xs text-slate-500 mb-4">
+            <a href="/" class="hover:text-hub-slug transition-colors">首頁</a>
+            <span>/</span>
+            <span class="text-slate-300">Slug Generator</span>
+        </nav>
+
+        <!-- Module Title -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-slug">
+                <span class="flex w-2 h-2 bg-hub-slug rounded-full animate-pulse mr-2"></span>
+                SEO 友善 URL · 即時 Slug 轉換引擎
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Slug Generator <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">SEO 友善 URL Slug 產生器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                將文字快速轉換為乾淨、可讀性高的 SEO 友善 URL Slug。<br class="hidden sm:block"/>
+                支援自訂分隔符號、大小寫轉換、移除選項與批次產生模式。
+            </p>
+        </div>
+
+        <!-- Main Tool Area -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+
+            <!-- Tool Header -->
+            <div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="ph ph-link text-hub-slug text-lg"></i>
+                    <span class="text-xs font-bold text-hub-slug uppercase tracking-widest">Slug 產生器</span>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button id="batch-mode-btn" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5
+                        bg-hub-800 border-hub-700 text-slate-400 hover:border-hub-slug hover:text-hub-slug">
+                        <i class="ph ph-list-numbers"></i> 批次模式
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tool Content -->
+            <div class="flex flex-col lg:flex-row min-h-[500px]">
+
+                <!-- ===== LEFT PANEL: Input + Options ===== -->
+                <div class="w-full lg:w-3/5 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- Input Label Row -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-text-aa text-hub-slug text-lg"></i> 輸入文字
+                        </label>
+                        <span id="input-stats" class="text-xs text-slate-500 font-mono">0 字元 · 0 行</span>
+                    </div>
+
+                    <!-- Input Textarea -->
+                    <textarea id="input-textarea" class="slug-input" placeholder="在此輸入文字，即時轉換為 Slug...&#10;&#10;範例：Hello World! My First Blog Post&#10;&#10;支援多行輸入（批次模式）" spellcheck="false"></textarea>
+
+                    <!-- ===== Options ===== -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center gap-2">
+                            <i class="ph ph-sliders-horizontal text-hub-slug text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">轉換選項</span>
+                        </div>
+
+                        <!-- Separator -->
+                        <div class="px-4 py-3 border-b border-hub-700/50">
+                            <div class="section-label mb-2">分隔符號 (Separator)</div>
+                            <div class="flex gap-2">
+                                <button class="opt-btn active flex-1" data-separator="-">連字號 <span class="text-xs opacity-60">-</span></button>
+                                <button class="opt-btn flex-1" data-separator="_">底線 <span class="text-xs opacity-60">_</span></button>
+                                <button class="opt-btn flex-1" data-separator=".">句點 <span class="text-xs opacity-60">.</span></button>
+                            </div>
+                        </div>
+
+                        <!-- Letter Case -->
+                        <div class="px-4 py-3 border-b border-hub-700/50">
+                            <div class="section-label mb-2">大小寫 (Letter Case)</div>
+                            <div class="flex gap-2">
+                                <button class="opt-btn active flex-1" data-case="lowercase">lowercase</button>
+                                <button class="opt-btn flex-1" data-case="uppercase">UPPERCASE</button>
+                                <button class="opt-btn flex-1" data-case="preserve">保留原始</button>
+                            </div>
+                        </div>
+
+                        <!-- Remove Options -->
+                        <div class="px-4 py-3">
+                            <div class="section-label mb-2">移除選項 (Remove)</div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                    <div class="relative">
+                                        <input type="checkbox" id="opt-numbers" class="sr-only toggle-checkbox" checked>
+                                        <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                        <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                    </div>
+                                    移除數字
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                    <div class="relative">
+                                        <input type="checkbox" id="opt-emoji" class="sr-only toggle-checkbox" checked>
+                                        <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                        <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                    </div>
+                                    移除表情符號
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                    <div class="relative">
+                                        <input type="checkbox" id="opt-symbols" class="sr-only toggle-checkbox" checked>
+                                        <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                        <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                    </div>
+                                    移除特殊符號
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                    <div class="relative">
+                                        <input type="checkbox" id="opt-extra-spaces" class="sr-only toggle-checkbox" checked>
+                                        <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                        <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                    </div>
+                                    去除重複空格
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer group text-xs text-slate-400 hover:text-white transition-colors">
+                                    <div class="relative">
+                                        <input type="checkbox" id="opt-dup-separator" class="sr-only toggle-checkbox" checked>
+                                        <div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+                                        <div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+                                    </div>
+                                    去除多餘分隔符號
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap items-center gap-2 pt-2">
+                        <button id="btn-undo" class="px-3 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-400 text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                            <i class="ph ph-arrow-u-up-left"></i> 復原
+                        </button>
+                        <button id="btn-redo" class="px-3 py-2 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-400 text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                            <i class="ph ph-arrow-u-up-right"></i> 重做
+                        </button>
+                        <div class="flex-1"></div>
+                        <button id="btn-clear" class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="ph ph-trash"></i> 清除
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ===== RIGHT PANEL: Output ===== -->
+                <div class="w-full lg:w-2/5 border-t lg:border-t-0 lg:border-l border-hub-700 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- Output Label -->
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-check-square text-hub-slug text-lg"></i>
+                            <span id="output-label">Slug 結果</span>
+                        </label>
+                        <span id="output-count" class="text-xs text-slate-500 font-mono">0 slugs</span>
+                    </div>
+
+                    <!-- Arrow indicator -->
+                    <div class="arrow-indicator">
+                        <i class="ph ph-arrow-down lg:ph-arrow-right text-xl"></i>
+                    </div>
+
+                    <!-- Output Textarea -->
+                    <textarea id="output-textarea" class="slug-output flex-grow" readonly placeholder="Slug 將顯示在此處..."></textarea>
+
+                    <!-- Stats Badges -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="stat-badge">
+                            <div class="stat-value" id="stat-chars">0</div>
+                            <div class="stat-label">字元</div>
+                        </div>
+                        <div class="stat-badge">
+                            <div class="stat-value" id="stat-slugs">0</div>
+                            <div class="stat-label">Slugs</div>
+                        </div>
+                        <div class="stat-badge">
+                            <div class="stat-value text-xs text-hub-slug" id="stat-separator">-</div>
+                            <div class="stat-label">分隔符號</div>
+                        </div>
+                    </div>
+
+                    <!-- Copy & Download Buttons -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-copy-slug" class="px-4 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+                            <i class="ph ph-copy"></i> 複製 Slug
+                        </button>
+                        <button id="btn-copy-all" class="px-4 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 rounded-lg text-slate-300 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+                            <i class="ph ph-copy"></i> 複製全部
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-download-txt" class="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/50 text-emerald-400 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                            <i class="ph ph-download-simple"></i> 下載 TXT
+                        </button>
+                        <button id="btn-download-csv" class="px-4 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-400 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                            <i class="ph ph-download-simple"></i> 下載 CSV
+                        </button>
+                    </div>
+
+                    <!-- Preview Row -->
+                    <div class="bg-hub-900/50 rounded-xl p-3 border border-hub-700">
+                        <div class="text-xs text-slate-500 mb-2 flex items-center gap-1.5">
+                            <i class="ph ph-eye text-hub-slug"></i> 即時預覽對照
+                        </div>
+                        <div id="preview-list" class="max-h-32 overflow-y-auto space-y-1">
+                            <div class="text-center text-slate-500 text-xs py-4">
+                                輸入文字後即時預覽
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Ad Banner ===== -->
+        <div class="mt-8 text-center text-xs text-slate-600 border border-hub-700/50 rounded-xl py-6 bg-hub-800/30">
+            <i class="ph ph-ad text-slate-600 text-lg block mb-1"></i>
+            <span>廣告空間</span>
+        </div>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <div class="mt-12 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ 常見問題 <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">FAQ</span></h2>
+                <p class="text-slate-400 text-sm">關於 Slug 與 URL 友善網址的常見疑問</p>
+            </div>
+
+            <div class="space-y-3">
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 URL Slug？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">URL Slug</strong> 是網址中最後面、可讀性高的那段文字，用來描述頁面內容。例如在網址 <code class="text-hub-slug">https://example.com/blog/<strong>how-to-install-nodejs</strong></code> 中，<code>how-to-install-nodejs</code> 就是 Slug。</p>
+                        <p class="mt-2">Slug 通常具有以下特徵：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">全部小寫</strong> — 避免大小寫混淆</li>
+                            <li><strong class="text-white">使用連字號分隔</strong> — 取代空格與其他特殊符號</li>
+                            <li><strong class="text-white">僅含字母與數字</strong> — 排除標點符號與特殊字元</li>
+                            <li><strong class="text-white">簡潔且具描述性</strong> — 讓人一眼看出頁面主題</li>
+                        </ul>
+                        <p class="mt-2">好的 Slug 能同時提升 <strong class="text-white">使用者體驗</strong> 與 <strong class="text-white">搜尋引擎排名</strong>，是網站 SEO 優化的重要環節。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>為什麼 SEO 需要好的 Slug？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>URL Slug 對 SEO 的影響主要體現在以下幾個方面：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">關鍵字相關性</strong> — 搜尋引擎會分析 URL 中的文字，含有關鍵字的 Slug 有助於提升排名</li>
+                            <li><strong class="text-white">使用者點擊率</strong> — 乾淨可讀的網址讓使用者更願意點擊，間接提升 SEO 表現</li>
+                            <li><strong class="text-white">分享友善</strong> — 良好的 Slug 在社群媒體分享時顯示更專業</li>
+                            <li><strong class="text-white">避免重複內容</strong> — 一致的 Slug 格式有助於 Canonical URL 管理</li>
+                            <li><strong class="text-white">提升可讀性</strong> — 搜尋引擎偏好對人類友善的網址結構</li>
+                        </ul>
+                        <div class="highlight-box mt-2">
+                            <p><strong>💡 範例對比：</strong></p>
+                            <p class="mt-1">❌ 不良 Slug：<code class="text-slate-400">/p=12345?cat=3</code></p>
+                            <p>✅ 良好 Slug：<code class="text-hub-slug">/blog/how-to-improve-seo</code></p>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Slug 應該使用連字號還是底線？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>根據 Google 的官方建議，URL 中的單字分隔應使用 <strong class="text-white">連字號 (-)</strong> 而非底線 (_)。</p>
+                        <div class="highlight-box mt-2">
+                            <p>✅ 推薦：<code class="text-hub-slug">/my-blog-post</code> (連字號)</p>
+                            <p class="mt-1">❌ 不推薦：<code class="text-slate-400">/my_blog_post</code> (底線)</p>
+                        </div>
+                        <p class="mt-2">原因如下：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">Google 將連字號視為單字分隔符</strong>，能正確辨識每個單字</li>
+                            <li><strong class="text-white">底線不會被 Google 視為分隔符</strong>，<code>my_blog_post</code> 可能被解讀為一個單字 <code>my_blog_post</code></li>
+                            <li><strong class="text-white">連字號更具可讀性</strong>，對使用者來說更直觀</li>
+                            <li>底線在連結中可能因為底線樣式而難以辨識</li>
+                        </ul>
+                        <p class="mt-2">💡 雖然底線在某些系統（如資料庫、檔案系統）中仍常見，但對於 URL Slug，<strong class="text-white">連字號是最佳選擇</strong>。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>批次模式如何使用？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>批次模式讓您可以一次將多行文字轉換為 Slug，每行獨立產生一個 Slug。</p>
+                        <p class="mt-2"><strong class="text-white">操作方式：</strong></p>
+                        <ol class="list-decimal pl-5 mt-1 space-y-1">
+                            <li>點擊「批次模式」按鈕啟動</li>
+                            <li>在輸入框中每行輸入一個文字（如文章標題、產品名稱）</li>
+                            <li>每行會自動轉換為對應的 Slug</li>
+                            <li>輸出結果會保留每行的對應關係</li>
+                        </ol>
+                        <div class="highlight-box mt-2">
+                            <p><strong>範例輸入：</strong></p>
+                            <p class="mt-1 text-xs font-mono">Hello World<br>JSON Formatter<br>SEO Tool</p>
+                            <p class="mt-2"><strong>產生結果：</strong></p>
+                            <p class="mt-1 text-xs font-mono text-hub-slug">hello-world<br>json-formatter<br>seo-tool</p>
+                        </div>
+                        <p class="mt-2">批次模式特別適合以下場景：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>大量文章或產品的 URL Slug 產生</li>
+                            <li>從 CSV 或試算表匯入資料進行批次轉換</li>
+                            <li>網站遷移或重新設計網址結構</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>Slug 應該多長才適合 SEO？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>一般建議 URL Slug 的長度控制在 <strong class="text-white">30 到 60 個字元</strong> 之間，具體取決於內容需求。</p>
+                        <p class="mt-2"><strong class="text-white">長度建議：</strong></p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">3-5 個單字（約 20-40 個字元）</strong> — 最理想，簡潔且具描述性</li>
+                            <li><strong class="text-white">少於 3 個單字</strong> — 可能過於簡略，無法充分描述內容</li>
+                            <li><strong class="text-white">超過 60 個字元</strong> — 過長，搜尋引擎可能會截斷顯示</li>
+                        </ul>
+                        <div class="highlight-box mt-2">
+                            <p><strong>💡 最佳實踐：</strong> 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。</p>
+                            <p class="mt-1">✅ <code class="text-hub-slug">/seo-tips-for-beginners</code> (3 個關鍵字, 23 字元)</p>
+                            <p>❌ <code class="text-slate-400">/the-best-seo-tips-that-you-should-know-for-beginners-in-2024</code> (過長, 62 字元)</p>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>這個工具支援中文 Slug 嗎？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>本工具主要設計用於 <strong class="text-white">英文字元</strong> 的 Slug 轉換。對於中文內容，工具有以下處理方式：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>中文字元會從 Slug 中移除（因為 URL Slug 通常僅使用 ASCII 字元）</li>
+                            <li>如果您的網站使用中文網址，建議將中文內容手動翻譯或轉寫為英文後再產生 Slug</li>
+                            <li>對於中英文混合的內容，英文部分會正常轉換，中文部分會被移除</li>
+                        </ul>
+                        <p class="mt-2">💡 大多數 SEO 專家建議 URL Slug 使用英文，因為：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>英文 Slug 對國際搜尋引擎更友善</li>
+                            <li>避免 URL 編碼（Percent-encoding）造成的可讀性問題</li>
+                            <li>跨語言分享時保持一致性</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>資料安全嗎？會不會上傳到伺服器？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>完全安全！ToolHub 的 Slug Generator 是一個 <strong class="text-white">純前端工具</strong>，所有的文字處理都在您的瀏覽器中完成，不會將任何資料上傳到伺服器。</p>
+                        <p class="mt-2">具體保障：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>✅ 所有運算在瀏覽器本地執行</li>
+                            <li>✅ 不需要網路連線即可操作（載入後可離線使用）</li>
+                            <li>✅ 不會儲存您的輸入內容</li>
+                            <li>✅ 不會追蹤或記錄您的使用行為</li>
+                            <li>✅ 不需要註冊或登入</li>
+                        </ul>
+                        <p class="mt-2">💡 即使處理敏感的商業資料或尚未發布的內容，也完全不用擔心外洩風險。</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- ===== SEO ARTICLE ===== -->
+        <div class="mt-12 max-w-4xl mx-auto seo-article">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 SEO 友善 URL Slug 完全指南</h2>
+                <p class="text-slate-400 text-sm">深入了解 Slug 對 SEO 的影響與最佳實踐</p>
+            </div>
+
+            <div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+
+                <h2>什麼是 Slug？</h2>
+                <p><strong class="text-white">Slug</strong> 是 URL 中用以識別特定頁面的可讀性文字部分。它通常位於網域之後，是整個 URL 中除了網域以外最重要的部分。Slug 的主要功能是讓使用者與搜尋引擎能夠快速理解頁面內容。</p>
+                <p>例如，在網址 <code class="text-hub-slug">https://example.com/blog/<strong>complete-seo-guide-2024</strong></code> 中，<code>complete-seo-guide-2024</code> 就是這篇文章的 Slug。</p>
+
+                <div class="highlight-box">
+                    <p><strong>💡 核心觀念：</strong> Slug 不僅是網址的一部分，更是搜尋引擎理解頁面內容的重要信號。一個好的 Slug 同時服務於人類讀者與搜尋引擎爬蟲。</p>
+                </div>
+
+                <h2>為什麼 SEO 需要好的 Slug？</h2>
+                <p>URL Slug 對 SEO 的影響層面廣泛，以下是主要的 SEO 效益：</p>
+
+                <h3>1. 關鍵字相關性信號</h3>
+                <p>搜尋引擎（特別是 Google）會分析 URL 中的文字內容。當 Slug 包含目標關鍵字時，這會作為一個<strong class="text-white">正向的排名信號</strong>，有助於提升頁面在相關搜尋中的排名。雖然 URL 關鍵字的權重已不如早期 SEO 時代，但它仍然是整體優化中不可忽視的一環。</p>
+
+                <h3>2. 提升使用者體驗與點擊率</h3>
+                <p>在搜尋結果頁面（SERP）中，URL 是使用者判斷結果相關性的重要線索之一。一個清晰、可讀的 Slug 能顯著提升<strong class="text-white">點擊率 (CTR)</strong>。例如，以下兩個網址，使用者明顯更傾向點擊第一個：</p>
+                <ul>
+                    <li>✅ <code class="text-hub-slug">/blog/how-to-improve-website-speed</code></li>
+                    <li>❌ <code class="text-slate-400">/blog/article?id=12345&cat=seo</code></li>
+                </ul>
+
+                <h3>3. 分享與引用價值</h3>
+                <p>良好的 Slug 在社群媒體、電子郵件、即時通訊中分享時，使用者能直接從網址推測內容主題，增加分享意願。這間接帶來了更多的<strong class="text-white">外部連結</strong>與<strong class="text-white">社群信號</strong>，進一步強化 SEO。</p>
+
+                <h3>4. 避免重複內容問題</h3>
+                <p>一致的 Slug 格式與規範有助於 Canonical URL 的管理，避免因 URL 參數或大小寫差異造成的<strong class="text-white">重複內容 (Duplicate Content)</strong> 問題。</p>
+
+                <h2>Slug 最佳實踐</h2>
+
+                <h3>使用連字號分隔單字</h3>
+                <p>Google 明確建議使用連字號 (<code>-</code>) 而非底線 (<code>_</code>) 作為單字分隔符。連字號被視為單字邊界，而底線則不被視為分隔符，可能影響搜尋引擎對關鍵字的辨識。</p>
+
+                <h3>保持簡潔但具描述性</h3>
+                <p>理想的 Slug 長度約為 <strong class="text-white">3 到 5 個單字</strong>（約 30-50 個字元）。過短的 Slug 可能無法充分描述內容，過長則可能被搜尋結果截斷。移除停用詞（如 "and"、"the"、"a"、"of"），只保留核心關鍵字。</p>
+
+                <h3>全部使用小寫字母</h3>
+                <p>雖然 HTTP URL 在理論上是區分大小寫的，但實務上 Web 伺服器可能對大小寫有不同的處理方式。為避免混淆與 404 錯誤，Slug 應<strong class="text-white">統一使用小寫</strong>。</p>
+
+                <h3>僅使用字母、數字與連字號</h3>
+                <p>Slug 應僅包含以下字元：</p>
+                <ul>
+                    <li><strong class="text-white">小寫字母</strong>：a-z</li>
+                    <li><strong class="text-white">數字</strong>：0-9（必要時）</li>
+                    <li><strong class="text-white">連字號</strong>：-（作為單字分隔符）</li>
+                </ul>
+                <p>避免使用特殊符號（! @ # $ % ^ & *）、空格、中文或其他非 ASCII 字元。</p>
+
+                <h3>避免日期與數字 ID</h3>
+                <p>盡量避免在 Slug 中使用具體日期（如 <code>/blog/2024-01-15-post</code>）或數字 ID（如 <code>/product/12345</code>），除非必要。這些資訊會讓 Slug 看起來不專業，且日期型 Slug 會讓內容顯得像「舊聞」。</p>
+
+                <h3>保持 URL 結構扁平</h3>
+                <p>URL 結構不應過深。理想情況下，內容應位於網域後 1-2 個目錄層級，例如 <code>/category/slug</code> 而非 <code>/a/b/c/d/e/slug</code>。扁平的 URL 結構更易於搜尋引擎爬蟲索引，對使用者也更友善。</p>
+
+                <h3>避免關鍵字堆砌</h3>
+                <p>不要在 Slug 中重複相同或相似的關鍵字。例如 <code>/seo-tips-seo-guide-seo-strategy</code> 就是典型的<strong class="text-white">關鍵字堆砌 (Keyword Stuffing)</strong>，這可能被搜尋引擎視為垃圾內容，反而對 SEO 產生負面影響。</p>
+
+                <div class="highlight-box">
+                    <p><strong>📌 黃金法則：</strong> 撰寫 Slug 時，問自己「這個 Slug 能讓使用者一眼理解頁面內容嗎？」如果答案是肯定的，那麼這個 Slug 大概率也是 SEO 友善的。</p>
+                </div>
+
+                <h2>常見 Slug 格式範例</h2>
+                <p>以下是不同類型網站的 Slug 範例：</p>
+                <ul>
+                    <li><strong class="text-white">部落格文章</strong>：<code>/blog/complete-seo-guide</code></li>
+                    <li><strong class="text-white">產品頁面</strong>：<code>/products/wireless-bluetooth-headphones</code></li>
+                    <li><strong class="text-white">分類頁面</strong>：<code>/category/web-development</code></li>
+                    <li><strong class="text-white">教學文件</strong>：<code>/docs/getting-started-with-react</code></li>
+                    <li><strong class="text-white">活動頁面</strong>：<code>/events/web-design-conference-2024</code></li>
+                </ul>
+
+                <h2>使用 Slug Generator 提升工作效率</h2>
+                <p>ToolHub 的 Slug Generator 提供一站式的 Slug 產生解決方案。無論您是<strong class="text-white">網站管理者</strong>需要為數百篇文章產生一致的 URL 格式、<strong class="text-white">SEO 人員</strong>需要優化現有網址結構、<strong class="text-white">內容創作者</strong>想要確保每篇文章都有 SEO 友善的網址，還是<strong class="text-white">開發者</strong>需要批次處理資料遷移，這個工具都能大幅提升您的工作效率。</p>
+                <p>立即在左側輸入文字，體驗即時 Slug 轉換的便利！</p>
+
+                <h2>瀏覽器相容性</h2>
+                <p>本工具基於現代 Web 標準開發，相容於所有主流瀏覽器的最新版本：</p>
+                <ul>
+                    <li><strong class="text-white">Google Chrome</strong> 90+</li>
+                    <li><strong class="text-white">Mozilla Firefox</strong> 88+</li>
+                    <li><strong class="text-white">Apple Safari</strong> 14+</li>
+                    <li><strong class="text-white">Microsoft Edge</strong> 90+</li>
+                    <li><strong class="text-white">Opera</strong> 76+</li>
+                </ul>
+                <p>建議將瀏覽器更新至最新版本以獲得最佳使用體驗。</p>
+
+                <h2>隱私權保護</h2>
+                <p>ToolHub 高度重視您的資料隱私。Slug Generator 採用 <strong class="text-white">100% 純前端架構</strong>，所有文字轉換處理均在您的瀏覽器中完成，不會將任何資料傳輸至外部伺服器。我們不會儲存、分析或分享您輸入的任何內容。您可以完全放心地處理任何敏感的商業資料。</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-slug" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. Footer -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- System Init Script -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/slug-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Slug Generator Business Logic -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM References ---
+            const inputTextarea = document.getElementById('input-textarea');
+            const outputTextarea = document.getElementById('output-textarea');
+            const previewList = document.getElementById('preview-list');
+            const separatorBtns = document.querySelectorAll('[data-separator]');
+            const caseBtns = document.querySelectorAll('[data-case]');
+            const batchModeBtn = document.getElementById('batch-mode-btn');
+
+            const statChars = document.getElementById('stat-chars');
+            const statSlugs = document.getElementById('stat-slugs');
+            const statSeparator = document.getElementById('stat-separator');
+            const inputStats = document.getElementById('input-stats');
+            const outputLabel = document.getElementById('output-label');
+            const outputCount = document.getElementById('output-count');
+
+            const btnCopySlug = document.getElementById('btn-copy-slug');
+            const btnCopyAll = document.getElementById('btn-copy-all');
+            const btnDownloadTxt = document.getElementById('btn-download-txt');
+            const btnDownloadCsv = document.getElementById('btn-download-csv');
+            const btnClear = document.getElementById('btn-clear');
+            const btnUndo = document.getElementById('btn-undo');
+            const btnRedo = document.getElementById('btn-redo');
+
+            const optNumbers = document.getElementById('opt-numbers');
+            const optEmoji = document.getElementById('opt-emoji');
+            const optSymbols = document.getElementById('opt-symbols');
+            const optExtraSpaces = document.getElementById('opt-extra-spaces');
+            const optDupSeparator = document.getElementById('opt-dup-separator');
+
+            // --- State ---
+            let currentSeparator = '-';
+            let currentCase = 'lowercase';
+            let isBatchMode = false;
+
+            // History for Undo/Redo
+            const MAX_HISTORY = 50;
+            const undoStack = [];
+            const redoStack = [];
+
+            // --- Core Slug Generation ---
+            function generateSlug(text, options) {
+                let slug = text;
+
+                // Remove numbers
+                if (options.removeNumbers) {
+                    slug = slug.replace(/[0-9]/g, '');
+                }
+
+                // Remove emoji (涵蓋 Unicode 標準 emoji 區塊與 surrogate pairs)
+                if (options.removeEmoji) {
+                    slug = slug.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{E000}-\u{F8FF}]/gu, '');
+                }
+
+                // 特殊符號處理：
+                // 勾選移除 → 符號序列轉為單字邊界（與主流 slug 工具行為一致）
+                // 未勾選   → 符號直接移除，不建立邊界
+                if (options.removeSymbols) {
+                    slug = slug.replace(/[^a-zA-Z0-9\s]+/g, ' ');
+                } else {
+                    slug = slug.replace(/[^a-zA-Z0-9\s]/g, '');
+                }
+
+                // 殘留的非字母數字（中文、底線、未移除的表情符號等）→ 單字邊界
+                slug = slug.replace(/[^a-zA-Z0-9]+/g, ' ');
+
+                // Letter case
+                if (options.letterCase === 'lowercase') {
+                    slug = slug.toLowerCase();
+                } else if (options.letterCase === 'uppercase') {
+                    slug = slug.toUpperCase();
+                }
+                // 'preserve' — leave as-is
+
+                // Trim 前後空白
+                slug = slug.trim();
+
+                // 空格 → 分隔符
+                const sep = options.separator;
+                slug = slug.replace(/[\s]+/g, sep);
+
+                // Remove duplicate separators
+                if (options.removeDuplicateSeparators) {
+                    const sepEscaped = sep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    slug = slug.replace(new RegExp(`${sepEscaped}+`, 'g'), sep);
+                }
+
+                // Trim separator from start and end
+                const sepEscaped = sep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const trimPattern = new RegExp(`^[${sepEscaped}]+|[${sepEscaped}]+$`, 'g');
+                slug = slug.replace(trimPattern, '');
+
+                return slug;
+            }
+
+            function getOptions() {
+                return {
+                    separator: currentSeparator,
+                    letterCase: currentCase,
+                    removeNumbers: optNumbers.checked,
+                    removeEmoji: optEmoji.checked,
+                    removeSymbols: optSymbols.checked,
+                    removeExtraSpaces: optExtraSpaces.checked,
+                    removeDuplicateSeparators: optDupSeparator.checked,
+                };
+            }
+
+            // --- Update Output ---
+            function updateOutput(pushHistory = true) {
+                const input = inputTextarea.value;
+                const options = getOptions();
+
+                // Push to undo stack
+                if (pushHistory) {
+                    undoStack.push(inputTextarea.value);
+                    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+                    redoStack.length = 0;
+                }
+
+                // Update input stats
+                const chars = input.length;
+                const lines = input ? input.split('\n').length : 0;
+                inputStats.textContent = `${chars} 字元 · ${lines} 行`;
+
+                // Generate slugs
+                let result;
+                let slugCount = 0;
+
+                if (isBatchMode && input.trim()) {
+                    const lines_arr = input.split('\n');
+                    const slugs = lines_arr.map(line => {
+                        const trimmed = line.trim();
+                        if (!trimmed) return '';
+                        const s = generateSlug(trimmed, options);
+                        if (s) slugCount++;
+                        return s;
+                    });
+                    result = slugs.join('\n');
+                } else {
+                    result = generateSlug(input, options);
+                    if (result) slugCount = 1;
+                }
+
+                outputTextarea.value = result;
+
+                // Update stats
+                statChars.textContent = result.length;
+                statSlugs.textContent = slugCount;
+                statSeparator.textContent = currentSeparator;
+                outputCount.textContent = `${slugCount} slug${slugCount !== 1 ? 's' : ''}`;
+                outputLabel.textContent = `Slug 結果${isBatchMode ? ' (批次模式)' : ''}`;
+
+                // Update preview
+                updatePreview(input, result);
+
+                // Update button states
+                updateUndoRedoButtons();
+            }
+
+            // --- Preview ---
+            function updatePreview(input, output) {
+                if (!input.trim()) {
+                    previewList.innerHTML = `
+                        <div class="text-center text-slate-500 text-xs py-4">
+                            <i class="ph ph-arrow-left text-lg block mb-1"></i>
+                            輸入文字後即時預覽
+                        </div>
+                    `;
+                    return;
+                }
+
+                let items = [];
+                if (isBatchMode) {
+                    const inputLines = input.split('\n').filter(l => l.trim());
+                    const outputLines = output.split('\n').filter(l => l.trim());
+                    const maxLen = Math.min(inputLines.length, 5); // Show max 5 preview items
+                    for (let i = 0; i < maxLen; i++) {
+                        items.push({ input: inputLines[i], output: outputLines[i] || '—' });
+                    }
+                    if (inputLines.length > 5) {
+                        items.push({ input: `...還有 ${inputLines.length - 5} 行`, output: '' });
+                    }
+                } else {
+                    items.push({ input: input.trim().slice(0, 60), output: output });
+                }
+
+                if (items.length === 0) {
+                    previewList.innerHTML = `<div class="text-center text-slate-500 text-xs py-4">無內容</div>`;
+                    return;
+                }
+
+                previewList.innerHTML = items.map((item, idx) => `
+                    <div class="flex items-center gap-2 text-xs ${item.output === '' ? 'opacity-50' : ''}">
+                        <span class="text-slate-400 truncate flex-1 min-w-0">${escapeHtml(item.input)}</span>
+                        <i class="ph ph-arrow-right text-hub-slug shrink-0"></i>
+                        <span class="text-hub-slug truncate flex-1 min-w-0 font-mono">${escapeHtml(item.output)}</span>
+                    </div>
+                `).join('');
+            }
+
+            // --- UI Utilities ---
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function showToast(msg, icon = 'check-circle') {
+                const toast = document.getElementById('toast');
+                const toastMsg = document.getElementById('toast-msg');
+                const toastIcon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                toastIcon.className = `ph-fill ph-${icon} text-lg text-hub-slug`;
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                }, 2000);
+            }
+
+            function updateUndoRedoButtons() {
+                btnUndo.disabled = undoStack.length === 0;
+                btnRedo.disabled = redoStack.length === 0;
+            }
+
+            // --- Undo / Redo ---
+            function undo() {
+                if (undoStack.length === 0) return;
+                redoStack.push(inputTextarea.value);
+                inputTextarea.value = undoStack.pop();
+                updateOutput(false);
+                showToast('已復原', 'arrow-u-up-left');
+            }
+
+            function redo() {
+                if (redoStack.length === 0) return;
+                undoStack.push(inputTextarea.value);
+                inputTextarea.value = redoStack.pop();
+                updateOutput(false);
+                showToast('已重做', 'arrow-u-up-right');
+            }
+
+            // --- Copy ---
+            function copyToClipboard(text, msg) {
+                if (!text) {
+                    showToast('沒有內容可複製', 'warning-circle');
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(msg || '已複製');
+                }).catch(() => {
+                    // Fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast(msg || '已複製');
+                });
+            }
+
+            // --- Download ---
+            function downloadAs(filename, content, mimeType = 'text/plain') {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            // --- Event Listeners ---
+
+            // Input
+            inputTextarea.addEventListener('input', () => updateOutput());
+
+            // Separator buttons
+            separatorBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    separatorBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentSeparator = btn.dataset.separator;
+                    updateOutput();
+                });
+            });
+
+            // Case buttons
+            caseBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    caseBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentCase = btn.dataset.case;
+                    updateOutput();
+                });
+            });
+
+            // Batch mode toggle
+            batchModeBtn.addEventListener('click', () => {
+                isBatchMode = !isBatchMode;
+                batchModeBtn.classList.toggle('bg-hub-slug/15', isBatchMode);
+                batchModeBtn.classList.toggle('border-hub-slug', isBatchMode);
+                batchModeBtn.classList.toggle('text-hub-slug', isBatchMode);
+                batchModeBtn.classList.toggle('bg-hub-800', !isBatchMode);
+                batchModeBtn.classList.toggle('border-hub-700', !isBatchMode);
+                batchModeBtn.classList.toggle('text-slate-400', !isBatchMode);
+                updateOutput();
+                showToast(isBatchMode ? '批次模式已開啟' : '批次模式已關閉');
+            });
+
+            // Checkboxes
+            [optNumbers, optEmoji, optSymbols, optExtraSpaces, optDupSeparator].forEach(cb => {
+                cb.addEventListener('change', () => updateOutput());
+            });
+
+            // Undo / Redo
+            btnUndo.addEventListener('click', undo);
+            btnRedo.addEventListener('click', redo);
+
+            // Keyboard shortcuts
+            inputTextarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    if (e.shiftKey) {
+                        e.preventDefault();
+                        redo();
+                    } else {
+                        e.preventDefault();
+                        undo();
+                    }
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                    e.preventDefault();
+                    redo();
+                }
+            });
+
+            // Copy
+            btnCopySlug.addEventListener('click', () => {
+                const slug = outputTextarea.value.split('\n')[0];
+                copyToClipboard(slug, 'Slug 已複製');
+            });
+
+            btnCopyAll.addEventListener('click', () => {
+                copyToClipboard(outputTextarea.value, '全部已複製');
+            });
+
+            // Download
+            btnDownloadTxt.addEventListener('click', () => {
+                const content = outputTextarea.value;
+                if (!content) {
+                    showToast('沒有內容可下載', 'warning-circle');
+                    return;
+                }
+                downloadAs(`slug_${Date.now()}.txt`, content, 'text/plain');
+                showToast('TXT 已下載');
+            });
+
+            btnDownloadCsv.addEventListener('click', () => {
+                const content = outputTextarea.value;
+                if (!content) {
+                    showToast('沒有內容可下載', 'warning-circle');
+                    return;
+                }
+                // Create CSV: original -> slug
+                const lines = inputTextarea.value.split('\n');
+                const slugs = content.split('\n');
+                let csv = 'Original,Slug\n';
+                const maxLen = Math.max(lines.length, slugs.length);
+                for (let i = 0; i < maxLen; i++) {
+                    const orig = (lines[i] || '').trim();
+                    const slug = (slugs[i] || '').trim();
+                    if (orig || slug) {
+                        csv += `"${orig.replace(/"/g, '""')}","${slug.replace(/"/g, '""')}"\n`;
+                    }
+                }
+                downloadAs(`slug_${Date.now()}.csv`, csv, 'text/csv;charset=utf-8');
+                showToast('CSV 已下載');
+            });
+
+            // Clear
+            btnClear.addEventListener('click', () => {
+                if (!inputTextarea.value && !outputTextarea.value) {
+                    showToast('已經清空', 'warning-circle');
+                    return;
+                }
+                undoStack.push(inputTextarea.value);
+                inputTextarea.value = '';
+                outputTextarea.value = '';
+                redoStack.length = 0;
+                updateOutput(false);
+                showToast('已清除', 'trash');
+            });
+
+            // --- Initial Render ---
+            updateOutput(false);
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

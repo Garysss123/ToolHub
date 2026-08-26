@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UUID Decoder & Inspector / UUID 分析工具 | ToolHub</title>
+    <meta name="description" content="全方位的 UUID 分析工具，支援 v1~v8 版本檢測、Variant 分析、時間戳解析、Node ID 提取、UUID 比較與格式轉換。適合開發者 Debug、資料庫主鍵分析與 UUID 學習。">
+    <meta name="keywords" content="UUID, UUID Decoder, UUID Inspector, UUID v1, UUID v4, UUID v7, RFC 4122, RFC 9562, UUID 分析, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' },
+                        uuid: { v1: '#10B981', v3: '#8B5CF6', v4: '#F59E0B', v5: '#EF4444', v6: '#3B82F6', v7: '#EC4899', v8: '#14B8A6' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .field-input {
+            background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.625rem 1rem; font-size: 0.9375rem;
+            transition: border-color 0.2s; font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .field-input:focus { outline: none; border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .field-input::placeholder { color: #475569; }
+        .field-input.error { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+
+        .info-row {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            padding: 0.625rem 0; border-bottom: 1px solid rgba(30,41,59,0.5);
+            gap: 1rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .label { font-size: 0.8125rem; color: #64748B; flex-shrink: 0; min-width: 7rem; }
+        .info-row .value { font-size: 0.8125rem; color: #E2E8F0; text-align: right; word-break: break-all; font-family: '"Fira Code"', ui-monospace, monospace; }
+
+        .version-badge {
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            padding: 0.25rem 0.75rem; border-radius: 9999px;
+            font-size: 0.75rem; font-weight: 600; letter-spacing: 0.025em;
+        }
+
+        .timeline-bar {
+            height: 4px; border-radius: 2px; background: #1E293B; overflow: hidden; position: relative;
+        }
+        .timeline-bar .fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+        .compare-row {
+            display: grid; grid-template-columns: 1fr auto 1fr;
+            gap: 0.75rem; align-items: center;
+            padding: 0.5rem 0; border-bottom: 1px solid rgba(30,41,59,0.5);
+        }
+        .compare-row:last-child { border-bottom: none; }
+        .compare-val { font-family: '"Fira Code"', ui-monospace, monospace; font-size: 0.75rem; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #38BDF8; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .byte-bar {
+            display: flex; gap: 2px; align-items: center; flex-wrap: wrap;
+        }
+        .byte-bar span {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 1.75rem; height: 1.75rem; border-radius: 0.25rem;
+            font-size: 0.65rem; font-weight: 500; font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/uuid-inspector/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/uuid-inspector/">
+    <meta property="og:title" content="UUID Decoder &amp; Inspector / UUID 分析工具">
+    <meta property="og:description" content="全方位的 UUID 分析工具，支援 v1~v8 版本檢測、Variant 分析、時間戳解析、Node ID 提取、UUID 比較與格式轉換。適合開發者 Debug、資料庫主鍵分析與 UUID 學習。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="UUID Decoder &amp; Inspector / UUID 分析工具">
+    <meta name="twitter:description" content="全方位的 UUID 分析工具，支援 v1~v8 版本檢測、Variant 分析、時間戳解析、Node ID 提取、UUID 比較與格式轉換。適合開發者 Debug、資料庫主鍵分析與 UUID 學習。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"UUID Decoder & Inspector / UUID 分析工具","url":"https://toolhuben.com/uuid-inspector/","description":"全方位的 UUID 分析工具，支援 v1~v8 版本檢測、Variant 分析、時間戳解析、Node ID 提取、UUID 比較與格式轉換。適合開發者 Debug、資料庫主鍵分析與 UUID 學習。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"UUID Decoder & Inspector / UUID 分析工具","item":"https://toolhuben.com/uuid-inspector/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/uuid-inspector/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/uuid-inspector/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/uuid-inspector/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248" data-tool-visual data-classic-tool data-classic-layout="split">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+
+        <!-- Hero -->
+        <div class="text-center mb-8 fade-in">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                UUID 分析與解碼工作台
+            </span>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                UUID Decoder & Inspector
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">UUID 分析工具</span>
+            </h1>
+            <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                分析 UUID 的版本、變體、時間戳與結構。支援 v1~v8 全版本檢測、Timestamp 解碼、
+                Node ID 提取、UUID 比較與格式轉換。不僅是驗證工具，更是學習 UUID 的工作台。
+            </p>
+        </div>
+
+        <!-- UUID Input -->
+        <div class="glass-panel p-4 sm:p-6 mb-6">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1 relative">
+                    <input type="text" id="uuid-input" class="field-input w-full text-base"
+                        placeholder="輸入 UUID，例如：550e8400-e29b-41d4-a716-446655440000"
+                        oninput="autoAnalyze(this.value)" autocomplete="off" spellcheck="false">
+                    <div id="input-status" class="absolute right-3 top-1/2 -translate-y-1/2"></div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="loadSample()" class="px-4 py-2.5 text-xs font-medium bg-slate-700/50 text-slate-300 border border-hub-700 rounded-lg hover:bg-slate-700 transition-colors whitespace-nowrap flex items-center gap-1.5">
+                        <i class="ph ph-example text-sm"></i> 樣本
+                    </button>
+                    <button onclick="clearAll()" class="px-4 py-2.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors whitespace-nowrap flex items-center gap-1.5">
+                        <i class="ph ph-x-circle text-sm"></i> 清除
+                    </button>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <span class="text-xs text-slate-500 mr-1 self-center">快速樣本：</span>
+                <span class="chip-sample" onclick="quickSample('550e8400-e29b-41d4-a716-446655440000')">v1</span>
+                <span class="chip-sample" onclick="quickSample('6ba7b810-9dad-11d1-80b4-00c04fd430c8')">v1 (DNS)</span>
+                <span class="chip-sample" onclick="quickSample('f47ac10b-58cc-4372-a567-0e02b2c3d479')">v4</span>
+                <span class="chip-sample" onclick="quickSample('9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d')">v4</span>
+                <span class="chip-sample" onclick="quickSample('018f3a6e-7b5c-7000-b000-000000000000')">v7</span>
+                <span class="chip-sample" onclick="quickSample('018f3a6e-7b5c-7000-b000-000000000000')">v7 (時間)</span>
+                <span class="chip-sample" onclick="quickSample('1ec9414c-232a-6b61-b3d8-7f9b3d6f1e8a')">v6</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <!-- Left: Analysis -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Analysis Results -->
+                <div id="results-panel" class="glass-panel p-4 sm:p-6 hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-magnifying-glass text-hub-accent"></i>
+                            UUID 分析結果
+                        </h2>
+                        <div class="flex gap-1">
+                            <button onclick="copyResult()" class="p-2 text-slate-500 hover:text-hub-accent transition-colors" title="複製">
+                                <i class="ph ph-copy-simple text-lg"></i>
+                            </button>
+                            <button onclick="downloadTXT()" class="p-2 text-slate-500 hover:text-blue-400 transition-colors" title="下載 TXT">
+                                <i class="ph ph-download-simple text-lg"></i>
+                            </button>
+                            <button onclick="downloadJSON()" class="p-2 text-slate-500 hover:text-emerald-400 transition-colors" title="下載 JSON">
+                                <i class="ph ph-download-simple text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="analysis-content" class="space-y-1"></div>
+                </div>
+
+                <!-- UUID Timeline (shown for time-based UUIDs) -->
+                <div id="timeline-panel" class="glass-panel p-4 sm:p-6 hidden">
+                    <h2 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                        <i class="ph ph-clock-counter-clockwise text-hub-accent"></i>
+                        UUID Timeline
+                    </h2>
+                    <div id="timeline-content"></div>
+                </div>
+
+                <!-- UUID Compare -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="ph ph-arrows-left-right text-hub-accent"></i>
+                        UUID 比較
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">UUID A</label>
+                            <input type="text" id="cmp-a" class="field-input w-full text-sm"
+                                placeholder="輸入第一個 UUID" oninput="compareUUIDs()" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">UUID B</label>
+                            <input type="text" id="cmp-b" class="field-input w-full text-sm"
+                                placeholder="輸入第二個 UUID" oninput="compareUUIDs()" autocomplete="off" spellcheck="false">
+                        </div>
+                    </div>
+                    <div id="compare-results" class="hidden">
+                        <div class="bg-slate-800/30 rounded-lg p-3 space-y-1 text-sm" id="compare-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Conversions -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Byte Visualization -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="ph ph-code-block text-hub-accent"></i>
+                        UUID Byte Map
+                    </h2>
+                    <div id="byte-map" class="text-center text-slate-500 text-sm py-6">
+                        輸入 UUID 後將顯示位元組結構
+                    </div>
+                </div>
+
+                <!-- Conversions -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                        <i class="ph ph-arrows-clockwise text-hub-accent"></i>
+                        格式轉換
+                    </h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">標準格式 (Canonical)</label>
+                            <div id="conv-canonical" class="text-sm font-mono text-white p-2 bg-slate-800/40 rounded border border-hub-700 break-all">--</div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">無連字號</label>
+                            <div id="conv-no-hyphen" class="text-sm font-mono text-white p-2 bg-slate-800/40 rounded border border-hub-700 break-all cursor-pointer hover:border-hub-accent" onclick="copyConv('conv-no-hyphen')" title="按一下複製">--</div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">大寫</label>
+                            <div id="conv-upper" class="text-sm font-mono text-white p-2 bg-slate-800/40 rounded border border-hub-700 break-all cursor-pointer hover:border-hub-accent" onclick="copyConv('conv-upper')" title="按一下複製">--</div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">小寫</label>
+                            <div id="conv-lower" class="text-sm font-mono text-white p-2 bg-slate-800/40 rounded border border-hub-700 break-all cursor-pointer hover:border-hub-accent" onclick="copyConv('conv-lower')" title="按一下複製">--</div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block">URN</label>
+                            <div id="conv-urn" class="text-sm font-mono text-white p-2 bg-slate-800/40 rounded border border-hub-700 break-all cursor-pointer hover:border-hub-accent" onclick="copyConv('conv-urn')" title="按一下複製">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ + SEO Content -->
+        <div class="mt-8 space-y-6">
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-question text-hub-accent"></i>
+                    常見問題 (FAQ)
+                </h2>
+                <div class="space-y-2 divide-y divide-hub-700/50">
+                    <details class="faq-item">
+                        <summary class="text-slate-200">UUID 是什麼？</summary>
+                        <div class="faq-answer">
+                            UUID（Universally Unique Identifier，通用唯一辨識碼）是一個 128 位元的識別碼標準，用於在分散式系統中唯一標識資訊。標準格式為 32 個十六進位字元，以連字號分為五組：<code class="text-hub-accent font-mono text-xs">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>。<br><br>
+                            UUID 的核心價值在於不需要中央註冊機構即可產生全域唯一的識別碼，這在資料庫主鍵、分散式追蹤、工作階段識別等場景中極為重要。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">UUID v1 ~ v8 有什麼差異？</summary>
+                        <div class="faq-answer">
+                            <div class="overflow-x-auto text-xs">
+                                <table class="w-full border-collapse">
+                                    <thead><tr class="border-b border-hub-700"><th class="text-left p-1.5 text-slate-500">版本</th><th class="text-left p-1.5 text-slate-500">時間基準</th><th class="text-left p-1.5 text-slate-500">隨機性</th><th class="text-left p-1.5 text-slate-500">主要用途</th></tr></thead>
+                                    <tbody>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-emerald-400 font-mono">v1</td><td class="p-1.5">100ns 間隔 (1582-10-15)</td><td class="p-1.5">Clock + Node</td><td class="p-1.5 text-slate-400">傳統時間型</td></tr>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-purple-400 font-mono">v3</td><td class="p-1.5">—</td><td class="p-1.5">MD5 Hash</td><td class="p-1.5 text-slate-400">名稱型 (MD5)</td></tr>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-amber-400 font-mono">v4</td><td class="p-1.5">—</td><td class="p-1.5">122 bits Random</td><td class="p-1.5 text-slate-400">最常見的隨機 UUID</td></tr>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-red-400 font-mono">v5</td><td class="p-1.5">—</td><td class="p-1.5">SHA-1 Hash</td><td class="p-1.5 text-slate-400">名稱型 (SHA-1)</td></tr>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-blue-400 font-mono">v6</td><td class="p-1.5">100ns 間隔 (排序優化)</td><td class="p-1.5">Clock + Node</td><td class="p-1.5 text-slate-400">可排序時間型</td></tr>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-pink-400 font-mono">v7</td><td class="p-1.5">Unix 毫秒</td><td class="p-1.5">74 bits Random</td><td class="p-1.5 text-slate-400">⭐ 新標準時間型</td></tr>
+                                        <tr class="border-b border-hub-700/40"><td class="p-1.5 text-teal-400 font-mono">v8</td><td class="p-1.5">自訂</td><td class="p-1.5">自訂</td><td class="p-1.5 text-slate-400">實驗/自訂</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">RFC 4122 與 RFC 9562 的差異？</summary>
+                        <div class="faq-answer">
+                            RFC 4122（2005 年）是原始的 UUID 標準，定義了 v1、v3、v4、v5 四種版本。RFC 9562（2024 年 5 月）是更新版本，新增了 v6、v7、v8，並保留了向後相容性。<br><br>
+                            主要的變化包括：<br>
+                            • v6 與 v1 相容但欄位重新排序，使其在資料庫中可排序<br>
+                            • v7 使用 Unix 毫秒時間戳，取代 v1 的 1582 年基準，更簡單且更符合現代需求<br>
+                            • v8 為實驗性自訂格式，允許開發者定義自己的欄位佈局<br>
+                            • 建議新的應用使用 UUID v7 以獲得最佳效能與可排序性
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">為什麼現在推薦使用 UUID v7？</summary>
+                        <div class="faq-answer">
+                            UUID v7 被推薦的主要原因：<br><br>
+                            • <strong>可排序</strong>：高位為時間戳，因此在資料庫中按 UUID 排序即按建立時間排序，大幅提升 B-Tree 索引效能<br>
+                            • <strong>高效能</strong>：不需要全域鎖定或節點 ID，產生速度快<br>
+                            • <strong>隱私</strong>：不像 v1 會暴露 MAC 地址與精確時間<br>
+                            • <strong>足夠隨機</strong>：74 bits 隨機部分提供約 2.4 × 10²² 種組合<br>
+                            • <strong>標準化</strong>：已納入 RFC 9562，MySQL 8.0+、PostgreSQL、SQLite 等主流資料庫均支援<br><br>
+                            對於新建的系統，除非有特定的相容性需求，否則 UUID v7 通常是比 v4 更好的選擇。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">UUID 的 Variant 是什麼？</summary>
+                        <div class="faq-answer">
+                            Variant（變體）表示 UUID 的位元組佈局規範，由第 9 個位元組的高位元決定：<br><br>
+                            • <strong>NCS (0xxx)</strong>：早期 NCS 格式，現已少用<br>
+                            • <strong>RFC 4122 (10xx)</strong>：目前標準格式（最常見）<br>
+                            • <strong>Microsoft (110x)</strong>：Microsoft GUID 相容格式<br>
+                            • <strong>Reserved (111x)</strong>：保留給未來定義<br><br>
+                            絕大多數現代 UUID 都使用 RFC 4122 Variant，您可以透過此工具快速確認 UUID 使用的 Variant。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">UUID 與 GUID 有什麼不同？</summary>
+                        <div class="faq-answer">
+                            技術上幾乎沒有差異。GUID（Globally Unique Identifier）是 Microsoft 對 UUID 標準的實作，用於 Windows COM/OLE 等技術。兩者都遵循 RFC 4122 規範，格式相同（128 位元、32 個十六進位字元）。<br><br>
+                            唯一的微小差異在於 Microsoft GUID 有時會使用混合的 endian 格式輸出（在連字號分組內的位元組順序不同），但這僅影響顯示，不影響唯一性。您可以放心將 UUID 和 GUID 視為同一回事。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">什麼是 Nil UUID？</summary>
+                        <div class="faq-answer">
+                            Nil UUID（也稱 Zero UUID）是全部位元組皆為 0 的特殊 UUID：<code class="text-hub-accent font-mono text-xs">00000000-0000-0000-0000-000000000000</code>。它不代表任何實際的識別碼，常用於表示「無值」或「未設定」的狀態，類似於資料庫中的 NULL 或程式語言中的 nil/null 概念。
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-book-open text-hub-accent"></i>
+                    UUID 完整指南
+                </h2>
+                <div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">UUID 的內部結構</h3>
+                        <p>一個 UUID 由 128 位元組成，在標準顯示格式中表示為 32 個十六進位字元，以四個連字號分隔：</p>
+                        <div class="bg-slate-800/40 rounded-lg p-3 font-mono text-xs text-center my-2">
+                            <span class="text-slate-400">time_low</span>
+                            <span class="text-slate-600">-</span>
+                            <span class="text-slate-400">time_mid</span>
+                            <span class="text-slate-600">-</span>
+                            <span class="text-hub-accent">time_hi_and_version</span>
+                            <span class="text-slate-600">-</span>
+                            <span class="text-emerald-400">clock_seq_hi_and_reserved</span>
+                            <span class="text-slate-400">clock_seq_low</span>
+                            <span class="text-slate-600">-</span>
+                            <span class="text-slate-400">node</span>
+                        </div>
+                        <p>以 <code class="text-hub-accent font-mono text-xs">550e8400-e29b-41d4-a716-446655440000</code> 為例：</p>
+                        <ul class="list-disc list-inside space-y-1 mt-1">
+                            <li><code class="text-slate-400 font-mono text-xs">550e8400</code> — time_low（4 bytes）</li>
+                            <li><code class="text-slate-400 font-mono text-xs">e29b</code> — time_mid（2 bytes）</li>
+                            <li><code class="text-hub-accent font-mono text-xs">41d4</code> — time_hi_and_version（版本 4 標示於高位）</li>
+                            <li><code class="text-emerald-400 font-mono text-xs">a7</code> — clock_seq_hi_and_reserved（Variant + 高位序號）</li>
+                            <li><code class="text-slate-400 font-mono text-xs">16</code> — clock_seq_low（低位序號）</li>
+                            <li><code class="text-slate-400 font-mono text-xs">446655440000</code> — node（6 bytes，一般為 MAC 或亂數）</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">UUID 版本速查表</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-emerald-400 font-mono text-sm font-bold">v1</p><p class="text-xs text-slate-500">時間 + MAC</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-purple-400 font-mono text-sm font-bold">v3</p><p class="text-xs text-slate-500">MD5 + Namespace</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-amber-400 font-mono text-sm font-bold">v4</p><p class="text-xs text-slate-500">完全隨機</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-red-400 font-mono text-sm font-bold">v5</p><p class="text-xs text-slate-500">SHA-1 + Namespace</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-blue-400 font-mono text-sm font-bold">v6</p><p class="text-xs text-slate-500">排序時間型</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-pink-400 font-mono text-sm font-bold">v7</p><p class="text-xs text-slate-500">Unix 時間 + 亂數</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-teal-400 font-mono text-sm font-bold">v8</p><p class="text-xs text-slate-500">自訂格式</p></div>
+                            <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-slate-400 font-mono text-sm font-bold">Nil</p><p class="text-xs text-slate-500">全零</p></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
+        <span id="toast-icon" class="text-lg">✅</span>
+        <span id="toast-message" class="text-sm font-medium text-slate-300"></span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- Bootstrap -->
+    <script>
+        async function loadComponent(id, path) {
+            try {
+                const r = await fetch(path);
+                if (!r.ok) throw Error('HTTP ' + r.status);
+                const html = await r.text();
+                const c = document.getElementById(id); c.innerHTML = html;
+                Array.from(c.querySelectorAll('script')).forEach(os => {
+                    const ns = document.createElement('script');
+                    Array.from(os.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(os.innerHTML));
+                    os.parentNode.replaceChild(ns, os);
+                });
+            } catch (e) { console.error('[System Error]', path, e); }
+        }
+        function setupSidebarActiveState() {
+            const cp = '/uuid-inspector';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(i => {
+                const h = i.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    i.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    i.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const ic = i.querySelector('svg'); if (ic) ic.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) {
+                const t = e.target.closest('#sidebar-trigger-btn');
+                if (t) window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar'));
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- Business Logic -->
+    <script>
+        // ===================== UUID PARSING =====================
+        function parseUUID(str) {
+            const clean = str.trim().replace(/\s/g, '');
+            const hex = clean.replace(/-/g, '');
+
+            // Validate hex
+            if (!/^[0-9a-fA-F]{32}$/.test(hex)) return null;
+
+            const parts = clean.match(/^([0-9a-fA-F]{8})-([0-9a-fA-F]{4})-([0-9a-fA-F]{4})-([0-9a-fA-F]{4})-([0-9a-fA-F]{12})$/) ||
+                          clean.match(/^([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{12})$/);
+
+            if (!parts) {
+                // Maybe no hyphens, check length 32
+                if (hex.length === 32) {
+                    return {
+                        hex: hex.toUpperCase(),
+                        hexLower: hex.toLowerCase(),
+                        time_low: hex.substring(0, 8),
+                        time_mid: hex.substring(8, 12),
+                        time_hi: hex.substring(12, 16),
+                        clock_seq: hex.substring(16, 20),
+                        node: hex.substring(20, 32),
+                        version: parseInt(hex[12], 16),
+                        variant_byte: parseInt(hex[16], 16),
+                        variant_bits: (parseInt(hex[16], 16) & 0xF0) >> 4,
+                        hasHyphens: clean.includes('-'),
+                        raw: clean
+                    };
+                }
+                return null;
+            }
+
+            return {
+                hex: (parts[1]+parts[2]+parts[3]+parts[4]+parts[5]).toUpperCase(),
+                hexLower: (parts[1]+parts[2]+parts[3]+parts[4]+parts[5]).toLowerCase(),
+                time_low: parts[1],
+                time_mid: parts[2],
+                time_hi: parts[3],
+                clock_seq: parts[4],
+                node: parts[5],
+                version: parseInt(parts[3][0], 16),
+                variant_byte: parseInt(parts[4][0], 16),
+                variant_bits: (parseInt(parts[4][0], 16) & 0xF0) >> 4,
+                hasHyphens: clean.includes('-'),
+                raw: clean
+            };
+        }
+
+        function getVariant(v) {
+            const bits = v.variant_bits;
+            if (bits >= 0 && bits <= 7) return { name: 'NCS (Network Computing System)', rfc: '早期 NCS 格式', color: '#94A3B8' };
+            if (bits >= 8 && bits <= 11) return { name: 'RFC 4122 / RFC 9562', rfc: '標準 ISO/IEC 11578', color: '#10B981' };
+            if (bits >= 12 && bits <= 13) return { name: 'Microsoft GUID (COM/OLE)', rfc: 'Microsoft 相容', color: '#F59E0B' };
+            return { name: 'Reserved (未來使用)', rfc: '保留', color: '#EF4444' };
+        }
+
+        function getVersionInfo(v) {
+            const ver = v.version;
+            switch (ver) {
+                case 1: return { name: 'UUID v1 — 時間型 (Time-based)', desc: '以 100ns 間隔的 UTC 時間戳 + 時鐘序列 + Node (MAC) 產生', color: '#10B981' };
+                case 2: return { name: 'UUID v2 — DCE Security', desc: 'DEC 安全架構，含 POSIX UID/GID', color: '#84CC16' };
+                case 3: return { name: 'UUID v3 — 名稱型 (Name-based, MD5)', desc: '以 MD5 雜湊 + Namespace 產生', color: '#8B5CF6' };
+                case 4: return { name: 'UUID v4 — 隨機型 (Random)', desc: '以亂數產生，含 122 bits 隨機資料', color: '#F59E0B' };
+                case 5: return { name: 'UUID v5 — 名稱型 (Name-based, SHA-1)', desc: '以 SHA-1 雜湊 + Namespace 產生', color: '#EF4444' };
+                case 6: return { name: 'UUID v6 — 排序時間型 (Reordered Time)', desc: 'v1 的欄位重排版本，資料庫友善', color: '#3B82F6' };
+                case 7: return { name: 'UUID v7 — Unix 時間型 (Unix Epoch Time)', desc: '以 Unix 毫秒時間戳 + 亂數產生，RFC 9562 推薦', color: '#EC4899' };
+                case 8: return { name: 'UUID v8 — 自訂型 (Custom)', desc: '實驗性自訂格式，可自由定義欄位佈局', color: '#14B8A6' };
+                default: return { name: `未知版本 (v${ver})`, desc: '不符合標準 UUID 版本', color: '#EF4444' };
+            }
+        }
+
+        // ===================== V1 / V6 TIMESTAMP =====================
+        function extractV1Timestamp(v) {
+            const time_low = parseInt(v.time_low, 16);
+            const time_mid = parseInt(v.time_mid, 16);
+            const time_hi = parseInt(v.time_hi, 16) & 0x0FFF;
+            const ts100ns = BigInt(time_hi) << 48n | BigInt(time_mid) << 32n | BigInt(time_low);
+            // Convert from 100-ns intervals since 1582-10-15 to Unix ms
+            const unixMs = Number(ts100ns / 10000n) - 12219292800000;
+            return unixMs;
+        }
+
+        function extractV7Timestamp(v) {
+            const hex = v.hex;
+            const tsHex = hex.substring(0, 12); // 48 bits = first 12 hex chars
+            const ts = parseInt(tsHex, 16);
+            return ts; // Unix timestamp in milliseconds
+        }
+
+        function extractV6Timestamp(v) {
+            // v6 same as v1 but reordered
+            const time_low = parseInt(v.time_low, 16);
+            const time_mid = parseInt(v.time_mid, 16);
+            const time_hi = parseInt(v.time_hi, 16) & 0x0FFF;
+            const ts100ns = BigInt(time_low) << 28n | BigInt(time_mid) << 16n | BigInt(time_hi);
+            const unixMs = Number(ts100ns / 10000n) - 12219292800000;
+            return unixMs;
+        }
+
+        function extractV1Node(v) {
+            return v.node.toLowerCase().replace(/(.{2})/g, '$1:').slice(0, -1);
+        }
+
+        function extractClockSequence(v) {
+            const clockHi = parseInt(v.clock_seq.substring(0, 2), 16) & 0x3F;
+            const clockLo = parseInt(v.clock_seq.substring(2, 4), 16);
+            return (clockHi << 8) | clockLo;
+        }
+
+        // ===================== ANALYSIS =====================
+        function analyzeUUID(input) {
+            const parsed = parseUUID(input);
+            if (!parsed) return null;
+
+            const ver = parsed.version;
+            const variant = getVariant(parsed);
+            const versionInfo = getVersionInfo(parsed);
+            const clockSeq = extractClockSequence(parsed);
+
+            const result = {
+                parsed,
+                valid: true,
+                version: ver,
+                versionName: versionInfo.name,
+                versionDesc: versionInfo.desc,
+                versionColor: versionInfo.color,
+                variantName: variant.name,
+                variantRfc: variant.rfc,
+                variantColor: variant.color,
+                clockSeq,
+                isNil: parsed.hex === '00000000000000000000000000000000',
+                timeInfo: null,
+                nodeInfo: null
+            };
+
+            // Time-based UUIDs
+            if (ver === 1 || ver === 6) {
+                const ts = ver === 1 ? extractV1Timestamp(parsed) : extractV6Timestamp(parsed);
+                const d = new Date(ts);
+                const age = Date.now() - ts;
+                result.timeInfo = {
+                    timestamp: ts,
+                    date: d,
+                    iso: d.toISOString(),
+                    age,
+                    ageHuman: formatAge(age),
+                    node: extractV1Node(parsed),
+                    clockSeq
+                };
+            }
+
+            if (ver === 7) {
+                const ts = extractV7Timestamp(parsed);
+                const d = new Date(ts);
+                const age = Date.now() - ts;
+                result.timeInfo = {
+                    timestamp: ts,
+                    date: d,
+                    iso: d.toISOString(),
+                    age,
+                    ageHuman: formatAge(age),
+                    node: null,
+                    clockSeq: null
+                };
+            }
+
+            // Random Info
+            if (ver === 4) {
+                result.randomInfo = {
+                    totalBits: 122,
+                    desc: '6 bytes random (48 bits) + 2 bytes random (14 bits) + 6 bytes random (48 bits) + variant (2 bits)'
+                };
+            }
+
+            // Hash info for v3/v5
+            if (ver === 3) {
+                result.hashInfo = { algorithm: 'MD5', bits: 128 };
+            }
+            if (ver === 5) {
+                result.hashInfo = { algorithm: 'SHA-1', bits: 160 };
+            }
+
+            return result;
+        }
+
+        function formatAge(ms) {
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 0) return '未來時間（時鐘不同步？）';
+            if (seconds < 60) return `${seconds} 秒前`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} 分鐘前`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} 小時前`;
+            const days = Math.floor(hours / 24);
+            if (days < 30) return `${days} 天前`;
+            const months = Math.floor(days / 30);
+            if (months < 12) return `${months} 個月前`;
+            const years = Math.floor(days / 365);
+            return `${years} 年前`;
+        }
+
+        // ===================== DISPLAY =====================
+        function autoAnalyze(value) {
+            if (!value || value.trim().length < 20) {
+                document.getElementById('results-panel').classList.add('hidden');
+                document.getElementById('timeline-panel').classList.add('hidden');
+                document.getElementById('input-status').innerHTML = '';
+                document.getElementById('byte-map').innerHTML = '<div class="text-center text-slate-500 text-sm py-6">輸入 UUID 後將顯示位元組結構</div>';
+                document.getElementById('conv-canonical').textContent = '--';
+                document.getElementById('conv-no-hyphen').textContent = '--';
+                document.getElementById('conv-upper').textContent = '--';
+                document.getElementById('conv-lower').textContent = '--';
+                document.getElementById('conv-urn').textContent = '--';
+                return;
+            }
+
+            const result = analyzeUUID(value);
+            const statusEl = document.getElementById('input-status');
+
+            if (!result) {
+                statusEl.innerHTML = '<span class="text-red-400 text-sm font-bold">✗</span>';
+                document.getElementById('results-panel').classList.add('hidden');
+                document.getElementById('timeline-panel').classList.add('hidden');
+                return;
+            }
+
+            statusEl.innerHTML = '<span class="text-green-400 text-sm font-bold">✓</span>';
+            renderAnalysis(result);
+            renderConversions(result);
+            renderByteMap(result);
+        }
+
+        function renderAnalysis(result) {
+            const panel = document.getElementById('results-panel');
+            panel.classList.remove('hidden');
+
+            const r = result;
+            const p = r.parsed;
+            const content = document.getElementById('analysis-content');
+
+            const hyphens = p.hasHyphens ? '有 (標準格式)' : '無 (需要連字號)';
+            const hyphensValid = p.hasHyphens;
+
+            const validityChecks = [
+                p.hex.length === 32,
+                p.hasHyphens,
+                r.version >= 1 && r.version <= 8,
+                !r.isNil
+            ];
+            const allValid = validityChecks.every(Boolean);
+
+            const entropyNote = r.version === 4 ? '122 bits 隨機 — 總組合數約 5.3 × 10³⁶' :
+                               r.version === 7 ? '74 bits 隨機 — 總組合數約 1.9 × 10²²' :
+                               '';
+
+            content.innerHTML = `
+                <div class="info-row">
+                    <span class="label">UUID</span>
+                    <span class="value font-mono text-sm">${p.hexLower.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">合法性</span>
+                    <span class="value">${allValid ? '<span class="text-green-400">✓ 合法 UUID</span>' : '<span class="text-red-400">✗ 格式異常</span>'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">RFC 規範</span>
+                    <span class="value">${r.isNil ? 'Nil UUID (特殊值)' : 'RFC 4122 / RFC 9562'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">版本</span>
+                    <span class="value"><span class="version-badge" style="background:${r.versionColor}15;color:${r.versionColor};border:1px solid ${r.versionColor}33">v${r.version}</span>
+                    <span class="text-xs ml-1.5" style="color:${r.versionColor}">${r.versionName.split('—')[0].trim()}</span></span>
+                </div>
+                <div class="info-row">
+                    <span class="label">版本說明</span>
+                    <span class="value" style="max-width:70%;text-align:right;font-family:inherit">${r.versionDesc}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">變體 (Variant)</span>
+                    <span class="value"><span style="color:${r.variantColor}">${r.variantName}</span></span>
+                </div>
+                ${entropyNote ? `<div class="info-row"><span class="label">熵值備註</span><span class="value" style="font-family:inherit;color:#94A3B8">${entropyNote}</span></div>` : ''}
+                <div class="info-row">
+                    <span class="label">時序號</span>
+                    <span class="value font-mono">${r.clockSeq} (0x${r.clockSeq.toString(16).padStart(4,'0').toUpperCase()})</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">格式</span>
+                    <span class="value">${hyphens} ${!hyphensValid ? '<span class="text-amber-400 text-xs ml-1">⚠️ 標準格式應包含連字號</span>' : ''}</span>
+                </div>
+            `;
+
+            // Timeline for time-based UUIDs
+            const timelinePanel = document.getElementById('timeline-panel');
+            const timelineContent = document.getElementById('timeline-content');
+
+            if (r.timeInfo) {
+                timelinePanel.classList.remove('hidden');
+                const t = r.timeInfo;
+                const isoStr = t.iso.replace('T', ' ').replace('Z', ' UTC');
+                const agePct = Math.min(Math.abs(t.age) / (365 * 24 * 3600 * 1000) * 100, 100);
+
+                let extraHtml = '';
+                if (t.node) {
+                    extraHtml += `<div class="info-row"><span class="label">Node ID</span><span class="value font-mono">${t.node}</span></div>`;
+                }
+                if (t.clockSeq !== null) {
+                    extraHtml += `<div class="info-row"><span class="label">Clock Sequence</span><span class="value font-mono">${t.clockSeq}</span></div>`;
+                }
+
+                const ageColor = t.age < 3600000 ? '#10B981' : t.age < 86400000 ? '#3B82F6' : t.age < 2592000000 ? '#F59E0B' : '#EF4444';
+
+                timelineContent.innerHTML = `
+                    <div class="info-row">
+                        <span class="label">產生時間</span>
+                        <span class="value" style="font-family:inherit">${isoStr}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">時間戳</span>
+                        <span class="value font-mono text-xs">${t.timestamp} ms</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">年齡</span>
+                        <span class="value" style="color:${ageColor};font-family:inherit;font-weight:600">${t.ageHuman}</span>
+                    </div>
+                    ${extraHtml}
+                    <div class="mt-3">
+                        <div class="flex justify-between text-xs text-slate-600 mb-1">
+                            <span>產生 (${t.ageHuman})</span>
+                            <span>現在</span>
+                        </div>
+                        <div class="timeline-bar">
+                            <div class="fill" style="width:${Math.min(agePct, 100)}%;background:linear-gradient(90deg,${r.versionColor},${r.versionColor}88)"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                timelinePanel.classList.add('hidden');
+            }
+        }
+
+        function renderByteMap(result) {
+            const p = result.parsed;
+            const hex = p.hex;
+            const container = document.getElementById('byte-map');
+
+            // Color-code each byte based on its role
+            const colors = {
+                time_low: 'rgba(56,189,248,0.3)',
+                time_mid: 'rgba(56,189,248,0.2)',
+                time_hi: 'rgba(99,102,241,0.3)',
+                clock_hi: 'rgba(16,185,129,0.3)',
+                clock_lo: 'rgba(16,185,129,0.2)',
+                node: 'rgba(251,191,36,0.25)'
+            };
+
+            const bytes = [];
+            for (let i = 0; i < 32; i += 2) {
+                bytes.push(hex.substring(i, i + 2));
+            }
+
+            // Map byte indices to groups
+            const byteClasses = [];
+            for (let i = 0; i < bytes.length; i++) {
+                if (i < 4) byteClasses.push(colors.time_low);
+                else if (i < 6) byteClasses.push(colors.time_mid);
+                else if (i < 8) byteClasses.push(colors.time_hi);
+                else if (i === 8) byteClasses.push(colors.clock_hi);
+                else if (i === 9) byteClasses.push(colors.clock_lo);
+                else byteClasses.push(colors.node);
+            }
+
+            let html = '<div class="byte-bar justify-center">';
+            bytes.forEach((b, i) => {
+                if (i === 4 || i === 6 || i === 8 || i === 10) {
+                    html += `<span class="text-slate-700" style="min-width:8px;height:1.75rem;display:inline-flex;align-items:center;font-size:0.65rem">-</span>`;
+                }
+                html += `<span style="background:${byteClasses[i]}">${b}</span>`;
+            });
+            html += '</div>';
+
+            // Legend
+            html += `<div class="flex flex-wrap gap-3 justify-center mt-3 text-xs">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:${colors.time_low}"></span><span class="text-slate-500">time_low</span></span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:${colors.time_mid}"></span><span class="text-slate-500">time_mid</span></span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:${colors.time_hi}"></span><span class="text-slate-500">time_hi</span></span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:${colors.clock_hi}"></span><span class="text-slate-500">clock_seq</span></span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:${colors.node}"></span><span class="text-slate-500">node</span></span>
+            </div>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderConversions(result) {
+            const p = result.parsed;
+            const hex = p.hex;
+            const low = p.hexLower;
+            const upper = p.hex.toUpperCase();
+            const formatted = low.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
+            const noHyphen = hex;
+            const urn = `urn:uuid:${formatted}`;
+
+            document.getElementById('conv-canonical').textContent = formatted;
+            document.getElementById('conv-no-hyphen').textContent = noHyphen;
+            document.getElementById('conv-upper').textContent = formatted.toUpperCase();
+            document.getElementById('conv-lower').textContent = formatted.toLowerCase();
+            document.getElementById('conv-urn').textContent = urn;
+        }
+
+        // ===================== COMPARISON =====================
+        function compareUUIDs() {
+            const a = document.getElementById('cmp-a').value.trim();
+            const b = document.getElementById('cmp-b').value.trim();
+            const container = document.getElementById('compare-results');
+            const content = document.getElementById('compare-content');
+
+            if (!a || !b || a.length < 30 || b.length < 30) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            const parsedA = parseUUID(a);
+            const parsedB = parseUUID(b);
+
+            if (!parsedA || !parsedB) {
+                container.classList.remove('hidden');
+                content.innerHTML = '<span class="text-red-400">請輸入兩個有效的 UUID</span>';
+                return;
+            }
+
+            const sameVersion = parsedA.version === parsedB.version;
+            const sameVariant = getVariant(parsedA).name === getVariant(parsedB).name;
+            const sameHex = parsedA.hex === parsedB.hex;
+
+            let timeCompare = '';
+            if ((parsedA.version === 1 || parsedA.version === 7) && (parsedB.version === 1 || parsedB.version === 7)) {
+                const tsA = parsedA.version === 1 ? extractV1Timestamp(parsedA) : extractV7Timestamp(parsedA);
+                const tsB = parsedB.version === 1 ? extractV1Timestamp(parsedB) : extractV7Timestamp(parsedB);
+                const diff = Math.abs(tsA - tsB);
+                timeCompare = `時間差：${diff < 1000 ? '同時產生' : formatAge(diff)}`;
+            }
+
+            const icons = { yes: '<span class="text-green-400">✓</span>', no: '<span class="text-red-400">✗</span>', same: '<span class="text-green-400">一致</span>', diff: '<span class="text-red-400">不同</span>' };
+
+            container.classList.remove('hidden');
+            content.innerHTML = `
+                <div class="compare-row">
+                    <div class="compare-val" style="color:${sameHex ? '#10B981' : '#94A3B8'}">${parsedA.hexLower.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')}</div>
+                    <span class="text-xs text-slate-600">vs</span>
+                    <div class="compare-val text-right" style="color:${sameHex ? '#10B981' : '#94A3B8'}">${parsedB.hexLower.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')}</div>
+                </div>
+                <div class="compare-row">
+                    <span class="text-slate-500 text-xs">UUID ${sameHex ? '相同' : '不同'}</span>
+                    <span class="text-xs">${sameHex ? icons.yes : icons.no}</span>
+                    <span class="text-slate-500 text-xs text-right">${sameHex ? '完全一致' : '兩個不同的 UUID'}</span>
+                </div>
+                <div class="compare-row">
+                    <span class="text-slate-500 text-xs">版本比較</span>
+                    <span class="text-xs">v${parsedA.version} / v${parsedB.version}</span>
+                    <span class="text-slate-500 text-xs text-right">${sameVersion ? icons.same : icons.diff}</span>
+                </div>
+                <div class="compare-row">
+                    <span class="text-slate-500 text-xs">變體比較</span>
+                    <span class="text-xs">${getVariant(parsedA).name.split(' ')[0]}</span>
+                    <span class="text-slate-500 text-xs text-right">${sameVariant ? icons.same : icons.diff}</span>
+                </div>
+                ${timeCompare ? `<div class="compare-row"><span class="text-slate-500 text-xs">時間分析</span><span class="text-xs"></span><span class="text-slate-500 text-xs text-right">${timeCompare}</span></div>` : ''}
+            `;
+        }
+
+        // ===================== SAMPLES =====================
+        function loadSample() {
+            // Generate a v4 UUID sample
+            const samples = [
+                '550e8400-e29b-41d4-a716-446655440000',
+                '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+                'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+                '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+                '1ec9414c-232a-6b61-b3d8-7f9b3d6f1e8a',
+                '018f3a6e-7b5c-7000-b000-000000000000',
+                '018f3a6e-7b5c-7000-b000-000000000000',
+                '00000000-0000-0000-0000-000000000000'
+            ];
+            const pick = samples[Math.floor(Math.random() * samples.length)];
+            document.getElementById('uuid-input').value = pick;
+            autoAnalyze(pick);
+            showToast('已載入樣本 UUID');
+        }
+
+        function quickSample(val) {
+            document.getElementById('uuid-input').value = val;
+            autoAnalyze(val);
+        }
+
+        // ===================== ACTIONS =====================
+        function copyResult() {
+            const hex = document.getElementById('conv-canonical').textContent;
+            if (hex && hex !== '--') {
+                copyToClipboard(hex);
+            }
+        }
+
+        function copyConv(id) {
+            const val = document.getElementById(id).textContent;
+            if (val && val !== '--') copyToClipboard(val);
+        }
+
+        function downloadTXT() {
+            const uuid = document.getElementById('conv-canonical').textContent;
+            if (!uuid || uuid === '--') { showToast('尚無 UUID 可下載', true); return; }
+            const result = analyzeUUID(uuid);
+            if (!result) return;
+            const r = result;
+            const lines = [
+                '═══════════════════════════════════════',
+                '  UUID Analysis Report',
+                '  ToolHub - UUID Decoder & Inspector',
+                '═══════════════════════════════════════',
+                '',
+                `UUID:       ${uuid}`,
+                `Version:    v${r.version} (${r.versionName.split('—')[0].trim()})`,
+                `Variant:    ${r.variantName}`,
+                `RFC:        ${r.isNil ? 'Nil UUID' : 'RFC 4122 / RFC 9562'}`,
+                `Clock Seq:  ${r.clockSeq}`,
+                r.timeInfo ? `Timestamp:  ${r.timeInfo.iso}` : '',
+                r.timeInfo ? `Age:       ${r.timeInfo.ageHuman}` : '',
+                r.timeInfo && r.timeInfo.node ? `Node ID:   ${r.timeInfo.node}` : '',
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/uuid-inspector)`,
+                `Timestamp: ${new Date().toISOString()}`,
+                '───────────────────────────────────────'
+            ].filter(l => l !== '').join('\n');
+            downloadFile(lines, 'uuid-analysis.txt', 'text/plain');
+            showToast('TXT 已下載');
+        }
+
+        function downloadJSON() {
+            const uuid = document.getElementById('conv-canonical').textContent;
+            if (!uuid || uuid === '--') { showToast('尚無 UUID 可下載', true); return; }
+            const result = analyzeUUID(uuid);
+            if (!result) return;
+            const data = {
+                tool: 'ToolHub UUID Decoder & Inspector',
+                url: 'https://toolhuben.com/uuid-inspector/',
+                timestamp: new Date().toISOString(),
+                uuid: uuid,
+                analysis: {
+                    valid: result.valid,
+                    version: result.version,
+                    versionName: result.versionName,
+                    versionDescription: result.versionDesc,
+                    variant: result.variantName,
+                    rfc: result.isNil ? 'Nil UUID' : 'RFC 4122 / RFC 9562',
+                    clockSequence: result.clockSeq,
+                    isNil: result.isNil,
+                    timeInfo: result.timeInfo ? {
+                        timestamp: result.timeInfo.timestamp,
+                        iso: result.timeInfo.iso,
+                        age: result.timeInfo.ageHuman
+                    } : null,
+                    nodeId: result.timeInfo?.node || null
+                }
+            };
+            downloadFile(JSON.stringify(data, null, 2), 'uuid-analysis.json', 'application/json');
+            showToast('JSON 已下載');
+        }
+
+        function clearAll() {
+            document.getElementById('uuid-input').value = '';
+            document.getElementById('input-status').innerHTML = '';
+            document.getElementById('results-panel').classList.add('hidden');
+            document.getElementById('timeline-panel').classList.add('hidden');
+            document.getElementById('byte-map').innerHTML = '<div class="text-center text-slate-500 text-sm py-6">輸入 UUID 後將顯示位元組結構</div>';
+            document.getElementById('conv-canonical').textContent = '--';
+            document.getElementById('conv-no-hyphen').textContent = '--';
+            document.getElementById('conv-upper').textContent = '--';
+            document.getElementById('conv-lower').textContent = '--';
+            document.getElementById('conv-urn').textContent = '--';
+            showToast('已清除');
+        }
+
+        // ===================== UTILITIES =====================
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast'), ic = document.getElementById('toast-icon'), m = document.getElementById('toast-message');
+            ic.textContent = isError ? '❌' : '✅'; m.textContent = msg;
+            t.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            t.classList.add('opacity-100', 'pointer-events-auto');
+            clearTimeout(t._timeout);
+            t._timeout = setTimeout(() => { t.classList.remove('opacity-100', 'pointer-events-auto'); t.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); }, 2500);
+        }
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => fallbackCopy(text));
+            else fallbackCopy(text);
+        }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showToast('已複製到剪貼簿'); } catch (e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        // ===================== INIT =====================
+        function initApp() {
+            // Auto-load a sample on first visit
+            setTimeout(() => loadSample(), 500);
+        }
+
+        window.autoAnalyze = autoAnalyze;
+        window.loadSample = loadSample;
+        window.quickSample = quickSample;
+        window.clearAll = clearAll;
+        window.copyResult = copyResult;
+        window.copyConv = copyConv;
+        window.downloadTXT = downloadTXT;
+        window.downloadJSON = downloadJSON;
+        window.compareUUIDs = compareUUIDs;
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

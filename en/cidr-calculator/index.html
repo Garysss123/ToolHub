@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cidr Calculator | Free Online Tool - ToolHub</title>
+<meta content="Free online CIDR web calculator. Supports IPv4 / IPv6, real-time calculation of Network Address, Broadcast Address, number of available Hosts, Netmask, Wildcard Mask, and provides binary view and CIDR Cheat Sheet. Suitable for daily maintenance by network engineers, DevOps and MIS personnel." name="description"/>
+<meta content="CIDR, 子網計算, 網路遮罩, Netmask, IPv4, IPv6, 子網切割, 可用IP計算, IP範圍, 網路工程, Subnet Calculator, CIDR Calculator" name="keywords"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        .glass-panel:hover {
+            border-color: #334155;
+        }
+
+        .result-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .result-card:hover {
+            border-color: #334155;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .bit-block {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 36px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 1px;
+            transition: all 0.2s;
+        }
+        .bit-net {
+            background: rgba(14, 165, 233, 0.2);
+            color: #7DD3FC;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+        }
+        .bit-host {
+            background: rgba(245, 158, 11, 0.15);
+            color: #FCD34D;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+        .bit-octet-gap {
+            margin-right: 4px;
+        }
+        .bit-highlight {
+            transform: scale(1.1);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+        }
+
+        .cheat-sheet-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.875rem;
+        }
+        .cheat-sheet-table th {
+            background: rgba(15, 23, 42, 0.8);
+            color: #38BDF8;
+            padding: 0.625rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #1E293B;
+            position: sticky;
+            top: 0;
+        }
+        .cheat-sheet-table td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            font-family: 'Fira Code', monospace;
+            color: #CBD5E1;
+        }
+        .cheat-sheet-table tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+        .cheat-sheet-table tr.prefix-highlight td {
+            background: rgba(56, 189, 248, 0.08);
+            color: #7DD3FC;
+        }
+
+        .faq-item summary {
+            cursor: pointer;
+            padding: 0.875rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(21, 31, 50, 0.6);
+            border: 1px solid #1E293B;
+            transition: all 0.2s;
+            font-weight: 500;
+            color: #E2E8F0;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .faq-item summary::-webkit-details-marker {
+            display: none;
+        }
+        .faq-item summary::before {
+            content: '+';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1E293B;
+            color: #38BDF8;
+            font-size: 0.875rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .faq-item[open] summary::before {
+            content: '−';
+            background: #38BDF8;
+            color: #0B1120;
+        }
+        .faq-item summary:hover {
+            border-color: #334155;
+            background: rgba(21, 31, 50, 0.8);
+        }
+        .faq-item .faq-answer {
+            padding: 1rem 1rem 1rem 2.75rem;
+            color: #94A3B8;
+            line-height: 1.75;
+            font-size: 0.9rem;
+        }
+
+        .ipv4-input {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .v6-badge {
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #D8B4FE;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pill-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .pill-ipv4 { background: rgba(14, 165, 233, 0.1); color: #7DD3FC; border: 1px solid rgba(14, 165, 233, 0.2); }
+        .pill-ipv6 { background: rgba(168, 85, 247, 0.1); color: #D8B4FE; border: 1px solid rgba(168, 85, 247, 0.2); }
+
+        @media (max-width: 640px) {
+            .bit-block {
+                width: 24px;
+                height: 30px;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/cidr-calculator/" property="og:url"/>
+<meta content="Cidr Calculator | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free online CIDR web calculator. Supports IPv4 / IPv6, real-time calculation of Network Address, Broadcast Address, number of available Hosts, Netmask, Wildcard Mask, and provides binary view and CIDR Cheat Sheet. Suitable for daily maintenance by network engineers, DevOps and MIS personnel." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Cidr Calculator | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free online CIDR web calculator. Supports IPv4 / IPv6, real-time calculation of Network Address, Broadcast Address, number of available Hosts, Netmask, Wildcard Mask, and provides binary view and CIDR Cheat Sheet. Suitable for daily maintenance by network engineers, DevOps and MIS personnel." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"CIDR Calculator","url":"https://toolhuben.com/en/cidr-calculator/","description":"Free online CIDR web calculator. Supports IPv4 / IPv6, real-time calculation of Network Address, Broadcast Address, number of available Hosts, Netmask, Wildcard Mask, and provides binary view and CIDR Cheat Sheet. Suitable for daily maintenance by network engineers, DevOps and MIS personnel.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"CIDR Calculator","item":"https://toolhuben.com/en/cidr-calculator/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/cidr-calculator/" rel="canonical"/><link href="https://toolhuben.com/cidr-calculator/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/cidr-calculator/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/cidr-calculator/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","CIDR 計算結果 (IPv6) ═══════════════════════════ Network Address:":"CIDR calculation result (IPv6) ═══════════════════════════ Network Address:","CIDR 計算結果 ═══════════════════════════ Network Address:":"CIDR calculation result ═══════════════════════════ Network Address:","IPv6 Prefix Length 必須在 0-128 之間":"IPv6 Prefix Length must be between 0-128","Prefix Length 必須在 0-32 之間":"Prefix Length must be between 0-32","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","建立理念":"Our Founding Idea","建議":"Recommendation","無法識別的 IP 格式。請輸入有效的 IPv4 或 IPv6 CIDR。":"Unrecognized IP format. Please enter a valid IPv4 or IPv6 CIDR.","無效的 IPv4 位址格式":"Invalid IPv4 address format","無效的 IPv6 位址格式":"Invalid IPv6 address format","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","複製失敗，請手動選取":"Copy failed, please select manually","請輸入 CIDR 格式（例如：192.168.1.0/24 或 2001:db8::/32）":"Please enter CIDR format (for example: 192.168.1.0/24 or 2001:db8::/32)","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="terminal" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<!-- 1. 系統組件：Header & Sidebar -->
+<div class="shrink-0" id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 2. 核心模塊 -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out] flex flex-col">
+<!-- SEO 友善標題區 -->
+<div class="text-center space-y-4 mb-8 mt-2 shrink-0">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-sky-950/30 border border-sky-900/50 text-xs text-sky-400 shadow-inner">
+<i class="ph-fill ph-network-slash mr-1.5 text-sm animate-pulse"></i>
+                Network address planning and subnet calculation engine
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Cidr Calculator <span class="text-transparent bg-clip-text bg-gradient-to-r from-cidr-primary to-cidr-v6">Subnet Calculator</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                Professional-grade CIDR subnet calculation tool that supports IPv4 and IPv6. Instantly parse Network Address, Broadcast, Available IP Ranges, Netmask and Bit Visualization. Includes CIDR Cheat Sheet and complete basic online tutorials.
+            </p>
+</div>
+<!-- 2a. 輸入區 -->
+<div class="max-w-3xl mx-auto w-full mb-6">
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex flex-col sm:flex-row gap-3">
+<div class="flex-1 relative">
+<div class="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+<i class="ph-bold ph-network-slash text-slate-400 text-lg"></i>
+</div>
+<input autofocus="" class="ipv4-input w-full bg-hub-900/80 border border-hub-700 focus:border-cidr-primary rounded-xl pl-10 sm:pl-12 pr-4 py-3.5 text-white text-sm sm:text-base outline-none shadow-xl transition-all placeholder:text-slate-600" id="in-cidr" placeholder="Enter the CIDR, for example: 192.168.1.0/24 or 2001:db8::/32" type="text" value="192.168.1.0/24"/>
+</div>
+<div class="flex gap-2">
+<button class="bg-cidr-primary hover:bg-sky-400 text-hub-900 font-bold rounded-xl px-5 py-3.5 text-sm transition-all shadow-lg hover:shadow-cidr-primary/20 flex items-center gap-2 whitespace-nowrap" id="btn-calculate">
+<i class="ph-bold ph-calculator"></i>
+<span class="hidden sm:inline">Calculate</span>
+</button>
+</div>
+</div>
+<!-- 快速範例按鈕 -->
+<div class="flex flex-wrap gap-2 mt-4">
+<span class="text-xs text-slate-500 mr-1 self-center">Quick example:</span>
+<button class="sample-btn text-xs px-3 py-1.5 rounded-full border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50" data-value="192.168.1.0/24">192.168.1.0/24</button>
+<button class="sample-btn text-xs px-3 py-1.5 rounded-full border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50" data-value="10.0.0.0/8">10.0.0.0/8</button>
+<button class="sample-btn text-xs px-3 py-1.5 rounded-full border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50" data-value="172.16.1.100/20">172.16.1.100/20</button>
+<button class="sample-btn text-xs px-3 py-1.5 rounded-full border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50" data-value="2001:db8::/32">2001:db8::/32</button>
+<button class="sample-btn text-xs px-3 py-1.5 rounded-full border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50" data-value="192.168.1.15/24">192.168.1.15/24 (Host)</button>
+</div>
+</div>
+</div>
+<!-- 2b. 錯誤提示 -->
+<div class="max-w-3xl mx-auto w-full mb-6 hidden" id="error-display">
+<div class="bg-red-950/40 border border-red-900/50 rounded-xl p-4 flex items-start gap-3">
+<i class="ph-fill ph-warning-circle text-red-400 text-xl mt-0.5"></i>
+<div>
+<p class="text-red-300 font-medium text-sm">Input validation error</p>
+<p class="text-red-400/80 text-xs mt-1" id="error-text"></p>
+</div>
+</div>
+</div>
+<!-- 2c. 結果區 (動態顯示) -->
+<div class="max-w-5xl mx-auto w-full space-y-6" id="result-area">
+<!-- 結果摘要卡 -->
+<div class="glass-panel p-4 sm:p-6 fade-in">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<h2 class="text-lg font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-checks text-cidr-primary"></i>
+                            Result
+                        </h2>
+<span class="pill-tag pill-ipv4" id="version-badge">IPv4</span>
+</div>
+<div class="flex gap-2">
+<button class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50 flex items-center gap-1.5" id="btn-copy" title="Copy results">
+<i class="ph-bold ph-copy-simple"></i> Copy
+                        </button>
+<button class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50 flex items-center gap-1.5" id="btn-download-txt" title="Download TXT">
+<i class="ph-bold ph-file-text"></i>
+</button>
+<button class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-cidr-primary transition-all bg-hub-800/50 flex items-center gap-1.5" id="btn-download-json" title="Download JSON">
+<i class="ph-bold ph-file-json"></i>
+</button>
+<button class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-red-400 hover:border-red-900 transition-all bg-hub-800/50 flex items-center gap-1.5" id="btn-clear" title="Clear results">
+<i class="ph-bold ph-trash"></i>
+</button>
+</div>
+</div>
+<!-- 主要結果 Grid (IPv4) -->
+<div id="results-v4">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Network Address</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-network">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Broadcast Address</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-broadcast">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">First Host</div>
+<div class="text-cidr-host font-mono text-sm sm:text-base font-bold" id="res-first-host">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Last Host</div>
+<div class="text-cidr-host font-mono text-sm sm:text-base font-bold" id="res-last-host">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Total IPs</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-total">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Usable Hosts</div>
+<div class="text-emerald-400 font-mono text-sm sm:text-base font-bold" id="res-usable">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Netmask</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-netmask">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Wildcard Mask</div>
+<div class="text-slate-300 font-mono text-sm sm:text-base" id="res-wildcard">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Prefix Length</div>
+<div class="text-cidr-primary font-mono text-sm sm:text-base font-bold" id="res-prefix">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">IP Type</div>
+<div class="text-slate-300 font-mono text-sm sm:text-base" id="res-iptype">--</div>
+</div>
+<div class="result-card col-span-2 sm:col-span-2 lg:col-span-2">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">CIDR Notation</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-cidr">--</div>
+</div>
+</div>
+</div>
+<!-- 主要結果 Grid (IPv6) - IPv4 結果隱藏時顯示 -->
+<div class="hidden" id="results-v6">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Network Address</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-v6-network">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">First Address</div>
+<div class="text-cidr-v6 font-mono text-sm sm:text-base font-bold" id="res-v6-first">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Last Address</div>
+<div class="text-cidr-v6 font-mono text-sm sm:text-base font-bold" id="res-v6-last">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Total /64 Subnets</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-v6-subnets">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Total IPs</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-v6-total">--</div>
+</div>
+<div class="result-card">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">Prefix Length</div>
+<div class="text-cidr-primary font-mono text-sm sm:text-base font-bold" id="res-v6-prefix">--</div>
+</div>
+<div class="result-card col-span-2">
+<div class="text-xs text-slate-500 mb-1 font-medium tracking-wide">CIDR Notation</div>
+<div class="text-white font-mono text-sm sm:text-base font-bold" id="res-v6-cidr">--</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 二進位檢視 -->
+<div class="glass-panel p-4 sm:p-6 fade-in" id="binary-view-section">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph-fill ph-binary text-cidr-primary"></i>
+                    binary view
+                    <span class="text-xs text-slate-500 font-normal">(Network / Host Bits)</span>
+</h2>
+<!-- IPv4 Binary -->
+<div id="binary-v4">
+<div class="mb-3" id="binary-ip">
+<div class="text-xs text-slate-500 mb-1.5 font-medium">IP address</div>
+<div class="flex flex-wrap" id="binary-ip-bits"></div>
+</div>
+<div class="mb-3" id="binary-netmask">
+<div class="text-xs text-slate-500 mb-1.5 font-medium">Netmask</div>
+<div class="flex flex-wrap" id="binary-netmask-bits"></div>
+</div>
+<div>
+<div class="text-xs text-slate-500 mb-1.5 font-medium">bit distribution</div>
+<div class="flex items-center gap-4 mb-2" id="binary-legend">
+<span class="flex items-center gap-1.5 text-xs">
+<span class="w-3 h-3 rounded-sm bg-blue-500/30 border border-blue-500/50"></span>
+<span class="text-slate-400">Network Bits (<span id="net-bits-count">0</span>)</span>
+</span>
+<span class="flex items-center gap-1.5 text-xs">
+<span class="w-3 h-3 rounded-sm bg-amber-500/30 border border-amber-500/50"></span>
+<span class="text-slate-400">Host Bits (<span id="host-bits-count">0</span>)</span>
+</span>
+</div>
+<div class="flex flex-wrap gap-0.5" id="binary-visual">
+<!-- 視覺化條：Network ████ Host ░░░░ -->
+</div>
+</div>
+</div>
+<!-- IPv6 Binary -->
+<div class="hidden" id="binary-v6">
+<div class="mb-3" id="binary-v6-ip">
+<div class="text-xs text-slate-500 mb-1.5 font-medium">IPv6 address (binary)</div>
+<div class="flex flex-wrap text-xs text-slate-300 font-mono leading-relaxed" id="binary-v6-ip-bits">
+<!-- Bits will be rendered -->
+</div>
+</div>
+<div>
+<div class="text-xs text-slate-500 mb-1.5 font-medium">bit distribution</div>
+<div class="flex items-center gap-4 mb-2" id="binary-v6-legend">
+<span class="flex items-center gap-1.5 text-xs">
+<span class="w-3 h-3 rounded-sm bg-purple-500/30 border border-purple-500/50"></span>
+<span class="text-slate-400">Network Bits (<span id="v6-net-bits-count">0</span>)</span>
+</span>
+<span class="flex items-center gap-1.5 text-xs">
+<span class="w-3 h-3 rounded-sm bg-amber-500/30 border border-amber-500/50"></span>
+<span class="text-slate-400">Host Bits (<span id="v6-host-bits-count">0</span>)</span>
+</span>
+</div>
+<div class="flex flex-wrap gap-0.5" id="binary-v6-visual"></div>
+</div>
+</div>
+</div>
+<!-- CIDR Cheat Sheet -->
+<div class="glass-panel p-4 sm:p-6 fade-in">
+<h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+<i class="ph-fill ph-table text-cidr-primary"></i>
+                    CIDR Cheat Sheet
+                </h2>
+<p class="text-xs text-slate-500 mb-4">Quickly query IPv4 subnet masks and the number of available IPs. Currently prefixed with <span class="text-cidr-primary">Highlight</span> mark.</p>
+<div class="overflow-x-auto">
+<table class="cheat-sheet-table">
+<thead>
+<tr>
+<th>Prefix</th>
+<th>Netmask</th>
+<th>Wildcard</th>
+<th class="hidden sm:table-cell">Total number of IPs</th>
+<th>Available Hosts</th>
+<th class="hidden md:table-cell">CIDR</th>
+</tr>
+</thead>
+<tbody id="cheat-sheet-body">
+<!-- JavaScript 動態產生 -->
+</tbody>
+</table>
+</div>
+</div>
+<!-- 教學與 FAQ -->
+<div class="glass-panel p-4 sm:p-6 fade-in">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph-fill ph-book-open-text text-cidr-primary"></i>
+                    CIDR Internet Basics Tutorial
+                </h2>
+<div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+<div>
+<h3 class="text-base font-bold text-white mb-2">What is CIDR?</h3>
+<p>CIDR (Classless Inter-Domain Routing) is a method of IP address allocation and routing that was introduced in 1993 to replace the traditional Class A/B/C addressing architecture. CIDR use <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">{IP}/{Prefix}</code> notation, for example <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">192.168.1.0/24</code>, among which <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/24</code> Indicates the first 24 bits are Network Bits.</p>
+</div>
+<div>
+<h3 class="text-base font-bold text-white mb-2">Subnet Mask</h3>
+<p>Subnet Mask is a 32-bit binary number used to divide IP addresses into network addresses and host addresses. Network Bits are set to 1 and Host Bits are set to 0. For example <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/24</code> The Subnet Mask is <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">255.255.255.0</code>。</p>
+</div>
+<div>
+<h3 class="text-base font-bold text-white mb-2">Prefix Length (prefix length)</h3>
+<p>Prefix Length is the number after the slash in CIDR notation, which represents the number of Network Bits. The Prefix Length range is 0-32 for IPv4 and 0-128 for IPv6. The longer the prefix, the smaller the network and the fewer available hosts.</p>
+</div>
+<div>
+<h3 class="text-base font-bold text-white mb-2">Why not use Class A/B/C?</h3>
+<p>Traditional Class addressing (Class A: /8, Class B: /16, Class C: /24) is too rigid and will cause a lot of IP waste. For example, if an organization needs 300 IPs, Class C (254 Hosts) is not enough, but Class B (65,534 Hosts) is far more than needed. CIDR allows prefixes of any length, enabling more flexible IP allocation and effectively delaying the exhaustion of IPv4 addresses.</p>
+</div>
+</div>
+<h2 class="text-lg font-bold text-white mt-8 mb-4 flex items-center gap-2">
+<i class="ph-fill ph-question text-cidr-primary"></i>
+                    Frequently Asked Questions (FAQ)
+                </h2>
+<div class="space-y-2">
+<details class="faq-item">
+<summary>What is a Network Address?</summary>
+<div class="faq-answer">
+                            The Network Address is the first IP address in the subnet, and all Host Bits are 0. It represents the entire network itself and cannot be used for assignment to hosts. In IPv4, it is ANDed with the subnet mask.
+                        </div>
+</details>
+<details class="faq-item">
+<summary>What is a Broadcast Address?</summary>
+<div class="faq-answer">
+                            The Broadcast Address is the last IP address in the subnet and all Host Bits are 1. Used to send broadcast packets to all hosts in the subnet. IPv6 does not have Broadcast, but uses Anycast and Multicast instead.
+                        </div>
+</details>
+<details class="faq-item">
+<summary>Why is the number of available hosts "total number of IPs - 2"?</summary>
+<div class="faq-answer">
+                            Each IPv4 subnet has two reserved addresses that cannot be assigned to hosts: Network Address (Host Bits are all 0) and Broadcast Address (Host Bits are all 1). Therefore the number of available Hosts = 2^HostBits - 2. For example <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/24</code> There are 8 Host Bits, available Hosts = 2^8 - 2 = 254.<br/><br/>Note:<code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/31</code>(2 IPs) and <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/32</code>(1 IP) is the exception. RFC 3021 definition <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/31</code> Can be used on point-to-point links, both IPs can be used.
+                        </div>
+</details>
+<details class="faq-item">
+<summary>What is the difference between CIDR calculation for IPv4 and IPv6?</summary>
+<div class="faq-answer">
+                            IPv6 uses 128-bit addresses, and the Prefix Length range is 0-128. The biggest differences from IPv4 are:<br/>
+                            • IPv6 has no Broadcast Address<br/>
+                            • Standard subnets are typically used <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/64</code>(2^64 IPs)<br/>
+                            • Common assignments are <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/48</code>(to the organization) or <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/56</code>(for home users)<br/>
+                            • The total number of IPv6 IPs is very large. Usually, "available hosts" are not calculated, but the number of allocable subnets is calculated.
+                        </div>
+</details>
+<details class="faq-item">
+<summary>What is Wildcard Mask?</summary>
+<div class="faq-answer">
+                            Wildcard Mask is the inverse code (bitwise NOT) of Netmask, and is used for the ACL (Access Control List) of Cisco network equipment and the Network Statement of routing protocols such as OSPF and EIGRP. For example Netmask <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">255.255.255.0</code> The Wildcard is <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">0.0.0.255</code>, indicating that any match can be made as long as the last 8 bits.
+                        </div>
+</details>
+<details class="faq-item">
+<summary>How to calculate if a subnet contains an IP?</summary>
+<div class="faq-answer">
+                            AND the IP address with the Netmask. If the result is equal to the Network Address, the IP belongs to this subnet. For example 192.168.1.15/24:<br/>
+                            192.168.1.15 AND 255.255.255.0 = 192.168.1.0 = Network Address ✓
+                        </div>
+</details>
+<details class="faq-item">
+<summary>What is VLSM (Variable Length Subnet Mask)?</summary>
+<div class="faq-answer">
+                            VLSM allows the use of different Prefix Lengths in a network to perform more detailed segmentation of subnets. For example, change <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">192.168.1.0/24</code> cut to <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/25</code>(126 Hosts),<code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/26</code>(62 Hosts) vs. two <code class="text-cidr-primary bg-sky-950/30 px-1.5 py-0.5 rounded text-xs font-mono">/27</code>(30 Hosts) to maximize IP usage efficiency.
+                        </div>
+</details>
+</div>
+</div>
+</div>
+<!-- 無結果時顯示的提示 -->
+<div class="max-w-3xl mx-auto w-full text-center py-16" id="empty-state">
+<i class="ph-fill ph-network-slash text-slate-700 text-6xl mb-4"></i>
+<p class="text-slate-500 text-sm">Enter the CIDR above and click the "Calculate" button</p>
+<p class="text-slate-600 text-xs mt-1">Or click the quick example button to try it out</p>
+</div>
+</main>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        // ============================================================
+        //  CIDR Calculator 核心引擎
+        // ============================================================
+
+        // --- 工具函式 ---
+        function isIPv4(cidr) {
+            const ipPart = cidr.split('/')[0];
+            return /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ipPart);
+        }
+
+        function isIPv6(cidr) {
+            const ipPart = cidr.split('/')[0];
+            // Simplified IPv6 pattern
+            return /^[0-9a-fA-F:]+$/.test(ipPart) && ipPart.includes(':');
+        }
+
+        function ipv4ToInt(ip) {
+            const parts = ip.split('.').map(Number);
+            return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+        }
+
+        function intToIPv4(int) {
+            return [
+                (int >>> 24) & 0xFF,
+                (int >>> 16) & 0xFF,
+                (int >>> 8) & 0xFF,
+                int & 0xFF
+            ].join('.');
+        }
+
+        function expandIPv6(addr) {
+            // Remove prefix if present
+            const parts = addr.split('/');
+            let ip = parts[0];
+
+            // Handle :: compression
+            if (ip === '::') ip = '0:0:0:0:0:0:0:0';
+            else if (ip.startsWith('::')) ip = '0'.repeat(8 - ip.split(':').length + 1).replace(/,/g, ':') + ip.slice(1);
+            else if (ip.endsWith('::')) ip = ip.slice(0, -1) + '0'.repeat(8 - ip.split(':').length + 1).replace(/,/g, ':');
+            else if (ip.includes('::')) {
+                const [left, right] = ip.split('::');
+                const leftParts = left ? left.split(':') : [];
+                const rightParts = right ? right.split(':') : [];
+                const zeros = 8 - leftParts.length - rightParts.length;
+                ip = [...leftParts, ...Array(zeros).fill('0'), ...rightParts].join(':');
+            }
+
+            // Pad each part to 4 hex digits
+            return ip.split(':').map(p => p.padStart(4, '0')).join(':');
+        }
+
+        function ipv6ToHexArray(addr) {
+            const expanded = expandIPv6(addr);
+            return expanded.split(':');
+        }
+
+        function hexArrayToIPv6(arr) {
+            return arr.map(h => h.replace(/^0+/, '') || '0').join(':');
+        }
+
+        function ipv6ToBigInt(addr) {
+            const hexStr = expandIPv6(addr).replace(/:/g, '');
+            return BigInt('0x' + hexStr);
+        }
+
+        function bigIntToIPv6(n) {
+            const hex = n.toString(16).padStart(32, '0');
+            const parts = [];
+            for (let i = 0; i < 8; i++) {
+                parts.push(hex.slice(i * 4, i * 4 + 4));
+            }
+            return hexArrayToIPv6(parts);
+        }
+
+        function formatNumber(n) {
+            if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        function formatExact(n) {
+            return n.toLocaleString('en-US');
+        }
+
+        // --- 主計算邏輯 (IPv4) ---
+        function calculateIPv4(cidrStr) {
+            const [ipPart, prefixPart] = cidrStr.split('/');
+            const prefix = parseInt(prefixPart, 10);
+
+            if (isNaN(prefix) || prefix < 0 || prefix > 32) {
+                throw new Error('Prefix Length 必須在 0-32 之間');
+            }
+
+            const ipParts = ipPart.split('.').map(Number);
+            if (ipParts.length !== 4 || ipParts.some(p => isNaN(p) || p < 0 || p > 255)) {
+                throw new Error('無效的 IPv4 位址格式');
+            }
+
+            const ipInt = ipv4ToInt(ipPart);
+            const maskInt = prefix === 0 ? 0 : ((0xFFFFFFFF << (32 - prefix)) >>> 0);
+            const networkInt = ipInt & maskInt;
+            const wildcardInt = ~maskInt >>> 0;
+            const broadcastInt = prefix === 32 ? networkInt : (networkInt | wildcardInt);
+            const totalIps = Math.pow(2, 32 - prefix);
+            const usableHosts = prefix >= 31 ? (prefix === 32 ? 1 : 2) : totalIps - 2;
+
+            const network = intToIPv4(networkInt);
+            const broadcast = intToIPv4(broadcastInt);
+            const firstHost = prefix === 32 ? network : intToIPv4(networkInt + 1);
+            const lastHost = prefix === 32 ? network : intToIPv4(broadcastInt - 1);
+            const wildcard = intToIPv4(wildcardInt);
+            const maskParts = [];
+            for (let i = 0; i < 4; i++) {
+                maskParts.push((maskInt >>> (24 - i * 8)) & 0xFF);
+            }
+            const netmask = maskParts.join('.');
+
+            // Binary view
+            const ipBinary = ipInt.toString(2).padStart(32, '0');
+            const maskBinary = maskInt.toString(2).padStart(32, '0');
+
+            // IP Type
+            let ipType = 'Public';
+            if (ipParts[0] === 10) ipType = 'Private (Class A)';
+            else if (ipParts[0] === 127) ipType = 'Loopback';
+            else if (ipParts[0] === 169 && ipParts[1] === 254) ipType = 'Link-Local (APIPA)';
+            else if (ipParts[0] === 192 && ipParts[1] === 168) ipType = 'Private (Class C)';
+            else if (ipParts[0] === 172 && ipParts[1] >= 16 && ipParts[1] <= 31) ipType = 'Private (Class B)';
+            else if (ipParts[0] >= 224 && ipParts[0] <= 239) ipType = 'Multicast';
+            else if (ipParts[0] >= 240) ipType = 'Reserved';
+
+            return {
+                network, broadcast, firstHost, lastHost,
+                netmask, wildcard,
+                totalIps, usableHosts,
+                prefix,
+                cidrNotation: network + '/' + prefix,
+                ipBinary, maskBinary,
+                ipInt, networkInt, broadcastInt, maskInt, wildcardInt,
+                ipType,
+                hostBits: 32 - prefix,
+                netBits: prefix,
+                inputIp: ipPart
+            };
+        }
+
+        // --- 主計算邏輯 (IPv6) ---
+        function calculateIPv6(cidrStr) {
+            const [ipPart, prefixPart] = cidrStr.split('/');
+            const prefix = parseInt(prefixPart, 10);
+
+            if (isNaN(prefix) || prefix < 0 || prefix > 128) {
+                throw new Error('IPv6 Prefix Length 必須在 0-128 之間');
+            }
+
+            // Validate IPv6 format
+            try {
+                expandIPv6(ipPart);
+            } catch (e) {
+                throw new Error('無效的 IPv6 位址格式');
+            }
+
+            const addrInt = ipv6ToBigInt(ipPart);
+            const maskInt = prefix === 0 ? 0n : ((1n << BigInt(128 - prefix)) - 1n) ^ ((1n << 128n) - 1n);
+            const networkInt = addrInt & maskInt;
+            const wildcardInt = ~maskInt & ((1n << 128n) - 1n);
+            const lastAddr = networkInt | wildcardInt;
+
+            const network = bigIntToIPv6(networkInt);
+            const first = bigIntToIPv6(networkInt);
+            const last = bigIntToIPv6(lastAddr);
+
+            // Total subnets of /64
+            const subnetBits = prefix <= 64 ? 64 - prefix : 0;
+            const totalSubnets = subnetBits > 0 ? BigInt(1) << BigInt(subnetBits) : 1n;
+            const totalIps = BigInt(1) << BigInt(Math.min(128 - prefix, 64));
+
+            return {
+                network,
+                firstHost: first,
+                lastHost: last,
+                totalIps,
+                totalSubnets,
+                prefix,
+                cidrNotation: network + '/' + prefix,
+                hostBits: 128 - prefix,
+                netBits: prefix,
+                inputIp: ipPart
+            };
+        }
+
+        // --- 渲染函式 ---
+        function renderBinaryIPv4(ipBinary, maskBinary, prefix) {
+            const ipContainer = document.getElementById('binary-ip-bits');
+            const maskContainer = document.getElementById('binary-netmask-bits');
+            const visualContainer = document.getElementById('binary-visual');
+            const netBitsSpan = document.getElementById('net-bits-count');
+            const hostBitsSpan = document.getElementById('host-bits-count');
+
+            netBitsSpan.textContent = prefix;
+            hostBitsSpan.textContent = 32 - prefix;
+
+            ipContainer.innerHTML = '';
+            maskContainer.innerHTML = '';
+            visualContainer.innerHTML = '';
+
+            for (let i = 0; i < 32; i++) {
+                const isNet = i < prefix;
+                const bitClass = isNet ? 'bit-net' : 'bit-host';
+                const isOctetEnd = (i + 1) % 8 === 0 && i < 31;
+
+                const ipBlock = document.createElement('span');
+                ipBlock.className = `bit-block ${bitClass}${isOctetEnd ? ' bit-octet-gap' : ''}`;
+                ipBlock.textContent = ipBinary[i];
+                ipContainer.appendChild(ipBlock);
+
+                const maskBlock = document.createElement('span');
+                maskBlock.className = `bit-block ${bitClass}${isOctetEnd ? ' bit-octet-gap' : ''}`;
+                maskBlock.textContent = maskBinary[i];
+                maskContainer.appendChild(maskBlock);
+            }
+
+            // Visual bar
+            const netCount = prefix;
+            const hostCount = 32 - prefix;
+            if (netCount > 0) {
+                const netBar = document.createElement('span');
+                netBar.className = 'h-5 bg-blue-500/40 rounded-l-sm border-l border-t border-b border-blue-500/40';
+                netBar.style.width = (netCount / 32 * 100) + '%';
+                netBar.title = `Network (${netCount} bits)`;
+                visualContainer.appendChild(netBar);
+            }
+            if (hostCount > 0) {
+                const hostBar = document.createElement('span');
+                hostBar.className = `h-5 bg-amber-500/30 ${netCount === 0 ? 'rounded-l-sm' : ''} rounded-r-sm border-r border-t border-b border-amber-500/30`;
+                hostBar.style.width = (hostCount / 32 * 100) + '%';
+                hostBar.title = `Host (${hostCount} bits)`;
+                visualContainer.appendChild(hostBar);
+            }
+        }
+
+        function renderBinaryIPv6(addr, prefix) {
+            const container = document.getElementById('binary-v6-ip-bits');
+            const visualContainer = document.getElementById('binary-v6-visual');
+            const netBitsSpan = document.getElementById('v6-net-bits-count');
+            const hostBitsSpan = document.getElementById('v6-host-bits-count');
+
+            netBitsSpan.textContent = prefix;
+            hostBitsSpan.textContent = 128 - prefix;
+
+            container.innerHTML = '';
+            visualContainer.innerHTML = '';
+
+            // Show first 64 bits as abbreviated binary for readability
+            const expanded = expandIPv6(addr);
+            const hexParts = expanded.split(':');
+            let bitStr = '';
+            for (const h of hexParts) {
+                const bits = parseInt(h, 16).toString(2).padStart(16, '0');
+                bitStr += bits;
+            }
+
+            // Show binary in groups of 16 bits
+            for (let i = 0; i < 128; i += 16) {
+                const group = bitStr.slice(i, i + 16);
+                const isNet = i < prefix;
+                const span = document.createElement('span');
+                span.className = `inline-block px-1.5 py-0.5 rounded mx-0.5 font-mono text-xs ${isNet ? 'text-purple-300 bg-purple-950/30' : 'text-amber-300 bg-amber-950/20'}`;
+                span.textContent = group;
+                container.appendChild(span);
+                if ((i / 16 + 1) % 4 === 0 && i < 112) {
+                    container.appendChild(document.createTextNode(' '));
+                }
+            }
+
+            // Visual bar
+            const netCount = prefix;
+            const hostCount = 128 - prefix;
+            if (netCount > 0) {
+                const netBar = document.createElement('span');
+                netBar.className = 'h-5 bg-purple-500/30 rounded-l-sm border-l border-t border-b border-purple-500/30';
+                netBar.style.width = (netCount / 128 * 100) + '%';
+                netBar.title = `Network (${netCount} bits)`;
+                visualContainer.appendChild(netBar);
+            }
+            if (hostCount > 0) {
+                const hostBar = document.createElement('span');
+                hostBar.className = `h-5 bg-amber-500/20 ${netCount === 0 ? 'rounded-l-sm' : ''} rounded-r-sm border-r border-t border-b border-amber-500/20`;
+                hostBar.style.width = (hostCount / 128 * 100) + '%';
+                hostBar.title = `Host (${hostCount} bits)`;
+                visualContainer.appendChild(hostBar);
+            }
+        }
+
+        function renderResultsV4(result) {
+            document.getElementById('res-network').textContent = result.network;
+            document.getElementById('res-broadcast').textContent = result.broadcast;
+            document.getElementById('res-first-host').textContent = result.firstHost;
+            document.getElementById('res-last-host').textContent = result.lastHost;
+            document.getElementById('res-total').textContent = formatExact(result.totalIps);
+            document.getElementById('res-usable').textContent = formatExact(result.usableHosts);
+            document.getElementById('res-netmask').textContent = result.netmask;
+            document.getElementById('res-wildcard').textContent = result.wildcard;
+            document.getElementById('res-prefix').textContent = '/' + result.prefix;
+            document.getElementById('res-iptype').textContent = result.ipType;
+            document.getElementById('res-cidr').textContent = result.cidrNotation;
+
+            renderBinaryIPv4(result.ipBinary, result.maskBinary, result.prefix);
+        }
+
+        function renderResultsV6(result) {
+            document.getElementById('res-v6-network').textContent = result.network;
+            document.getElementById('res-v6-first').textContent = result.firstHost;
+            document.getElementById('res-v6-last').textContent = result.lastHost;
+
+            const totalStr = result.totalIps > 1n << 64n ? '> 1.8×10¹⁹' : formatExact(Number(result.totalIps));
+            document.getElementById('res-v6-total').textContent = result.totalIps > 1n << 64n ? '> 1.8×10¹⁹' : formatExact(Number(result.totalIps));
+            document.getElementById('res-v6-subnets').textContent = result.totalSubnets > 1n << 32n ? '> 4.3B' : formatExact(Number(result.totalSubnets));
+            document.getElementById('res-v6-prefix').textContent = '/' + result.prefix;
+            document.getElementById('res-v6-cidr').textContent = result.cidrNotation;
+
+            renderBinaryIPv6(result.inputIp, result.prefix);
+        }
+
+        function generateCheatSheet(currentPrefix) {
+            const tbody = document.getElementById('cheat-sheet-body');
+            tbody.innerHTML = '';
+
+            const prefixes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
+
+            for (const p of prefixes) {
+                const tr = document.createElement('tr');
+                if (p === currentPrefix) {
+                    tr.className = 'prefix-highlight';
+                }
+
+                const maskInt = p === 0 ? 0 : ((0xFFFFFFFF << (32 - p)) >>> 0);
+                const maskParts = [];
+                for (let i = 0; i < 4; i++) {
+                    maskParts.push((maskInt >>> (24 - i * 8)) & 0xFF);
+                }
+                const netmask = maskParts.join('.');
+                const wildcardInt = ~maskInt >>> 0;
+                const wildcardParts = [];
+                for (let i = 0; i < 4; i++) {
+                    wildcardParts.push((wildcardInt >>> (24 - i * 8)) & 0xFF);
+                }
+                const wildcard = wildcardParts.join('.');
+                const totalIps = Math.pow(2, 32 - p);
+                const usable = p >= 31 ? (p === 32 ? 1 : 2) : totalIps - 2;
+
+                const cidrExample = p === 0 ? '0.0.0.0/0' :
+                    p <= 8 ? '10.0.0.0/' + p :
+                    p <= 16 ? '172.16.0.0/' + p :
+                    p <= 24 ? '192.168.' + (p === 24 ? '0' : '1') + '.0/' + p :
+                    '192.168.1.' + (p === 32 ? '1' : '0') + '/' + p;
+
+                tr.innerHTML = `
+                    <td>/${p}</td>
+                    <td>${netmask}</td>
+                    <td>${wildcard}</td>
+                    <td class="hidden sm:table-cell">${formatExact(totalIps)}</td>
+                    <td>${formatExact(usable)}</td>
+                    <td class="hidden md:table-cell text-slate-500">${cidrExample}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // --- 主要計算入口 ---
+        function calculate() {
+            const input = document.getElementById('in-cidr').value.trim();
+            const errorDisplay = document.getElementById('error-display');
+            const errorText = document.getElementById('error-text');
+            const emptyState = document.getElementById('empty-state');
+            const resultArea = document.getElementById('result-area');
+
+            // Hide previous
+            errorDisplay.classList.add('hidden');
+
+            if (!input) {
+                emptyState.classList.remove('hidden');
+                resultArea.classList.add('hidden');
+                return;
+            }
+
+            if (!input.includes('/')) {
+                showError('請輸入 CIDR 格式（例如：192.168.1.0/24 或 2001:db8::/32）');
+                return;
+            }
+
+            try {
+                let result;
+                let isV4 = false;
+                let isV6 = false;
+
+                if (isIPv4(input)) {
+                    isV4 = true;
+                    result = calculateIPv4(input);
+                } else if (isIPv6(input)) {
+                    isV6 = true;
+                    result = calculateIPv6(input);
+                } else {
+                    showError('無法識別的 IP 格式。請輸入有效的 IPv4 或 IPv6 CIDR。');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                resultArea.classList.remove('hidden');
+
+                // 切換 v4/v6 顯示
+                document.getElementById('results-v4').classList.toggle('hidden', !isV4);
+                document.getElementById('results-v6').classList.toggle('hidden', !isV6);
+                document.getElementById('binary-v4').classList.toggle('hidden', !isV4);
+                document.getElementById('binary-v6').classList.toggle('hidden', !isV6);
+
+                const badge = document.getElementById('version-badge');
+                badge.textContent = isV4 ? 'IPv4' : 'IPv6';
+                badge.className = `pill-tag ${isV4 ? 'pill-ipv4' : 'pill-ipv6'}`;
+
+                if (isV4) {
+                    renderResultsV4(result);
+                } else {
+                    renderResultsV6(result);
+                }
+
+                // Update cheat sheet highlight
+                const prefix = result.prefix;
+                generateCheatSheet(isV4 ? prefix : undefined);
+
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        function showError(msg) {
+            const errorDisplay = document.getElementById('error-display');
+            const errorText = document.getElementById('error-text');
+            errorDisplay.classList.remove('hidden');
+            errorText.textContent = msg;
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('result-area').classList.add('hidden');
+        }
+
+        // --- 複製功能 ---
+        function getResultText() {
+            const isV4 = !document.getElementById('results-v4').classList.contains('hidden');
+            if (isV4) {
+                return `CIDR 計算結果
+═══════════════════════════
+Network Address:  ${document.getElementById('res-network').textContent}
+Broadcast:        ${document.getElementById('res-broadcast').textContent}
+First Host:       ${document.getElementById('res-first-host').textContent}
+Last Host:        ${document.getElementById('res-last-host').textContent}
+Total IPs:        ${document.getElementById('res-total').textContent}
+Usable Hosts:     ${document.getElementById('res-usable').textContent}
+Netmask:          ${document.getElementById('res-netmask').textContent}
+Wildcard Mask:    ${document.getElementById('res-wildcard').textContent}
+Prefix Length:    ${document.getElementById('res-prefix').textContent}
+IP Type:          ${document.getElementById('res-iptype').textContent}
+CIDR:             ${document.getElementById('res-cidr').textContent}
+═══════════════════════════
+Generated by ToolHub CIDR Calculator`;
+            } else {
+                return `CIDR 計算結果 (IPv6)
+═══════════════════════════
+Network Address:  ${document.getElementById('res-v6-network').textContent}
+First Address:    ${document.getElementById('res-v6-first').textContent}
+Last Address:     ${document.getElementById('res-v6-last').textContent}
+Total IPs:        ${document.getElementById('res-v6-total').textContent}
+Total /64 Subnets:${document.getElementById('res-v6-subnets').textContent}
+Prefix Length:    ${document.getElementById('res-v6-prefix').textContent}
+CIDR:             ${document.getElementById('res-v6-cidr').textContent}
+═══════════════════════════
+Generated by ToolHub CIDR Calculator`;
+            }
+        }
+
+        function getResultJSON() {
+            const isV4 = !document.getElementById('results-v4').classList.contains('hidden');
+            if (isV4) {
+                return {
+                    type: 'IPv4',
+                    networkAddress: document.getElementById('res-network').textContent,
+                    broadcastAddress: document.getElementById('res-broadcast').textContent,
+                    firstHost: document.getElementById('res-first-host').textContent,
+                    lastHost: document.getElementById('res-last-host').textContent,
+                    totalIPs: document.getElementById('res-total').textContent,
+                    usableHosts: document.getElementById('res-usable').textContent,
+                    netmask: document.getElementById('res-netmask').textContent,
+                    wildcardMask: document.getElementById('res-wildcard').textContent,
+                    prefixLength: document.getElementById('res-prefix').textContent,
+                    ipType: document.getElementById('res-iptype').textContent,
+                    cidr: document.getElementById('res-cidr').textContent,
+                    generatedBy: 'ToolHub CIDR Calculator'
+                };
+            } else {
+                return {
+                    type: 'IPv6',
+                    networkAddress: document.getElementById('res-v6-network').textContent,
+                    firstHost: document.getElementById('res-v6-first').textContent,
+                    lastHost: document.getElementById('res-v6-last').textContent,
+                    totalIPs: document.getElementById('res-v6-total').textContent,
+                    total64Subnets: document.getElementById('res-v6-subnets').textContent,
+                    prefixLength: document.getElementById('res-v6-prefix').textContent,
+                    cidr: document.getElementById('res-v6-cidr').textContent,
+                    generatedBy: 'ToolHub CIDR Calculator'
+                };
+            }
+        }
+
+        // --- 事件綁定 ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('in-cidr');
+            const btnCalc = document.getElementById('btn-calculate');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDlTxt = document.getElementById('btn-download-txt');
+            const btnDlJson = document.getElementById('btn-download-json');
+            const btnClear = document.getElementById('btn-clear');
+
+            // Calculate on button click
+            btnCalc.addEventListener('click', calculate);
+
+            // Calculate on Enter
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') calculate();
+            });
+
+            // Sample buttons
+            document.querySelectorAll('.sample-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    input.value = this.dataset.value;
+                    calculate();
+                });
+            });
+
+            // Copy
+            btnCopy.addEventListener('click', async function() {
+                try {
+                    const text = getResultText();
+                    await navigator.clipboard.writeText(text);
+                    const orig = this.innerHTML;
+                    this.innerHTML = '<i class="ph-bold ph-check"></i> 已複製';
+                    setTimeout(() => this.innerHTML = orig, 2000);
+                } catch (e) {
+                    alert('複製失敗，請手動選取');
+                }
+            });
+
+            // Download TXT
+            btnDlTxt.addEventListener('click', function() {
+                const text = getResultText();
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cidr-calculation.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            // Download JSON
+            btnDlJson.addEventListener('click', function() {
+                const json = getResultJSON();
+                const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cidr-calculation.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            // Clear
+            btnClear.addEventListener('click', function() {
+                document.getElementById('in-cidr').value = '';
+                document.getElementById('error-display').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('result-area').classList.add('hidden');
+                // Reset cheat sheet
+                generateCheatSheet(undefined);
+            });
+
+            // Auto-calculate on load with default value
+            calculate();
+        });
+
+        // --- 組件載入系統 (符合 ToolHub 標準) ---
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (err) {
+                console.warn('Failed to load component:', elementId, err);
+            }
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            // Re-trigger calculation after components loaded (ensures DOM ready)
+            setTimeout(calculate, 100);
+        }
+
+        initializeSystem();
+
+        // Re-initialize on popstate (browser back/forward)
+        window.addEventListener('popstate', () => {
+            setTimeout(calculate, 100);
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

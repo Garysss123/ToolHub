@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Generator 唯一識別碼產生器 | UUID v7 / ULID / Nano ID / CUID2 | ToolHub</title>
+    <meta name="description" content="免費線上唯一識別碼產生工具，支援 UUID v4/v7、ULID、Nano ID、CUID2、Short ID 六種格式。批量產生、重複檢查、碰撞機率估算，一鍵複製與多格式匯出。純前端本地運算，資料絕不外洩。">
+    <meta name="keywords" content="UUID, UUID v4, UUID v7, ULID, Nano ID, CUID2, Short ID, ID Generator, 唯一識別碼, 唯一ID, 批量產生, 碰撞機率, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' },
+                        idgen: { DEFAULT: '#818CF8', light: '#A78BFA', dark: '#6366F1' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #818CF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .format-tab {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 500; transition: all 0.2s;
+            border: 1px solid transparent; white-space: nowrap;
+        }
+        .format-tab:hover { background: rgba(129,140,248,0.05); color: #E2E8F0; }
+        .format-tab.active {
+            background: rgba(129,140,248,0.1); border-color: rgba(129,140,248,0.3);
+            color: #A78BFA; box-shadow: 0 0 20px rgba(129,140,248,0.05);
+        }
+
+        .option-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            cursor: pointer; font-size: 0.8125rem; color: #94A3B8; transition: color 0.2s;
+        }
+        .option-label:hover { color: #E2E8F0; }
+        .option-label input[type="checkbox"] { accent-color: #818CF8; width: 1rem; height: 1rem; }
+
+        .output-area {
+            width: 100%; min-height: 300px; background: #0f172a;
+            color: #e2e8f0; border: none; resize: vertical;
+            padding: 1.25rem; outline: none; line-height: 1.7;
+            font-size: 0.85rem;
+        }
+        .output-area::placeholder { color: #475569; }
+
+        .stat-card {
+            background: rgba(15,23,42,0.6); border: 1px solid #1E293B;
+            border-radius: 0.75rem; padding: 0.75rem 1rem;
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+
+        .toggle-checkbox:checked ~ .toggle-track { background: #818CF8; border-color: #818CF8; }
+        .toggle-checkbox:checked ~ .toggle-track .toggle-dot { transform: translateX(100%); background: white; }
+        .toggle-track { transition: all 0.2s; }
+        .toggle-dot { transition: transform 0.2s, background 0.2s; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #818CF8; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        @keyframes flash-success {
+            0% { background-color: rgba(129,140,248,0.15); }
+            100% { background-color: transparent; }
+        }
+        .flash-active { animation: flash-success 0.5s ease-out; }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #818CF8; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(129,140,248,0.4); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px;
+        }
+
+        .btn-primary {
+            padding: 0.625rem 1.25rem; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #818CF8, #6366F1);
+            color: white; font-weight: 600; font-size: 0.875rem;
+            transition: all 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(129,140,248,0.25); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-secondary {
+            padding: 0.5rem 1rem; border-radius: 0.5rem;
+            background: rgba(30,41,59,0.5); border: 1px solid #1E293B;
+            color: #94A3B8; font-size: 0.8125rem; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-secondary:hover { background: rgba(30,41,59,0.8); color: #E2E8F0; border-color: #334155; }
+
+        .comp-table th { padding: 0.625rem 0.75rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; border-bottom: 1px solid #1E293B; text-align: left; }
+        .comp-table td { padding: 0.625rem 0.75rem; font-size: 0.8125rem; color: #94A3B8; border-bottom: 1px solid rgba(30,41,59,0.5); }
+        .comp-table tr:hover td { background: rgba(129,140,248,0.03); }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/id-generator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/id-generator/">
+    <meta property="og:title" content="ID Generator 唯一識別碼產生器">
+    <meta property="og:description" content="免費線上唯一識別碼產生工具，支援 UUID v4/v7、ULID、Nano ID、CUID2、Short ID 六種格式。批量產生、重複檢查、碰撞機率估算，一鍵複製與多格式匯出。純前端本地運算，資料絕不外洩。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ID Generator 唯一識別碼產生器">
+    <meta name="twitter:description" content="免費線上唯一識別碼產生工具，支援 UUID v4/v7、ULID、Nano ID、CUID2、Short ID 六種格式。批量產生、重複檢查、碰撞機率估算，一鍵複製與多格式匯出。純前端本地運算，資料絕不外洩。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"ID Generator 唯一識別碼產生器","url":"https://toolhuben.com/id-generator/","description":"免費線上唯一識別碼產生工具，支援 UUID v4/v7、ULID、Nano ID、CUID2、Short ID 六種格式。批量產生、重複檢查、碰撞機率估算，一鍵複製與多格式匯出。純前端本地運算，資料絕不外洩。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"ID Generator 唯一識別碼產生器","item":"https://toolhuben.com/id-generator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/id-generator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/id-generator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/id-generator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen font-sans" style="--classic-accent:#818CF8;--classic-accent-rgb:129,140,248" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <!-- System Components -->
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+
+        <!-- Hero Section -->
+        <div class="text-center space-y-3 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 rounded-full bg-hub-800 border border-hub-700 text-xs text-idgen">
+                <span class="flex w-2 h-2 bg-idgen rounded-full animate-pulse mr-2"></span>
+                純前端本地運算 · 支援 6 種 ID 格式
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                唯一識別碼產生器
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-idgen to-fuchsia-500"> UUID / ULID / Nano ID</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                免費、免安裝的線上唯一 ID 產生工具。支援 UUID v4/v7、ULID、Nano ID、CUID2、Short ID 六種主流格式，
+                提供批量產生、重複檢查與碰撞機率估算。所有運算在瀏覽器端完成，保障資料隱私安全。
+            </p>
+        </div>
+
+        <!-- Main Tool Panel -->
+        <div class="glass-panel overflow-hidden flex flex-col lg:flex-row min-h-[500px]">
+
+            <!-- Left: Control Panel -->
+            <div class="w-full lg:w-[340px] shrink-0 bg-hub-900/50 border-b lg:border-b-0 lg:border-r border-hub-700 p-5 flex flex-col gap-5">
+
+                <!-- Format Selector -->
+                <div>
+                    <label class="text-xs font-bold text-white flex items-center gap-1.5 mb-2.5">
+                        <i data-lucide="fingerprint" class="w-3.5 h-3.5 text-idgen"></i> ID 格式
+                    </label>
+                    <div class="flex flex-wrap gap-1.5" id="format-tabs">
+                        <button class="format-tab active" data-format="uuidv4">UUID v4</button>
+                        <button class="format-tab" data-format="uuidv7">UUID v7</button>
+                        <button class="format-tab" data-format="ulid">ULID</button>
+                        <button class="format-tab" data-format="nanoid">Nano ID</button>
+                        <button class="format-tab" data-format="cuid2">CUID2</button>
+                        <button class="format-tab" data-format="shortid">Short ID</button>
+                    </div>
+                </div>
+
+                <!-- Quantity -->
+                <div>
+                    <label class="text-xs font-bold text-white flex items-center gap-1.5 mb-2">
+                        <i data-lucide="hash" class="w-3.5 h-3.5 text-idgen"></i> 產生數量
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="slider-count" min="1" max="1000" value="10" class="flex-1">
+                        <input type="number" id="input-count" value="10" min="1" max="1000" class="w-16 bg-hub-800 border border-hub-700 rounded-md px-2 py-1 text-white font-mono text-xs text-center focus:border-idgen outline-none">
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-600 font-mono mt-0.5">
+                        <span>1</span>
+                        <span>1,000 max</span>
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="space-y-3" id="options-panel">
+                    <label class="text-xs font-bold text-white flex items-center gap-1.5 border-b border-hub-700 pb-1.5">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-idgen"></i> 輸出設定
+                    </label>
+
+                    <!-- Hyphens (for UUID formats) -->
+                    <label class="option-label" id="opt-hyphens-wrapper">
+                        <input type="checkbox" id="opt-hyphens" checked>
+                        <span>包含連字號 <span class="text-[10px] text-slate-600">(8-4-4-4-12)</span></span>
+                    </label>
+
+                    <!-- Uppercase -->
+                    <label class="option-label">
+                        <input type="checkbox" id="opt-uppercase">
+                        <span>轉為大寫</span>
+                    </label>
+
+                    <!-- Length (Nano ID / Short ID) -->
+                    <div class="flex items-center justify-between" id="opt-length-wrapper">
+                        <span class="text-xs text-slate-400">ID 長度</span>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="slider-length" min="4" max="64" value="21" class="w-24">
+                            <input type="number" id="input-length" value="21" min="4" max="64" class="w-14 bg-hub-800 border border-hub-700 rounded-md px-1.5 py-1 text-white font-mono text-xs text-center focus:border-idgen outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Character Set (Nano ID / Short ID) -->
+                    <div id="opt-charset-wrapper">
+                        <span class="text-xs text-slate-400 mb-1.5 block">字元集</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <label class="option-label text-xs px-2 py-1 rounded border border-hub-700 bg-hub-800/50 has-[:checked]:border-idgen has-[:checked]:bg-idgen/5">
+                                <input type="checkbox" id="charset-upper" checked> A-Z
+                            </label>
+                            <label class="option-label text-xs px-2 py-1 rounded border border-hub-700 bg-hub-800/50 has-[:checked]:border-idgen has-[:checked]:bg-idgen/5">
+                                <input type="checkbox" id="charset-lower" checked> a-z
+                            </label>
+                            <label class="option-label text-xs px-2 py-1 rounded border border-hub-700 bg-hub-800/50 has-[:checked]:border-idgen has-[:checked]:bg-idgen/5">
+                                <input type="checkbox" id="charset-digit" checked> 0-9
+                            </label>
+                            <label class="option-label text-xs px-2 py-1 rounded border border-hub-700 bg-hub-800/50 has-[:checked]:border-idgen has-[:checked]:bg-idgen/5">
+                                <input type="checkbox" id="charset-symbol"> !@#$%
+                            </label>
+                        </div>
+                        <div class="mt-1.5">
+                            <input type="text" id="charset-custom" placeholder="自訂字元集（覆蓋上方選擇）" class="w-full bg-hub-800 border border-hub-700 rounded-md px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-idgen placeholder:text-slate-700">
+                        </div>
+                    </div>
+
+                    <!-- Prefix (Short ID) -->
+                    <div class="flex items-center justify-between" id="opt-prefix-wrapper">
+                        <span class="text-xs text-slate-400">前綴</span>
+                        <input type="text" id="opt-prefix" placeholder="可選前綴" class="w-28 bg-hub-800 border border-hub-700 rounded-md px-2 py-1 text-white font-mono text-xs text-center focus:border-idgen outline-none placeholder:text-slate-700">
+                    </div>
+
+                    <!-- Separator (batch) -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400">分隔方式</span>
+                        <select id="opt-separator" class="bg-hub-800 border border-hub-700 rounded-md px-2 py-1 text-white font-mono text-xs outline-none focus:border-idgen">
+                            <option value="\n">換行</option>
+                            <option value=",">逗號 ,</option>
+                            <option value=";">分號 ;</option>
+                            <option value=" ">空格</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button id="btn-generate" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-idgen to-indigo-600 hover:from-[#727CF5] hover:to-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/30 active:scale-[0.98] mt-auto">
+                    <i data-lucide="zap" class="w-4 h-4"></i> 立即產生 ID
+                </button>
+            </div>
+
+            <!-- Right: Output Area -->
+            <div class="flex-1 flex flex-col">
+
+                <!-- Toolbar -->
+                <div class="bg-hub-900/80 px-4 py-2.5 border-b border-hub-700 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-idgen uppercase tracking-widest">Output</span>
+                        <span id="output-stat" class="px-2 py-0.5 bg-hub-800 rounded text-[10px] font-mono text-slate-500">就緒</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button id="btn-copy" class="btn-secondary text-[11px] px-2.5 py-1.5"><i data-lucide="copy" class="w-3 h-3"></i> 複製</button>
+                        <button id="btn-clear" class="btn-secondary text-[11px] px-2.5 py-1.5"><i data-lucide="trash-2" class="w-3 h-3"></i> 清除</button>
+                        <button id="btn-sample" class="btn-secondary text-[11px] px-2.5 py-1.5"><i data-lucide="refresh-cw" class="w-3 h-3"></i> 範例</button>
+                        <div class="relative group">
+                            <button id="btn-export" class="btn-secondary text-[11px] px-2.5 py-1.5"><i data-lucide="download" class="w-3 h-3"></i> 匯出 ▾</button>
+                            <div class="absolute right-0 top-full mt-1 bg-hub-800 border border-hub-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 min-w-[120px]">
+                                <button class="export-option w-full text-left px-3.5 py-2 text-xs text-slate-300 hover:text-white hover:bg-hub-700 rounded-t-lg" data-export="txt">📄 純文字 (.txt)</button>
+                                <button class="export-option w-full text-left px-3.5 py-2 text-xs text-slate-300 hover:text-white hover:bg-hub-700" data-export="csv">📊 CSV (.csv)</button>
+                                <button class="export-option w-full text-left px-3.5 py-2 text-xs text-slate-300 hover:text-white hover:bg-hub-700 rounded-b-lg" data-export="json">📋 JSON (.json)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Textarea -->
+                <div class="flex-1 relative">
+                    <textarea id="output-area" class="output-area w-full h-full font-mono" readonly placeholder="選擇上方格式與數量，點擊「立即產生 ID」開始生成⋯"></textarea>
+                </div>
+
+                <!-- Stats Bar -->
+                <div class="bg-hub-900/80 px-4 py-2.5 border-t border-hub-700 flex flex-wrap items-center gap-3 text-xs">
+                    <div class="stat-card">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5 text-idgen"></i>
+                        <span>已產生: <strong id="stat-generated" class="text-white font-mono">0</strong></span>
+                    </div>
+                    <div class="stat-card">
+                        <i data-lucide="copy-x" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>重複: <strong id="stat-duplicates" class="text-white font-mono">0</strong></span>
+                    </div>
+                    <div class="stat-card">
+                        <i data-lucide="ruler" class="w-3.5 h-3.5 text-sky-400"></i>
+                        <span>單一長度: <strong id="stat-length" class="text-white font-mono">0</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Format Comparison Table -->
+        <section class="mt-12 glass-panel p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-5 flex items-center gap-2">
+                <i data-lucide="table" class="w-5 h-5 text-idgen"></i> ID 格式比較
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="comp-table w-full min-w-[500px]">
+                    <thead>
+                        <tr>
+                            <th>格式</th>
+                            <th>可排序</th>
+                            <th>URL 安全</th>
+                            <th>長度</th>
+                            <th>亂度</th>
+                            <th>特點</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="font-medium text-white">UUID v4</td><td>❌</td><td>✅</td><td class="font-mono">36 (32+4)</td><td class="text-idgen">⭐⭐⭐⭐⭐</td><td>純隨機，最廣泛使用</td></tr>
+                        <tr><td class="font-medium text-white">UUID v7</td><td>✅</td><td>✅</td><td class="font-mono">36 (32+4)</td><td class="text-idgen">⭐⭐⭐⭐⭐</td><td>時間有序，適合 DB 索引</td></tr>
+                        <tr><td class="font-medium text-white">ULID</td><td>✅</td><td>✅</td><td class="font-mono">26</td><td>⭐⭐⭐⭐</td><td>Crockford Base32，可排序</td></tr>
+                        <tr><td class="font-medium text-white">Nano ID</td><td>❌</td><td>✅</td><td class="font-mono">可變 (預設 21)</td><td class="text-idgen">⭐⭐⭐⭐⭐</td><td>輕量高效，64 字元字母表</td></tr>
+                        <tr><td class="font-medium text-white">CUID2</td><td>❌</td><td>✅</td><td class="font-mono">約 24</td><td class="text-idgen">⭐⭐⭐⭐⭐</td><td>水平擴展安全，防碰撞</td></tr>
+                        <tr><td class="font-medium text-white">Short ID</td><td>❌</td><td>✅</td><td class="font-mono">可變 (自訂)</td><td>⭐⭐⭐</td><td>簡短靈活，自訂字母表</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Collision Probability Calculator -->
+        <section class="mt-8 glass-panel p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-5 flex items-center gap-2">
+                <i data-lucide="sigma" class="w-5 h-5 text-idgen"></i> 碰撞機率估算
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <p class="text-slate-400 text-sm">根據每天產生的 ID 數量與使用時間，估算 ID 碰撞的機率。</p>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">每天產生 ID 數量</label>
+                        <input type="number" id="collision-daily" value="1000000" min="1" class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-idgen outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">使用多久（年）</label>
+                        <input type="number" id="collision-years" value="10" min="1" max="100" class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-idgen outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">ID 格式</label>
+                        <select id="collision-format" class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-idgen outline-none">
+                            <option value="uuid4">UUID v4</option>
+                            <option value="uuid7">UUID v7</option>
+                            <option value="ulid">ULID</option>
+                            <option value="nanoid" selected>Nano ID (21 chars)</option>
+                            <option value="nanoid8">Nano ID (8 chars)</option>
+                        </select>
+                    </div>
+                    <button id="btn-calc-collision" class="btn-primary text-sm w-full justify-center">計算碰撞機率</button>
+                </div>
+                <div class="bg-hub-900/50 border border-hub-700 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+                    <div class="text-5xl font-bold text-idgen mb-2" id="collision-probability">≈ 0%</div>
+                    <p class="text-slate-500 text-xs">Estimated Collision Probability</p>
+                    <div class="mt-3 text-xs text-slate-600" id="collision-detail">尚未計算</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="mt-12 glass-panel p-6 md:p-8" itemscope itemtype="https://schema.org/FAQPage">
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <i data-lucide="help-circle" class="w-5 h-5 text-idgen"></i> 常見問題
+            </h2>
+            <div class="space-y-2 divide-y divide-hub-700/50">
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">UUID、ULID、Nano ID 有什麼差別？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            <strong>UUID (v4)</strong> 是 128 位元的通用唯一識別碼，完全隨機產生，廣泛用於資料庫主鍵與分散式系統。但由於純隨機特性，不適合做 B-tree 索引 (會導致頁面分裂)。<br><br>
+                            <strong>ULID</strong> 同樣是 128 位元，但前 48 位元是時間戳，後 80 位元是亂數，因此具備「可排序」特性，且使用 Crockford Base32 編碼，長度僅 26 字元。<br><br>
+                            <strong>Nano ID</strong> 使用 64 字元字母表 (A-Za-z0-9_-)，預設長度 21 字元即可達到與 UUID v4 相近的亂度。體積小、速度快，常使用在短網址、檔案命名等場景。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">什麼時候該用 UUID v7 而不是 UUID v4？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            UUID v7 的核心優勢是「時間有序」。v7 的前 48 位元為 Unix 毫秒時間戳，這使得產生的 ID 天然具備單調遞增特性。<br><br>
+                            如果你的資料庫使用 B-tree 或 LSM-Tree 作為索引結構（如 PostgreSQL、MySQL、SQLite），使用 UUID v7 能大幅減少索引頁面分裂與隨機寫入的開銷，在大量插入場景下效能可提升 5~10 倍。<br><br>
+                            <strong>建議使用 UUID v7 的情境：</strong> 資料庫主鍵、時間序列資料、需要按建立時間排序的業務場景。UUID v4 則適合不需排序、純隨機標識的場景。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">ULID 為什麼可以排序？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            ULID 的前 48 位元儲存的是 Unix 毫秒時間戳（與 UUID v7 類似），因此按字典序排序就等同於按建立時間排序。這使得 ULID 在資料庫索引上比純隨機 ID 更友善。<br><br>
+                            此外，ULID 使用 Crockford Base32 編碼（排除了 I、L、O、U 等容易混淆的字元），整體長度僅 26 字元，比 UUID 的 36 字元更簡潔。時間戳的編碼佔前 10 字元，後 16 字元為亂數。<br><br>
+                            ULID 的另一個優點是：可以在同一毫秒內產生最多 2^80 個 ID，極端高併發場景下仍能保持唯一性。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Nano ID 為什麼越來越流行？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            Nano ID 受到開發者歡迎的原因主要有以下幾點：<br><br>
+                            <strong>1. 體積極小：</strong> 原始程式碼僅約 130 bytes（gzip），對前端打包體積幾乎無影響。<br>
+                            <strong>2. 高效能：</strong> 使用 Node.js 的 crypto 模組或瀏覽器的 Web Crypto API，產生速度遠快於 UUID。<br>
+                            <strong>3. 自訂彈性：</strong> 可自由調整 ID 長度與字元集，在「唯一性」與「簡潔性」之間取得最佳平衡。<br>
+                            <strong>4. URL 安全：</strong> 預設使用 URL 安全字元集（A-Za-z0-9_-），無需額外編碼即可嵌入網址。<br>
+                            <strong>5. 被主流專案採用：</strong> 包括 Next.js、Nuxt、Hono 等框架、以及許多開源專案都使用 Nano ID 作為預設 ID 產生方案。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">建立系統時如何選擇適合的 ID 格式？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            選擇 ID 格式時可以根據以下幾點判斷：<br><br>
+                            <strong>需要時間排序且高安全性 → UUID v7</strong><br>
+                            適合資料庫主鍵，128 位元亂度，支援全球唯一。<br><br>
+                            <strong>需要時間排序但希望更簡潔 → ULID</strong><br>
+                            26 字元，可排序，適合對外公開的識別碼。<br><br>
+                            <strong>純隨機標識，相容性優先 → UUID v4</strong><br>
+                            最廣為支援的格式，適合 API、外部系統整合。<br><br>
+                            <strong>高效能、輕量級前端 → Nano ID</strong><br>
+                            短、快、可自訂，適合短期 Token、檔案命名、訂單編號。<br><br>
+                            <strong>需要安全性與水平擴展 → CUID2</strong><br>
+                            專為水平擴展設計，內建碰撞防護機制。<br><br>
+                            <strong>簡短且人類可讀 → Short ID</strong><br>
+                            適合邀請碼、優惠券代碼、短網址 slug。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">ID 碰撞的機率有多高？真的不會重複嗎？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            這是機率問題，並非「不會」而是「極難」。以 UUID v4 為例，有效位元數為 122 bits，理論上要產生約 2.71 × 10^18 個 ID 才有 50% 的碰撞機率（生日悖論）。<br><br>
+                            換算成直覺感受：<br>
+                            • 每秒產生 10 億個 UUID v4，連續 85 年後碰撞機率約為 50%<br>
+                            • 每秒產生 100 萬個 UUID v4，你的一生中看到碰撞的機率趨近於 0<br><br>
+                            ULID 和 Nano ID 也有類似等級的安全性。你可以使用本工具的「碰撞機率估算」功能，根據你的使用量計算具體的碰撞風險。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">這些 ID 是純前端產生，真的安全嗎？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            是的，本工具所有 ID 產生邏輯都使用瀏覽器的 <strong>Web Crypto API</strong>（crypto.getRandomValues / crypto.randomUUID），這是作業系統底層提供的密碼學安全亂數產生器 (CSPRNG)，與 HTTPS 加密使用的是同一層級的亂數來源。<br><br>
+                            所有運算都在你的瀏覽器中完成，產生的 ID 不會透過網路傳輸，伺服器不會儲存任何資料。你可以關閉網路後繼續使用本工具。<br><br>
+                            如果你需要更高安全性的 ID（例如包含機密資訊的場景），建議在本地端使用專用程式庫進行產生。
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- SEO Article -->
+        <section class="mt-12 glass-panel p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-idgen"></i> 深入了解唯一識別碼：從 UUID 到 Nano ID 的完整指南
+            </h2>
+            <article class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+                <p>在現代軟體開發中，唯一識別碼（Unique Identifier）是構成系統基礎的重要元件。無論是資料庫主鍵、API 資源識別、使用者 ID、訂單編號還是檔案名稱，我們都需要一個可靠的機制來產生不重複的標識。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">UUID：最廣泛使用的標準</h3>
+                <p>UUID（Universally Unique Identifier）是一組 128 位元的識別碼標準（RFC 4122），其設計目標是在不需要中央協調機制的條件下，保證全球範圍的唯一性。最常見的 UUID v4 完全依賴亂數產生，而較新的 UUID v7 則結合了時間戳與亂數，提供時間有序的特性。</p>
+                <p>UUID 的優勢在於其標準化程度最高，幾乎所有程式語言和資料庫都有原生支援，非常適合跨系統、跨語言的應用場景。然而其 36 字元的長度在某些場合顯得冗長，且 v4 的純隨機特性對資料庫索引不夠友善。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">ULID：可排序的現代替代方案</h3>
+                <p>ULID（Universally Unique Lexicographically Sortable Identifier）由 Alizain Feerasta 於 2016 年提出，旨在解決 UUID 不可排序的問題。ULID 同樣為 128 位元，但編碼為 26 字元的 Crockford Base32 字串。其時間戳前綴確保了字典序排序即為時間序排序，且在同一毫秒內可產生多達 2^80 個唯一值。</p>
+                <p>Crockford Base32 編碼的額外好處是排除了容易混淆的字元（如 I、L、O、U），提高了人類閱讀與手動輸入的正確性。ULID 的大小寫不敏感特性也使其在 URL 中使用時更友善。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">Nano ID：輕量級高效方案</h3>
+                <p>Nano ID 由 Andrey Sitnik（也是 PostCSS 與 Autoprefixer 的作者）開發，是目前前端生態中最受歡迎的 ID 產生器之一。與 UUID 和 ULID 不同，Nano ID 不是固定格式的標準，而是一個可自訂的實作方案。其核心設計哲學是「在最小的體積下提供足夠的唯一性」。</p>
+                <p>Nano ID 使用 64 字元的 URL 安全字母表（包含 A-Z、a-z、0-9、- 和 _），預設長度 21 字元下可提供與 UUID v4 相同的 126 bits 亂度。透過調整長度參數，可在安全性與簡潔性之間靈活切換。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">CUID2：水平擴展的防碰撞方案</h3>
+                <p>CUID2 是 CUID 的第二代版本，由 Eric Elliott 建立，特別針對水平擴展（Horizontal Scaling）場景設計。CUID2 內部使用遞增計數器、亂數指紋以及雜湊函數，確保在分散式系統中即使沒有中央協調器也不會產生碰撞。</p>
+                <p>CUID2 的預設長度約為 24 字元，包含了編碼的指紋資訊，因此即使兩台伺服器在同一毫秒內產生 ID，結果也截然不同。這使得 CUID2 成為微服務架構與 Serverless 應用的理想選擇。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">如何選擇？實務建議</h3>
+                <p>如果你是建立新的 PostgreSQL 或 MySQL 資料表，並希望使用 UUID 作為主鍵，<strong>強烈建議選擇 UUID v7</strong>，它能大幅減少索引碎片化問題。如果你需要對外暴露 ID 且希望長度較短，<strong>ULID 或 Nano ID</strong> 是更好的選擇。對於安全性要求極高的水平擴展場景，<strong>CUID2</strong> 提供了額外的防碰撞保障。</p>
+                <p>無論你選擇哪種格式，都可以使用 ToolHub 的 ID 產生器快速生成測試資料，並透過碰撞機率計算器驗證你的選擇是否滿足業務需求。</p>
+            </article>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <div id="component-footer"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i data-lucide="check-circle" class="w-4 h-4 text-idgen" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- System Initialization                       -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/id-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- ID Generator Core Engine                    -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- DOM References ---
+            const formatTabs = document.querySelectorAll('.format-tab');
+            const sliderCount = document.getElementById('slider-count');
+            const inputCount = document.getElementById('input-count');
+            const btnGenerate = document.getElementById('btn-generate');
+            const outputArea = document.getElementById('output-area');
+            const outputStat = document.getElementById('output-stat');
+            const statGenerated = document.getElementById('stat-generated');
+            const statDuplicates = document.getElementById('stat-duplicates');
+            const statLength = document.getElementById('stat-length');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnClear = document.getElementById('btn-clear');
+            const btnSample = document.getElementById('btn-sample');
+            const optHyphens = document.getElementById('opt-hyphens');
+            const optUppercase = document.getElementById('opt-uppercase');
+            const sliderLength = document.getElementById('slider-length');
+            const inputLength = document.getElementById('input-length');
+            const optPrefix = document.getElementById('opt-prefix');
+            const optSeparator = document.getElementById('opt-separator');
+            const charsetUpper = document.getElementById('charset-upper');
+            const charsetLower = document.getElementById('charset-lower');
+            const charsetDigit = document.getElementById('charset-digit');
+            const charsetSymbol = document.getElementById('charset-symbol');
+            const charsetCustom = document.getElementById('charset-custom');
+
+            const optHyphensWrapper = document.getElementById('opt-hyphens-wrapper');
+            const optLengthWrapper = document.getElementById('opt-length-wrapper');
+            const optCharsetWrapper = document.getElementById('opt-charset-wrapper');
+            const optPrefixWrapper = document.getElementById('opt-prefix-wrapper');
+
+            // Collision
+            const btnCalcCollision = document.getElementById('btn-calc-collision');
+            const collisionDaily = document.getElementById('collision-daily');
+            const collisionYears = document.getElementById('collision-years');
+            const collisionFormat = document.getElementById('collision-format');
+            const collisionProbability = document.getElementById('collision-probability');
+            const collisionDetail = document.getElementById('collision-detail');
+
+            // --- State ---
+            let currentFormat = 'uuidv4';
+
+            // --- Toast ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'w-4 h-4 text-red-500';
+                    icon.setAttribute('data-lucide', 'alert-circle');
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'w-4 h-4 text-idgen';
+                    icon.setAttribute('data-lucide', 'check-circle');
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- Format Switching ---
+            function updateOptionsForFormat(format) {
+                const isUUID = format === 'uuidv4' || format === 'uuidv7';
+                const isULID = format === 'ulid';
+                const isNanoID = format === 'nanoid';
+                const isShortID = format === 'shortid';
+                const isCUID2 = format === 'cuid2';
+
+                // Hyphens: only for UUID formats
+                optHyphensWrapper.style.display = isUUID ? '' : 'none';
+
+                // Length: Nano ID and Short ID
+                optLengthWrapper.style.display = isNanoID || isShortID ? '' : 'none';
+
+                // Character set: Nano ID and Short ID
+                optCharsetWrapper.style.display = isNanoID || isShortID ? '' : 'none';
+
+                // Prefix: Short ID
+                optPrefixWrapper.style.display = isShortID ? '' : 'none';
+
+                // Default values
+                if (isNanoID) {
+                    sliderLength.value = 21;
+                    inputLength.value = 21;
+                } else if (isShortID) {
+                    sliderLength.value = 8;
+                    inputLength.value = 8;
+                }
+            }
+
+            formatTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    formatTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFormat = tab.dataset.format;
+                    updateOptionsForFormat(currentFormat);
+                });
+            });
+
+            // Initial format setup
+            updateOptionsForFormat('uuidv4');
+
+            // --- Count sync ---
+            sliderCount.addEventListener('input', () => { inputCount.value = sliderCount.value; });
+            inputCount.addEventListener('input', () => {
+                let val = parseInt(inputCount.value) || 1;
+                if (val < 1) val = 1;
+                if (val > 1000) val = 1000;
+                sliderCount.value = val;
+            });
+
+            // --- Length sync ---
+            sliderLength.addEventListener('input', () => { inputLength.value = sliderLength.value; });
+            inputLength.addEventListener('input', () => {
+                let val = parseInt(inputLength.value) || 4;
+                if (val < 4) val = 4;
+                if (val > 64) val = 64;
+                sliderLength.value = val;
+            });
+
+            // ==========================================
+            // ID Generation Algorithms
+            // ==========================================
+
+            // --- UUID v4 ---
+            function generateUUIDv4() {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                    return crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                    const r = crypto.getRandomValues(new Uint8Array(1))[0] & 15;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+
+            // --- UUID v7 (RFC 9562) ---
+            function generateUUIDv7() {
+                const timestamp = Date.now();
+                const bytes = new Uint8Array(16);
+                // 48-bit timestamp
+                bytes[0] = (timestamp / 0x10000000000) & 0xFF;
+                bytes[1] = (timestamp / 0x100000000) & 0xFF;
+                bytes[2] = (timestamp / 0x1000000) & 0xFF;
+                bytes[3] = (timestamp / 0x10000) & 0xFF;
+                bytes[4] = (timestamp / 0x100) & 0xFF;
+                bytes[5] = timestamp & 0xFF;
+                // Version 7
+                bytes[6] = (bytes[6] & 0x0F) | 0x70;
+                // Random bytes
+                crypto.getRandomValues(bytes.subarray(6, 16));
+                // Set version 7
+                bytes[6] = (bytes[6] & 0x0F) | 0x70;
+                // Set variant (10xx)
+                bytes[8] = (bytes[8] & 0x3F) | 0x80;
+
+                const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+                return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+            }
+
+            // --- ULID ---
+            const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+            function generateULID() {
+                const timestamp = Date.now();
+                // Encode timestamp (48 bits → 10 chars)
+                let ts = '';
+                let t = timestamp;
+                for (let i = 0; i < 10; i++) {
+                    ts = CROCKFORD[t % 32] + ts;
+                    t = Math.floor(t / 32);
+                }
+                // Encode random (80 bits → 16 chars)
+                let rand = '';
+                // Generate 10 bytes (80 bits)
+                const buf = crypto.getRandomValues(new Uint8Array(10));
+                let r = 0;
+                for (let i = 0; i < 16; i++) {
+                    if (i % 2 === 0) {
+                        r = buf[Math.floor(i/2)];
+                    } else {
+                        r = (buf[Math.floor(i/2)] >> 4) | ((buf[Math.floor(i/2) + (i%2===0?0:0)] & 0x0F) << 4);
+                        // simpler: just use index
+                    }
+                }
+                // Better approach: use big integer math via 5-bits per char
+                let randomBits = 0;
+                let bits = 0;
+                for (let i = 0; i < 16; i++) {
+                    if (bits < 5) {
+                        randomBits = (randomBits << 8) | crypto.getRandomValues(new Uint8Array(1))[0];
+                        bits += 8;
+                    }
+                    bits -= 5;
+                    const idx = (randomBits >> bits) & 31;
+                    rand += CROCKFORD[idx];
+                    randomBits &= (1 << bits) - 1;
+                }
+                return ts + rand;
+            }
+
+            // --- Nano ID ---
+            const NANO_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+            function generateNanoID(length, alphabet) {
+                const len = length || 21;
+                const alpha = alphabet || getCharset();
+                if (!alpha) return '';
+                const alphaLen = alpha.length;
+                let result = '';
+                const bytes = crypto.getRandomValues(new Uint8Array(len));
+                for (let i = 0; i < len; i++) {
+                    result += alpha[bytes[i] % alphaLen];
+                }
+                return result;
+            }
+
+            function getCharset() {
+                const custom = charsetCustom.value.trim();
+                if (custom) return custom;
+                let chars = '';
+                if (charsetUpper.checked) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                if (charsetLower.checked) chars += 'abcdefghijklmnopqrstuvwxyz';
+                if (charsetDigit.checked) chars += '0123456789';
+                if (charsetSymbol.checked) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+                if (!chars) chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                return chars;
+            }
+
+            // --- CUID2 (simplified implementation) ---
+            let cuidCounter = 0;
+            const CUID2_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-';
+            function generateCUID2() {
+                const time = Date.now().toString(36);
+                const counter = (cuidCounter++).toString(36);
+                const rand = generateNanoID(8, CUID2_ALPHABET);
+                const fingerprint = generateNanoID(4, CUID2_ALPHABET);
+                return `c${time}${counter}${rand}${fingerprint}`;
+            }
+
+            // --- Short ID ---
+            function generateShortID(length) {
+                const len = length || 8;
+                const alpha = getCharset();
+                if (!alpha) return '';
+                const alphaLen = alpha.length;
+                let result = '';
+                const bytes = crypto.getRandomValues(new Uint8Array(len));
+                for (let i = 0; i < len; i++) {
+                    result += alpha[bytes[i] % alphaLen];
+                }
+                return result;
+            }
+
+            // ==========================================
+            // Process & Format ID
+            // ==========================================
+
+            function processID(id, format) {
+                let result = id;
+                const hyphens = optHyphens.checked;
+                const upper = optUppercase.checked;
+
+                if (!hyphens && (format === 'uuidv4' || format === 'uuidv7')) {
+                    result = result.replace(/-/g, '');
+                }
+                if (upper) {
+                    result = result.toUpperCase();
+                }
+                return result;
+            }
+
+            function generateSingle(format) {
+                let id;
+                switch (format) {
+                    case 'uuidv4': id = generateUUIDv4(); break;
+                    case 'uuidv7': id = generateUUIDv7(); break;
+                    case 'ulid': id = generateULID(); break;
+                    case 'nanoid': {
+                        const len = parseInt(inputLength.value) || 21;
+                        id = generateNanoID(len);
+                        break;
+                    }
+                    case 'cuid2': id = generateCUID2(); break;
+                    case 'shortid': {
+                        const len = parseInt(inputLength.value) || 8;
+                        let sid = generateShortID(len);
+                        const prefix = optPrefix.value.trim();
+                        if (prefix) sid = prefix + sid;
+                        id = sid;
+                        break;
+                    }
+                    default: id = generateUUIDv4();
+                }
+                return processID(id, format);
+            }
+
+            // ==========================================
+            // Main Generate
+            // ==========================================
+
+            function generate() {
+                const count = parseInt(inputCount.value) || 10;
+                const format = currentFormat;
+                const sep = optSeparator.value.replace('\\n', '\n');
+
+                const ids = [];
+                for (let i = 0; i < count; i++) {
+                    ids.push(generateSingle(format));
+                }
+
+                // Check duplicates
+                const uniqueSet = new Set(ids);
+                const dupCount = ids.length - uniqueSet.size;
+
+                // Update stats
+                statGenerated.textContent = ids.length;
+                statDuplicates.textContent = dupCount;
+                statLength.textContent = ids.length > 0 ? ids[0].length : 0;
+
+                // Output
+                outputArea.value = ids.join(sep);
+                outputStat.textContent = `${ids.length} IDs`;
+
+                // Flash effect
+                outputArea.classList.remove('flash-active');
+                void outputArea.offsetWidth;
+                outputArea.classList.add('flash-active');
+
+                showToast(`已產生 ${ids.length} 個 ID${dupCount > 0 ? `（${dupCount} 個重複）` : ''}`);
+            }
+
+            btnGenerate.addEventListener('click', generate);
+
+            // --- Copy ---
+            btnCopy.addEventListener('click', () => {
+                if (!outputArea.value) { showToast('沒有內容可複製', true); return; }
+                navigator.clipboard.writeText(outputArea.value).then(() => {
+                    showToast('已複製到剪貼簿');
+                }).catch(() => {
+                    outputArea.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('已複製到剪貼簿');
+                });
+            });
+
+            // --- Clear ---
+            btnClear.addEventListener('click', () => {
+                outputArea.value = '';
+                outputStat.textContent = '已清除';
+                statGenerated.textContent = '0';
+                statDuplicates.textContent = '0';
+                statLength.textContent = '0';
+                showToast('已清除');
+            });
+
+            // --- Sample ---
+            btnSample.addEventListener('click', () => {
+                // Generate just 5 sample IDs
+                const prevCount = inputCount.value;
+                inputCount.value = 5;
+                sliderCount.value = 5;
+                generate();
+                inputCount.value = prevCount;
+                sliderCount.value = prevCount;
+            });
+
+            // --- Export ---
+            document.querySelectorAll('.export-option').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const format = btn.dataset.export;
+                    if (!outputArea.value) { showToast('沒有內容可匯出', true); return; }
+
+                    const ids = outputArea.value.split('\n').filter(s => s.trim());
+                    let content = '';
+                    let filename = `ids_${Date.now()}`;
+                    let mime = 'text/plain';
+
+                    if (format === 'txt') {
+                        content = ids.join('\n');
+                        filename += '.txt';
+                    } else if (format === 'csv') {
+                        content = 'ID\n' + ids.map(id => `"${id}"`).join('\n');
+                        filename += '.csv';
+                        mime = 'text/csv';
+                    } else if (format === 'json') {
+                        content = JSON.stringify(ids, null, 2);
+                        filename += '.json';
+                        mime = 'application/json';
+                    }
+
+                    const blob = new Blob([content], { type: mime + ';charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast(`已匯出為 ${format.toUpperCase()}`);
+                });
+            });
+
+            // ==========================================
+            // Collision Probability Calculator
+            // ==========================================
+
+            btnCalcCollision.addEventListener('click', () => {
+                const daily = parseInt(collisionDaily.value) || 1000000;
+                const years = parseInt(collisionYears.value) || 10;
+                const format = collisionFormat.value;
+
+                // Total IDs generated
+                const total = daily * 365 * years;
+
+                // Bits of entropy per format
+                let bits;
+                switch (format) {
+                    case 'uuid4': bits = 122; break;
+                    case 'uuid7': bits = 74; break; // 74 random bits
+                    case 'ulid': bits = 80; break;
+                    case 'nanoid': bits = 21 * 6; break; // 64 char alphabet = 6 bits per char
+                    case 'nanoid8': bits = 8 * 6; break;
+                    default: bits = 122;
+                }
+
+                // Birthday paradox approximation: P ≈ 1 - exp(-n²/(2^(b+1)))
+                // where n = total IDs, b = bits of entropy
+                const expArg = -(total * total) / Math.pow(2, bits + 1);
+                let prob = 1 - Math.exp(expArg);
+
+                // For very small probabilities
+                if (prob < 1e-15) {
+                    collisionProbability.textContent = '≈ 0%';
+                    collisionDetail.textContent = `產生 ${total.toLocaleString()} 個 ID，碰撞機率可忽略不計`;
+                } else if (prob > 0.0001) {
+                    collisionProbability.textContent = `≈ ${(prob * 100).toFixed(4)}%`;
+                    collisionDetail.textContent = `產生 ${total.toLocaleString()} 個 ID (每天 ${daily.toLocaleString()} 個 × ${years} 年)`;
+                } else {
+                    // Show in scientific notation
+                    collisionProbability.textContent = `≈ ${(prob * 100).toExponential(2)}%`;
+                    collisionDetail.textContent = `產生 ${total.toLocaleString()} 個 ID (每天 ${daily.toLocaleString()} 個 × ${years} 年)`;
+                }
+            });
+
+            // Initial collision calculation
+            btnCalcCollision.click();
+
+            // Generate initial sample
+            generate();
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

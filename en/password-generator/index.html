@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Password Generator | Free Online Tool - ToolHub</title>
+<meta content="Strong password generator and security analysis tool. Supports custom password rules, Passphrase mode, real-time strength analysis, Entropy calculation, cracking time estimation and QR Code export." name="description"/>
+<meta content="Password Generator, 密碼產生器, Password Strength, Entropy, 熵值, Passphrase, Crack Time, 密碼安全性, ToolHub" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .strength-bar {
+            height: 8px; border-radius: 4px; transition: all 0.4s ease;
+            background: #1E293B; overflow: hidden;
+        }
+        .strength-bar-fill {
+            height: 100%; border-radius: 4px; transition: all 0.4s ease; width: 0%;
+        }
+
+        .meter-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .option-toggle {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            cursor: pointer; font-size: 0.8125rem; color: #94A3B8;
+            padding: 0.375rem 0; transition: color 0.2s;
+        }
+        .option-toggle:hover { color: #E2E8F0; }
+        .option-toggle input[type="checkbox"] {
+            accent-color: #38BDF8; width: 1rem; height: 1rem;
+        }
+
+        .char-pool-item {
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            padding: 0.25rem 0.5rem; border-radius: 0.375rem;
+            font-size: 0.75rem; border: 1px solid #1E293B;
+        }
+        .char-pool-item.active { border-color: #38BDF8; background: rgba(56,189,248,0.06); }
+        .char-pool-item.inactive { opacity: 0.4; }
+
+        .analysis-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.5rem 0; border-bottom: 1px solid rgba(30,41,59,0.5);
+            font-size: 0.8125rem;
+        }
+        .analysis-row:last-child { border-bottom: none; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #38BDF8; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(56,189,248,0.1); }
+            50% { box-shadow: 0 0 30px rgba(56,189,248,0.2); }
+        }
+        .password-display {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 1.25rem; letter-spacing: 0.05em;
+            word-break: break-all;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        @media (max-width: 640px) { .password-display { font-size: 1rem; } }
+
+        .field-input {
+            background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+        .field-input:focus { outline: none; border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.625rem 1.25rem; font-size: 0.8125rem; font-weight: 500;
+            background: rgba(56,189,248,0.12); color: #38BDF8;
+            border: 1px solid rgba(56,189,248,0.25);
+            border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary:hover { background: rgba(56,189,248,0.2); }
+
+        .tab-btn {
+            padding: 0.5rem 1rem; font-size: 0.8125rem; font-weight: 500;
+            color: #94A3B8; cursor: pointer; transition: all 0.2s;
+            border: 1px solid transparent; border-radius: 0.5rem;
+        }
+        .tab-btn:hover { color: #E2E8F0; background: rgba(255,255,255,0.03); }
+        .tab-btn.active { color: #38BDF8; border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.08); }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/password-generator/" property="og:url"/>
+<meta content="Password Generator | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Strong password generator and security analysis tool. Supports custom password rules, Passphrase mode, real-time strength analysis, Entropy calculation, cracking time estimation and QR Code export." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Password Generator | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Strong password generator and security analysis tool. Supports custom password rules, Passphrase mode, real-time strength analysis, Entropy calculation, cracking time estimation and QR Code export." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Password Generator & Strength Checker / Password Generator & Strength Analysis","url":"https://toolhuben.com/en/password-generator/","description":"Strong password generator and security analysis tool. Supports custom password rules, Passphrase mode, real-time strength analysis, Entropy calculation, cracking time estimation and QR Code export.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Password Generator & Strength Checker / Password Generator & Strength Analysis","item":"https://toolhuben.com/en/password-generator/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/password-generator/" rel="canonical"/><link href="https://toolhuben.com/password-generator/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/password-generator/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/password-generator/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","QR Code 已下載":"QR Code Downloaded","TXT 已下載":"TXT downloaded","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","分析密碼":"Analyze passwords","分鐘":"minutes","即時破解":"Instant crack","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","天":"day","字元":"character","小時":"hours","尚無密碼可下載":"No password to download yet","尚無密碼可複製":"There is no password to copy yet","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已複製到剪貼簿":"Copied to clipboard","建立理念":"Our Founding Idea","建議":"Recommendation","年":"year","數百萬年":"millions of years","產生 Passphrase":"generate Passphrase","產生密碼":"generate password","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","秒":"seconds","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","複製失敗":"Copy failed","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","有連續":"It's a series.","有重複":"Repeated.","本機處理":"processed locally","無連續":"No continuity","無重複":"No Repeat","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="terminal" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+<!-- Hero -->
+<div class="text-center mb-8 fade-in">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                Password security assessment and generation engine
+            </span>
+<h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                Password Generator &amp; Strength Checker
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">Password generator and strength analysis tools</span>
+</h1>
+<p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Generate strong passwords or Passphrase, and instantly analyze password security, entropy value and cracking difficulty. Understand the math behind passwords and build truly secure protection.
+            </p>
+</div>
+<!-- Main Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<!-- Left: Settings -->
+<div class="lg:col-span-3 space-y-6">
+<!-- Mode Tabs -->
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex gap-2 mb-4">
+<button class="tab-btn active" data-mode="password" onclick="switchMode('password')">
+<i class="ph ph-lock-key"></i> password mode
+                        </button>
+<button class="tab-btn" data-mode="passphrase" onclick="switchMode('passphrase')">
+<i class="ph ph-quotes"></i> Passphrase mode
+                        </button>
+<button class="tab-btn" data-mode="analyze" onclick="switchMode('analyze')">
+<i class="ph ph-magnifying-glass"></i> analysis mode
+                        </button>
+</div>
+<!-- Password Mode -->
+<div class="space-y-4" id="mode-password">
+<div>
+<label class="flex items-center justify-between text-sm text-slate-400 mb-2">
+<span>Password length</span>
+<span class="font-mono text-hub-accent font-bold" id="length-display">16</span>
+</label>
+<input class="w-full accent-hub-accent cursor-pointer" id="pw-length" max="128" min="4" oninput="document.getElementById('length-display').textContent=this.value; generate()" step="1" type="range" value="16"/>
+<div class="flex justify-between text-xs text-slate-600"><span>4</span><span>128</span></div>
+</div>
+<div class="grid grid-cols-2 gap-x-4 gap-y-1">
+<label class="option-toggle"><input checked="" id="opt-upper" onchange="generate()" type="checkbox"/> A-Z capital letters</label>
+<label class="option-toggle"><input checked="" id="opt-lower" onchange="generate()" type="checkbox"/> a-z lowercase</label>
+<label class="option-toggle"><input checked="" id="opt-number" onchange="generate()" type="checkbox"/> 0-9 numbers</label>
+<label class="option-toggle"><input id="opt-symbol" onchange="generate()" type="checkbox"/> !@# symbol</label>
+</div>
+<div class="border-t border-hub-700/50 pt-3">
+<p class="text-xs text-slate-500 mb-2">Advanced options</p>
+<div class="grid grid-cols-2 gap-x-4 gap-y-1">
+<label class="option-toggle"><input id="opt-exclude-similar" onchange="generate()" type="checkbox"/> Exclude similar characters (O0Il)</label>
+<label class="option-toggle"><input id="opt-no-repeat" onchange="generate()" type="checkbox"/> No duplicate characters</label>
+<label class="option-toggle"><input id="opt-first-letter" onchange="generate()" type="checkbox"/> The first character must be a letter</label>
+</div>
+</div>
+</div>
+<!-- Passphrase Mode -->
+<div class="space-y-4 hidden" id="mode-passphrase">
+<div>
+<label class="flex items-center justify-between text-sm text-slate-400 mb-2">
+<span>Number of words</span>
+<span class="font-mono text-hub-accent font-bold" id="words-display">4</span>
+</label>
+<input class="w-full accent-hub-accent cursor-pointer" id="pw-words" max="8" min="3" oninput="document.getElementById('words-display').textContent=this.value; generate()" step="1" type="range" value="4"/>
+<div class="flex justify-between text-xs text-slate-600"><span>3</span><span>8</span></div>
+</div>
+<div>
+<label class="flex items-center justify-between text-sm text-slate-400 mb-2">
+<span>delimiter</span>
+</label>
+<select class="field-input w-24" id="phrase-separator" onchange="generate()">
+<option value="-">- (hyphen)</option>
+<option value=".">. (period)</option>
+<option value="_">_ (bottom line)</option>
+<option value=" "> (blank)</option>
+</select>
+</div>
+<div>
+<label class="option-toggle"><input id="opt-capitalize" onchange="generate()" type="checkbox"/> Capitalize first letter</label>
+<label class="option-toggle"><input id="opt-append-number" onchange="generate()" type="checkbox"/> Append numbers</label>
+</div>
+</div>
+<!-- Analyze Mode -->
+<div class="space-y-4 hidden" id="mode-analyze">
+<div>
+<label class="text-sm text-slate-400 mb-2 block">Enter the password to be analyzed</label>
+<div class="flex gap-2">
+<input class="field-input flex-1 font-mono" id="analyze-input" oninput="analyzePassword(this.value)" placeholder="Paste the password for analysis..." type="text"/>
+<button class="px-3 py-2 text-xs text-slate-500 hover:text-red-400 border border-hub-700 rounded-lg transition-colors" onclick="document.getElementById('analyze-input').value='';document.getElementById('analyze-results').classList.add('hidden');document.getElementById('analyze-blank').classList.remove('hidden')">Clear</button>
+</div>
+</div>
+<div id="analyze-blank">
+<p class="text-sm text-slate-500 text-center py-6">Once you enter your password, its security will be automatically analyzed</p>
+</div>
+<div class="hidden space-y-4" id="analyze-results"></div>
+</div>
+<!-- Generate Button -->
+<div class="mt-4">
+<button class="w-full py-3 bg-hub-accent text-white rounded-xl font-medium hover:bg-sky-400 transition-colors flex items-center justify-center gap-2" onclick="generate()">
+<i class="ph ph-lightning"></i>
+<span id="generate-btn-text">generate password</span>
+</button>
+</div>
+</div>
+<!-- QR Code -->
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-sm font-semibold text-white flex items-center gap-2">
+<i class="ph ph-qr-code text-hub-accent"></i>
+                            QR Code
+                        </h2>
+<button class="text-xs text-slate-500 hover:text-hub-accent transition-colors flex items-center gap-1" onclick="downloadQR()">
+<i class="ph ph-download-simple"></i> Download QR
+                        </button>
+</div>
+<div class="flex items-center justify-center py-4">
+<div class="bg-white p-3 rounded-xl" id="qrcode-container">
+<canvas height="160" id="qrcode-canvas" width="160"></canvas>
+</div>
+</div>
+<p class="text-xs text-slate-500 text-center">Scan the QR Code to get the password (pay attention to safety around you)</p>
+</div>
+</div>
+<!-- Right: Results -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Generated Password -->
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-sm font-semibold text-white flex items-center gap-2">
+<i class="ph ph-password text-hub-accent"></i>
+                            generated password
+                        </h2>
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-hub-accent transition-colors" onclick="copyPassword()" title="Copy">
+<i class="ph ph-copy-simple text-lg"></i>
+</button>
+<button class="p-2 text-slate-500 hover:text-green-400 transition-colors" onclick="generate()" title="regenerate">
+<i class="ph ph-arrow-clockwise text-lg"></i>
+</button>
+<button class="p-2 text-slate-500 hover:text-blue-400 transition-colors" onclick="downloadTXT()" title="Download TXT">
+<i class="ph ph-download-simple text-lg"></i>
+</button>
+</div>
+</div>
+<div class="password-display text-center py-5 px-3 bg-[#0B1120] rounded-xl border border-hub-700 mb-4 text-white select-all" id="password-display">
+                        Click Generate
+                    </div>
+<!-- Strength Meter -->
+<div class="mb-4">
+<div class="flex items-center justify-between mb-1.5">
+<span class="meter-label" id="strength-label">intensity</span>
+<span class="text-xs font-mono text-slate-500" id="strength-score">-- bits</span>
+</div>
+<div class="strength-bar">
+<div class="strength-bar-fill" id="strength-bar-fill" style="width: 0%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-slate-600 mt-1">
+<span>Weak</span><span>Fair</span><span>Good</span><span>Strong</span><span>Very Strong</span>
+</div>
+</div>
+<!-- Crack Time -->
+<div class="flex items-center justify-between py-2 px-3 bg-slate-800/40 rounded-lg border border-hub-700 mb-3">
+<span class="text-xs text-slate-500">⛏ Offline cracking time (estimated)</span>
+<span class="text-sm font-bold text-white" id="crack-time">--</span>
+</div>
+<p class="text-[10px] text-slate-600 leading-relaxed">*Break times are theoretical estimates, assuming the attacker uses GPU acceleration (10⁹ times/second). The actual time depends on the attacker's hardware and methods.</p>
+</div>
+<!-- Character Pool -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+<i class="ph ph-database text-hub-accent"></i>
+                        Character Pool
+                    </h2>
+<div class="flex flex-wrap gap-2 mb-3">
+<span class="char-pool-item" id="pool-upper">A-Z</span>
+<span class="char-pool-item" id="pool-lower">a-z</span>
+<span class="char-pool-item" id="pool-number">0-9</span>
+<span class="char-pool-item" id="pool-symbol">!@#$%</span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-400">Total Pool</span>
+<span class="text-white font-bold font-mono" id="pool-total">94 characters</span>
+</div>
+<div class="flex items-center justify-between text-sm mt-1">
+<span class="text-slate-400">Estimated Entropy</span>
+<span class="text-hub-accent font-bold font-mono" id="pool-entropy">-- bits</span>
+</div>
+</div>
+<!-- Full Analysis -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+<i class="ph ph-clipboard-text text-hub-accent"></i>
+                        cryptanalysis
+                    </h2>
+<div id="analysis-results">
+<div class="analysis-row"><span class="text-slate-500">capital letters</span><span class="text-slate-500" id="ana-upper">--</span></div>
+<div class="analysis-row"><span class="text-slate-500">lowercase letters</span><span class="text-slate-500" id="ana-lower">--</span></div>
+<div class="analysis-row"><span class="text-slate-500">numbers</span><span class="text-slate-500" id="ana-number">--</span></div>
+<div class="analysis-row"><span class="text-slate-500">symbol</span><span class="text-slate-500" id="ana-symbol">--</span></div>
+<div class="analysis-row"><span class="text-slate-500">length</span><span class="text-slate-500" id="ana-length">--</span></div>
+<div class="analysis-row"><span class="text-slate-500">Repeat characters</span><span class="text-slate-500" id="ana-repeat">--</span></div>
+<div class="analysis-row"><span class="text-slate-500">consecutive characters</span><span class="text-slate-500" id="ana-sequence">--</span></div>
+</div>
+</div>
+</div>
+</div>
+<!-- FAQ & SEO -->
+<div class="mt-8 space-y-6">
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-question text-hub-accent"></i>
+                    Frequently Asked Questions (FAQ)
+                </h2>
+<div class="space-y-2 divide-y divide-hub-700/50">
+<details class="faq-item">
+<summary class="text-slate-200">How to create a secure password?</summary>
+<div class="faq-answer">
+                            A secure password should have the following characteristics:<br/><br/>
+                            • <strong>long enough</strong>: At least 12 characters, 16 or more characters recommended<br/>
+                            • <strong>Messy enough</strong>: Mix uppercase, lowercase, numbers and symbols<br/>
+                            • <strong>Not repeated</strong>: Use a different password for each website<br/>
+                            • <strong>Irregular</strong>: Avoid common patterns such as birthday, name, consecutive keyboard keys, etc.<br/><br/>
+                            Using this tool's password mode or Passphrase mode, you can easily generate secure passwords that meet the above conditions.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Why not reuse passwords?</summary>
+<div class="faq-answer">
+                            If a website were to be compromised, the attacker could obtain the password (or password hash) you used on that website. If you use the same password on other websites, an attacker can try to log into your other accounts. This is called Credential Stuffing.<br/><br/>
+                            According to the Verizon Breach Investigation Report, more than 80% of hacking incidents are related to weak passwords or password reuse. It is recommended to use a password manager (such as Bitwarden, 1Password) to generate and store unique and strong passwords for each website.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">What is the difference between Password and Passphrase?</summary>
+<div class="faq-answer">
+                            Password consists of random characters, for example <code class="text-slate-400 font-mono text-xs">k8J#mP2&amp;xL9$qR</code>, high security but difficult to remember.<br/><br/>
+                            A passphrase consists of several common words, such as <code class="text-slate-400 font-mono text-xs">river-orange-coffee-window</code>, trading length for safety. The famous xkcd comic (#936) illustrates how a passphrase such as "The Correct Toilet Battery Staple", although composed of simple words, is long enough to have extremely high entropy.<br/><br/>
+                            • Password: difficult to remember, difficult to type, high density entropy<br/>
+                            • Passphrase: easy to remember, easy to type, accumulates entropy by length<br/>
+                            While both can be very safe if designed properly, Passphrase is more suitable for use in situations where human memory is required.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">What is Entropy?</summary>
+<div class="faq-answer">
+                            Entropy is an indicator used to measure uncertainty in information theory, and its unit is bit. In cryptography, entropy represents the logarithm of the number of attempts required to crack a password.<br/><br/>
+                            Calculation formula:<code class="text-slate-400 font-mono text-xs">Entropy = log₂(R^L) = L × log₂(R)</code><br/>
+                            Where R is the character pool size and L is the password length.<br/><br/>
+                            • 50 bits — Brute force in minutes using GPU<br/>
+                            • 60 bits — may take hours to days<br/>
+                            • 70 bits — may take years<br/>
+                            • 80 bits — very secure, thousands of years away from current technology<br/>
+                            • 128 bits — difficult to crack even with a quantum computer<br/><br/>
+                            It is generally recommended that the password entropy value should be above 70 bits.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Are password managers safe?</summary>
+<div class="faq-answer">
+                            Password managers (such as Bitwarden, 1Password, KeePass) are by far the most recommended way to manage passwords. They use a master password to encrypt all of your password database. As long as the master password is strong enough and has not been leaked, password managers are very safe.<br/><br/>
+                            Password managers provide better security and convenience than reusing the same passwords everywhere or writing them on sticky notes. It is recommended to use this tool to generate a 4-5 word Passphrase as your master password.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">What are brute force and dictionary attacks?</summary>
+<div class="faq-answer">
+                            • <strong>Brute Force</strong>: Try all possible character combinations. This is the most comprehensive but also the most time-consuming attack method. Defense: Increase password length and character pool size to increase entropy.<br/><br/>
+                            • <strong>Dictionary Attack</strong>: Use a list of common passwords to try. Many weak passwords such as <code class="text-slate-400 font-mono text-xs">password123</code> or <code class="text-slate-400 font-mono text-xs">admin2024</code> Can be cracked within seconds. Defense: Avoid using any dictionary words or common patterns.<br/><br/>
+                            • <strong>Rainbow Table attack</strong>: Pre-calculated hash value comparison table. Defense: Websites should use Salt to defend against such attacks.
+                        </div>
+</details>
+</div>
+</div>
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-book-open text-hub-accent"></i>
+                    The Complete Guide to Password Security
+                </h2>
+<div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+<section>
+<h3 class="text-white font-bold text-base mb-2">Best practices for establishing secure passwords</h3>
+<ul class="list-disc list-inside space-y-1.5">
+<li><strong>Length trumps complexity</strong>: A 16-character plain lowercase password (75 bits) is more secure than an 8-character signed password (52 bits)</li>
+<li><strong>One password for each site</strong>: Use a password manager to generate unique passwords for each website</li>
+<li><strong>Enable 2FA/MFA</strong>:Two-factor authentication can greatly improve account security</li>
+<li><strong>Regular replacement</strong>: It is recommended to change passwords for important accounts (email, bank) every 3-6 months</li>
+<li><strong>Avoid personal information</strong>: Do not use personal information such as birthday, phone number, name, etc. in your password</li>
+<li><strong>Check for leaks</strong>: Regularly use Have I Been Pwned to check whether your account has been compromised.</li>
+</ul>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">Entropy calculation example</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs text-slate-500 mb-1">Plain lowercase 8 characters</p>
+<p class="text-hub-accent font-mono text-sm">38.0 bits</p>
+<p class="text-[10px] text-slate-600">Can be cracked in minutes</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs text-slate-500 mb-1">Uppercase and lowercase + numbers 10 characters</p>
+<p class="text-hub-accent font-mono text-sm">59.5 bits</p>
+<p class="text-[10px] text-slate-600">may take several days</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs text-slate-500 mb-1">Complete character set 16 characters</p>
+<p class="text-hub-accent font-mono text-sm">95.3 bits</p>
+<p class="text-[10px] text-slate-600">millions of years</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs text-slate-500 mb-1">5 words Passphrase</p>
+<p class="text-hub-accent font-mono text-sm">~65 bits</p>
+<p class="text-[10px] text-slate-600">Hundreds of years (assumed 7776 vocabulary)</p>
+</div>
+</div>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">Password security level recommendations</h3>
+<p>According to NIST SP 800-63B and OWASP recommendations:</p>
+<ul class="list-disc list-inside space-y-1 mt-1">
+<li><strong>general website</strong>: Entropy value ≥ 50 bits, length ≥ 10 characters</li>
+<li><strong>Important accounts (email, bank)</strong>: Entropy value ≥ 70 bits, length ≥ 14 characters</li>
+<li><strong>Master Password</strong>: Entropy value ≥ 80 bits, it is recommended to use Passphrase</li>
+<li><strong>Admin/SSH key</strong>: Entropy value ≥ 100 bits</li>
+</ul>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4" id="toast">
+<span class="text-lg" id="toast-icon">✅</span>
+<span class="text-sm font-medium text-slate-300" id="toast-message"></span>
+</div>
+<div id="component-footer"></div>
+<!-- Bootstrap -->
+<script>
+        async function loadComponent(id, path) {
+            try {
+                const r = await fetch(path);
+                if (!r.ok) throw Error('HTTP ' + r.status);
+                const html = await r.text();
+                const c = document.getElementById(id); c.innerHTML = html;
+                Array.from(c.querySelectorAll('script')).forEach(os => {
+                    const ns = document.createElement('script');
+                    Array.from(os.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(os.innerHTML));
+                    os.parentNode.replaceChild(ns, os);
+                });
+            } catch (e) { console.error('[System Error]', path, e); }
+        }
+        function setupSidebarActiveState() {
+            const cp = '/password-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(i => {
+                const h = i.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    i.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    i.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const ic = i.querySelector('svg'); if (ic) ic.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) {
+                const t = e.target.closest('#sidebar-trigger-btn');
+                if (t) window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar'));
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- Business Logic -->
+<script>
+        // ===================== WORD LIST =====================
+        const WORD_LIST = [
+            "ability","able","aboard","about","above","absorb","accent","accept","access","account","accuse","achieve",
+            "acid","across","action","active","actor","actual","adapt","add","address","adjust","admit","adopt","advance",
+            "advice","affair","affect","afford","after","again","age","agent","agree","ahead","aisle","alarm","album",
+            "alert","alien","align","alive","alley","allow","almost","alone","along","aloud","alpine","alter","always",
+            "amaze","among","amount","amuse","anchor","angel","anger","angle","animal","ankle","announce","annual",
+            "answer","antique","anxiety","anyway","apart","apology","appear","apple","apply","apron","arch","argue",
+            "arise","armor","aroma","arrange","arrow","artist","aspect","assault","assist","assume","assure","attic",
+            "attach","attack","attempt","attend","attract","audio","audit","August","aunt","author","auto","autumn",
+            "avenue","average","avoid","awake","award","aware","awful","bacon","badge","bagel","baker","balance",
+            "ballet","ballot","banana","bandit","banner","banquet","barber","barely","bargain","barrel","barrier",
+            "basalt","basics","basket","battle","beach","beacon","beagle","bean","beauty","become","bedroom","before",
+            "begin","behave","behind","belief","below","bench","benefit","best","better","beyond","bicycle","billion",
+            "binary","bind","biology","birth","bishop","bitter","black","blade","blame","bland","blank","blast","blaze",
+            "bleed","blend","bless","blind","blink","bliss","block","blood","bloom","blossom","board","boast","body",
+            "boiler","bold","bolt","bomb","bond","bone","bonus","book","boost","border","boring","borrow","bottle",
+            "bottom","bounce","boxer","branch","brand","brave","bread","break","breath","breed","bridge","bright",
+            "bring","broad","broken","bronze","browser","brush","bubble","bucket","budget","buffer","build","bullet",
+            "bundle","burden","burial","burn","burst","bushel","butter","button","cabin","cable","cactus","cafe",
+            "cage","cake","calcium","calculate","caliber","calm","camera","camp","cancel","candle","canvas","canyon",
+            "capable","capital","captain","capture","carbon","career","careful","cargo","carpet","carrot","carve",
+            "cascade","casino","castle","casual","catalog","catch","cattle","caught","causal","caution","cave","cease",
+            "celery","cement","census","center","cereal","certain","chain","chair","chalk","chamber","champion","chance",
+            "change","channel","chapter","charge","charity","charm","chase","cheap","check","cheese","cherry","chest",
+            "chicken","chief","child","choice","choose","chunk","church","circle","circus","citizen","civic","civil",
+            "clarity","classic","clause","claw","clay","clean","clear","clerk","clever","cliff","climb","cling",
+            "clinic","clock","clone","close","closet","cloth","cloud","clown","club","clue","clumsy","coach","coast",
+            "cobalt","coconut","code","coffee","cohort","coil","coin","collar","college","colonel","column","combine",
+            "comedy","comfort","command","comment","commit","common","company","compare","compete","complex","comply",
+            "concept","concern","conduct","confirm","conquer","consent","consist","consult","contact","contain","content",
+            "contest","context","control","convert","convince","cook","cooper","copper","copy","coral","corner","correct",
+            "corrode","cotton","cough","count","couple","courage","courier","course","court","cousin","cover","crack",
+            "cradle","craft","crane","crash","crate","crawl","crazy","cream","create","credit","creek","crew","cricket",
+            "crime","crisp","critic","crop","cross","crowd","crown","crucial","cruise","crunch","crush","crystal",
+            "cuckoo","culture","cupboard","curious","current","curtain","curve","cushion","custom","cute","cycle",
+            "cynical","daily","dairy","dance","danger","daring","dark","darling","dart","dash","data","date","dawn",
+            "daylight","dead","deadly","deaf","deal","dear","death","debate","debt","decade","decay","decent","decide",
+            "decision","deck","declare","decoy","decree","dedicate","deep","deeply","deer","default","defeat","defend",
+            "define","degree","delay","deliver","demand","demise","denial","density","depart","depend","depict","deploy",
+            "deposit","depot","depress","depth","deputy","derive","describe","desert","design","desire","desk","despair",
+            "despite","destiny","detail","detect","defend","device","devote","dialogue","diamond","diary","dictate",
+            "diesel","diet","differ","digest","dignity","dilemma","diligent","dilute","dim","dimension","dine","dinner",
+            "dioxide","diploma","direct","dirty","disable","disagree","discard","discern","disclose","discount","discover",
+            "disease","dismiss","display","dispute","distant","distinct","district","divide","divorce","dizzy","doctor",
+            "document","dollar","dolphin","domain","donate","donkey","donor","doom","door","dormant","dosage","double",
+            "doubt","dove","dozen","draft","dragon","drama","drastic","drawer","dream","dress","dribble","drift","drill",
+            "drink","drip","drive","driver","drop","drought","drown","drum","drunk","dryer","duck","due","duke","dull",
+            "dummy","dump","duplicate","durable","duration","during","dusk","dust","duty","dwarf","dynamic","eager",
+            "eagle","early","earn","earth","easily","eastern","easy","echo","eclipse","ecology","economy","edge","edition",
+            "editor","educate","effect","effort","elbow","elder","election","elegant","element","elephant","elevate",
+            "elite","elsewhere","embrace","emerge","emotion","emperor","emphasis","empire","employ","enable","enclose",
+            "encounter","encourage","endure","enemy","energy","enforce","engage","engine","enhance","enjoy","enormous",
+            "enough","enrich","ensure","enter","entire","entity","entrance","entry","envelope","episode","equal","equate",
+            "equip","equity","erase","erode","erosion","error","erupt","escape","essay","essence","estate","esteem",
+            "estimate","eternal","ethical","evade","evaluate","evening","event","eventual","ever","every","evident",
+            "evil","evolve","exact","examine","example","exceed","excel","except","excerpt","excess","exchange","excite",
+            "exclude","excuse","execute","exempt","exercise","exert","exhaust","exhibit","exile","exist","exit","expand",
+            "expect","expense","expert","explain","exploit","explore","export","expose","extend","extent","external",
+            "extract","extreme","fabric","face","facility","factor","factory","fade","fail","faint","fair","faith",
+            "fall","false","fame","familiar","family","famine","famous","fan","fancy","fantasy","farmer","fashion",
+            "fast","fatal","fate","father","fatigue","fault","favor","feather","feature","federal","feeble","feedback",
+            "fellow","female","fence","ferry","festival","fever","fiber","fiction","field","fierce","fifteen","fight",
+            "figure","filter","final","finance","finding","finger","finish","finite","fire","firm","fiscal","fisher",
+            "fitness","fixed","flame","flash","flat","flavor","flee","fleet","flesh","flexible","flight","flip","float",
+            "flock","flood","floor","floppy","flour","flow","flower","fluent","fluffy","fluid","flute","focus","foggy",
+            "fold","folklore","follow","fond","foolish","forbid","force","forecast","foreign","forest","forever","forget",
+            "formal","format","formula","fortune","forum","forward","fossil","foster","foundation","fountain","fox",
+            "fraction","fragile","frame","frank","fraud","free","freedom","freeze","french","frequent","fresh","friday",
+            "fridge","friend","frighten","frog","front","frost","frozen","fruit","frustrate","fuel","fulfill","full",
+            "fumble","fume","function","fund","funding","funeral","fungus","funny","furniture","further","fusion",
+            "future","gain","galaxy","gallery","gallon","gambit","gamble","game","gang","gap","garage","garbage",
+            "garden","garlic","garment","gaseous","gasoline","gasp","gate","gather","gauge","gaze","gear","gender",
+            "general","genesis","genetic","genius","gentle","genuine","gesture","giant","gift","gigantic","giggle",
+            "ginger","giraffe","girl","given","glad","glance","glare","glass","glide","glimpse","globe","gloom","glory",
+            "glove","glow","glucose","glue","goal","golden","golf","good","goose","gorgeous","gossip","govern","gown",
+            "grab","grace","grade","gradual","grain","grand","grant","grape","graph","grasp","grass","grateful","grave",
+            "gravity","great","green","greet","grid","grief","grill","grin","grind","grip","grocery","group","grove",
+            "growth","guarantee","guard","guess","guest","guide","guild","guilty","guitar","gulf","gun","gut","gym",
+            "habit","habitat","hail","hair","half","hall","halt","hammer","handful","handle","handsome","happen",
+            "harbor","harden","hardly","hardware","harm","harmony","harness","harvest","haste","hatch","hate","haunt",
+            "haven","havoc","hawk","hazard","headline","heal","health","hearing","heart","heaven","heavy","hedge",
+            "height","helmet","help","hemisphere","hen","herald","herb","heritage","hero","hesitate","hide","high",
+            "highlight","highway","hill","hinder","hint","hip","hire","historian","history","hobby","hockey","hold",
+            "hollow","holy","home","honest","honey","honor","hook","hope","horizon","horror","horse","hospital","host",
+            "hotel","hour","hover","hub","human","humble","humidity","humor","hundred","hunger","hunt","hurdle","hurricane",
+            "hurry","hurt","husband","hybrid","icon","idea","ideal","identify","idle","ignite","ignore","illegal","illness",
+            "image","imagine","imitate","immense","immune","impact","import","impose","impress","improve","impulse",
+            "income","increase","indeed","index","indicate","indoor","industry","infant","infect","infer","infinite",
+            "influence","inform","initial","inject","injury","inline","inner","input","inquiry","insect","insert","inside",
+            "insist","inspect","install","instant","instead","instinct","insult","intact","integrate","intend","intense",
+            "intent","interest","internal","internet","interval","intimate","invade","invent","invest","invite","involve",
+            "ion","iron","island","isolate","issue","item","ivory","jacket","jaguar","jam","jazz","jealous","jeans",
+            "jelly","jewel","join","joke","journal","journey","joy","judge","juice","july","jump","jungle","junior",
+            "junk","jury","justice","justify","kangaroo","keen","keep","kennel","kernel","kettle","key","keyboard",
+            "kick","kid","kidney","kind","kingdom","kiss","kitchen","kite","kitten","knee","knife","knock","knot","know",
+            "knowledge","label","labor","lace","lack","ladder","lady","lagoon","lake","lamp","land","landscape","language",
+            "lantern","lap","large","laser","last","latch","late","later","latest","latitude","latter","laugh","launch",
+            "laundry","lavender","law","lawn","lawsuit","layer","layout","lazy","lead","leader","leaf","league","leak",
+            "lean","leap","learn","lease","leather","leave","lecture","ledge","leek","legacy","legal","legend","leisure",
+            "lemon","lend","length","lens","leopard","lesson","letter","level","lever","liable","liberty","library",
+            "license","lid","life","lift","light","like","likely","limit","line","linear","linen","liner","linger",
+            "link","lion","lip","liquid","list","listen","liter","literal","literary","litter","little","live","lively",
+            "liver","living","load","loaf","loan","lobby","local","locate","lock","lodge","lofty","log","logic","login",
+            "lonely","long","look","loop","loose","loot","lord","lose","loss","lost","lottery","loud","love","lovely",
+            "lover","low","lower","loyal","lucid","luck","lucky","luggage","lumber","luminous","lump","lunch","lung",
+            "luxury","lyric","machine","madam","magazine","magic","magnet","magnificent","maid","mailbox","main","mainly",
+            "maintain","major","makeup","male","mall","mammal","manage","manner","mansion","manual","maple","marathon",
+            "marble","march","margin","marine","mark","market","marriage","marvel","mask","massive","master","match",
+            "material","matter","mature","maximum","maybe","mayor","meadow","meal","mean","measure","meat","mechanic",
+            "medal","media","medical","medium","meeting","melody","member","memory","mention","mentor","menu","merchant",
+            "mercy","merely","merge","merit","merry","mesh","message","metal","method","midnight","midst","migrant",
+            "mild","military","million","mind","mineral","minimum","mining","minister","minor","minute","miracle","mirror",
+            "miserable","missile","mission","mistake","mix","mixture","mobile","model","modem","modern","modest","module",
+            "moist","molecule","moment","momentum","monarch","money","monitor","monkey","monster","month","monument",
+            "mood","moon","moral","more","morning","mortal","mortgage","mosaic","mosquito","most","motion","motivate",
+            "motor","motto","mountain","mouse","mouth","move","movie","mud","muffin","multiply","municipal","murder",
+            "muscle","museum","mushroom","music","mutual","mystery","myth","nail","naked","name","narrow","nation",
+            "native","natural","nature","naughty","naval","near","neat","necessary","neck","needle","negative","neighbor",
+            "neither","nervous","nest","network","neutral","never","newly","newsletter","next","nice","niche","night",
+            "noble","nobody","noise","nominate","none","nonsense","noon","normal","north","nose","notable","note","nothing",
+            "notice","notion","novel","nowhere","nuclear","number","numerous","nurse","nut","oak","object","observe",
+            "obtain","obvious","occasion","occupy","ocean","October","odd","offend","offer","office","officer","official",
+            "often","oil","old","olive","olympic","omit","once","onion","online","only","open","opera","operate","opinion",
+            "oppose","option","orange","orbit","orchard","orchestra","order","ordinary","organ","orient","origin","ornament",
+            "other","outcome","outdoor","outer","output","outside","oval","oven","overall","overcome","overflow","overseas",
+            "owe","own","owner","oxygen","ozone","pace","pack","package","packet","page","pain","paint","pair","palace",
+            "pale","palm","panel","panic","panther","paper","parade","parent","parish","park","parrot","parsel","parson",
+            "part","particle","particular","partly","partner","party","passage","passenger","passion","passive","passport",
+            "password","past","paste","pastor","patch","patent","path","patience","patient","patrol","patron","pattern",
+            "pause","pavement","pawn","payment","peace","peak","pearl","peculiar","pedestal","pedestrian","peel","peer",
+            "penalty","pencil","pendulum","penetrate","penny","people","perceive","perfect","perform","perfume","perhaps",
+            "period","permanent","permit","person","persuade","phase","phenomenon","philosophy","phone","photo","phrase",
+            "physical","piano","pick","picture","piece","pier","pile","pilot","pine","pink","pioneer","pipeline","pirate",
+            "pitch","pizza","place","plain","plan","planet","plant","plastic","plate","platform","play","player","please",
+            "pledge","plenty","plot","plug","plunge","plus","pocket","poem","poet","poetry","point","polar","pole",
+            "police","policy","polite","pollen","pond","pool","poor","popcorn","popular","population","porch","port",
+            "portion","portrait","position","positive","possess","possible","post","poster","potato","potential","pound",
+            "pour","poverty","powder","power","practice","praise","pray","preach","precise","predict","prefer","premium",
+            "prepare","prescribe","present","preserve","press","pressure","prestige","presume","pretend","pretty","prevail",
+            "prevent","previous","price","pride","primary","prime","prince","princess","principal","principle","print",
+            "prior","priority","prison","privacy","private","privilege","prize","probably","problem","procedure","proceed",
+            "process","produce","product","profession","profit","program","progress","project","promise","promote","prompt",
+            "proof","proper","property","proposal","propose","prospect","protect","protein","protest","proud","prove",
+            "provide","province","provision","provoke","prune","public","pull","pulse","pump","punch","punctual","punish",
+            "pupil","puppet","purchase","pure","purpose","pursue","puzzle","pyramid","qualify","quality","quantity",
+            "quartz","queen","quest","question","quick","quiet","quilt","quit","quite","quiz","quote","rabbit","race",
+            "racial","rack","radar","radical","radio","rage","raid","rail","rain","raise","rally","ramp","random","range",
+            "rank","rapid","rare","rate","rather","rating","ratio","rational","raw","reach","react","read","ready",
+            "real","realistic","reality","realize","really","realm","reap","rear","reason","rebel","recall","receipt",
+            "receive","recent","recipe","reckon","recognize","recommend","record","recover","recruit","rectify","recycle",
+            "reduce","refer","reflect","reform","refuge","refuse","regain","regard","regime","region","register","regret",
+            "regular","reject","relate","relax","release","relent","reliable","relief","religion","relish","reluctant",
+            "remain","remark","remedy","remember","remind","remote","remove","render","renew","rent","repair","repeat",
+            "replace","report","represent","reproduce","republic","reputation","request","require","rescue","research",
+            "resemble","reserve","reside","resign","resist","resolve","resort","resource","respond","rest","restore",
+            "restrict","result","resume","retail","retain","retire","retreat","return","reveal","revenge","review",
+            "revolt","reward","rhythm","ribbon","rice","rich","riddle","ride","ridge","rifle","right","rigid","ring",
+            "riot","rip","ripe","rise","risk","ritual","rival","river","road","roar","roast","robbery","robe","robin",
+            "robot","robust","rocket","rod","role","roll","romance","roof","room","root","rope","rose","rotate","rough",
+            "round","route","routine","row","royal","rubber","rude","rug","rugby","ruin","rule","ruler","rumor","run",
+            "rural","rush","rust","sabotage","sack","sacred","sacrifice","saddle","sad","safe","safety","sail","saint",
+            "salad","salary","sale","salmon","salon","salute","sample","sanction","sanctuary","sand","sandal","sandwich",
+            "satellite","satisfy","sauce","saver","savings","scale","scan","scandal","scarce","scatter","scene","schedule",
+            "scheme","scholar","school","science","scissors","scope","score","scout","scramble","scratch","scream",
+            "screen","script","scroll","scrub","sculpture","seal","search","season","seat","second","secret","section",
+            "secure","seed","seek","segment","select","self","seller","senate","send","senior","sense","sensitive",
+            "sentence","separate","sequence","series","serious","serve","service","session","settle","setup","severe",
+            "shade","shadow","shaft","shake","shall","shallow","shame","shape","share","shark","sharp","shatter","shave",
+            "shed","sheep","sheer","sheet","shelf","shell","shelter","shield","shift","shine","ship","shirt","shock",
+            "shoe","shoot","shop","shore","short","shot","shoulder","shout","shove","show","shower","shrimp","shrink",
+            "shrug","shutter","shuttle","sibling","sick","side","siege","sight","sign","signal","silence","silicon",
+            "silk","silly","silver","similar","simple","simply","simulate","since","sincere","sing","single","sink",
+            "sister","site","situate","sixth","size","skate","sketch","ski","skill","skirt","skull","slab","slave",
+            "sleep","slice","slide","slip","slogan","slope","slow","small","smart","smell","smile","smoke","smooth",
+            "snack","snake","snap","sniff","snow","soak","soap","social","society","socket","soda","soft","software",
+            "soil","solar","soldier","sole","solid","solution","solve","some","sonic","soothe","sophisticated","sorry",
+            "sort","soul","sound","source","south","sovereign","space","spade","span","spare","spark","speak","special",
+            "species","specific","speech","speed","spell","spend","sphere","spice","spider","spin","spine","spirit",
+            "spite","splash","split","spoil","sponsor","spoon","sport","spot","spray","spread","spring","sprout","square",
+            "squeeze","stable","stadium","staff","stage","stain","stair","stake","stale","stamp","stance","stand","star",
+            "stare","start","starve","state","static","station","statue","status","stay","steady","steal","steam","steel",
+            "steep","steer","stem","step","stereo","stern","stick","stiff","still","sting","stir","stock","stomach",
+            "stone","stool","stop","storage","store","storm","story","stove","straight","strain","strange","strategy",
+            "stream","street","strength","stress","stretch","strict","stride","strike","string","strip","stroke","strong",
+            "structure","struggle","student","studio","study","stuff","stumble","style","subject","submit","substance",
+            "subtle","suburb","subway","succeed","success","such","suck","sudden","suffer","sufficient","sugar","suggest",
+            "suite","sulfur","sum","summer","summit","sunny","sunset","super","superior","supply","support","suppose",
+            "supreme","sure","surface","surgery","surplus","surprise","surrender","surround","survey","survive","suspect",
+            "suspend","sustain","swallow","swamp","swan","swap","swear","sweat","sweep","sweet","swell","swift","swim",
+            "swing","switch","sword","symbol","sympathy","symptom","syndrome","system","table","tablet","tackle","tactics",
+            "tag","tail","tale","talent","talk","tank","tap","tape","target","task","taste","tax","taxi","teach","team",
+            "tear","teaspoon","technical","technique","technology","tedious","teenager","telescope","temperature","temple",
+            "temporary","tempt","tender","tennis","tense","tension","tent","term","terminal","terrace","terrible","terrific",
+            "territory","terror","test","text","texture","thank","theater","theme","theory","therapy","thermal","thesis",
+            "thick","thief","thin","thing","think","third","thirst","thorn","thorough","thought","thread","threat","three",
+            "thrill","throat","throne","through","throw","thumb","thunder","ticket","tide","tidy","tiger","tight","tile",
+            "till","timber","time","timing","tiny","tip","tire","tissue","title","toast","tobacco","today","together",
+            "toilet","token","tolerance","tomato","tomorrow","tone","tongue","tonight","tool","tooth","top","topic",
+            "torch","tornado","torture","toss","total","touch","tough","tour","tourist","toward","tower","town","toxic",
+            "toy","trace","track","tractor","trade","tradition","traffic","tragedy","trail","train","trait","tram",
+            "transfer","transform","transit","translate","transport","trap","trash","travel","tray","treasure","treat",
+            "treaty","tree","tremble","trend","trial","tribe","trick","trigger","trim","trip","triumph","troop","trophy",
+            "tropical","trouble","truck","true","truly","trumpet","trust","truth","try","tube","tuck","tuesday","tuition",
+            "tumble","tune","tunnel","turkey","turn","turtle","tutor","twin","twist","type","typical","ugly","umbrella",
+            "unable","unaware","uncle","uncover","under","undergo","understand","undo","unfair","unfold","unhappy","uniform",
+            "unique","unit","unite","unity","universal","universe","unknown","unleash","unlike","unlock","unusual","unveil",
+            "update","upgrade","uphold","upper","upset","upward","urban","urge","urgent","usage","use","useful","useless",
+            "user","usual","utility","vacant","vacation","vacuum","vague","valid","valley","valuable","value","valve",
+            "van","vanish","vapor","variable","variation","variety","various","vary","vast","vault","vector","vehicle",
+            "veil","vein","velocity","velvet","vendor","venture","venue","verb","verify","version","vertical","vessel",
+            "veteran","viable","vibrant","vibration","vice","victim","victory","video","view","village","vintage","violate",
+            "violence","violet","violin","virtual","virtue","virus","visible","vision","visit","visual","vital","vivid",
+            "vocal","voice","void","volcano","volume","volunteer","vortex","vote","voyage","vulnerable","wagon","wake",
+            "walk","wall","wallet","wander","want","war","warm","warn","warrant","warrior","wash","waste","watch","water",
+            "wave","wax","way","weak","wealth","weapon","wear","weasel","weather","weave","web","wedding","week","weekend",
+            "weight","weird","welcome","welfare","well","western","wet","whale","wheat","wheel","when","where","whether",
+            "which","while","whip","whisper","white","whole","wicked","wide","width","wife","wild","will","willing","win",
+            "wind","window","wine","wing","winner","winter","wipe","wire","wisdom","wise","wish","witness","wolf","woman",
+            "wonder","wood","wool","word","work","worker","workshop","world","worm","worry","worse","worst","worth",
+            "worthy","wound","wrap","wreck","wrist","write","writer","wrong","yard","year","yell","yellow","yield",
+            "young","youth","zebra","zero","zone","zoo"
+        ];
+        const WORD_COUNT = WORD_LIST.length;
+
+        // ===================== STATE =====================
+        let currentMode = 'password';
+        let currentPassword = '';
+
+        // ===================== PASSWORD GENERATION =====================
+        function getCharPool() {
+            let chars = '';
+            const sets = {};
+            if (document.getElementById('opt-upper').checked) { chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; sets.upper = true; }
+            if (document.getElementById('opt-lower').checked) { chars += 'abcdefghijklmnopqrstuvwxyz'; sets.lower = true; }
+            if (document.getElementById('opt-number').checked) { chars += '0123456789'; sets.number = true; }
+            if (document.getElementById('opt-symbol').checked) { chars += '!@#$%^&*()_+-=[]{}|;:,.<>?'; sets.symbol = true; }
+
+            if (document.getElementById('opt-exclude-similar').checked) {
+                chars = chars.replace(/[O0Il]/g, '');
+            }
+
+            return { chars, sets };
+        }
+
+        function generatePassword() {
+            const length = parseInt(document.getElementById('pw-length').value);
+            const pool = getCharPool();
+
+            if (pool.chars.length === 0) {
+                currentPassword = '';
+                updateDisplay('');
+                return;
+            }
+
+            let password = '';
+            const noRepeat = document.getElementById('opt-no-repeat').checked;
+            const firstLetter = document.getElementById('opt-first-letter').checked;
+            const maxAttempts = 1000;
+            let attempts = 0;
+
+            while (password.length < length && attempts < maxAttempts) {
+                attempts++;
+                let char = pool.chars[Math.floor(Math.random() * pool.chars.length)];
+
+                if (noRepeat && password.includes(char)) continue;
+
+                if (firstLetter && password.length === 0 && !/[a-zA-Z]/.test(char)) {
+                    const letters = pool.chars.match(/[a-zA-Z]/g);
+                    if (letters) char = letters[Math.floor(Math.random() * letters.length)];
+                    else continue;
+                }
+
+                password += char;
+            }
+
+            currentPassword = password;
+            updateDisplay(password);
+            updateCharacterPool(pool);
+        }
+
+        function generatePassphrase() {
+            const numWords = parseInt(document.getElementById('pw-words').value);
+            const separator = document.getElementById('phrase-separator').value;
+            const capitalize = document.getElementById('opt-capitalize').checked;
+            const appendNumber = document.getElementById('opt-append-number').checked;
+
+            let used = new Set();
+            let words = [];
+            for (let i = 0; i < numWords; i++) {
+                let idx;
+                do { idx = Math.floor(Math.random() * WORD_COUNT); } while (used.has(idx) && used.size < WORD_COUNT);
+                used.add(idx);
+                let word = WORD_LIST[idx];
+                if (capitalize) word = word.charAt(0).toUpperCase() + word.slice(1);
+                words.push(word);
+            }
+
+            let phrase = words.join(separator);
+            if (appendNumber) phrase += Math.floor(Math.random() * 100);
+
+            currentPassword = phrase;
+
+            // For passphrase, pool size = word count, length = num words
+            const poolInfo = { chars: `Word List (${WORD_COUNT} words)`, sets: { passphrase: true } };
+            updateDisplay(phrase);
+            updateCharacterPool(poolInfo, true, numWords);
+        }
+
+        function generate() {
+            if (currentMode === 'password') generatePassword();
+            else if (currentMode === 'passphrase') generatePassphrase();
+            updateQRCode(currentPassword);
+        }
+
+        // ===================== STRENGTH & ENTROPY =====================
+        function calculateEntropy(password) {
+            let poolSize = 0;
+            if (/[A-Z]/.test(password)) poolSize += 26;
+            if (/[a-z]/.test(password)) poolSize += 26;
+            if (/[0-9]/.test(password)) poolSize += 10;
+            if (/[^a-zA-Z0-9]/.test(password)) poolSize += 32;
+
+            if (poolSize === 0) return 0;
+            return Math.round(password.length * Math.log2(poolSize) * 10) / 10;
+        }
+
+        function getStrength(entropy) {
+            if (entropy < 30) return { label: 'Weak', color: '#EF4444', pct: 10 };
+            if (entropy < 50) return { label: 'Fair', color: '#F59E0B', pct: 30 };
+            if (entropy < 70) return { label: 'Good', color: '#3B82F6', pct: 55 };
+            if (entropy < 90) return { label: 'Strong', color: '#10B981', pct: 78 };
+            return { label: 'Very Strong', color: '#8B5CF6', pct: 100 };
+        }
+
+        function getCrackTime(entropy) {
+            if (entropy <= 0) return '--';
+            // Offline attack: 1 billion guesses/sec (GPU)
+            const guesses = Math.pow(2, entropy);
+            const perSec = 1_000_000_000;
+            const seconds = guesses / (2 * perSec); // average case
+
+            if (seconds < 1) return '即時破解';
+            if (seconds < 60) return Math.round(seconds) + ' 秒';
+            if (seconds < 3600) return Math.round(seconds / 60) + ' 分鐘';
+            if (seconds < 86400) return Math.round(seconds / 3600) + ' 小時';
+            if (seconds < 31536000) return Math.round(seconds / 86400) + ' 天';
+            if (seconds < 315360000) return Math.round(seconds / 31536000) + ' 年';
+            if (seconds < 3.1536e12) return Math.round(seconds / 31536000) + ' 年';
+            return '數百萬年';
+        }
+
+        // ===================== ANALYSIS =====================
+        function analyzePassword(pw) {
+            if (!pw) return;
+
+            const blank = document.getElementById('analyze-blank');
+            const results = document.getElementById('analyze-results');
+            blank.classList.add('hidden');
+            results.classList.remove('hidden');
+
+            const hasUpper = /[A-Z]/.test(pw);
+            const hasLower = /[a-z]/.test(pw);
+            const hasNumber = /[0-9]/.test(pw);
+            const hasSymbol = /[^a-zA-Z0-9]/.test(pw);
+            const len = pw.length;
+            const hasRepeat = /(.)\1{2,}/.test(pw);
+            const hasSequence = /(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(pw);
+
+            const entropy = calculateEntropy(pw);
+            const strength = getStrength(entropy);
+
+            const icons = {
+                yes: '<span class="text-green-400">✓</span>',
+                no: '<span class="text-red-400">✗</span>'
+            };
+
+            results.innerHTML = `
+                <div class="flex items-center justify-between py-2 px-3 bg-slate-800/40 rounded-lg border border-hub-700">
+                    <span class="text-sm text-slate-400">熵值 (Entropy)</span>
+                    <span class="text-lg font-bold font-mono" style="color:${strength.color}">${entropy} bits</span>
+                </div>
+                <div class="flex items-center justify-between py-2 px-3 bg-slate-800/40 rounded-lg border border-hub-700">
+                    <span class="text-sm text-slate-400">強度評級</span>
+                    <span class="text-sm font-bold" style="color:${strength.color}">${strength.label}</span>
+                </div>
+                <div class="bg-slate-800/20 rounded-lg border border-hub-700/50 p-3">
+                    <div class="analysis-row"><span class="text-slate-500">大寫字母</span>${hasUpper ? icons.yes + ' 存在' : icons.no + ' 缺少'}</div>
+                    <div class="analysis-row"><span class="text-slate-500">小寫字母</span>${hasLower ? icons.yes + ' 存在' : icons.no + ' 缺少'}</div>
+                    <div class="analysis-row"><span class="text-slate-500">數字</span>${hasNumber ? icons.yes + ' 存在' : icons.no + ' 缺少'}</div>
+                    <div class="analysis-row"><span class="text-slate-500">符號</span>${hasSymbol ? icons.yes + ' 存在' : icons.no + ' 缺少'}</div>
+                    <div class="analysis-row"><span class="text-slate-500">長度 ${len}</span>${len >= 12 ? icons.yes + ' 足夠' : len >= 8 ? icons.yes + ' 尚可' : icons.no + ' 過短'}</div>
+                    <div class="analysis-row"><span class="text-slate-500">重複字元</span>${hasRepeat ? icons.no + ' 存在連續重複' : icons.yes + ' 無重複'}</div>
+                    <div class="analysis-row"><span class="text-slate-500">連續字元</span>${hasSequence ? icons.no + ' 存在連續序列' : icons.yes + ' 無連續序列'}</div>
+                </div>
+            `;
+        }
+
+        // ===================== CHARACTER POOL =====================
+        function updateCharacterPool(pool, isPassphrase, numWords) {
+            const upper = document.getElementById('pool-upper');
+            const lower = document.getElementById('pool-lower');
+            const number = document.getElementById('pool-number');
+            const symbol = document.getElementById('pool-symbol');
+
+            if (isPassphrase) {
+                upper.className = 'char-pool-item active';
+                upper.innerHTML = `📖 Word List (${WORD_COUNT.toLocaleString()} words)`;
+                lower.className = 'char-pool-item inactive';
+                lower.textContent = 'a-z';
+                number.className = 'char-pool-item inactive';
+                number.textContent = '0-9';
+                symbol.className = 'char-pool-item inactive';
+                symbol.textContent = '!@#$%';
+
+                document.getElementById('pool-total').textContent = `${WORD_COUNT.toLocaleString()} words`;
+                const entropy = Math.round(numWords * Math.log2(WORD_COUNT) * 10) / 10;
+                document.getElementById('pool-entropy').textContent = `${entropy} bits`;
+                return;
+            }
+
+            const sets = pool.sets;
+            upper.className = 'char-pool-item' + (sets.upper ? ' active' : ' inactive');
+            upper.textContent = 'A-Z';
+            lower.className = 'char-pool-item' + (sets.lower ? ' active' : ' inactive');
+            lower.textContent = 'a-z';
+            number.className = 'char-pool-item' + (sets.number ? ' active' : ' inactive');
+            number.textContent = '0-9';
+            symbol.className = 'char-pool-item' + (sets.symbol ? ' active' : ' inactive');
+            symbol.textContent = '!@#$%';
+
+            document.getElementById('pool-total').textContent = `${pool.chars.length} characters`;
+            const len = parseInt(document.getElementById('pw-length').value);
+            const entropy = len > 0 && pool.chars.length > 0 ? Math.round(len * Math.log2(pool.chars.length) * 10) / 10 : 0;
+            document.getElementById('pool-entropy').textContent = `${entropy} bits`;
+        }
+
+        // ===================== UPDATE DISPLAY =====================
+        function updateDisplay(password) {
+            const display = document.getElementById('password-display');
+            display.textContent = password || 'Click Generate';
+
+            const entropy = calculateEntropy(password);
+            const strength = getStrength(entropy);
+            const crackTime = getCrackTime(entropy);
+
+            // Strength bar
+            document.getElementById('strength-bar-fill').style.width = strength.pct + '%';
+            document.getElementById('strength-bar-fill').style.background = strength.color;
+            document.getElementById('strength-label').textContent = strength.label;
+            document.getElementById('strength-label').style.color = strength.color;
+            document.getElementById('strength-score').textContent = entropy + ' bits';
+            document.getElementById('crack-time').textContent = crackTime;
+
+            // Analysis
+            updateAnalysis(password);
+        }
+
+        function updateAnalysis(password) {
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSymbol = /[^a-zA-Z0-9]/.test(password);
+            const hasRepeat = /(.)\1{2,}/.test(password);
+            const hasSequence = /(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(password);
+
+            const ok = (cond) => cond ? '<span class="text-green-400">✓</span>' : '<span class="text-red-400">✗</span>';
+
+            document.getElementById('ana-upper').innerHTML = ok(hasUpper);
+            document.getElementById('ana-lower').innerHTML = ok(hasLower);
+            document.getElementById('ana-number').innerHTML = ok(hasNumber);
+            document.getElementById('ana-symbol').innerHTML = ok(hasSymbol);
+            document.getElementById('ana-length').innerHTML = `${password.length} 字元 ${password.length >= 12 ? '✓' : password.length >= 8 ? '⚠️' : '✗'}`;
+            document.getElementById('ana-repeat').innerHTML = hasRepeat ? '<span class="text-red-400">有重複</span>' : '<span class="text-green-400">無重複</span>';
+            document.getElementById('ana-sequence').innerHTML = hasSequence ? '<span class="text-red-400">有連續</span>' : '<span class="text-green-400">無連續</span>';
+        }
+
+        // ===================== QR CODE =====================
+        function updateQRCode(text) {
+            const canvas = document.getElementById('qrcode-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!text || typeof qrcode === 'undefined') return;
+            try {
+                const qr = qrcode(0, 'M');
+                qr.addData(text);
+                qr.make();
+                const moduleCount = qr.getModuleCount();
+                const cellSize = 3;
+                const margin = 4;
+                const size = moduleCount * cellSize + margin * 2;
+                canvas.width = size;
+                canvas.height = size;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, size, size);
+                ctx.fillStyle = '#000033';
+                for (let row = 0; row < moduleCount; row++) {
+                    for (let col = 0; col < moduleCount; col++) {
+                        if (qr.isDark(row, col)) {
+                            ctx.fillRect(col * cellSize + margin, row * cellSize + margin, cellSize, cellSize);
+                        }
+                    }
+                }
+            } catch(e) {
+                console.log('QR generation failed:', e);
+            }
+        }
+
+        function downloadQR() {
+            const canvas = document.getElementById('qrcode-canvas');
+            if (!canvas) return;
+            const url = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = url; a.download = 'password-qr.png';
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            showToast('QR Code 已下載');
+        }
+
+        // ===================== EXPORT =====================
+        function copyPassword() {
+            if (!currentPassword) { showToast('尚無密碼可複製', true); return; }
+            copyToClipboard(currentPassword);
+        }
+
+        function downloadTXT() {
+            if (!currentPassword) { showToast('尚無密碼可下載', true); return; }
+            const entropy = calculateEntropy(currentPassword);
+            const strength = getStrength(entropy);
+            const lines = [
+                '═══════════════════════════════════════',
+                '  Password Generator Report',
+                '  ToolHub - Password Generator & Strength Checker',
+                '═══════════════════════════════════════',
+                '',
+                `Password: ${currentPassword}`,
+                `Length:   ${currentPassword.length}`,
+                `Entropy:  ${entropy} bits`,
+                `Strength: ${strength.label}`,
+                `Crack Time: ${getCrackTime(entropy)}`,
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/password-generator)`,
+                `Timestamp: ${new Date().toISOString()}`,
+                '───────────────────────────────────────'
+            ].join('\n');
+            downloadFile(lines, 'password-report.txt', 'text/plain');
+            showToast('TXT 已下載');
+        }
+
+        // ===================== MODE SWITCHING =====================
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            document.getElementById('mode-password').classList.toggle('hidden', mode !== 'password');
+            document.getElementById('mode-passphrase').classList.toggle('hidden', mode !== 'passphrase');
+            document.getElementById('mode-analyze').classList.toggle('hidden', mode !== 'analyze');
+
+            const btnText = document.getElementById('generate-btn-text');
+            if (mode === 'password') btnText.textContent = '產生密碼';
+            else if (mode === 'passphrase') btnText.textContent = '產生 Passphrase';
+            else btnText.textContent = '分析密碼';
+
+            generate();
+        }
+
+        // ===================== UTILITIES =====================
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast'), ic = document.getElementById('toast-icon'), m = document.getElementById('toast-message');
+            ic.textContent = isError ? '❌' : '✅'; m.textContent = msg;
+            t.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            t.classList.add('opacity-100', 'pointer-events-auto');
+            clearTimeout(t._timeout);
+            t._timeout = setTimeout(() => { t.classList.remove('opacity-100', 'pointer-events-auto'); t.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); }, 2500);
+        }
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => fallbackCopy(text));
+            else fallbackCopy(text);
+        }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showToast('已複製到剪貼簿'); } catch (e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        // ===================== INIT =====================
+        function initApp() {
+            generate();
+        }
+
+        window.switchMode = switchMode;
+        window.generate = generate;
+        window.generatePassword = generatePassword;
+        window.generatePassphrase = generatePassphrase;
+        window.copyPassword = copyPassword;
+        window.downloadTXT = downloadTXT;
+        window.downloadQR = downloadQR;
+        window.analyzePassword = analyzePassword;
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

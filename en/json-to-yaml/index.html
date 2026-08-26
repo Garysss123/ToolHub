@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JSON to YAML | Free Online Tool - ToolHub</title>
+<meta content="Quickly convert JSON data into standard YAML format. Supports configuration file conversion for Docker Compose, Kubernetes, GitHub Actions, Ansible, etc. Built-in JSON verification engine accurately marks the location of syntax errors." name="description"/>
+<meta content="JSON轉YAML, JSON to YAML, JSON轉換器, YAML產生器, Docker Compose, Kubernetes YAML, GitHub Actions, 資料格式轉換, 線上轉換工具" name="keywords"/>
+<meta content="ToolHub" name="author"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<!-- YAML 轉換引擎 (js-yaml) -->
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #7C3AED; }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
+        }
+
+        .editor-textarea::placeholder {
+            color: #475569;
+        }
+
+        /* YAML 輸出區域 */
+        .yaml-output {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.8rem;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        /* JSON 錯誤行標示 */
+        .error-marker {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #EF4444;
+        }
+
+        /* 驗證狀態指示 */
+        .status-valid { color: #34D399; }
+        .status-invalid { color: #EF4444; }
+        .status-idle { color: #64748b; }
+
+        .radio-group label {
+            transition: all 0.15s ease;
+        }
+        .radio-group input[type="radio"]:checked + span {
+            color: #7C3AED;
+        }
+        .option-checkbox {
+            accent-color: #7C3AED;
+        }
+
+        /* 錯誤詳情面板 */
+        .error-detail {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-family: '"Fira Code"', monospace;
+        }
+
+        /* FAQ 手風琴 */
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .faq-content.open {
+            max-height: 600px;
+        }
+        .faq-chevron {
+            transition: transform 0.3s ease;
+        }
+        .faq-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        @media (max-width: 767px) {
+            .editor-textarea { min-height: 380px; font-size: 0.8rem; }
+            .yaml-output { min-height: 380px; font-size: 0.75rem; }
+            .flex-grow.relative { min-height: 380px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .flex-grow.relative { min-height: 400px; }
+            .editor-textarea { min-height: 400px; }
+            .yaml-output { min-height: 400px; }
+        }
+        @media (min-width: 1024px) {
+            .flex-grow.relative { min-height: 600px; }
+            .editor-textarea { min-height: 600px; }
+            .yaml-output { min-height: 600px; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/json-to-yaml/" property="og:url"/>
+<meta content="JSON to YAML | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Quickly convert JSON data into standard YAML format. Supports configuration file conversion for Docker Compose, Kubernetes, GitHub Actions, Ansible, etc. Built-in JSON verification engine accurately marks the location of syntax errors." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="JSON to YAML | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Quickly convert JSON data into standard YAML format. Supports configuration file conversion for Docker Compose, Kubernetes, GitHub Actions, Ansible, etc. Built-in JSON verification engine accurately marks the location of syntax errors." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"JSON to YAML Converter","url":"https://toolhuben.com/en/json-to-yaml/","description":"Quickly convert JSON data into standard YAML format. Supports configuration file conversion for Docker Compose, Kubernetes, GitHub Actions, Ansible, etc. Built-in JSON verification engine accurately marks the location of syntax errors.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"JSON to YAML Converter","item":"https://toolhuben.com/en/json-to-yaml/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/json-to-yaml/" rel="canonical"/><link href="https://toolhuben.com/json-to-yaml/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/json-to-yaml/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/json-to-yaml/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","JSON 語法錯誤":"JSON syntax error","JSON 已格式化":"JSON formatted","[System Error] 模組":"[System Error] Module","⚠️ 轉換錯誤：":"⚠️Conversion error:","⚠️ YAML 解析器未載入，請重新整理頁面。":"⚠️ The YAML parser is not loaded, please refresh the page.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清空全部內容":"All content has been cleared","已載入範例 JSON":"Sample JSON loaded","建立理念":"Our Founding Idea","建議":"Recommendation","待輸入":"To be entered","格式化失敗":"Format failed","沒有內容可格式化":"No content to format","沒有可以下載的內容":"There is nothing to download","沒有可以複製的內容":"Nothing to copy","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","第":"No.","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","行":"OK","行末尾有多餘逗號，JSON 不允許最後一個屬性後有逗號。":"There is an extra comma at the end of the line, JSON does not allow commas after the last attribute.","載入失敗:":"Loading failed:","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","JSON 有錯誤，無法格式化":"JSON has errors and cannot be formatted","JSON 語法不正確，請確認 Key 使用雙引號且格式正確。":"The JSON syntax is incorrect, please make sure the Key uses double quotes and is in the correct format.","YAML 已複製到剪貼簿":"YAML copied to clipboard","出現非預期的逗號，請檢查逗號位置是否正確。":"An unexpected comma appears. Please check whether the comma position is correct.","字串中含有無效的控制字符或錯誤的跳脫序列。":"The string contains invalid control characters or incorrect escape sequences.","已載入範例，立即體驗 JSON 轉 YAML！":"The sample has been loaded, try converting JSON to YAML now!","數字格式不正確（如前導零、多餘小數點等）。":"Number format is incorrect (e.g. leading zeros, extra decimal points, etc.).","檔案已下載":"File downloaded","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","缺少閉合方括號 ]，請檢查陣列結構是否完整。":"The closing square bracket is missing], please check whether the array structure is complete.","缺少閉合花括號 }，請檢查物件結構是否完整。":"The closing curly brace } is missing, please check whether the object structure is complete.","行在陣列/物件末尾有多餘逗號。":"Row has extra comma at end of array/object.","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="split" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#7C3AED;--classic-accent-rgb:124,58,237">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 核心模塊：JSON to YAML Converter -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Hero -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-jy">
+<span class="flex w-2 h-2 bg-hub-jy rounded-full animate-pulse mr-2"></span>
+                Format conversion engine is ready
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                JSON <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-jy to-violet-300">to YAML</span> Converter
+            </h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                Convert JSON data to standard YAML format on the fly. Built-in JSON verification engine to accurately locate syntax errors. Supports Pretty Output, Minify, and indentation settings. Works with Docker, Kubernetes, CI/CD and DevOps workflows.
+            </p>
+</div>
+<!-- 主控台 -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+<!-- 工具列 -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-hub-900/80 border-b border-hub-700 p-3 sm:p-4 gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-sample">
+<i class="ph ph-lightbulb text-base"></i> Example
+                    </button>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-red-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-clear">
+<i class="ph ph-trash text-base"></i> Clear
+                    </button>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 hover:text-hub-jy font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-format">
+<i class="ph ph-magic-wand text-base"></i> Format
+                    </button>
+</div>
+<div class="flex flex-wrap items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-hub-700 pt-3 sm:pt-0">
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-copy">
+<i class="ph ph-copy text-base"></i> Copy
+                    </button>
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/50 text-violet-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-download-yaml">
+<i class="ph ph-download-simple text-base"></i> .yaml
+                    </button>
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/50 text-violet-300 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-download-yml">
+<i class="ph ph-file text-base"></i> .yml
+                    </button>
+</div>
+</div>
+<!-- 選項列 -->
+<div class="bg-hub-900/50 border-b border-hub-700 px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+<span class="text-slate-500 font-medium uppercase tracking-wider mr-1">Options</span>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-pretty" type="checkbox"/>
+                    Pretty Output
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input class="option-checkbox rounded" id="opt-minify" type="checkbox"/>
+                    Minify JSON
+                </label>
+<div class="flex items-center gap-2 text-slate-400">
+<span class="text-slate-500">Indentation:</span>
+<label class="radio-group flex items-center gap-1 cursor-pointer hover:text-slate-200">
+<input checked="" class="accent-hub-jy" name="indent" type="radio" value="2"/>
+<span>2 Sp</span>
+</label>
+<label class="radio-group flex items-center gap-1 cursor-pointer hover:text-slate-200">
+<input class="accent-hub-jy" name="indent" type="radio" value="4"/>
+<span>4 Sp</span>
+</label>
+</div>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input class="option-checkbox rounded" id="opt-array-flow" type="checkbox"/>
+                    preserve array format
+                </label>
+<div class="h-4 w-px bg-hub-700 hidden sm:block"></div>
+<span class="flex items-center gap-1 font-mono" id="json-validity">
+<span class="w-2 h-2 rounded-full bg-slate-600" id="validity-dot"></span>
+<span class="text-slate-500" id="validity-text">To be entered</span>
+</span>
+</div>
+<!-- 錯誤詳情面板 (預設隱藏) -->
+<div class="hidden bg-red-950/30 border-b border-red-900/30 px-4 py-2.5" id="error-panel">
+<div class="error-detail flex flex-wrap items-center gap-x-4 gap-y-1">
+<span class="text-red-400 font-medium flex items-center gap-1">
+<i class="ph ph-warning-circle text-sm"></i>
+<span id="error-type">syntax error</span>
+</span>
+<span class="text-red-300 text-xs font-mono" id="error-location">Line 0</span>
+<span class="text-slate-400 text-xs" id="error-message">—</span>
+</div>
+</div>
+<!-- 分割區域 -->
+<div class="flex flex-col lg:flex-row flex-grow">
+<!-- 左側：JSON 編輯器 -->
+<div class="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-hub-700 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-brackets-curly text-hub-jy text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">JSON Input</span>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="json-size">0 bytes</span>
+</div>
+<div class="flex-grow relative">
+<textarea class="editor-textarea w-full h-full absolute inset-0" id="json-input" placeholder='Enter JSON content here... Example: { "name": "ToolHub", "version": "1.0.0", "features": ["json", "yaml"], "config": { "debug": false, "port": 8080 } }' spellcheck="false"></textarea>
+</div>
+</div>
+<!-- 右側：YAML 輸出 -->
+<div class="w-full lg:w-1/2 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-file-yaml text-hub-jy text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">YAML Output</span>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="yaml-size">0 bytes</span>
+</div>
+<div class="flex-grow relative">
+<textarea class="yaml-output w-full h-full absolute inset-0" id="yaml-output" placeholder="The converted YAML will appear here..." readonly="" spellcheck="false"></textarea>
+</div>
+</div>
+</div>
+<!-- 底部狀態列 -->
+<div class="bg-hub-900 border-t border-hub-700 p-3 sm:px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div class="flex items-center gap-1.5" id="status-indicator">
+<div class="w-2 h-2 rounded-full bg-slate-500" id="status-dot"></div>
+<span class="text-slate-400 uppercase tracking-wider text-[10px]" id="status-text">Ready</span>
+</div>
+<div class="h-3 w-px bg-hub-700"></div>
+<span class="text-slate-500" id="line-count">0 lines</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="hidden sm:inline flex items-center gap-1"><i class="ph ph-info text-xs"></i> Pure front-end local processing, the data does not leave your browser</span>
+</div>
+</div>
+</div>
+<!-- ==================== -->
+<!-- FAQ 常見問題區       -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="text-center mb-10">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-3">JSON to YAML conversion FAQ</h2>
+<p class="text-slate-400 text-sm">Popular questions about JSON and YAML format conversion and application</p>
+</div>
+<div class="space-y-3" id="faq-container">
+<!-- FAQ 1 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">What is the difference between JSON and YAML? Which one should I use?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>JSON and YAML are both lightweight data exchange formats, but they have significant differences in design philosophy and usage scenarios:</p>
+<div class="overflow-x-auto text-xs">
+<table class="w-full mt-2">
+<thead>
+<tr class="border-b border-hub-700">
+<th class="text-left py-2 pr-3 text-slate-300">Features</th>
+<th class="text-left py-2 pr-3 text-slate-300">JSON</th>
+<th class="text-left py-2 pr-3 text-slate-300">YAML</th>
+</tr>
+</thead>
+<tbody class="text-slate-400">
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">Readability</td>
+<td class="py-2 pr-3">Medium — lots of parentheses and quotes</td>
+<td class="py-2 pr-3">Excellent — indented structure, minimal symbols</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">type support</td>
+<td class="py-2 pr-3">String, number, Boolean, Null, array, object</td>
+<td class="py-2 pr-3">Same as JSON + date, timestamp, anchor reference</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">Annotation support</td>
+<td class="py-2 pr-3">❌ Not supported</td>
+<td class="py-2 pr-3">✅Support # annotation</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">multiple files</td>
+<td class="py-2 pr-3">❌ Single file</td>
+<td class="py-2 pr-3">✅ Use --- separator</td>
+</tr>
+<tr class="border-b border-hub-700/50">
+<td class="py-2 pr-3">ecosystem</td>
+<td class="py-2 pr-3">API, Web, Database, JavaScript</td>
+<td class="py-2 pr-3">DevOps、CI/CD、Kubernetes、Ansible</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="mt-2 text-xs text-slate-500">Selection suggestions: Choose JSON (lightweight, strict, fast parsing) for inter-machine communication; choose YAML (high readability, support annotations) for human-edited configuration files.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 2 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Why does Docker Compose use YAML?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>Docker Compose selects YAML as the configuration file format (<code class="text-hub-jy">docker-compose.yml</code>) mainly based on the following reasons:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Readability first:</strong> Compose files usually require frequent reading and modification by team members, and YAML's indentation structure is more intuitive than JSON's nested brackets.</li>
+<li><strong class="text-slate-300">Annotation support:</strong> YAML allows comments to be added to the configuration file to describe the purpose of each service, the meaning of environment variables, or version change records.</li>
+<li><strong class="text-slate-300">Multiple file support:</strong> A single YAML file can be accessed via <code class="text-hub-jy">---</code> Separately define multiple settings environments (development/test/production).</li>
+<li><strong class="text-slate-300">Anchors and aliases:</strong> YAML <code class="text-hub-jy">&amp;anchor</code> with <code class="text-hub-jy">*alias</code> The mechanism prevents repeated definition of the same configuration block.</li>
+</ul>
+<p class="mt-2 text-xs text-slate-500">Example:<code class="text-hub-jy">docker compose config</code> The command will convert the Compose file into a standard format for easy debugging.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 3 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Why does Kubernetes use YAML?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>Kubernetes uses YAML as the main resource definition language (K8s YAML <code class="text-hub-jy">apiVersion: apps/v1</code>), reasons include:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Declarative configuration:</strong> The core philosophy of Kubernetes is "declarative management" - you describe "what state you want", not "how to achieve it". YAML's structured format fits this declarative model perfectly.</li>
+<li><strong class="text-slate-300">Human editable:</strong> Resource definitions such as Pod, Service, Deployment, and ConfigMap are usually manually written by developers and maintenance personnel. YAML's concise syntax greatly reduces cognitive load.</li>
+<li><strong class="text-slate-300">File composition:</strong> Multiple K8s resources can be defined in the same YAML file (ending with <code class="text-hub-jy">---</code> separated), or can be split into multiple files for version control.</li>
+<li><strong class="text-slate-300">Tool ecology:</strong><code class="text-hub-jy">kubectl</code>、<code class="text-hub-jy">helm</code>、<code class="text-hub-jy">kustomize</code> Tools such as YAML deeply support the YAML format.</li>
+</ul>
+<p class="mt-2">While Kubernetes also supports the JSON format, YAML has become the lingua franca of the K8s ecosystem. Learning to read and write YAML is an essential skill for Kubernetes users.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 4 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">JSON parsing error occurred during conversion, how to fix it?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>This tool has built-in<strong class="text-slate-300">Smart JSON validation engine</strong>, when your JSON has syntax problems, a detailed error message will be displayed at the top, including:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Error line number and field:</strong> Pinpoint the line number and location where the error occurred.</li>
+<li><strong class="text-slate-300">Error type:</strong> Differentiate common error types (e.g. Trailing comma, Missing bracket, Unexpected token, etc.).</li>
+<li><strong class="text-slate-300">Friendly tips:</strong> Describe the problem in Chinese to help you fix it quickly.</li>
+</ul>
+<p class="mt-2">Common JSON errors include:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Trailing comma:<code class="text-hub-jy">"key": "value",</code> ❌ The last attribute cannot have a comma</li>
+<li>Missing quotes: Key must be wrapped in double quotes.<code class="text-hub-jy">name</code> ❌ should be <code class="text-hub-jy">"name"</code></li>
+<li>Extra commas: e.g. <code class="text-hub-jy">[1, 2,]</code> the final comma in</li>
+<li>Curly brace or square bracket mismatch</li>
+<li>Use single quotes instead of double quotes</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- FAQ 5 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Why is YAML indentation important?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>In YAML,<strong class="text-slate-300">Indentation is part of grammar</strong>, used to represent the nested structure and hierarchical relationship of data. This works with JSON using curly braces <code class="text-hub-jy">{}</code> Differently, YAML relies entirely on indentation to organize hierarchy.</p>
+<p>Key rules:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Use<strong class="text-slate-300">space</strong> Indentation (Tab not supported)</li>
+<li>Elements at the same level must have<strong class="text-slate-300">same amount of indentation</strong></li>
+<li>The child level must be smaller than the parent level<strong class="text-slate-300">Multi-indentation</strong>(minimum 1 space, usually 2 or 4)</li>
+<li>YAML does not allow the Tab character - the parser will complain if Tab is used</li>
+</ul>
+<p class="mt-2 text-xs text-slate-500">This tool provides two indentation options of 2 Spaces and 4 Spaces to meet the coding styles of different teams.</p>
+</div>
+</div>
+</div>
+<!-- FAQ 6 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Is this tool safe to use? Will the data be uploaded?</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-green-400">100% safe.</strong> This tool adopts a pure front-end (Client-side) architecture, and all JSON parsing and YAML conversion are completed in your browser.<strong class="text-slate-300">No data will be uploaded to any server</strong>。</p>
+<p>This means:</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>Your API settings, database configurations, and trade secrets never leave your computer</li>
+<li>No internet connection is required to perform the conversion (except when loading the page for the first time)</li>
+<li>No backend servers store or process your content</li>
+<li>Even ToolHub administrators cannot access the data you enter</li>
+</ul>
+<p class="mt-2">Whether it's Kubernetes credentials, Docker deployment configurations, or GitHub Actions keys, everything is handled securely here.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ==================== -->
+<!-- SEO 教學文章區        -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="bg-hub-800/40 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2 class="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3">
+<i class="ph ph-book-open-text text-hub-jy text-2xl"></i>
+                    From JSON to YAML: A required course on data formats for modern DevOps
+                </h2>
+<div class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+<p>
+                        In the field of modern software development and DevOps,<strong class="text-white">JSON</strong>(JavaScript Object Notation) with <strong class="text-white">YAML</strong>(YAML Ain't Markup Language) are the two most widely used structured data formats. The former dominated API communication and web development, while the latter became the standard language for configuration files and Infrastructure as Code. Understanding the characteristics and conversion methods of the two is an essential skill for every modern developer.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">What is JSON?</h3>
+<p>
+                        JSON, standardized by Douglas Crockford in 2001, is a lightweight data exchange format. It is based on a subset of JavaScript syntax, using<strong class="text-slate-300">key value pair</strong>（<code class="text-hub-jy">{"key": "value"}</code>) and<strong class="text-slate-300">Array</strong>（<code class="text-hub-jy">[item1, item2]</code>) to organize the data.
+                    </p>
+<p>
+                        The main advantage of JSON is that<strong class="text-slate-300">Simple, strict and efficient in analysis</strong>. Almost all programming languages have built-in JSON parsers, making it a common format for Web APIs (RESTful APIs), databases (MongoDB, PostgreSQL JSONB), instant messaging (WebSocket), and configuration files. JSON's strict syntax (double quotes required, no comments allowed, no trailing commas) ensures consistency and predictability across languages.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">What is YAML?</h3>
+<p>
+                        YAML (YAML Ain't Markup Language) was first released in 2001 and is a<strong class="text-slate-300">Human readability first</strong> data serialization format. Unlike JSON, which uses parentheses and quotes, YAML uses<strong class="text-slate-300">indent</strong> To represent the data structure, similar to Python's syntax style.
+                    </p>
+<p>
+                        The design goal of YAML is to "<em class="text-slate-300">Make complex configuration files easy to read and edit</em>”. It supports all data types of JSON and extends<strong class="text-slate-300">Annotations (#), date and time, anchor references (&amp;/*), multi-line strings, multiple files (---)</strong> and other practical functions. These features make YAML the configuration file standard for mainstream DevOps tools such as Docker Compose, Kubernetes, Ansible, GitHub Actions, GitLab CI, and Home Assistant.
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Detailed comparison of JSON and YAML</h3>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-brackets-curly text-hub-jy"></i>
+<h4 class="font-medium text-white">JSON applicable scenarios</h4>
+</div>
+<ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+<li>Web API requests and responses</li>
+<li>Browser and server data exchange</li>
+<li>Database storage (MongoDB, PostgreSQL)</li>
+<li>Application configuration file (Node.js package.json)</li>
+<li>Real-time data streaming and message queuing</li>
+</ul>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-file-yaml text-hub-jy"></i>
+<h4 class="font-medium text-white">YAML applicable scenarios</h4>
+</div>
+<ul class="text-xs text-slate-400 space-y-1 list-disc pl-4">
+<li>Docker Compose multi-container deployment</li>
+<li>Kubernetes Pod/Service/Deployment</li>
+<li>CI/CD pipeline (GitHub Actions, GitLab CI)</li>
+<li>Configuration management (Ansible Playbook, SaltStack)</li>
+<li>Infrastructure as code (Terraform, CloudFormation)</li>
+</ul>
+</div>
+</div>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">JSON to YAML practical example</h3>
+<div class="grid sm:grid-cols-2 gap-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<h4 class="font-medium text-white text-sm mb-2">JSON input</h4>
+<pre class="text-xs font-mono text-slate-300 bg-[#0B1120] p-3 rounded-lg overflow-x-auto">{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "web-app",
+    "labels": {
+      "app": "frontend"
+    }
+  },
+  "spec": {
+    "ports": [{"port": 80}],
+    "selector": {
+      "app": "frontend"
+    }
+  }
+}</pre>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<h4 class="font-medium text-white text-sm mb-2">YAML output</h4>
+<pre class="text-xs font-mono text-slate-300 bg-[#0B1120] p-3 rounded-lg overflow-x-auto">apiVersion: v1
+kind: Service
+metadata:
+  name: web-app
+  labels:
+    app: frontend
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: frontend</pre>
+</div>
+</div>
+<p class="text-xs text-slate-500">As you can see, the same data appears more concise and intuitive in YAML, without the visual interference of brackets and quotation marks.</p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Why choose ToolHub’s JSON to YAML Converter?</h3>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">Two-way thinking:</strong> Although this tool focuses on JSON→YAML, the rigorous verification engine ensures the accuracy and completeness of the data.</li>
+<li><strong class="text-slate-300">Smart error message:</strong> Not only displays "Invalid JSON", but also accurately points out the error line number, type and specific reason (such as Trailing comma, Missing bracket).</li>
+<li><strong class="text-slate-300">Flexible output control:</strong> Pretty Output, Minify, indentation setting (2/4 Spaces), and array format retention to meet the needs of different scenarios.</li>
+<li><strong class="text-slate-300">Zero server architecture:</strong> All conversions are 100% done in the browser, eliminating the risk of data leakage.</li>
+<li><strong class="text-slate-300">DevOps native design:</strong> A conversion experience optimized specifically for Docker Compose, Kubernetes and CI/CD scenarios.</li>
+</ul>
+<p class="mt-4 text-slate-500 text-xs border-t border-hub-700 pt-4">
+                        Whether you're converting API responses into Kubernetes configurations, migrating application settings to Docker Compose, or need to clean and format configuration files for your CI/CD pipeline, ToolHub's JSON to YAML Converter gets the job done accurately, securely, and efficiently. Start converting now and experience a smooth transition from JSON to YAML.
+                    </p>
+</div>
+</div>
+</section>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-jy" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 組件載入區 -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- 系統級中樞神經                              -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/json-to-yaml';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                    const parentGroup = item.closest('.nav-group');
+                    if (parentGroup) {
+                        const content = parentGroup.querySelector('.group-content');
+                        const chevron = parentGroup.querySelector('.chevron');
+                        if (content && chevron) {
+                            setTimeout(() => {
+                                content.style.maxHeight = content.scrollHeight + 'px';
+                                chevron.classList.add('rotate-180');
+                            }, 50);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：JSON to YAML 轉換引擎       -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // === DOM 節點映射 ===
+            const jsonInput = document.getElementById('json-input');
+            const yamlOutput = document.getElementById('yaml-output');
+
+            const btnSample = document.getElementById('btn-sample');
+            const btnClear = document.getElementById('btn-clear');
+            const btnFormat = document.getElementById('btn-format');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownloadYaml = document.getElementById('btn-download-yaml');
+            const btnDownloadYml = document.getElementById('btn-download-yml');
+
+            const optPretty = document.getElementById('opt-pretty');
+            const optMinify = document.getElementById('opt-minify');
+            const indentRadios = document.querySelectorAll('input[name="indent"]');
+            const optArrayFlow = document.getElementById('opt-array-flow');
+
+            const validityDot = document.getElementById('validity-dot');
+            const validityText = document.getElementById('validity-text');
+            const errorPanel = document.getElementById('error-panel');
+            const errorType = document.getElementById('error-type');
+            const errorLocation = document.getElementById('error-location');
+            const errorMessage = document.getElementById('error-message');
+
+            const jsonSize = document.getElementById('json-size');
+            const yamlSize = document.getElementById('yaml-size');
+            const lineCount = document.getElementById('line-count');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            // === JSON 錯誤分析 ===
+            function analyzeJSONError(input) {
+                // 先檢查常見的特定錯誤
+                const lines = input.split('\n');
+
+                // 檢查末尾逗號
+                for (let i = 0; i < lines.length; i++) {
+                    const trimmed = lines[i].trim();
+                    // 匹配 , 後面緊跟著 } 或 ] (可能中間有空白)
+                    if (/,\s*$/.test(trimmed) && i + 1 < lines.length) {
+                        const nextTrimmed = lines[i + 1].trim();
+                        if (nextTrimmed === '}' || nextTrimmed === ']' || nextTrimmed.startsWith('}') || nextTrimmed.startsWith(']')) {
+                            return {
+                                line: i + 1,
+                                column: trimmed.length,
+                                type: 'Trailing comma',
+                                detail: `第 ${i + 1} 行末尾有多餘逗號，JSON 不允許最後一個屬性後有逗號。`
+                            };
+                        }
+                    }
+                    // 內聯末尾逗號: { "a": 1, } 或 [1, 2,]
+                    const trailingMatch = trimmed.match(/.*,\s*[}\]][\s,]*$/);
+                    if (trailingMatch && !trimmed.match(/["'`]/)) {
+                        // 更精確: 找到 , 後面直接跟著 } 或 ]
+                        const commaPos = trimmed.lastIndexOf(',');
+                        const afterComma = trimmed.substring(commaPos + 1).trim();
+                        if (afterComma === '}' || afterComma === ']' || afterComma.startsWith('}') || afterComma.startsWith(']')) {
+                            return {
+                                line: i + 1,
+                                column: commaPos + 2,
+                                type: 'Trailing comma',
+                                detail: `第 ${i + 1} 行在陣列/物件末尾有多餘逗號。`
+                            };
+                        }
+                    }
+                }
+
+                try {
+                    JSON.parse(input);
+                    return null; // Valid
+                } catch (e) {
+                    const posMatch = e.message.match(/position\s+(\d+)/);
+                    if (!posMatch) {
+                        return { line: 1, column: 1, type: 'Parse error', detail: e.message };
+                    }
+                    const pos = parseInt(posMatch[1]);
+                    const beforePos = input.substring(0, pos);
+                    const line = beforePos.split('\n').length;
+                    const lastNewline = beforePos.lastIndexOf('\n');
+                    const column = pos - lastNewline;
+
+                    // 人性化錯誤訊息
+                    let errorType = 'Syntax error';
+                    let detail = e.message.replace(/\(in JSON at position\s+\d+\)/, '').replace(/JSON\.parse:\s*/, '').trim();
+
+                    if (detail.includes('Unexpected token') && detail.includes(',')) {
+                        errorType = 'Unexpected comma';
+                        detail = '出現非預期的逗號，請檢查逗號位置是否正確。';
+                    } else if (detail.includes('Expected') && detail.includes('}')) {
+                        errorType = 'Missing bracket';
+                        detail = '缺少閉合花括號 }，請檢查物件結構是否完整。';
+                    } else if (detail.includes('Expected') && detail.includes(']')) {
+                        errorType = 'Missing bracket';
+                        detail = '缺少閉合方括號 ]，請檢查陣列結構是否完整。';
+                    } else if (detail.includes('string') || detail.includes('quote') || detail.includes('token')) {
+                        errorType = 'Invalid syntax';
+                        detail = 'JSON 語法不正確，請確認 Key 使用雙引號且格式正確。';
+                    } else if (detail.includes('control character') || detail.includes('escape')) {
+                        errorType = 'Invalid character';
+                        detail = '字串中含有無效的控制字符或錯誤的跳脫序列。';
+                    } else if (detail.includes('number')) {
+                        errorType = 'Invalid number';
+                        detail = '數字格式不正確（如前導零、多餘小數點等）。';
+                    }
+
+                    // 刪除 JSON.parse 前綴
+                    detail = detail.replace(/^JSON\.parse:\s*/, '');
+                    // 大寫第一個字母
+                    detail = detail.charAt(0).toUpperCase() + detail.slice(1);
+
+                    return { line, column, type: errorType, detail };
+                }
+            }
+
+            // === 核心轉換邏輯 ===
+            function convert() {
+                const json = jsonInput.value;
+                const isEmpty = !json.trim();
+
+                // 更新大小
+                const jsonBytes = new TextEncoder().encode(json).length;
+                jsonSize.textContent = formatBytes(jsonBytes);
+
+                if (isEmpty) {
+                    yamlOutput.value = '';
+                    setValidationStatus('idle', '待輸入');
+                    hideError();
+                    updateStats('');
+                    updateStatus(false);
+                    return;
+                }
+
+                // 驗證 JSON
+                const error = analyzeJSONError(json);
+
+                // Pretty Print: 格式化 JSON
+                let parsedJson = null;
+                let formattedJson = json;
+
+                if (!error) {
+                    try {
+                        parsedJson = JSON.parse(json);
+                        if (optMinify.checked) {
+                            formattedJson = JSON.stringify(parsedJson);
+                        } else {
+                            formattedJson = JSON.stringify(parsedJson, null, 2);
+                        }
+                    } catch (e) {
+                        // 不應發生，因為 analyzeJSONError 已通過
+                    }
+                }
+
+                // 更新編輯器內容（格式化後）
+                if (parsedJson && formattedJson !== json) {
+                    // 只在格式化按鈕觸發時更新內容
+                }
+
+                if (error) {
+                    setValidationStatus('invalid', 'Invalid JSON');
+                    showError(error);
+                    yamlOutput.value = '';
+                    updateStatus(false);
+                    return;
+                }
+
+                // JSON 通過驗證
+                setValidationStatus('valid', 'Valid JSON');
+                hideError();
+
+                // 轉換為 YAML
+                try {
+                    if (typeof jsyaml === 'undefined') {
+                        yamlOutput.value = '⚠️ YAML 解析器未載入，請重新整理頁面。';
+                        updateStatus(false);
+                        return;
+                    }
+
+                    const indent = parseInt(document.querySelector('input[name="indent"]:checked').value);
+
+                    const yamlOptions = {
+                        indent: indent,
+                        lineWidth: -1,  // 不自動換行
+                        noRefs: true,   // 不使用錨點引用
+                        quotingType: '"',
+                        forceQuotes: false,
+                    };
+
+                    // 陣列格式
+                    if (optArrayFlow.checked) {
+                        yamlOptions.flowStyle = {
+                            sequences: 'flow'
+                        };
+                    }
+
+                    let yaml = jsyaml.dump(parsedJson, yamlOptions);
+
+                    // Pretty Output 選項控制尾部空白
+                    if (!optPretty.checked) {
+                        // Compact 模式：去除多餘空白行
+                        yaml = yaml.replace(/\n{3,}/g, '\n\n');
+                    }
+
+                    yamlOutput.value = yaml;
+                    updateStats(yaml);
+                    updateStatus(true);
+
+                } catch (e) {
+                    yamlOutput.value = `⚠️ 轉換錯誤：${e.message}`;
+                    console.error('YAML conversion error:', e);
+                    updateStatus(false);
+                }
+            }
+
+            // === 設定驗證狀態 ===
+            function setValidationStatus(state, text) {
+                validityText.textContent = text;
+                if (state === 'valid') {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-green-400';
+                    validityText.className = 'text-green-400 font-mono text-xs font-bold';
+                } else if (state === 'invalid') {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-red-400 status-pulse';
+                    validityText.className = 'text-red-400 font-mono text-xs font-bold';
+                } else {
+                    validityDot.className = 'w-2 h-2 rounded-full bg-slate-600';
+                    validityText.className = 'text-slate-500 font-mono text-xs';
+                }
+            }
+
+            function showError(error) {
+                errorPanel.classList.remove('hidden');
+                errorType.textContent = error.type || 'Syntax error';
+                errorLocation.textContent = `Line ${error.line}, Col ${error.column}`;
+                errorMessage.textContent = error.detail || 'JSON 語法錯誤';
+            }
+
+            function hideError() {
+                errorPanel.classList.add('hidden');
+            }
+
+            // === 輔助函數 ===
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 bytes';
+                if (bytes < 1024) return bytes + ' bytes';
+                return (bytes / 1024).toFixed(1) + ' KB';
+            }
+
+            function updateStats(yaml) {
+                const lines = yaml ? yaml.split('\n').length : 0;
+                lineCount.textContent = `${lines} 行`;
+                const yamlBytes = new TextEncoder().encode(yaml).length;
+                yamlSize.textContent = formatBytes(yamlBytes);
+            }
+
+            function updateStatus(hasContent) {
+                if (hasContent) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-hub-jy status-pulse';
+                    statusText.textContent = 'Converted';
+                    statusText.className = 'text-hub-jy uppercase tracking-wider text-[10px] font-bold';
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                    statusText.textContent = 'Ready';
+                    statusText.className = 'text-slate-400 uppercase tracking-wider text-[10px]';
+                }
+            }
+
+            // === Toast ===
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-jy';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // === 格式化 JSON ===
+            function formatJSON() {
+                const json = jsonInput.value.trim();
+                if (!json) {
+                    showToast('沒有內容可格式化', true);
+                    return;
+                }
+                const error = analyzeJSONError(json);
+                if (error) {
+                    showToast('JSON 有錯誤，無法格式化', true);
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(json);
+                    jsonInput.value = JSON.stringify(parsed, null, 2);
+                    convert();
+                    showToast('JSON 已格式化');
+                } catch (e) {
+                    showToast('格式化失敗', true);
+                }
+            }
+
+            // === 範例 JSON ===
+            const sampleJSON = `{
+  "project": "ToolHub Platform",
+  "version": "2.1.0",
+  "description": "Microservices-based utility platform",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toolhub/platform"
+  },
+  "services": {
+    "api": {
+      "port": 8080,
+      "replicas": 3,
+      "env": {
+        "NODE_ENV": "production",
+        "LOG_LEVEL": "info"
+      },
+      "resources": {
+        "limits": {
+          "cpu": "0.5",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "0.2",
+          "memory": "256Mi"
+        }
+      }
+    },
+    "worker": {
+      "port": null,
+      "replicas": 2,
+      "env": {
+        "QUEUE_URL": "redis://redis.internal:6379"
+      }
+    },
+    "database": {
+      "type": "postgresql",
+      "host": "db.internal",
+      "port": 5432,
+      "pool": {
+        "min": 2,
+        "max": 10
+      }
+    }
+  },
+  "features": [
+    "user-authentication",
+    "file-processing",
+    "real-time-notifications",
+    "data-export"
+  ],
+  "ci_cd": {
+    "provider": "github-actions",
+    "branches": ["main", "develop"],
+    "notifications": {
+      "slack": true,
+      "email": false
+    }
+  },
+  "deployment": {
+    "strategy": "rolling-update",
+    "health_check": {
+      "path": "/health",
+      "interval": 30,
+      "timeout": 5,
+      "retries": 3
+    }
+  }
+}`;
+
+            // === 綁定事件 ===
+            jsonInput.addEventListener('input', convert);
+
+            // 選項變更
+            optPretty.addEventListener('change', () => { if (jsonInput.value.trim()) convert(); });
+            optMinify.addEventListener('change', () => { if (jsonInput.value.trim()) convert(); });
+            optArrayFlow.addEventListener('change', () => { if (jsonInput.value.trim()) convert(); });
+            indentRadios.forEach(r => r.addEventListener('change', () => { if (jsonInput.value.trim()) convert(); }));
+
+            // 範例
+            btnSample.addEventListener('click', () => {
+                jsonInput.value = sampleJSON;
+                convert();
+                showToast('已載入範例 JSON');
+            });
+
+            // 清空
+            btnClear.addEventListener('click', () => {
+                jsonInput.value = '';
+                convert();
+                showToast('已清空全部內容');
+            });
+
+            // 格式化
+            btnFormat.addEventListener('click', formatJSON);
+
+            // 複製
+            btnCopy.addEventListener('click', () => {
+                const content = yamlOutput.value.trim();
+                if (!content) { showToast('沒有可以複製的內容', true); return; }
+                navigator.clipboard.writeText(content).then(() => {
+                    showToast('YAML 已複製到剪貼簿');
+                }).catch(() => {
+                    yamlOutput.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('YAML 已複製到剪貼簿');
+                });
+            });
+
+            // 下載 .yaml
+            btnDownloadYaml.addEventListener('click', () => downloadYAML('yaml'));
+            btnDownloadYml.addEventListener('click', () => downloadYAML('yml'));
+
+            function downloadYAML(ext) {
+                const content = yamlOutput.value.trim();
+                if (!content) { showToast('沒有可以下載的內容', true); return; }
+                const blob = new Blob([content], { type: 'text/yaml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Config_${Date.now()}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`.${ext} 檔案已下載`);
+            }
+
+            // Tab 縮排
+            jsonInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const target = e.target;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    target.value = target.value.substring(0, start) + '    ' + target.value.substring(end);
+                    target.selectionStart = target.selectionEnd = start + 4;
+                    convert();
+                }
+            });
+
+            // FAQ 手風琴
+            document.querySelectorAll('.faq-question').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const item = btn.closest('.faq-item');
+                    const content = item.querySelector('.faq-content');
+                    const chevron = btn.querySelector('.faq-chevron');
+                    content.classList.toggle('open');
+                    chevron.classList.toggle('rotated');
+                });
+            });
+
+            // 初始載入範例
+            jsonInput.value = sampleJSON;
+            convert();
+            showToast('已載入範例，立即體驗 JSON 轉 YAML！');
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

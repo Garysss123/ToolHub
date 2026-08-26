@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Cleaner 文字清理工具 | AI 輸出優化、Unicode 正規化、格式整理 | ToolHub</title>
+    <meta name="description" content="免費線上文字清理工具。支援移除多餘空格/空白行、去重、全半角轉換、Unicode 正規化、移除 Emoji/HTML/Markdown/不可見字元。內建 AI Output Cleanup 與 Presets 一鍵模式。">
+    <meta name="keywords" content="Text Cleaner, 文字清理, AI Output Cleanup, Unicode 正規化, NFC NFD, 全形半形, 移除HTML, 文字統計, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' },
+                        cln: { DEFAULT: '#3B82F6', light: '#60A5FA', dark: '#2563EB' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.85); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .preset-chip {
+            padding: 0.375rem 0.75rem; border-radius: 999px; cursor: pointer;
+            font-size: 0.75rem; border: 1px solid #1E293B; color: #94A3B8;
+            transition: all 0.2s; white-space: nowrap; background: rgba(15,23,42,0.4);
+        }
+        .preset-chip:hover { border-color: rgba(59,130,246,0.3); color: #E2E8F0; }
+        .preset-chip.active { border-color: #3B82F6; background: rgba(59,130,246,0.1); color: #60A5FA; }
+
+        .clean-opt {
+            display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+            padding: 0.375rem 0.5rem; border-radius: 0.375rem;
+            transition: all 0.15s; font-size: 0.75rem; color: #94A3B8;
+        }
+        .clean-opt:hover { background: rgba(59,130,246,0.04); color: #E2E8F0; }
+        .clean-opt input { accent-color: #3B82F6; width: 0.875rem; height: 0.875rem; }
+
+        .io-area {
+            width: 100%; min-height: 180px; background: #0f172a;
+            color: #e2e8f0; border: 1px solid #1E293B; border-radius: 0.75rem;
+            padding: 0.875rem; outline: none; font-family: "Fira Code", monospace;
+            font-size: 0.85rem; resize: vertical; line-height: 1.6;
+        }
+        .io-area:focus { border-color: #3B82F6; }
+        .io-area::placeholder { color: #475569; }
+
+        .stat-card {
+            background: rgba(15,23,42,0.6); border: 1px solid #1E293B;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem;
+            text-align: center;
+        }
+        .stat-value { font-size: 1.25rem; font-weight: 700; color: #60A5FA; font-family: "Fira Code", monospace; }
+        .stat-label { font-size: 0.65rem; color: #64748B; }
+
+        .diff-added { background: rgba(16,185,129,0.15); color: #34D399; }
+        .diff-removed { background: rgba(239,68,68,0.15); color: #F87171; text-decoration: line-through; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #3B82F6; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        .btn-primary {
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: white; font-weight: 600; font-size: 0.8125rem;
+            transition: all 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(59,130,246,0.25); }
+        .btn-secondary {
+            padding: 0.375rem 0.875rem; border-radius: 0.5rem;
+            background: rgba(30,41,59,0.5); border: 1px solid #1E293B;
+            color: #94A3B8; font-size: 0.75rem; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-secondary:hover { background: rgba(30,41,59,0.8); color: #E2E8F0; border-color: #334155; }
+
+        @media (max-width: 640px) {
+            .io-grid { grid-template-columns: 1fr !important; }
+            .stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/text-cleaner/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/text-cleaner/">
+    <meta property="og:title" content="Text Cleaner 文字清理工具">
+    <meta property="og:description" content="免費線上文字清理工具。支援移除多餘空格/空白行、去重、全半角轉換、Unicode 正規化、移除 Emoji/HTML/Markdown/不可見字元。內建 AI Output Cleanup 與 Presets 一鍵模式。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Text Cleaner 文字清理工具">
+    <meta name="twitter:description" content="免費線上文字清理工具。支援移除多餘空格/空白行、去重、全半角轉換、Unicode 正規化、移除 Emoji/HTML/Markdown/不可見字元。內建 AI Output Cleanup 與 Presets 一鍵模式。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Text Cleaner 文字清理工具","url":"https://toolhuben.com/text-cleaner/","description":"免費線上文字清理工具。支援移除多餘空格/空白行、去重、全半角轉換、Unicode 正規化、移除 Emoji/HTML/Markdown/不可見字元。內建 AI Output Cleanup 與 Presets 一鍵模式。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Text Cleaner 文字清理工具","item":"https://toolhuben.com/text-cleaner/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/text-cleaner/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/text-cleaner/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/text-cleaner/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen font-sans" style="--classic-accent:#3B82F6;--classic-accent-rgb:59,130,246" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+
+        <!-- Hero -->
+        <div class="text-center space-y-3 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 rounded-full bg-hub-800 border border-hub-700 text-xs text-cln">
+                <span class="flex w-2 h-2 bg-cln rounded-full animate-pulse mr-2"></span>
+                文字清理 · Unicode 正規化 · AI Output 優化
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Text Cleaner
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cln to-cyan-400"> 文字清理與格式化工具</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                快速清理、整理、標準化文字內容。支援移除多餘空格/空行/重複行、全半角轉換、
+                Unicode 正規化（NFC/NFD）、移除 HTML/Markdown/Emoji。內建一鍵 Presets 與 AI Output 清理。
+            </p>
+        </div>
+
+        <!-- Presets -->
+        <div class="flex flex-wrap gap-1.5 mb-4">
+            <span class="text-xs text-slate-600 self-center mr-1">Presets：</span>
+            <button class="preset-chip active" data-preset="custom">⚙️ 自訂</button>
+            <button class="preset-chip" data-preset="document">📄 Document Cleanup</button>
+            <button class="preset-chip" data-preset="ai">🤖 AI Output Cleanup</button>
+            <button class="preset-chip" data-preset="code">💻 Source Code Cleanup</button>
+            <button class="preset-chip" data-preset="html">🌐 HTML Cleanup</button>
+            <button class="preset-chip" data-preset="paste">📋 Copy & Paste Cleanup</button>
+        </div>
+
+        <!-- Main: Options + IO -->
+        <div class="flex flex-col lg:flex-row gap-4">
+            <!-- Left: Options Panel -->
+            <div class="w-full lg:w-72 shrink-0 glass-panel p-4 space-y-3">
+                <h2 class="text-sm font-bold text-white flex items-center gap-1.5 border-b border-hub-700 pb-2">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4 text-cln"></i> 清理選項
+                </h2>
+
+                <!-- Text Cleanup -->
+                <div>
+                    <label class="text-[11px] text-slate-500 font-semibold">文字清理</label>
+                    <div>
+                        <label class="clean-opt"><input type="checkbox" id="opt-trim"> Trim 前後空白</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-collapse"> 壓縮多餘空格</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-empty-lines"> 移除空白行</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-dup-lines"> 移除重複行</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-tabs"> 取代 Tab 為空格</label>
+                    </div>
+                </div>
+
+                <!-- Line Endings -->
+                <div>
+                    <label class="text-[11px] text-slate-500 font-semibold">換行格式</label>
+                    <div>
+                        <label class="clean-opt"><input type="radio" name="eol" value="lf" checked> LF（Unix）</label>
+                        <label class="clean-opt"><input type="radio" name="eol" value="crlf"> CRLF（Windows）</label>
+                        <label class="clean-opt"><input type="radio" name="eol" value="none"> 保持原樣</label>
+                    </div>
+                </div>
+
+                <!-- Width & Unicode -->
+                <div>
+                    <label class="text-[11px] text-slate-500 font-semibold">寬度與 Unicode</label>
+                    <div>
+                        <label class="clean-opt"><input type="checkbox" id="opt-fullwidth"> 全形 → 半形</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-nfc"> Unicode NFC 正規化</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-nfd"> Unicode NFD 正規化</label>
+                    </div>
+                </div>
+
+                <!-- Character Cleanup -->
+                <div>
+                    <label class="text-[11px] text-slate-500 font-semibold">字元清理</label>
+                    <div>
+                        <label class="clean-opt"><input type="checkbox" id="opt-emoji"> 移除 Emoji</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-numbers"> 移除數字</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-symbols"> 移除符號（!@#$%⋯）</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-punct"> 移除標點符號</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-html"> 移除 HTML 標籤</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-md"> 移除 Markdown 語法</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-invisible"> 移除不可見字元</label>
+                    </div>
+                </div>
+
+                <!-- AI Cleanup -->
+                <div>
+                    <label class="text-[11px] text-slate-500 font-semibold">AI 輸出清理</label>
+                    <div>
+                        <label class="clean-opt"><input type="checkbox" id="opt-ai-code"> 移除 Markdown 程式碼區塊</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-ai-cite"> 移除 AI 引用標記 [citation]</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-ai-bullet"> 標準化列表符號</label>
+                        <label class="clean-opt"><input type="checkbox" id="opt-ai-quote"> 標準化引號（"" → ""）</label>
+                    </div>
+                </div>
+
+                <button id="btn-clean" class="btn-primary w-full justify-center mt-2"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> 執行清理</button>
+            </div>
+
+            <!-- Right: IO + Stats -->
+            <div class="flex-1 space-y-4">
+                <!-- Input -->
+                <div class="glass-panel p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold text-cln uppercase tracking-widest">Original</label>
+                        <div class="flex gap-1.5">
+                            <button id="btn-upload" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="upload" class="w-3 h-3"></i> 上傳 TXT</button>
+                            <button id="btn-undo" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="undo-2" class="w-3 h-3"></i> 復原</button>
+                            <button id="btn-clear" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="trash-2" class="w-3 h-3"></i> 清除</button>
+                        </div>
+                    </div>
+                    <textarea id="input-area" class="io-area min-h-[200px]" placeholder="在此貼上要清理的文字⋯" spellcheck="false"></textarea>
+                </div>
+
+                <!-- Statistics -->
+                <div class="glass-panel p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold text-cln uppercase tracking-widest">Statistics</label>
+                        <span class="text-[10px] text-slate-600" id="reading-time"></span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2 stat-grid" id="stats-grid">
+                        <div class="stat-card"><div class="stat-value" id="stat-chars">0</div><div class="stat-label">字元</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-words">0</div><div class="stat-label">單字</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-lines">0</div><div class="stat-label">行</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-paras">0</div><div class="stat-label">段落</div></div>
+                        <div class="stat-card"><div class="stat-value" id="stat-wschars">0</div><div class="stat-label">非空白字元</div></div>
+                    </div>
+                </div>
+
+                <!-- Output -->
+                <div class="glass-panel p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold text-cln uppercase tracking-widest">Cleaned</label>
+                        <div class="flex gap-1.5">
+                            <button id="btn-copy" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="copy" class="w-3 h-3"></i> 複製</button>
+                            <button id="btn-download" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="download" class="w-3 h-3"></i> TXT</button>
+                        </div>
+                    </div>
+                    <textarea id="output-area" class="io-area min-h-[200px]" readonly placeholder="清理後的結果將顯示在此⋯" spellcheck="false"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <section class="mt-12 glass-panel p-6 md:p-8" itemscope itemtype="https://schema.org/FAQPage">
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <i data-lucide="help-circle" class="w-5 h-5 text-cln"></i> 常見問題
+            </h2>
+            <div class="space-y-2 divide-y divide-hub-700/50">
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">為什麼需要文字清理工具？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            文字清理在日常工作中有許多應用場景：<br><br>
+                            <strong>AI 輸出優化：</strong> ChatGPT、Claude 等 AI 生成的回應常包含 Markdown 語法、引用標記、多餘的空白行。清理後可以更乾淨地整合到文件中。<br><br>
+                            <strong>網頁複製貼上：</strong> 從網頁複製的文字常帶有不可見字元、特殊空格、混亂的換行格式。清理後可以得到乾淨純文字。<br><br>
+                            <strong>程式碼整理：</strong> 不同來源的程式碼可能使用不同的換行格式（LF vs CRLF），混雜了 Tab 與空格。<br><br>
+                            <strong>資料預處理：</strong> 在進行文字分析、機器學習或資料導入前，通常需要先清理資料，移除重複行、多餘符號等雜訊。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Unicode 正規化（NFC / NFD）是什麼？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            Unicode 正規化是將相同字元的不同編碼表示方式統一為標準形式的過程。舉例來說，字元「á」可以用兩種方式表示：<br><br>
+                            <strong>NFC（Normalization Form C, Composition）：</strong> 使用單一的合成字元 U+00E1（á），這是「預先組合」的形式，也是多數應用程式的預設格式。<br><br>
+                            <strong>NFD（Normalization Form D, Decomposition）：</strong> 使用基礎字元 a（U+0061）加上組合重音符 ◌́（U+0301），這是「分解」形式，在某些作業系統（如 macOS 的 HFS+ 檔案系統）中使用。<br><br>
+                            如果來源與目標使用不同的正規化形式，可能會導致文字比對失敗、搜尋不到、或檔案名稱不符等問題。使用本工具可以將文字統一轉換為 NFC 或 NFD 格式。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">LF 與 CRLF 有什麼差別？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            LF（Line Feed, <code class="text-cln font-mono text-xs px-1">\\n</code>）和 CRLF（Carriage Return + Line Feed, <code class="text-cln font-mono text-xs px-1">\\r\\n</code>）是兩種不同的換行（End of Line）標記：<br><br>
+                            <strong>LF（Unix / Linux / macOS）：</strong> 使用單一字元 <code class="text-cln font-mono text-xs px-1">\\n</code> 表示換行，是 Linux、macOS、現代 Web 開發中的主流格式。<br><br>
+                            <strong>CRLF（Windows）：</strong> 使用兩個字元 <code class="text-cln font-mono text-xs px-1">\\r\\n</code> 表示換行，是 Windows 系統的傳統格式。<br><br>
+                            跨平台協作時（特別是 Git），混雜的換行格式會導致 diff 顯示異常、腳本執行錯誤等問題。建議團隊統一使用 LF（可在 Git 中設定 <code class="text-cln font-mono text-xs px-1">core.autocrlf</code> 自動處理）。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">AI 生成內容常見的格式問題有哪些？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            AI 生成內容雖然方便，但常常會有一些格式上的問題：<br><br>
+                            <strong>1. 多餘的 Markdown 程式碼區塊：</strong> AI 常在一般文字外套上 <code class="text-cln font-mono text-xs px-1">```</code> 程式碼標記，即使內容不是程式碼。<br><br>
+                            <strong>2. 引用標記：</strong> 某些 AI 會在句子中加入 <code class="text-cln font-mono text-xs px-1">[citation:1]</code> 或 <code class="text-cln font-mono text-xs px-1">[source]</code> 標記，在複製使用時需要移除。<br><br>
+                            <strong>3. 不一致的列表符號：</strong> 同一份輸出中可能混用 <code class="text-cln font-mono text-xs px-1">-</code>、<code class="text-cln font-mono text-xs px-1">*</code>、<code class="text-cln font-mono text-xs px-1">•</code> 等不同列表符號。<br><br>
+                            <strong>4. 多餘的空白行：</strong> AI 輸出中經常有過多的段落間距，需要壓縮。<br><br>
+                            <strong>5. 彎引號混雜：</strong> 中文引號與英文引號混用是常見問題，需要統一標準化。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">全形與半形字元有什麼不同？何時需要轉換？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            全形（Full-width）與半形（Half-width）是東亞文字排版中的概念：<br><br>
+                            <strong>半形字元：</strong> 佔用一個字元寬度，如英文字母 A-Z、數字 0-9、基本符號。<br><br>
+                            <strong>全形字元：</strong> 佔用兩個字元寬度，如中文、日文、韓文，以及全形的英數字（Ａ-Ｚ、０-９）。<br><br>
+                            全形英數字通常是由舊式中文輸入法或日文輸入法不經意產生的。在程式碼、URL、資料比對等場景中，全形英數字會導致問題。例如全形的「Ａ」與半形的「A」在電腦看來是完全不同的字元。<br><br>
+                            本工具的「全形 → 半形」功能可將全形英數字與符號轉換為標準半形形式。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">不可見字元（Zero Width Characters）是什麼？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            不可見字元（Invisible Characters）是指 Unicode 中不顯示任何圖形但確實存在的字元。常見的例子包括：<br><br>
+                            • <strong>零寬空格（Zero Width Space, U+200B）：</strong> 用於文字折行提示<br>
+                            • <strong>零寬不連字（ZWNJ, U+200C）與零寬連字（ZWJ, U+200D）：</strong> 用於文字排版控制<br>
+                            • <strong>左右至標記（LRM / RLM, U+200E / U+200F）：</strong> 用於雙向文字顯示<br>
+                            • <strong>BOM（Byte Order Mark, U+FEFF）：</strong> 檔案開頭的編碼標記<br><br>
+                            這些字元在大多數編輯器中不可見，但可能導致文字比對失敗、網頁顯示異常、程式碼解析錯誤等問題。使用「移除不可見字元」功能可以將它們一次清除。
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- SEO Article -->
+        <section class="mt-12 glass-panel p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-cln"></i> 文字清理：AI 時代的必備技能
+            </h2>
+            <article class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+                <p>在 AI 生成內容日益普及的今天，文字清理已經從「進階技巧」變成了「必備技能」。無論是使用 ChatGPT 生成報告、Claude 分析文件、還是 Gemini 協助翻譯，AI 輸出的內容往往需要進一步整理才能被直接使用。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">AI 輸出 vs. 人工撰寫</h3>
+                <p>AI 生成內容與人工撰寫的文字在格式上有顯著差異。AI 傾向於在回應中使用大量的 Markdown 語法（標題、列表、程式碼區塊），這些格式在 AI 對話介面中美觀且易讀，但當你將這些內容複製到 Word、Google Docs、Notion 或發布到網頁時，殘留的 Markdown 語法反而成為負擔。</p>
+                <p>此外，不同 AI 平台對同一問題的回應格式也可能不同：ChatGPT 習慣使用 # 標題，Claude 使用 **粗體** 強調，而 Gemini 則偏好 - 列表符號。當你同時使用多個 AI 工具時，輸出的格式不一致性就更加明顯。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">跨平台協作的文字標準化</h3>
+                <p>在團隊協作中，文字的格式一致性直接影響工作效率。不同作業系統（Windows / macOS / Linux）使用不同的換行格式（CRLF vs. LF），不同編輯器對 Tab 的處理方式也不同，甚至不同來源的中文字元可能採用不同的 Unicode 正規化形式。</p>
+                <p>透過本工具的 Presets 功能，你可以一鍵套用最佳化規則組合，快速將來自不同來源的文字標準化為統一的格式，大幅減少手動修復的時間。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">Presets 使用建議</h3>
+                <p><strong>📄 Document Cleanup：</strong>適合一般文件整理，會壓縮多餘空格、移除空白行、標準化換行為 LF、轉換全形字元、NFC 正規化。</p>
+                <p><strong>🤖 AI Output Cleanup：</strong>適合清理 ChatGPT/Claude 等 AI 回應，會移除程式碼區塊標記、引用標記、壓縮多餘空白行、標準化列表與引號。</p>
+                <p><strong>💻 Source Code Cleanup：</strong>適合程式碼整理，統一換行為 LF、取代 Tab、移除行尾空白。</p>
+                <p><strong>🌐 HTML Cleanup：</strong>從網頁複製內容後使用，移除 HTML 標籤、不可見字元、壓縮空白。</p>
+                <p><strong>📋 Copy & Paste Cleanup：</strong>通用型清理，涵蓋最常見的格式問題，適合日常使用。</p>
+            </article>
+        </section>
+
+    
+        <!-- SEO Completeness Upgrade 2026 -->
+        <article class="seo-upgrade" aria-label="Text Cleaner 文字清理工具補充指南">
+          <section class="seo-upgrade-card"><h2>Text Cleaner 文字清理工具使用說明</h2><p>免費線上文字清理工具。支援移除多餘空格/空白行、去重、全半角轉換、Unicode 正規化、移除 Emoji/HTML/Markdown/不可見字元。內建 AI Output Cleanup 與 Presets 一鍵模式。</p><h3>建議操作流程</h3><ol><li>先確認輸入格式、單位與必要欄位，避免讓錯誤資料一路傳到結果。</li><li>調整工具選項並閱讀即時提示，使用代表性的邊界值交叉檢查。</li><li>複製或下載前再次核對結果；若要用於正式流程，請在目標環境完成驗證。</li></ol><h3>品質與隱私</h3><p>此工具在瀏覽器本機執行，不依賴後端處理。結果會受到輸入品質、瀏覽器支援與相關技術規格影響，重要資料請保留原始版本與備份。</p></section>
+          
+        </article>
+    </main>
+
+    <div id="component-footer"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i data-lucide="check-circle" class="w-4 h-4 text-cln" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- System Init                                 -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elId, path) {
+            try {
+                const r = await fetch(path); if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const h = await r.text(); const c = document.getElementById(elId); c.innerHTML = h;
+                c.querySelectorAll('script').forEach(s => { const ns = document.createElement('script'); Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value)); ns.appendChild(document.createTextNode(s.innerHTML)); s.parentNode.replaceChild(ns, s); });
+            } catch(e) { console.error(e); }
+        }
+        function setupEventDelegation() {
+            document.body.addEventListener('click', e => {
+                const t = e.target.closest('#sidebar-trigger-btn'), cl = e.target.closest('#sidebar-close-btn'), ol = e.target.closest('#sidebar-overlay');
+                if (t || cl || ol) { const c = document.getElementById('sidebar-container'), o = document.getElementById('sidebar-overlay'); if (c && o) { const isClosed = c.classList.contains('translate-x-full'); if (isClosed && t) { o.classList.remove('pointer-events-none'); requestAnimationFrame(() => { c.classList.remove('translate-x-full'); o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); } else if (!isClosed && (cl || ol || t)) { c.classList.add('translate-x-full'); o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => o.classList.add('pointer-events-none'), 300); } } }
+            });
+        }
+        function setupSidebarActiveState() {
+            const cp = '/text-cleaner'; document.querySelectorAll('#sidebar-container .nav-item').forEach(item => { const h = item.getAttribute('href'); if (!h) return; const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/'; if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) { item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50'); item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]'); const icon = item.querySelector('svg'); if (icon) icon.classList.add('text-[#3ebcf0]'); } });
+        }
+        async function initializeSystem() {
+            await Promise.all([loadComponent('component-header','/components/header.html'),loadComponent('component-sidebar','/components/sidebar.html'),loadComponent('component-footer','/components/footer.html')]);
+            if (typeof lucide !== 'undefined') lucide.createIcons(); setupEventDelegation(); setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Text Cleaner Engine                        -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Shared ---
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            function showToast(msg, isErr = false) {
+                const icon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                if (isErr) { toast.classList.replace('bg-slate-800', 'bg-red-950'); toast.classList.replace('border-slate-700', 'border-red-900'); icon.className = 'w-4 h-4 text-red-500'; }
+                else { toast.classList.replace('bg-red-950', 'bg-slate-800'); toast.classList.replace('border-red-900', 'border-slate-700'); icon.className = 'w-4 h-4 text-cln'; }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => { toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); }, 2000);
+            }
+
+            // --- DOM Refs ---
+            const inputArea = document.getElementById('input-area');
+            const outputArea = document.getElementById('output-area');
+            const btnClean = document.getElementById('btn-clean');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+            const btnClear = document.getElementById('btn-clear');
+            const btnUndo = document.getElementById('btn-undo');
+            const btnUpload = document.getElementById('btn-upload');
+            const presetChips = document.querySelectorAll('.preset-chip');
+            const readingTime = document.getElementById('reading-time');
+
+            // Stats
+            const statChars = document.getElementById('stat-chars');
+            const statWords = document.getElementById('stat-words');
+            const statLines = document.getElementById('stat-lines');
+            const statParas = document.getElementById('stat-paras');
+            const statWschars = document.getElementById('stat-wchars');
+
+            // Options
+            const optTrim = document.getElementById('opt-trim');
+            const optCollapse = document.getElementById('opt-collapse');
+            const optEmptyLines = document.getElementById('opt-empty-lines');
+            const optDupLines = document.getElementById('opt-dup-lines');
+            const optTabs = document.getElementById('opt-tabs');
+            const eolRadios = document.querySelectorAll('input[name="eol"]');
+            const optFullwidth = document.getElementById('opt-fullwidth');
+            const optNfc = document.getElementById('opt-nfc');
+            const optNfd = document.getElementById('opt-nfd');
+            const optEmoji = document.getElementById('opt-emoji');
+            const optNumbers = document.getElementById('opt-numbers');
+            const optSymbols = document.getElementById('opt-symbols');
+            const optPunct = document.getElementById('opt-punct');
+            const optHtml = document.getElementById('opt-html');
+            const optMd = document.getElementById('opt-md');
+            const optInvisible = document.getElementById('opt-invisible');
+            const optAiCode = document.getElementById('opt-ai-code');
+            const optAiCite = document.getElementById('opt-ai-cite');
+            const optAiBullet = document.getElementById('opt-ai-bullet');
+            const optAiQuote = document.getElementById('opt-ai-quote');
+
+            // --- History for Undo ---
+            let history = [];
+
+            // --- Presets ---
+            const PRESETS = {
+                custom: {},
+                document: { trim:1, collapse:1, emptyLines:1, tabs:1, eol:'lf', fullwidth:1, nfc:1 },
+                ai: { collapse:1, emptyLines:1, eol:'lf', aiCode:1, aiCite:1, aiBullet:1, aiQuote:1 },
+                code: { trim:1, tabs:1, eol:'lf', invisible:1 },
+                html: { html:1, invisible:1, collapse:1, emptyLines:1 },
+                paste: { trim:1, collapse:1, emptyLines:1, dupLines:1, eol:'lf', fullwidth:1, nfc:1, invisible:1 }
+            };
+
+            presetChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    presetChips.forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    const preset = chip.dataset.preset;
+                    if (preset !== 'custom') applyPreset(preset);
+                });
+            });
+
+            function applyPreset(name) {
+                const p = PRESETS[name];
+                if (!p) return;
+
+                // Reset all checkboxes
+                document.querySelectorAll('.clean-opt input[type="checkbox"]').forEach(cb => cb.checked = false);
+                document.querySelectorAll('input[name="eol"]').forEach(r => r.checked = r.value === 'none');
+
+                // Apply preset
+                const map = {
+                    trim: optTrim, collapse: optCollapse, emptyLines: optEmptyLines,
+                    dupLines: optDupLines, tabs: optTabs, fullwidth: optFullwidth,
+                    nfc: optNfc, nfd: optNfd, emoji: optEmoji, numbers: optNumbers,
+                    symbols: optSymbols, punct: optPunct, html: optHtml, md: optMd,
+                    invisible: optInvisible, aiCode: optAiCode, aiCite: optAiCite,
+                    aiBullet: optAiBullet, aiQuote: optAiQuote
+                };
+                for (const [key, el] of Object.entries(map)) {
+                    if (p[key]) el.checked = true;
+                }
+                if (p.eol && p.eol !== 'none') {
+                    document.querySelectorAll('input[name="eol"]').forEach(r => {
+                        if (r.value === p.eol) r.checked = true;
+                    });
+                }
+                showToast(`已套用 ${name} Preset`);
+                clean();
+            }
+
+            // --- Clean Logic ---
+            function clean() {
+                const text = inputArea.value;
+                if (!text) { outputArea.value = ''; updateStats(''); return; }
+
+                history.push(text);
+                if (history.length > 20) history.shift();
+
+                let result = text;
+
+                // EOL normalization
+                const eol = document.querySelector('input[name="eol"]:checked');
+                if (eol && eol.value !== 'none') {
+                    result = result.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                    if (eol.value === 'crlf') result = result.replace(/\n/g, '\r\n');
+                }
+
+                // Trim
+                if (optTrim.checked) result = result.split('\n').map(l => l.trim()).join('\n');
+
+                // Collapse spaces (per line)
+                if (optCollapse.checked) {
+                    if (eol && eol.value === 'crlf') {
+                        result = result.split('\r\n').map(l => l.replace(/[ \t]+/g, ' ')).join('\r\n');
+                    } else {
+                        result = result.split('\n').map(l => l.replace(/[ \t]+/g, ' ')).join('\n');
+                    }
+                }
+
+                // Remove empty lines
+                if (optEmptyLines.checked) {
+                    result = result.replace(/^[ \t]*[\r\n]+/gm, '');
+                }
+
+                // Remove duplicate lines
+                if (optDupLines.checked) {
+                    const sep = eol && eol.value === 'crlf' ? '\r\n' : '\n';
+                    const seen = new Set();
+                    result = result.split(sep).filter(l => { const k = l.trim(); if (seen.has(k) && k) return false; seen.add(k); return true; }).join(sep);
+                }
+
+                // Replace tabs with spaces
+                if (optTabs.checked) result = result.replace(/\t/g, '  ');
+
+                // Fullwidth to halfwidth
+                if (optFullwidth.checked) result = fullwidthToHalfwidth(result);
+
+                // Unicode NFC / NFD
+                if (optNfc.checked) result = result.normalize('NFC');
+                if (optNfd.checked) result = result.normalize('NFD');
+
+                // Remove emoji
+                if (optEmoji.checked) result = result.replace(/\p{Emoji_Presentation}|\p{Emoji}️/gu, '');
+
+                // Remove numbers
+                if (optNumbers.checked) result = result.replace(/[0-9]/g, '');
+
+                // Remove symbols
+                if (optSymbols.checked) result = result.replace(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/g, '');
+
+                // Remove punctuation
+                if (optPunct.checked) result = result.replace(/[，。、；：？！「」『』（）【】《》—…·～\.\,\;\:\!\?\-\–\—]/g, '');
+
+                // Remove HTML tags
+                if (optHtml.checked) result = result.replace(/<[^>]*>/g, '');
+
+                // Remove Markdown syntax
+                if (optMd.checked) {
+                    result = result.replace(/#{1,6}\s/g, ''); // headings
+                    result = result.replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1'); // bold/italic
+                    result = result.replace(/_{1,3}([^_]+)_{1,3}/g, '$1');
+                    result = result.replace(/`{1,3}([^`]+)`{1,3}/g, '$1'); // inline code
+                    result = result.replace(/~~([^~]+)~~/g, '$1'); // strikethrough
+                    result = result.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1'); // images
+                    result = result.replace(/\[([^\]]*)\]\([^)]+\)/g, '$1'); // links
+                }
+
+                // Remove invisible characters
+                if (optInvisible.checked) {
+                    result = result.replace(/[​-‍‎‏﻿­⁠⁡-⁤]/g, '');
+                }
+
+                // AI: Remove markdown code blocks
+                if (optAiCode.checked) result = result.replace(/```[\s\S]*?```/g, '');
+
+                // AI: Remove citation markers
+                if (optAiCite.checked) result = result.replace(/\[citation(?::\d+)?\]/gi, '').replace(/\[source(?::\d+)?\]/gi, '').replace(/\[image(?::\d+)?\]/gi, '');
+
+                // AI: Normalize bullet lists
+                if (optAiBullet.checked) {
+                    result = result.split('\n').map(l => {
+                        return l.replace(/^(\s*)[•·◦▪▸▹►](\s)/, '$1-$2');
+                    }).join('\n');
+                }
+
+                // AI: Normalize quotes
+                if (optAiQuote.checked) {
+                    result = result.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                }
+
+                outputArea.value = result;
+                updateStats(result);
+            }
+
+            function fullwidthToHalfwidth(str) {
+                return str.replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+                         .replace(/　/g, ' '); // fullwidth space
+            }
+
+            // --- Stats ---
+            function updateStats(text) {
+                if (!text) {
+                    statChars.textContent = '0'; statWords.textContent = '0';
+                    statLines.textContent = '0'; statParas.textContent = '0';
+                    statWschars.textContent = '0'; readingTime.textContent = '';
+                    return;
+                }
+                const chars = text.length;
+                const noSpace = text.replace(/\s/g, '').length;
+                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                const lines = text.split(/\r\n|\r|\n/).length;
+                const paras = text.replace(/\r\n/g, '\n').split(/\n\s*\n/).filter(p => p.trim()).length;
+                const mins = Math.max(1, Math.ceil(words / 200));
+
+                statChars.textContent = chars.toLocaleString();
+                statWords.textContent = words.toLocaleString();
+                statLines.textContent = lines.toLocaleString();
+                statParas.textContent = paras.toLocaleString();
+                statWschars.textContent = noSpace.toLocaleString();
+                readingTime.textContent = `⏱ ${mins} min 閱讀時間 (${words.toLocaleString()} 詞)`;
+            }
+
+            // --- Events ---
+            btnClean.addEventListener('click', clean);
+
+            inputArea.addEventListener('input', () => {
+                const text = inputArea.value;
+                updateStats(text);
+                if (!text) outputArea.value = '';
+            });
+
+            btnCopy.addEventListener('click', () => {
+                if (!outputArea.value) { showToast('沒有內容可複製', true); return; }
+                navigator.clipboard.writeText(outputArea.value).then(() => showToast('已複製'));
+            });
+
+            btnDownload.addEventListener('click', () => {
+                if (!outputArea.value) { showToast('沒有內容可下載', true); return; }
+                const blob = new Blob([outputArea.value], {type:'text/plain;charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'cleaned_text.txt';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast('已下載');
+            });
+
+            btnClear.addEventListener('click', () => {
+                inputArea.value = ''; outputArea.value = '';
+                updateStats(''); history = [];
+                showToast('已清除');
+            });
+
+            btnUndo.addEventListener('click', () => {
+                if (history.length === 0) { showToast('沒有可復原的動作', true); return; }
+                inputArea.value = history.pop();
+                updateStats(inputArea.value);
+                showToast('已復原');
+            });
+
+            // File upload
+            btnUpload.addEventListener('click', () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file'; fileInput.accept = '.txt,.md,.csv,.html,.js,.ts,.jsx,.tsx,.json,.xml,.yml,.yaml,.css,.scss,.less';
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        inputArea.value = ev.target.result;
+                        updateStats(inputArea.value);
+                        showToast(`已載入 ${file.name}`);
+                    };
+                    reader.readAsText(file);
+                });
+                fileInput.click();
+            });
+
+            // Initial sample
+            inputArea.value = 'Hello  World!  這裡有   多餘空格\n\n\n這是刪除線測試\n這是刪除線測試\n\n【AI 輸出範例】\n\n```python\nprint("hello")\n```\n\n當然！以下是[citation:1]重點整理：\n\n• 第一點\n• 第二點\n* 第三點\n\n​​不可見字元測試​\n\nＡＢＣ全形英數字１２３';
+            updateStats(inputArea.value);
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

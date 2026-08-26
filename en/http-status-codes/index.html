@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HTTP Status Codes | Free Online Tool - ToolHub</title>
+<meta content="Free online HTTP status code query and comparison tool. Covers more than 60 official and common status codes from 1xx to 5xx, providing detailed Chinese descriptions, common causes, repair suggestions and SEO impact analysis. Supports real-time search, category browsing, favorites and recent queries. Pure front-end local computing ensures privacy and security." name="description"/>
+<meta content="HTTP 狀態碼, HTTP Status Codes, 200 OK, 404 Not Found, 500 Internal Server Error, 301 Redirect, 狀態碼查詢, REST API 錯誤, SEO 狀態碼, 開發者工具, 網頁除錯" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F97316; }
+
+        .search-input {
+            width: 100%;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            outline: none;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 0.9rem;
+        }
+        .search-input:focus {
+            border-color: #F97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+        .search-input::placeholder { color: #475569; }
+
+        .category-tab {
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .category-tab:hover { color: #e2e8f0; background: rgba(249, 115, 22, 0.05); }
+        .category-tab.active { background: rgba(249, 115, 22, 0.12); color: #F97316; border-color: rgba(249, 115, 22, 0.25); }
+        .category-tab[data-category="1xx"].active { background: rgba(59, 130, 246, 0.12); color: #3B82F6; border-color: rgba(59, 130, 246, 0.25); }
+        .category-tab[data-category="2xx"].active { background: rgba(16, 185, 129, 0.12); color: #10B981; border-color: rgba(16, 185, 129, 0.25); }
+        .category-tab[data-category="3xx"].active { background: rgba(245, 158, 11, 0.12); color: #F59E0B; border-color: rgba(245, 158, 11, 0.25); }
+        .category-tab[data-category="4xx"].active { background: rgba(249, 115, 22, 0.12); color: #F97316; border-color: rgba(249, 115, 22, 0.25); }
+        .category-tab[data-category="5xx"].active { background: rgba(239, 68, 68, 0.12); color: #EF4444; border-color: rgba(239, 68, 68, 0.25); }
+
+        .status-card {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .status-card:hover {
+            border-color: rgba(249, 115, 22, 0.3);
+            background: #1E293B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .status-card .code-badge {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .status-card .category-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            border-radius: 3px 0 0 3px;
+        }
+
+        .detail-panel {
+            border-top: 1px solid #1e293b;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+        }
+        .detail-panel dt { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.6rem; }
+        .detail-panel dt:first-child { margin-top: 0; }
+        .detail-panel dd { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; margin-top: 0.15rem; }
+        .detail-panel ul { list-style: disc; padding-left: 1.2rem; margin-top: 0.15rem; }
+        .detail-panel ul li { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; margin-bottom: 0.15rem; }
+
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #F97316; border-color: #F97316; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        /* Animation */
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+
+        /* SEO Article */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #F97316;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #F97316;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(249, 115, 22, 0.05);
+            border-left: 3px solid #F97316;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .status-card .code-badge { font-size: 1.4rem; }
+            .search-input { font-size: 0.82rem; }
+            .category-tab { font-size: 0.72rem; padding: 0.3rem 0.6rem; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/http-status-codes/" property="og:url"/>
+<meta content="HTTP Status Codes | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free online HTTP status code query and comparison tool. Covers more than 60 official and common status codes from 1xx to 5xx, providing detailed Chinese descriptions, common causes, repair suggestions and SEO impact analysis. Supports real-time search, category browsing, favorites and recent queries. Pure front-end local computing ensures privacy and security." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="HTTP Status Codes | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free online HTTP status code query and comparison tool. Covers more than 60 official and common status codes from 1xx to 5xx, providing detailed Chinese descriptions, common causes, repair suggestions and SEO impact analysis. Supports real-time search, category browsing, favorites and recent queries. Pure front-end local computing ensures privacy and security." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"HTTP Status Codes","url":"https://toolhuben.com/en/http-status-codes/","description":"Free online HTTP status code query and comparison tool. Covers more than 60 official and common status codes from 1xx to 5xx, providing detailed Chinese descriptions, common causes, repair suggestions and SEO impact analysis. Supports real-time search, category browsing, favorites and recent queries. Pure front-end local computing ensures privacy and security.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"HTTP Status Codes","item":"https://toolhuben.com/en/http-status-codes/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/http-status-codes/" rel="canonical"/><link href="https://toolhuben.com/http-status-codes/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/http-status-codes/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/http-status-codes/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.",".htaccess 語法錯誤":".htaccess syntax error","A/B 測試":"A/B testing","API Key 缺失或無效":"API Key is missing or invalid","API 端點永久變更":"API endpoint permanently changed","API 端點限制":"API endpoint restrictions","Accept 標頭設定過於嚴格":"Accept header setting is too strict","CDN 或代理伺服器修改了回應內容":"The CDN or proxy server modified the response content","CORS 政策":"CORS policy","Content-Type 標頭錯誤":"Content-Type header error","Cookie 過多或過大":"Too many or too large cookies","Cloudflare 在源站伺服器回傳空白、未知或未預期回應時回傳此錯誤。":"Cloudflare returns this error when the origin server returns a blank, unknown, or unexpected response.","Cloudflare 建立了 TCP 連線但源站伺服器未及時回應。":"Cloudflare established a TCP connection but the origin server did not respond in time.","Cloudflare 無法與源站伺服器完成 SSL/TLS 握手。":"Cloudflare was unable to complete the SSL/TLS handshake with the origin server.","Cloudflare 無法與源站伺服器完成 TCP 握手。":"Cloudflare was unable to complete the TCP handshake with the origin server.","Cloudflare 無法連接到源站伺服器（DNS 解析失敗）。":"Cloudflare cannot connect to the origin server (DNS resolution failed).","DAV 繫結的成員已在前面的回應部分中列舉過，不再重複。":"The members of the DAV knot have already been enumerated in the previous response section and will not be repeated.","DDoS 防護觸發":"DDoS protection trigger","DELETE 請求":"DELETE request","DNS 解析失敗":"DNS resolution failed","DNS 記錄不正確":"DNS records are incorrect","ETag 不匹配":"ETag does not match","Expect 標頭要求不被支援":"Expect header requirement not supported","GDPR 地區限制":"GDPR regional restrictions","GET 請求攜帶過多資料":"GET request carries too much data","HTTP 遷移到 HTTPS":"HTTP to HTTPS migration","HTTP/1.1 升級到 HTTP/2":"HTTP/1.1 upgraded to HTTP/2","HTTP/2 連線被錯誤路由":"HTTP/2 connection misrouted","IP 被封鎖":"IP blocked","If-None-Match 或 If-Modified-Since 標頭匹配":"If-None-Match or If-Modified-Since header match","JSON 格式不正確":"JSON format is incorrect","JSON 欄位類型錯誤":"Wrong JSON field type","Nginx 使用的非標準狀態碼。伺服器不向客戶端回傳任何資訊並直接關閉連線（常用於阻擋惡意請求）。":"Non-standard status codes used by Nginx. The server does not return any information to the client and directly closes the connection (often used to block malicious requests).","Nginx 使用的非標準狀態碼。客戶端在伺服器回應前關閉了連線。":"Non-standard status codes used by Nginx. The client closed the connection before the server responded.","PHP 執行超時":"PHP execution timeout","PHP-FPM 沒有執行":"PHP-FPM is not implemented","PRG 模式":"PRG mode","Range 格式錯誤":"Range format error","Range 請求超出檔案大小":"Range request exceeds file size","SSL 憑證過期":"SSL certificate expired","TLS 1.3 0-RTT 重放風險":"TLS 1.3 0-RTT replay risk","Token 過期":"Token expires","URL 包含無效字元":"URL contains invalid characters","URL 拼寫錯誤":"URL misspelling","WebDAV PROPFIND 請求的內部優化":"Internal optimization of WebDAV PROPFIND requests","WebSocket 連線建立":"WebSocket connection established","Wi-Fi 熱點需要登入":"Wi-Fi hotspot requires login","[System Error] 模組":"[System Error] Module","上傳檔案超過限制":"File upload exceeds limit","上游伺服器回應過慢":"Upstream server responds too slowly","上游伺服器當機":"Upstream server crashes","不應快取":"Should not be cached","不應快取，但可設定 Retry-After":"Should not be cached, but Retry-After can be set","不要再建立同名資源":"Do not create another resource with the same name","不要用茶壺煮咖啡...":"Don't use a teapot to make coffee...","不足":"Incomplete","付款逾期":"Payment overdue","代理伺服器需要認證":"Proxy server requires authentication","代理設定錯誤":"Proxy setting error","代理迴圈":"proxy loop","伺服器不支援要求的回應格式":"The server does not support the requested response format","伺服器不支援請求中使用的 HTTP 版本。":"The server does not support the HTTP version used in the request.","伺服器不支援請求方法（例如伺服器不支援 PATCH 方法）。":"The server does not support the request method (for example, the server does not support the PATCH method).","伺服器不支援請求的媒體格式（例如發送了 XML 但伺服器只接受 JSON）。":"The server does not support the requested media format (e.g. XML was sent but the server only accepts JSON).","伺服器不願意冒險處理可能被重放的請求（與 TLS 1.3 0-RTT 相關）。":"Servers are unwilling to risk handling requests that may be replayed (related to TLS 1.3 0-RTT).","伺服器儲存空間不足，無法完成請求。":"There is insufficient server storage space to complete the request.","伺服器內容協商設定錯誤":"Server content negotiation setting error","伺服器內部設定錯誤：透明內容協商導致循環引用。":"Internal server configuration error: Transparent content negotiation leads to circular reference.","伺服器因遇到無限迴圈而終止操作。":"The server terminated due to an infinite loop.","伺服器已完成資源的 GET 請求，回應是經過一個或多個實例操作處理後的結果。":"The server has completed a GET request for the resource and the response is the result of one or more instance operations.","伺服器已收到請求並正在處理中，但尚無回應可用。用於防止客戶端超時。":"The server has received the request and is processing it, but no response is available yet. Used to prevent client timeouts.","伺服器已收到請求的初始部分，客戶端應繼續發送剩餘請求。":"The server has received the initial part of the request and the client should continue sending the remainder of the request.","伺服器引導客戶端以 GET 請求從另一個 URI 獲取資源。常用於 Post/Redirect/Get 模式。":"The server directs the client to obtain the resource from another URI with a GET request. Commonly used in Post/Redirect/Get mode.","伺服器成功處理了請求，但不回傳任何內容。常用於 DELETE 請求或 AJAX 操作。":"The server successfully processed the request but sent nothing back. Commonly used for DELETE requests or AJAX operations.","伺服器成功處理請求，並要求客戶端重置文件檢視（例如清除表單輸入）。":"The server successfully handles the request and asks the client to reset the document view (e.g. clear the form input).","伺服器找不到請求的資源。這是最常見、最知名的 HTTP 錯誤之一。":"The server cannot find the requested resource. This is one of the most common and well-known HTTP errors.","伺服器拒絕使用當前協定執行請求，但可能在客戶端升級協定後願意執行。":"The server refuses to perform the request using the current protocol, but may be willing to perform it after the client upgrades the protocol.","伺服器拒絕接受未定義 Content-Length 標頭的請求。":"The server refused to accept the request without defining the Content-Length header.","伺服器拒絕用茶壺煮咖啡。RFC 2324 的愚人節玩笑，但被許多框架保留作為彩蛋。":"The server refuses to use the teapot to make coffee. RFC 2324 is an April Fool's joke, but is retained as an Easter egg by many frameworks.","伺服器效能不足":"Insufficient server performance","伺服器暫時無法處理請求。常見原因包括伺服器維護中或過載。":"The server is temporarily unable to process the request. Common causes include server maintenance or overload.","伺服器最佳化策略":"Server Optimization Strategies","伺服器根據客戶端發送的 Range 標頭，僅回傳資源的一部分。用於續傳、影片串流。":"The server returns only a portion of the resource based on the Range header sent by the client. Used for resume downloading and video streaming.","伺服器無法產生符合 Accept 標頭要求的回應格式。":"The server cannot generate a response format that matches the Accept header requirements.","伺服器無法處理請求，因為請求語法錯誤或格式不正確。":"The server cannot process the request because the request has bad syntax or is malformed.","伺服器理解並同意客戶端更換通訊協定的請求（如升級到 WebSocket）。":"The server understands and agrees to the client's request to change the protocol (such as upgrading to WebSocket).","伺服器理解請求格式，但無法處理其中的指令（語義錯誤、驗證失敗）。常用於 REST API。":"The server understands the request format, but cannot process the instructions in it (semantic error, validation failure). Commonly used in REST APIs.","伺服器等待客戶端請求時超時。客戶端發送請求的時間過長。":"The server timed out while waiting for a client request. The client took too long to send the request.","伺服器維護中":"Server under maintenance","伺服器要求請求必須是條件式的（使用 If-Match 等標頭），以防止「遺失更新」問題。":"Server request requests must be conditional (using headers such as If-Match) to prevent \"missing updates\" problems.","伺服器設定錯誤":"Server configuration error","伺服器認識請求方法，但目標資源不支援該方法（例如用 GET 存取只接受 POST 的端點）。":"The request method is recognized by the server, but the target resource does not support it (for example, using GET to access an endpoint that only accepts POST).","伺服器超時設定過短":"Server timeout setting is too short","伺服器軟體版本過舊":"Server software version is out of date","伺服器遇到無法處理的狀況。這是伺服器端最常見的通用錯誤。":"The server encountered a condition that it could not handle. This is the most common common error on the server side.","伺服器過載":"Server overload","伺服器錯誤 Server Error":"Server Error Server Error","伺服器需要請求的進一步擴展才能完成處理。":"The server requires further expansion of the request to complete processing.","作為閘道或代理的伺服器，從上游伺服器收到了無效的回應。常見於 Nginx 反向代理。":"The server acting as a gateway or proxy received an invalid response from the upstream server. Commonly found in Nginx reverse proxy.","作為閘道或代理的伺服器，未能在時限內收到上游伺服器的回應。":"The server acting as a gateway or proxy failed to receive a response from the upstream server within the time limit.","使用 302 僅在臨時情況下":"Use 302 only in temporary situations","使用 CDN 顯示維護頁面":"Use CDN to display maintenance pages","使用 HTTPS":"Use HTTPS","使用 Location 標頭查看處理狀態":"Use the Location header to view processing status","使用 VPN（取決於當地法律）":"Use a VPN (depending on local laws)","使用樂觀鎖定或 ETag":"Use optimistic locking or ETag","使用正確的 HTTP 方法":"Use the correct HTTP method","使用短連結":"Use short links","使用了不支援的資料格式":"Unsupported data format used","使用了伺服器不支援的 HTTP 方法":"An HTTP method not supported by the server was used","使用了過舊或過新的 HTTP 版本":"Using an older or newer HTTP version","使用了錯誤的 HTTP 方法":"Wrong HTTP method used","使用伺服器支援的 HTTP 版本":"Use the HTTP version supported by the server","使用伺服器支援的方法":"Use server-supported methods","使用分片上傳":"Use multipart upload","使用更具體的 URL":"Use a more specific URL","使用者在給定時間內發送了過多請求（速率限制）。常見於 API 呼叫限制。":"The consumer sent too many requests in a given time (rate limiting). Commonly seen in API call throttling.","使用非同步處理":"Use asynchronous processing","保留供未來使用。最初用於數位支付系統。目前很少使用，部分平台用於付費牆。":"Reserved for future use. Originally used in digital payment systems. It is currently rarely used and some platforms are behind paywalls.","修復相依請求的問題":"Fix issue with dependent requests","修改 Accept 標頭":"Modify Accept header","個狀態碼":"status code","個項目":"items","修正 Range 範圍":"Correct Range range","修正伺服器內容協商設定":"Fix server content negotiation settings","修正程式碼 Bug":"Fix code bugs","修正資料格式":"Correct data format","僅在短時間內使用":"Use only for a short period of time","優化伺服器回應速度":"Optimize server response speed","優化慢查詢":"Optimize slow queries","優化應用效能":"Optimize application performance","先 GET 最新版本再 PUT":"First GET the latest version and then PUT","內容協商":"content negotiation","內容永久下架":"Content permanently removed from shelves","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","公司網路代理設定":"Corporate Internet proxy settings","刪除不必要的資料":"Delete unnecessary data","加入 If-Match 或 If-Unmodified-Since 標頭":"Add If-Match or If-Unmodified-Since header","加密協定不相容":"Encryption protocol incompatibility","升級 API 方案":"Upgrade API plan","升級伺服器軟體":"Upgrade server software","升級到新版本協定":"Upgrade to a new version of the protocol","升級帳號方案":"Upgrade account plan","反向代理設定問題":"Reverse proxy settings issue","只顯示收藏的狀態碼":"Show only favorite status codes","可顯著提升頁面載入速度":"Can significantly improve page loading speed","合併變更後重新提交":"Resubmit after merging changes","可快取":"Cacheable","可快取（取決於 Cache-Control 標頭）":"Cacheable (depends on Cache-Control header)","同時編輯同一資源":"Edit the same resource simultaneously","嘗試用茶壺煮咖啡":"Try making coffee with a teapot","因法律要求，伺服器拒絕存取該資源（例如 GDPR 地區限制、政府審查）。":"The server denies access to this resource due to legal requirements (e.g. GDPR regional restrictions, government censorship).","在 Location 標頭中提供新 URL":"Provide the new URL in the Location header","在最終回應之前提前發送部分標頭，讓瀏覽器可以預先載入資源。":"Send some headers ahead of time before the final response, allowing the browser to preload the resource.","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","在請求中加入 Content-Length 標頭":"Include Content-Length header in request","在需要回傳多個狀態碼的情況下，傳達多個資源的狀態資訊。常用於 WebDAV。":"Convey status information of multiple resources when multiple status codes need to be returned. Commonly used with WebDAV.","增加 PHP max_execution_time":"Increase PHP max_execution_time","增加代理超時設定":"Add proxy timeout setting","增加伺服器資源":"Increase server resources","大檔案分段下載":"Download large files in sections","多語言或多格式資源":"Multi-language or multi-format resources","存取的資源已被鎖定（例如被其他使用者編輯中）。":"The accessed resource is locked (for example, being edited by another user).","季節性促銷頁面":"Seasonal promotions page","如有替代資源請使用 301":"Please use 301 if alternative resources are available","如果從 WAF 收到，檢查請求是否被誤判":"If received from WAF, check whether the request was misjudged","如需強制刷新，使用 Ctrl+F5":"To force a refresh, use Ctrl+F5","如需永久移動請使用 301":"If you want to move permanently please use 301","完成付款":"Complete payment","完成網路認證頁面":"Complete the network authentication page","定期檢查不再需要的暫存重定向":"Periodically check for staged redirects that are no longer needed","定期檢查網站斷連":"Regularly check for website disconnections","客戶端上傳大檔案時網路中斷":"The network is interrupted when the client uploads large files","客戶端取消請求":"Client cancels request","客戶端必須先對代理伺服器進行身份驗證。":"The client must first authenticate to the proxy server.","客戶端必須進行身份驗證才能獲取請求的回應。":"The client must authenticate to get a response to the request.","客戶端沒有存取權限。即使已驗證身份，也不被允許存取該資源。":"The client does not have access rights. Even if you have authenticated your identity, you are not allowed to access the resource.","客戶端發送了 Expect: 100-continue 標頭":"Client sent Expect: 100-continue header","客戶端超時":"Client timeout","客戶端錯誤 Client Error":"Client Error Client Error","客戶端需要進行網路認證才能獲得網路存取權（例如 Wi-Fi 強制門戶 Captive Portal）。":"Clients require network authentication to gain network access (such as Wi-Fi Captive Portal).","實作指數退避重試":"Implement exponential backoff retries","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已清除查詢記錄":"Query history cleared","已複製到剪貼簿":"Copied to clipboard","已加入收藏":"Added to favorites","已取消收藏":"Canceled favorites","帳號暫停":"Account suspended","建立理念":"Our Founding Idea","建立自訂 404 頁面":"Create a custom 404 page","建議":"Recommendation","影片跳轉播放":"Video jump play","必填欄位缺失":"Required fields are missing","恢復正常後移除重定向":"Remove redirects after returning to normal","惡意請求被直接丟棄":"Malicious requests are discarded directly","憑證不受信任":"Credentials not trusted","應用程式重新啟動中":"Application is restarting","成功 Success":"Success Success","成功執行操作但無需回傳資料":"The operation was performed successfully without returning data.","成功建立新資源（如新使用者註冊、新文章發布）":"Successfully create new resources (such as new user registration, new article publishing)","批次操作中某一項失敗":"An item in the batch operation failed","批次操作需要回傳混合結果":"Batch operations need to return mixed results","提供 Proxy-Authorization 標頭":"Provide Proxy-Authorization header","提供有效的 Authorization 標頭":"Provide a valid Authorization header","擴充伺服器資源":"Expand server resources","擴充儲存容量":"Expand storage capacity","改用 POST 請求":"Use POST requests instead","暫時的服務遷移":"Temporary service migration","暫時維護":"Temporary maintenance","暫時重定向。與 302 類似，但保證請求方法不會被更改（POST 仍然是 POST）。":"Temporarily redirect. Similar to 302, but guarantees that the request method has not been changed (POST is still POST).","更新 API 文件":"Update API documentation","更新 SSL 憑證":"Update SSL certificate","更新 sitemap.xml":"Update sitemap.xml","更新所有內部連結":"Update all internal links","更新所有引用":"Update all citations","未提供認證 Token":"No authentication token provided","未登入":"Not logged in","根據伺服器回應加入必要的擴展":"Add necessary extensions based on server response","業務邏輯驗證失敗":"Business logic validation failed","樂觀鎖定失敗":"Optimistic lock failed","查看 API 文件中的驗證規則":"View validation rules in API files","查看 API 文件確認參數":"Check the API file to confirm the parameters","查看 Allow 回應標頭":"View the Allow response header","查看 Retry-After 標頭":"View the Retry-After header","查看是否有替代來源":"Check to see if there are alternative sources","查看源站日誌":"View origin site logs","檔案正在編輯中":"File is being edited","檢查 .htaccess 語法":"Check .htaccess syntax","檢查 API Key 是否正確":"Check if the API Key is correct","檢查 API 文件確認支援的方法":"Check the API documentation to confirm supported methods","檢查 CORS 設定":"Check CORS settings","檢查 DNS 設定":"Check DNS settings","檢查 IP 白名單":"Check IP whitelist","檢查 Nginx 安全規則":"Check Nginx security rules","檢查 URL 是否正確":"Check if the URL is correct","檢查 URL 編碼":"Check URL encoding","檢查上游伺服器狀態":"Check upstream server status","檢查代理設定":"Check proxy settings","檢查伺服器負載":"Check server load","檢查伺服器路由設定":"Check server routing settings","檢查伺服器錯誤日誌":"Check the server error log","權限不足":"Insufficient permissions","檢查加密協定設定":"Check encryption protocol settings","檢查帳號狀態":"Check account status","檢查慢查詢":"Check for slow queries","檢查檔案大小":"Check file size","檢查每個子回應的個別狀態":"Check the individual status of each subresponse","檢查源站伺服器狀態":"Check origin server status","檢查網路延遲":"Check network latency","檢查網路連線":"Check network connection","檢查請求內容的語義正確性":"Check the semantic correctness of the request content","檢查請求格式":"Check request format","檢查重定向鏈":"Check redirect chain","此狀態碼本身就是快取機制的一部分":"This status code itself is part of the caching mechanism","正常流程的一部分":"part of normal process","正常的成功請求":"Normal successful request","永久變更網址結構":"Permanently change URL structure","永久重定向，與 301 類似但保證請求方法不變。適合非 GET 請求的永久轉移。":"Permanent redirect, similar to 301 but ensuring that the request method remains unchanged. Suitable for permanent transfers of non-GET requests.","法院命令封鎖":"court ordered blockade","減小上傳檔案大小":"Reduce upload file size","減少 Cookie 大小和數量":"Reduce cookie size and number","源站 IP 變更":"Origin IP change","源站伺服器崩潰":"Origin server crashes","源站伺服器拒絕了 Cloudflare 的連線。":"The origin server rejected Cloudflare's connection.","源站伺服器當機":"The origin server crashed","源站回傳了無效回應":"The origin site sent back an invalid response.","瀏覽器會永久快取":"The browser will permanently cache","瀏覽器會永久快取此重定向":"The browser will cache this redirect forever","清理不必要的自訂標頭":"Clean up unnecessary custom headers","清理磁碟空間":"Clear disk space","瀏覽器關閉分頁":"Browser closes pagination","無法滿足請求 Expect 標頭中的期望。":"The expectation in the request's Expect header could not be met.","爬蟲請求過於頻繁":"The crawler requests too frequently","版本衝突":"version conflict","版權投訴":"Copyright complaint","無需修復":"No need to fix","無需修復，等待處理完成":"No need to fix, wait for processing to complete","無需修復，這是最佳的快取行為":"No fixes required, this is optimal caching behavior","無需修復，這是正常協議流程":"No need to fix, this is normal protocol process","無需修復，這是正常的協議切換流程":"No need to fix, this is a normal protocol switching process","產品停產":"Product discontinued","用於快取目的。告訴客戶端資源未被修改，可以繼續使用本地快取版本。":"For caching purposes. Tells the client that the resource has not been modified and can continue to use the local cached version.","登入 Wi-Fi 熱點":"Sign in to Wi-Fi hotspot","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","目錄索引被禁用":"Directory indexing is disabled","相依的請求失敗":"Dependent request failed","目標資源已永久不存在，且沒有轉址。比 404 更強烈的訊號，告知搜尋引擎該資源已永久刪除。":"The target resource no longer exists permanently and has no redirection. A stronger signal than 404, telling search engines that the resource has been permanently deleted.","確認帳號權限":"Confirm account permissions","確認憑證有效":"Confirm that the voucher is valid","確認源站 IP 正確":"Confirm that the origin IP is correct","確認請求未被防火牆誤擋":"Confirm that the request is not blocked by the firewall","確認資料庫連線":"Confirm database connection","確認資源是否真的永久刪除":"Confirm whether the resource is indeed permanently deleted","確認重定向 URL 正確":"Confirm that the redirect URL is correct","確認防火牆允許 Cloudflare IP":"Confirm that the firewall allows the Cloudflare IP","確認防火牆規則":"Confirm firewall rules","磁碟空間已滿":"Disk space is full","禁用 0-RTT":"Disable 0-RTT","移除 Expect 標頭":"Remove Expect header","程式碼錯誤或例外":"Code errors or exceptions","確認 API 支援的格式":"Confirm the formats supported by the API","確認 DNS 設定":"Confirm DNS settings","確認代理設定無迴圈":"Confirm proxy settings without loops","確認伺服器支援的格式":"Confirm the formats supported by the server","確認內容完整性":"Confirm content integrity","等待伺服器恢復":"Waiting for server to recover","等待鎖定解除":"Waiting for the lock to be lifted","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","網站已被凍結或暫停（常見於主機平台暫停服務）。":"The website has been frozen or suspended (commonly caused by the hosting platform suspending service).","結構性 URL 變更":"Structural URL changes","縮短 URL 參數":"Shorten URL parameters","網站改版或重構":"Website revision or reconstruction","網路問題":"network problems","網路延遲":"network delay","缺少必要參數":"Missing required parameters","缺少必要的請求擴展":"Missing required request extension","缺少條件式請求標頭":"Missing conditional request header","聯繫主機商":"Contact the hosting provider","聯繫管理員獲取權限":"Contact the administrator to obtain permissions","聯繫鎖定資源的使用者":"Contact the user of the locked resource","缺少":"Missing","缺少 Content-Length 標頭":"Missing Content-Length header","臨時維護頁面":"Temporary maintenance page","自訂標頭過多":"Too many custom headers","舊版 API 退役":"Old API Retirement","處理重複資料":"Handle duplicate data","表單提交後不刷新頁面":"Do not refresh page after form submission","表單提交後需要重置輸入":"Inputs need to be reset after form submission","表單驗證失敗":"Form validation failed","被 WAF 或 Nginx 規則阻擋":"Blocked by WAF or Nginx rules","被防火牆或 WAF 攔截的幽默回應":"Humorous responses to being blocked by a firewall or WAF","設定 301 重定向到新頁面":"Set up 301 redirect to new page","設定代理認證資訊":"Set proxy authentication information","設定正確的 Accept 標頭":"Set the correct Accept header","設定正確的 Content-Type（如 application/json）":"Set the correct Content-Type (such as application/json)","調整伺服器 upload_max 設定":"Adjust server upload_max setting","調整伺服器設定以支援該期望":"Adjust server settings to support this expectation","調整伺服器超時設定":"Adjust server timeout settings","請求中 Range 標頭指定的範圍無法滿足（例如請求的位元組範圍超出檔案大小）。":"The range specified by the Range header in the request cannot be satisfied (for example, the requested byte range exceeds the archive size).","請求主體過大":"The request body is too large","請求內容超過伺服器允許的大小限制（例如上傳檔案過大）。":"The requested content exceeds the size limit allowed by the server (for example, the uploaded file is too large).","請求失敗，因為它依賴於另一個請求，且該請求失敗了。":"The request failed because it depends on another request and that request failed.","請求已成功，並已建立了一個新資源。通常在 POST 或 PUT 請求後回傳。":"The request was successful and a new resource was created. Usually posted back after a POST or PUT request.","請求已被接受進行處理，但處理尚未完成。適用於非同步操作。":"The request has been accepted for processing, but processing has not yet been completed. Suitable for asynchronous operations.","請求成功。這是 HTTP 中最常見的成功狀態碼，表示伺服器成功處理了請求。":"The request was successful. This is the most common success status code in HTTP, indicating that the server successfully processed the request.","請求成功，但回應內容已被中間代理修改（例如 CDN 或快取伺服器）。":"The request was successful, but the response content has been modified by an intermediary proxy (such as a CDN or cache server).","請求有多個可能的回應。使用者代理應選擇其中一個（例如多語言或多格式資源）。":"The request has multiple possible responses. The user agent should select one of these (e.g. multilingual or multiformat resources).","請求標頭中的一個或多個條件評估為 false（例如 If-Match 或 If-Unmodified-Since）。":"One or more conditions in the request headers evaluated to false (such as If-Match or If-Unmodified-Since).","請求標頭欄位過大，伺服器拒絕處理（例如 Cookie 過多或過大）。":"The request header field is too large and the server refuses to process it (for example, there are too many or too large cookies).","請求無法完成，因為與目標資源的當前狀態發生衝突（例如版本衝突、重複資料）。":"The request cannot be completed because of a conflict with the current state of the target resource (e.g. version conflict, duplicate material).","請求的 URI 長度超過伺服器允許的範圍（通常因過多的查詢參數）。":"The requested URI is longer than the server allows (usually due to too many query parameters).","請求的資源已經永久移動到新的 URL。搜尋引擎會將 SEO 權重轉移到新網址。":"The requested resource has been permanently moved to a new URL. Search engines will transfer SEO weight to the new URL.","請求的資源暫時移動到新的 URL。搜尋引擎通常不會轉移 SEO 權重。":"The requested resource is temporarily moved to a new URL. Search engines generally do not transfer SEO weight.","請求被導向到無法產生回應的伺服器（例如 HTTP/2 連線重用的問題）。":"The request was directed to a server that was unable to respond (such as an HTTP/2 connection reuse issue).","請求語法錯誤":"Request syntax error","資料唯一性約束違反":"Data uniqueness constraint violation","資料庫儲存空間不足":"Insufficient database storage space","資料庫連線失敗":"Database connection failed","資源已被其他人修改":"The resource has been modified by someone else","資源已被刪除":"Resource has been deleted","資源未被修改":"The resource has not been modified","資源耗盡（記憶體、連線數）":"Resource exhaustion (memory, number of connections)","資源被其他使用者鎖定":"The resource is locked by another user","資訊回應 Informational":"Informational response Informational","超過 API 速率限制":"API rate limit exceeded","路由設定錯誤":"Routing setting error","載入失敗:":"Loading failed:","逐步除錯找出問題":"Step-by-step debugging to find the problem","連結失效（Dead Link）":"Dead Link","過長的查詢字串":"Query string too long","達到免費額度上限":"Free limit reached","違反服務條款":"Violation of terms of service","重新建立連線":"Reestablish connection","重新提交整個批次":"Resubmit the entire batch","重新獲取最新資源":"Retrieve the latest resources","重新登入獲取新 Token":"Log in again to get new Token","重新發送請求":"Resend request","重啟 PHP-FPM 或應用伺服器":"Restart PHP-FPM or application server","重啟源站伺服器":"Restart the origin server","重定向 Redirection":"Redirection Redirection","重定向迴圈":"Redirect loop","重試請求":"Retry request","長時間執行的操作":"Long-running operations","長時間執行的資料庫查詢":"Long-running database queries","長時間批次處理":"long batch processing","長時間運行的伺服器端處理":"Long-running server-side processing","防火牆封鎖了 Cloudflare IP":"Firewall blocks Cloudflare IP","防火牆規則":"firewall rules","降低請求頻率":"Reduce request frequency","防止表單重複提交":"Prevent duplicate form submissions","需要付費方案":"Requires paid plan","需要升級到 HTTP/2":"Need to upgrade to HTTP/2","需要升級到 TLS/HTTPS":"Requires upgrade to TLS/HTTPS","非同步任務提交":"Asynchronous task submission","預載關鍵資源（CSS、JS、字型）":"Preload key resources (CSS, JS, fonts)","顯示":"Showing","顯示 0 個狀態碼":"Showing 0 status codes","驗證 JSON/XML 結構":"Validate JSON/XML structure","顯示所有狀態碼":"Show all status codes","飯店/機場網路認證":"Hotel/Airport Network Authentication","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="editorial" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#F97316;--classic-accent-rgb:249,115,22">
+<!-- Header & Sidebar -->
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- Main Content -->
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Hero -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-orange-400">
+<span class="flex w-2 h-2 bg-orange-400 rounded-full animate-pulse mr-2"></span>
+                Covers 60+ common HTTP status codes · Instant query · Complete Chinese comparison
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                HTTP Status Code Lookup <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">HTTP status code query comparison table</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                Get detailed descriptions, common causes, and fix suggestions for all HTTP status codes.<br class="hidden sm:block"/>
+                Built-in <strong class="text-orange-400">SEO impact analysis</strong> with <strong class="text-orange-400">Cache policy flag</strong>, a must-have tool for web development and SEO teams.
+            </p>
+</div>
+<!-- Search & Filter Bar -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-6" id="tool-card">
+<!-- Search -->
+<div class="p-4 sm:p-5 border-b border-hub-700">
+<div class="relative">
+<i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg"></i>
+<input autocomplete="off" class="search-input" id="search-input" placeholder="Search status code (404, 500), name (Not Found), keyword (Redirect, Server Error)..." type="text"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors hidden" id="clear-search">
+<i class="ph ph-x-circle text-lg"></i>
+</button>
+</div>
+</div>
+<!-- Category Tabs -->
+<div class="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-hub-700/50 overflow-x-auto no-scrollbar">
+<button class="category-tab active" data-category="all">All <span class="opacity-60" id="count-all">0</span></button>
+<button class="category-tab" data-category="1xx">1xx 🟦 Information <span class="opacity-60" id="count-1xx">0</span></button>
+<button class="category-tab" data-category="2xx">2xx 🟩 Success <span class="opacity-60" id="count-2xx">0</span></button>
+<button class="category-tab" data-category="3xx">3xx 🟨 redirect <span class="opacity-60" id="count-3xx">0</span></button>
+<button class="category-tab" data-category="4xx">4xx 🟧 Client error <span class="opacity-60" id="count-4xx">0</span></button>
+<button class="category-tab" data-category="5xx">5xx 🟥 Server error <span class="opacity-60" id="count-5xx">0</span></button>
+</div>
+<!-- Bottom bar -->
+<div class="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-3">
+<label class="flex items-center gap-2 cursor-pointer text-xs text-slate-400 hover:text-white transition-colors select-none">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="fav-toggle" type="checkbox"/>
+<div class="toggle-bg block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+<i class="ph ph-star text-amber-400 text-sm"></i> Show only favorites
+                    </label>
+<button class="text-xs text-slate-500 hover:text-orange-400 transition-colors flex items-center gap-1" id="recent-btn">
+<i class="ph ph-clock-counter-clockwise"></i> Recent queries
+                    </button>
+</div>
+<span class="text-xs text-slate-500" id="result-count"></span>
+</div>
+</div>
+<!-- Recent Queries Panel -->
+<div class="hidden bg-hub-800/60 border border-hub-700 rounded-xl p-4 mb-4 fade-in" id="recent-panel">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-bold text-slate-400 uppercase tracking-wider"><i class="ph ph-clock-counter-clockwise text-orange-400 mr-1"></i> Recent queries</span>
+<button class="text-xs text-slate-500 hover:text-red-400 transition-colors" id="clear-recent">clear history</button>
+</div>
+<div class="flex flex-wrap gap-2" id="recent-list"></div>
+</div>
+<!-- Status Code Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4" id="codes-grid"></div>
+<!-- ===== FAQ SECTION ===== -->
+<div class="mt-16 max-w-4xl mx-auto">
+<div class="text-center mb-8">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ FAQ <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">FAQ</span></h2>
+<p class="text-slate-400 text-sm">Frequently asked questions and answers about HTTP status codes</p>
+</div>
+<div class="space-y-3">
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What are HTTP status codes? Why is it important?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">HTTP Status Code</strong> It is the three-digit code returned by the server when responding to the client (browser, API client, etc.) request. They are the basic language for Internet communication, telling clients the results of their requests.</p>
+<p class="mt-2">Status codes are divided into five categories:</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-blue-400">1xx (information)</strong> — The request is being processed</li>
+<li><strong class="text-emerald-400">2xx (success)</strong> — The request was successfully processed</li>
+<li><strong class="text-amber-400">3xx (redirect)</strong> — Further action is required to complete the request</li>
+<li><strong class="text-orange-400">4xx (client error)</strong> — The request is incorrect and the client needs to correct it.</li>
+<li><strong class="text-red-400">5xx (server error)</strong> — Server-side problem</li>
+</ul>
+<p class="mt-2"><strong class="text-white">Why is it important?</strong> Status codes are not only a debugging tool, but also directly affect <strong class="text-orange-400">SEO ranking</strong>、<strong class="text-orange-400">User experience</strong>、<strong class="text-orange-400">cache policy</strong> with <strong class="text-orange-400">API design</strong>. Correct status codes are the basis for building reliable web services.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What is the difference between 301 and 302 redirects?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-amber-400">301 Moved Permanently</strong> Indicates that the resource has<strong class="text-white">move permanently</strong> to the new URL. Search engines will completely transfer the SEO weight (PageRank, link juice) of the old URL to the new URL and update it in the index with the new URL.</p>
+<p class="mt-2"><strong class="text-amber-400">302 Found</strong> represents a resource<strong class="text-white">move temporarily</strong>. Search engines will not transfer SEO weight to the new URL and will continue to index the old URL.</p>
+<div class="highlight-box mt-2">
+<p><strong>Main differences:</strong></p>
+<ul class="pl-5 mt-1 space-y-1">
+<li><strong class="text-orange-400">301</strong>: Permanent changes, SEO weight transfer, suitable for website revision, HTTPS migration, URL reconstruction</li>
+<li><strong class="text-orange-400">302</strong>: Temporary change, SEO weight will not be transferred, suitable for A/B testing, temporary maintenance pages, seasonal promotions</li>
+</ul>
+</div>
+<p class="mt-2"><strong class="text-orange-400">⚠️ Common mistakes:</strong> Many websites misuse 302 as a permanent redirect, causing SEO weight to be dispersed. If you are sure that the URL will not be changed back, be sure to use <strong>301</strong>。</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What is the difference between 404 and 410?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-orange-400">404 Not Found</strong> represents a resource<strong class="text-white">Can't find it yet</strong>, but may be restored in the future. This is the most common error page.</p>
+<p><strong class="text-orange-400">410 Gone</strong> represents a resource<strong class="text-white">permanently deleted</strong>, and there is no redirection. This is a stronger signal than a 404.</p>
+<div class="highlight-box mt-2">
+<p><strong>The impact on SEO varies widely:</strong></p>
+<ul class="pl-5 mt-1 space-y-1">
+<li><strong class="text-orange-400">404</strong>: The search engine will continue to try to crawl for a period of time, and will be removed from the index after multiple 404s.</li>
+<li><strong class="text-orange-400">410</strong>: Search engines will remove the URL from their index more quickly because they are explicitly informed that the resource is permanently gone</li>
+</ul>
+</div>
+<p class="mt-2"><strong class="text-white">Suggestions for use:</strong> If content was accidentally deleted or temporarily taken down, use <strong>404</strong>. If it is a product page, old article, or discontinued product that you are sure you will no longer reply to, please use <strong>410</strong> To speed up search engine index cleaning.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>How to troubleshoot 500 series server errors?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>5xx errors represent a problem on the server side. The following are the troubleshooting guidelines for common 5xx errors:</p>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">500 Internal Server Error</strong></p>
+<p>The most common server error. Check the server error log (<code>/var/log/</code>, Nginx/Apache logs, application logs), the most common reasons are code exceptions, database connection failures, or .htaccess syntax errors.</p>
+</div>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">502 Bad Gateway</strong></p>
+<p>The proxy server received an invalid response from the upstream. Commonly found in Nginx + PHP-FPM architecture: Check whether PHP-FPM is running, or whether the upstream application server (such as Gunicorn, uWSGI) is operating normally.</p>
+</div>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">503 Service Unavailable</strong></p>
+<p>The server is temporarily unable to process the request. Check whether maintenance is being performed and whether the server is overloaded. View <code>Retry-After</code> Header to know the estimated recovery time.</p>
+</div>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">504 Gateway Timeout</strong></p>
+<p>The proxy server timed out waiting for a response from the upstream. Add nginx <code>proxy_read_timeout</code>、PHP <code>max_execution_time</code>, or optimize slow database queries.</p>
+</div>
+<p class="mt-2"><strong class="text-white">General troubleshooting steps:</strong>① Check the server error log → ② Confirm the database connection → ③ Check the memory and CPU usage → ④ Check whether there have been recent program deployment changes → ⑤ Retrying may sometimes recover (if it is a short-lived problem).</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What impact do HTTP status codes have on SEO?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>HTTP status codes have a direct impact on search engine rankings:</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-emerald-400">200 OK</strong> — Ideally, search engines index content normally</li>
+<li><strong class="text-amber-400">301 Moved Permanently</strong> —Seamless transfer of SEO authority to new URLs</li>
+<li><strong class="text-amber-400">302 Found</strong> — Failure to transfer weights may result in scattered scores</li>
+<li><strong class="text-amber-400">304 Not Modified</strong> — Save crawler budget (Crawl Budget)</li>
+<li><strong class="text-orange-400">403 Forbidden</strong> — Content cannot be accessed by search engines</li>
+<li><strong class="text-red-400">404 Not Found</strong> — Too many 404s hurt your site quality score</li>
+<li><strong class="text-red-400">410 Gone</strong> — Search engines will remove indexes faster</li>
+<li><strong class="text-red-400">429 Too Many Requests</strong> — May cause the crawler to temporarily stop crawling</li>
+<li><strong class="text-red-400">500+ series</strong> — Consistent server errors can seriously harm SEO rankings</li>
+</ul>
+<p class="mt-2"><strong class="text-white">SEO best practices:</strong> Regularly monitor the distribution of HTTP status codes on the website, use Google Search Console to check for 404 and 500 errors, create custom 404 pages to improve user experience, and ensure that all pages return correct status codes.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>What HTTP status codes can be cached?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>HTTP caching policies are closely related to status codes. The following is cache behavior for common status codes:</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-emerald-400">200 OK</strong> — cacheable (depends on <code>Cache-Control</code> header)</li>
+<li><strong class="text-emerald-400">203 Non-Authoritative Info</strong> — cacheable</li>
+<li><strong class="text-emerald-400">206 Partial Content</strong> — Cacheable (for segmented content)</li>
+<li><strong class="text-emerald-400">301 Moved Permanently</strong> — Browsers cache this redirect forever</li>
+<li><strong class="text-emerald-400">304 Not Modified</strong> — part of the caching mechanism itself</li>
+<li><strong class="text-emerald-400">308 Permanent Redirect</strong> — The browser will cache it permanently</li>
+<li><strong class="text-amber-400">302 / 307</strong> — Only if there is an explicit <code>Cache-Control</code> time cache</li>
+<li><strong class="text-red-400">404</strong> — Usually (but preferably not) cacheable</li>
+<li><strong class="text-red-400">410 Gone</strong> — usually cacheable</li>
+<li><strong class="text-red-400">503 Service Unavailable</strong> — Configurable <code>Retry-After</code> Paired with cache</li>
+</ul>
+<p class="mt-2"><strong class="text-white">💡 Reminder:</strong> Caching behavior ultimately consists of <code>Cache-Control</code>、<code>Expires</code> with <code>ETag</code> As determined by headers, the same status code may have different caching behavior depending on different header settings.</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>How do I view HTTP status codes in browser developer tools?</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>All three major browsers have built-in developer tools to easily view HTTP status codes:</p>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">Chrome / Edge DevTools</strong></p>
+<p>press <code>F12</code> or <code>Ctrl+Shift+I</code> → switch to <strong>Network</strong> Panel → Reload page → Click on any request to <strong>Headers</strong> seen in <code>Status Code</code>。</p>
+</div>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">Firefox DevTools</strong></p>
+<p>press <code>F12</code> → <strong>Network</strong> Panel → The request list directly displays the status code (color marking: 2xx green, 4xx orange, 5xx red).</p>
+</div>
+<div class="highlight-box mt-2">
+<p><strong class="text-orange-400">Safari Web Inspector</strong></p>
+<p>Enable developer menu (Preferences → Advanced) → <strong>Internet</strong> Tag → View the status code for each request.</p>
+</div>
+<p class="mt-2"><strong class="text-white">💡 Quick Tips:</strong> In the Network panel press <code>Status</code> Sort to quickly find all 4xx/5xx bad requests.</p>
+</div>
+</details>
+</div>
+</div>
+<!-- ===== SEO ARTICLE ===== -->
+<div class="mt-16 max-w-4xl mx-auto seo-article">
+<div class="text-center mb-8">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 Complete Guide to HTTP Status Codes</h2>
+<p class="text-slate-400 text-sm">Learn more about how HTTP status codes work and best practices</p>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2>What are HTTP status codes?</h2>
+<p><strong>HTTP Status Code</strong> It is one of the most basic and important components in Internet communication. Whenever a browser, search engine crawler, or API client makes a request to the server, the server sends back a three-digit status code indicating the result of the request.</p>
+<p>Each digit of these three numbers has a meaning:</p>
+<ul>
+<li><strong class="text-blue-400">1xx</strong> — Information response: The request has been received and is being processed.</li>
+<li><strong class="text-emerald-400">2xx</strong> — Success: The request was successfully received, understood, and accepted</li>
+<li><strong class="text-amber-400">3xx</strong> — Redirect: Further action is required to complete the request</li>
+<li><strong class="text-orange-400">4xx</strong> — Client Error: The request contained bad syntax or could not be completed</li>
+<li><strong class="text-red-400">5xx</strong> — Server Error: The server was unable to complete a valid request</li>
+</ul>
+<p>Understanding HTTP status codes for <strong>web development</strong>、<strong>API design</strong>、<strong>SEO optimization</strong> with <strong>System management</strong> All are necessary basic knowledge.</p>
+<h2>301 vs 302: Complete analysis of redirection strategies</h2>
+<p>Redirect is a commonly used technology in website management, but <strong>301</strong> with <strong>302</strong> The choice has a very different impact on SEO.</p>
+<h3>301 permanent redirect</h3>
+<p>Use <strong>301</strong> The representative told the search engine: "This URL has been permanently moved. Please transfer all rankings and weights of the old URL to the new URL." This is <strong>Website revision, HTTPS migration, URL reconstruction</strong> the right choice at the time.</p>
+<p><strong class="text-white">SEO Impact:</strong> PageRank transfer rate is around 90-99%, making it the most complete way to transfer weight. Google will remove the old URL from the index and use the new URL instead.</p>
+<h3>302 Temporary Redirect</h3>
+<p>Use <strong>302</strong> The representative told the search engine: "This URL has only been moved temporarily, please continue to index the old URL." This is <strong>A/B testing, temporary maintenance pages, seasonal events</strong> the right choice at the time.</p>
+<p><strong class="text-white">SEO Impact:</strong> The search engine will not transfer the weight to the new URL and will continue to keep the old URL in the index.</p>
+<div class="highlight-box">
+<p><strong>Practical suggestions:</strong></p>
+<ul>
+<li>✅ Upgrade from HTTP to HTTPS → <strong>301</strong></li>
+<li>✅ Website domain name change → <strong>301</strong></li>
+<li>✅ Merge multiple pages → <strong>301</strong></li>
+<li>⚠️ Short-term promotion page → <strong>302</strong></li>
+<li>⚠️ A/B test different versions → <strong>302</strong></li>
+<li>❌ Use 302 for permanent redirect → <strong>Common Mistakes That Lead to Dispersed SEO Weight</strong></li>
+</ul>
+</div>
+<h2>404 vs 410: Response options when content does not exist</h2>
+<p>When a user or search engine requests a URL that does not exist, the server can return <strong>404 Not Found</strong> or <strong>410 Gone</strong>. The difference between the two is not only technical semantics, but also affects the behavior of search engines.</p>
+<h3>404 Not Found</h3>
+<p>Indicates resources "<strong>temporarily</strong>"Can't find it. The server doesn't know if the resource will come online again. This is the default "resource does not exist" response and is the most common choice.</p>
+<ul>
+<li>Suitable for: accidental deletion, temporary removal, URL spelling errors</li>
+<li>Search engine behavior: Will continue to try to crawl for a period of time, and will be removed from the index after multiple 404s</li>
+</ul>
+<h3>410 Gone</h3>
+<p>Indicates resources "<strong>permanent</strong>” disappeared without providing an alternative URL. This is a clearer signal than a 404.</p>
+<ul>
+<li>Good for: discontinued product pages, deleted user content, retired API versions</li>
+<li>Search engine behavior: The URL will be removed from the index more quickly because you are explicitly informed that the resource is gone</li>
+</ul>
+<div class="highlight-box">
+<p><strong>SEO advice:</strong> For pages that you are sure will not be restored, use <strong>410</strong> Instead of 404, it can speed up search engine index cleaning. For pages that are not sure whether they will be restored, use the standard <strong>404</strong> That’s it.</p>
+</div>
+<h2>500 Series Server Errors: Diagnosis and Repair</h2>
+<p>5xx errors represent server-side issues, which are the biggest threat to SEO and user experience. Persistent 5xx errors make search engines less trustworthy of your website.</p>
+<h3>Common 5xx errors and solutions</h3>
+<ul>
+<li><strong>500 Internal Server Error</strong> — The most common server error. Check server error logs, application logs, .htaccess syntax</li>
+<li><strong>502 Bad Gateway</strong> — The proxy/gateway received an invalid response. Check Nginx + PHP-FPM / Gunicorn and other architectures</li>
+<li><strong>503 Service Unavailable</strong> — The server is temporarily unable to process the request. Check maintenance status, server load, ensure settings <code>Retry-After</code> header</li>
+<li><strong>504 Gateway Timeout</strong> — The upstream server response timed out. Add proxy timeout settings and optimize database queries</li>
+</ul>
+<h3>Impact of 5xx Errors on SEO</h3>
+<p>Search engines such as Google will significantly lower rankings for websites that consistently return 5xx errors. If a search engine crawler encounters a 503 while crawling, it will understand that this is a temporary issue and try again later. But if you continue to encounter 500 or 502, search engines will think that the website is unreliable and lower the ranking.</p>
+<div class="highlight-box">
+<p><strong>Emergency response:</strong> When large-scale 5xx errors occur, set <strong>503</strong> Status code and match <code>Retry-After</code> header, telling search engines that this is temporary. This is much better than having the crawler encounter errors randomly.</p>
+</div>
+<h2>HTTP status codes and SEO best practices</h2>
+<p>In SEO work, the management of HTTP status codes is an indispensable part. Here are a few key best practices:</p>
+<h3>Regularly monitor status code distribution</h3>
+<p>Use <strong>Google Search Console</strong> Regularly check your website's status code report. Pay special attention to the number and trends of 404 and 5xx errors. A large number of 404s may indicate a structural issue with the site or a large number of broken external links.</p>
+<h3>Use redirects correctly</h3>
+<p>301 for permanent changes and 302 for temporary changes. Avoid redirect chains (A → B → C) and try to make redirects happen in one step. Avoid redirect loops (A → B → A).</p>
+<h3>Custom 404 page</h3>
+<p>Provides a user-friendly custom 404 page, including links back to the homepage and search functionality. This not only improves user experience, but also reduces the negative impact of bounce rates on SEO.</p>
+<h3>Using cache to improve performance</h3>
+<p>Correct settings <code>Cache-Control</code> with <code>ETag</code> header to allow 304 Not Modified to take full advantage, reducing server load and speeding up page loading.</p>
+<h3>Monitor server health</h3>
+<p>Set up server monitoring alerts to be notified immediately when a large number of 5xx errors occur. Using a CDN can provide backup or maintenance pages in the event of origin server failure.</p>
+<div class="highlight-box">
+<p><strong>Summary:</strong> HTTP status codes are a core indicator of website health. Correctly understanding and using each status code can not only improve development efficiency, but also significantly improve the website's SEO ranking and user experience. Use ToolHub's HTTP Status Code Lookup tool to check the detailed description and best way to handle any status code at any time.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<div id="component-footer"></div>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-orange-400" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- ================ SYSTEM INIT ================ -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/http-status-codes';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ================ BUSINESS LOGIC ================ -->
+<script>
+        // ===== DATA =====
+        const CATEGORY_COLORS = {
+            '1xx': { hex: '#3B82F6', name: 'blue', label: '資訊回應 Informational' },
+            '2xx': { hex: '#10B981', name: 'green', label: '成功 Success' },
+            '3xx': { hex: '#F59E0B', name: 'amber', label: '重定向 Redirection' },
+            '4xx': { hex: '#F97316', name: 'orange', label: '客戶端錯誤 Client Error' },
+            '5xx': { hex: '#EF4444', name: 'red', label: '伺服器錯誤 Server Error' },
+        };
+
+        const STATUS_CODES = [
+            // ===== 1xx =====
+            { code: 100, name: 'Continue', category: '1xx', officialDesc: 'The initial part of a request has been received and the client should continue.', zhDesc: '伺服器已收到請求的初始部分，客戶端應繼續發送剩餘請求。', causes: ['正常流程的一部分', '客戶端發送了 Expect: 100-continue 標頭'], fixes: ['無需修復，這是正常協議流程'], seoRelevant: false, cacheable: false, common: false },
+            { code: 101, name: 'Switching Protocols', category: '1xx', officialDesc: 'The server understands and is willing to comply with the client\'s request to switch protocols.', zhDesc: '伺服器理解並同意客戶端更換通訊協定的請求（如升級到 WebSocket）。', causes: ['WebSocket 連線建立', 'HTTP/1.1 升級到 HTTP/2'], fixes: ['無需修復，這是正常的協議切換流程'], seoRelevant: false, cacheable: false, common: false },
+            { code: 102, name: 'Processing', category: '1xx', officialDesc: 'The server has received and is processing the request, but no response is available yet.', zhDesc: '伺服器已收到請求並正在處理中，但尚無回應可用。用於防止客戶端超時。', causes: ['長時間運行的伺服器端處理'], fixes: ['無需修復，等待處理完成'], seoRelevant: false, cacheable: false, common: false },
+            { code: 103, name: 'Early Hints', category: '1xx', officialDesc: 'Used to return some response headers before final HTTP message.', zhDesc: '在最終回應之前提前發送部分標頭，讓瀏覽器可以預先載入資源。', causes: ['伺服器最佳化策略', '預載關鍵資源（CSS、JS、字型）'], fixes: ['無需修復', '可顯著提升頁面載入速度'], seoRelevant: true, cacheable: false, common: false },
+
+            // ===== 2xx =====
+            { code: 200, name: 'OK', category: '2xx', officialDesc: 'The request has succeeded.', zhDesc: '請求成功。這是 HTTP 中最常見的成功狀態碼，表示伺服器成功處理了請求。', causes: ['正常的成功請求'], fixes: ['無需修復'], seoRelevant: true, cacheable: '可快取（取決於 Cache-Control 標頭）', common: true },
+            { code: 201, name: 'Created', category: '2xx', officialDesc: 'The request has been fulfilled and a new resource has been created.', zhDesc: '請求已成功，並已建立了一個新資源。通常在 POST 或 PUT 請求後回傳。', causes: ['成功建立新資源（如新使用者註冊、新文章發布）'], fixes: ['無需修復'], seoRelevant: false, cacheable: false, common: true },
+            { code: 202, name: 'Accepted', category: '2xx', officialDesc: 'The request has been accepted for processing, but the processing has not been completed.', zhDesc: '請求已被接受進行處理，但處理尚未完成。適用於非同步操作。', causes: ['非同步任務提交', '長時間批次處理'], fixes: ['無需修復', '使用 Location 標頭查看處理狀態'], seoRelevant: false, cacheable: false, common: false },
+            { code: 203, name: 'Non-Authoritative Information', category: '2xx', officialDesc: 'The request was successful but the enclosed payload has been modified by a transforming proxy.', zhDesc: '請求成功，但回應內容已被中間代理修改（例如 CDN 或快取伺服器）。', causes: ['CDN 或代理伺服器修改了回應內容'], fixes: ['檢查代理設定', '確認內容完整性'], seoRelevant: false, cacheable: '可快取', common: false },
+            { code: 204, name: 'No Content', category: '2xx', officialDesc: 'The server successfully processed the request, but is not returning any content.', zhDesc: '伺服器成功處理了請求，但不回傳任何內容。常用於 DELETE 請求或 AJAX 操作。', causes: ['成功執行操作但無需回傳資料', 'DELETE 請求', '表單提交後不刷新頁面'], fixes: ['無需修復'], seoRelevant: false, cacheable: false, common: true },
+            { code: 205, name: 'Reset Content', category: '2xx', officialDesc: 'The server successfully processed the request and asks the client to reset the document view.', zhDesc: '伺服器成功處理請求，並要求客戶端重置文件檢視（例如清除表單輸入）。', causes: ['表單提交後需要重置輸入'], fixes: ['無需修復'], seoRelevant: false, cacheable: false, common: false },
+            { code: 206, name: 'Partial Content', category: '2xx', officialDesc: 'The server is delivering only part of the resource due to a range header sent by the client.', zhDesc: '伺服器根據客戶端發送的 Range 標頭，僅回傳資源的一部分。用於續傳、影片串流。', causes: ['大檔案分段下載', '影片跳轉播放'], fixes: ['無需修復'], seoRelevant: false, cacheable: '可快取', common: false },
+            { code: 207, name: 'Multi-Status', category: '2xx', officialDesc: 'Conveys information about multiple resources in situations where multiple status codes might be appropriate.', zhDesc: '在需要回傳多個狀態碼的情況下，傳達多個資源的狀態資訊。常用於 WebDAV。', causes: ['批次操作需要回傳混合結果'], fixes: ['無需修復', '檢查每個子回應的個別狀態'], seoRelevant: false, cacheable: false, common: false },
+            { code: 208, name: 'Already Reported', category: '2xx', officialDesc: 'The members of a DAV binding have already been enumerated in a preceding part of the response.', zhDesc: 'DAV 繫結的成員已在前面的回應部分中列舉過，不再重複。', causes: ['WebDAV PROPFIND 請求的內部優化'], fixes: ['無需修復'], seoRelevant: false, cacheable: false, common: false },
+            { code: 226, name: 'IM Used', category: '2xx', officialDesc: 'The server has fulfilled a GET request for the resource, and the response is a result of instance-manipulations.', zhDesc: '伺服器已完成資源的 GET 請求，回應是經過一個或多個實例操作處理後的結果。', causes: ['HTTP Delta Encoding'], fixes: ['無需修復'], seoRelevant: false, cacheable: false, common: false },
+
+            // ===== 3xx =====
+            { code: 300, name: 'Multiple Choices', category: '3xx', officialDesc: 'The request has more than one possible response. The user-agent should choose one.', zhDesc: '請求有多個可能的回應。使用者代理應選擇其中一個（例如多語言或多格式資源）。', causes: ['內容協商', '多語言或多格式資源'], fixes: ['設定正確的 Accept 標頭', '使用更具體的 URL'], seoRelevant: true, cacheable: false, common: false },
+            { code: 301, name: 'Moved Permanently', category: '3xx', officialDesc: 'The URL of the requested resource has been changed permanently.', zhDesc: '請求的資源已經永久移動到新的 URL。搜尋引擎會將 SEO 權重轉移到新網址。', causes: ['網站改版或重構', '永久變更網址結構', 'HTTP 遷移到 HTTPS'], fixes: ['在 Location 標頭中提供新 URL', '更新所有內部連結', '更新 sitemap.xml'], seoRelevant: true, cacheable: '瀏覽器會永久快取此重定向', common: true },
+            { code: 302, name: 'Found (Moved Temporarily)', category: '3xx', officialDesc: 'The resource requested has been temporarily moved to the URL given by the Location header.', zhDesc: '請求的資源暫時移動到新的 URL。搜尋引擎通常不會轉移 SEO 權重。', causes: ['A/B 測試', '臨時維護頁面', '季節性促銷頁面'], fixes: ['使用 302 僅在臨時情況下', '如需永久移動請使用 301', '定期檢查不再需要的暫存重定向'], seoRelevant: true, cacheable: '不應快取', common: true },
+            { code: 303, name: 'See Other', category: '3xx', officialDesc: 'The server sends this response to direct the client to get the requested resource at another URI with a GET request.', zhDesc: '伺服器引導客戶端以 GET 請求從另一個 URI 獲取資源。常用於 Post/Redirect/Get 模式。', causes: ['PRG 模式', '防止表單重複提交'], fixes: ['無需修復', '確認重定向 URL 正確'], seoRelevant: false, cacheable: false, common: false },
+            { code: 304, name: 'Not Modified', category: '3xx', officialDesc: 'This is used for caching purposes. It tells the client that the response has not been modified.', zhDesc: '用於快取目的。告訴客戶端資源未被修改，可以繼續使用本地快取版本。', causes: ['資源未被修改', 'If-None-Match 或 If-Modified-Since 標頭匹配'], fixes: ['無需修復，這是最佳的快取行為', '如需強制刷新，使用 Ctrl+F5'], seoRelevant: true, cacheable: '此狀態碼本身就是快取機制的一部分', common: true },
+            { code: 307, name: 'Temporary Redirect', category: '3xx', officialDesc: 'The server sends this response to direct the client to get the requested resource at another URI with the same method.', zhDesc: '暫時重定向。與 302 類似，但保證請求方法不會被更改（POST 仍然是 POST）。', causes: ['暫時維護', '暫時的服務遷移'], fixes: ['僅在短時間內使用', '恢復正常後移除重定向'], seoRelevant: true, cacheable: false, common: false },
+            { code: 308, name: 'Permanent Redirect', category: '3xx', officialDesc: 'The resource is now permanently located at another URI, specified by the Location header. Same method is used.', zhDesc: '永久重定向，與 301 類似但保證請求方法不變。適合非 GET 請求的永久轉移。', causes: ['API 端點永久變更', '結構性 URL 變更'], fixes: ['更新所有引用', '更新 API 文件'], seoRelevant: true, cacheable: '瀏覽器會永久快取', common: false },
+
+            // ===== 4xx =====
+            { code: 400, name: 'Bad Request', category: '4xx', officialDesc: 'The server cannot or will not process the request due to something that is perceived to be a client error.', zhDesc: '伺服器無法處理請求，因為請求語法錯誤或格式不正確。', causes: ['請求語法錯誤', 'JSON 格式不正確', '缺少必要參數', 'URL 包含無效字元'], fixes: ['檢查請求格式', '驗證 JSON/XML 結構', '檢查 URL 編碼', '查看 API 文件確認參數'], seoRelevant: false, cacheable: false, common: true },
+            { code: 401, name: 'Unauthorized', category: '4xx', officialDesc: 'The client must authenticate itself to get the requested response.', zhDesc: '客戶端必須進行身份驗證才能獲取請求的回應。', causes: ['未提供認證 Token', 'Token 過期', '未登入', 'API Key 缺失或無效'], fixes: ['提供有效的 Authorization 標頭', '重新登入獲取新 Token', '檢查 API Key 是否正確'], seoRelevant: false, cacheable: false, common: true },
+            { code: 402, name: 'Payment Required', category: '4xx', officialDesc: 'Reserved for future use. Originally intended for digital payment systems.', zhDesc: '保留供未來使用。最初用於數位支付系統。目前很少使用，部分平台用於付費牆。', causes: ['達到免費額度上限', '需要付費方案'], fixes: ['升級帳號方案', '完成付款'], seoRelevant: false, cacheable: false, common: false },
+            { code: 403, name: 'Forbidden', category: '4xx', officialDesc: 'The client does not have access rights to the content; the server is refusing to give the requested resource.', zhDesc: '客戶端沒有存取權限。即使已驗證身份，也不被允許存取該資源。', causes: ['權限不足', 'IP 被封鎖', '目錄索引被禁用', 'CORS 政策'], fixes: ['確認帳號權限', '檢查 IP 白名單', '檢查 CORS 設定', '聯繫管理員獲取權限'], seoRelevant: true, cacheable: false, common: true },
+            { code: 404, name: 'Not Found', category: '4xx', officialDesc: 'The server can not find the requested resource.', zhDesc: '伺服器找不到請求的資源。這是最常見、最知名的 HTTP 錯誤之一。', causes: ['URL 拼寫錯誤', '資源已被刪除', '連結失效（Dead Link）', '路由設定錯誤'], fixes: ['檢查 URL 是否正確', '設定 301 重定向到新頁面', '建立自訂 404 頁面', '定期檢查網站斷連'], seoRelevant: true, cacheable: false, common: true },
+            { code: 405, name: 'Method Not Allowed', category: '4xx', officialDesc: 'The request method is known by the server but is not supported by the target resource.', zhDesc: '伺服器認識請求方法，但目標資源不支援該方法（例如用 GET 存取只接受 POST 的端點）。', causes: ['使用了錯誤的 HTTP 方法', 'API 端點限制'], fixes: ['檢查 API 文件確認支援的方法', '查看 Allow 回應標頭', '使用正確的 HTTP 方法'], seoRelevant: false, cacheable: false, common: true },
+            { code: 406, name: 'Not Acceptable', category: '4xx', officialDesc: 'The server cannot produce a response matching the list of acceptable values defined in the request.', zhDesc: '伺服器無法產生符合 Accept 標頭要求的回應格式。', causes: ['Accept 標頭設定過於嚴格', '伺服器不支援要求的回應格式'], fixes: ['修改 Accept 標頭', '確認伺服器支援的格式'], seoRelevant: false, cacheable: false, common: false },
+            { code: 407, name: 'Proxy Authentication Required', category: '4xx', officialDesc: 'The client must first authenticate itself with the proxy.', zhDesc: '客戶端必須先對代理伺服器進行身份驗證。', causes: ['代理伺服器需要認證', '公司網路代理設定'], fixes: ['提供 Proxy-Authorization 標頭', '設定代理認證資訊'], seoRelevant: false, cacheable: false, common: false },
+            { code: 408, name: 'Request Timeout', category: '4xx', officialDesc: 'The server timed out waiting for the request from the client.', zhDesc: '伺服器等待客戶端請求時超時。客戶端發送請求的時間過長。', causes: ['網路延遲', '客戶端上傳大檔案時網路中斷', '伺服器超時設定過短'], fixes: ['檢查網路連線', '重新發送請求', '調整伺服器超時設定'], seoRelevant: false, cacheable: false, common: true },
+            { code: 409, name: 'Conflict', category: '4xx', officialDesc: 'The request could not be completed due to a conflict with the current state of the target resource.', zhDesc: '請求無法完成，因為與目標資源的當前狀態發生衝突（例如版本衝突、重複資料）。', causes: ['同時編輯同一資源', '資料唯一性約束違反', '版本衝突'], fixes: ['使用樂觀鎖定或 ETag', '先 GET 最新版本再 PUT', '處理重複資料'], seoRelevant: false, cacheable: false, common: false },
+            { code: 410, name: 'Gone', category: '4xx', officialDesc: 'The target resource is no longer available at the origin server and this condition is likely to be permanent.', zhDesc: '目標資源已永久不存在，且沒有轉址。比 404 更強烈的訊號，告知搜尋引擎該資源已永久刪除。', causes: ['內容永久下架', '產品停產', '舊版 API 退役'], fixes: ['確認資源是否真的永久刪除', '如有替代資源請使用 301', '不要再建立同名資源'], seoRelevant: true, cacheable: false, common: false },
+            { code: 411, name: 'Length Required', category: '4xx', officialDesc: 'The server refuses to accept the request without a defined Content-Length header.', zhDesc: '伺服器拒絕接受未定義 Content-Length 標頭的請求。', causes: ['缺少 Content-Length 標頭'], fixes: ['在請求中加入 Content-Length 標頭'], seoRelevant: false, cacheable: false, common: false },
+            { code: 412, name: 'Precondition Failed', category: '4xx', officialDesc: 'One or more conditions given in the request header fields evaluated to false.', zhDesc: '請求標頭中的一個或多個條件評估為 false（例如 If-Match 或 If-Unmodified-Since）。', causes: ['ETag 不匹配', '樂觀鎖定失敗', '資源已被其他人修改'], fixes: ['重新獲取最新資源', '合併變更後重新提交'], seoRelevant: false, cacheable: false, common: false },
+            { code: 413, name: 'Payload Too Large', category: '4xx', officialDesc: 'The request entity is larger than limits defined by server.', zhDesc: '請求內容超過伺服器允許的大小限制（例如上傳檔案過大）。', causes: ['上傳檔案超過限制', '請求主體過大'], fixes: ['減小上傳檔案大小', '使用分片上傳', '調整伺服器 upload_max 設定'], seoRelevant: false, cacheable: false, common: false },
+            { code: 414, name: 'URI Too Long', category: '4xx', officialDesc: 'The URI requested by the client is longer than the server is willing to interpret.', zhDesc: '請求的 URI 長度超過伺服器允許的範圍（通常因過多的查詢參數）。', causes: ['過長的查詢字串', 'GET 請求攜帶過多資料'], fixes: ['改用 POST 請求', '縮短 URL 參數', '使用短連結'], seoRelevant: false, cacheable: false, common: false },
+            { code: 415, name: 'Unsupported Media Type', category: '4xx', officialDesc: 'The media format of the requested data is not supported by the server.', zhDesc: '伺服器不支援請求的媒體格式（例如發送了 XML 但伺服器只接受 JSON）。', causes: ['Content-Type 標頭錯誤', '使用了不支援的資料格式'], fixes: ['設定正確的 Content-Type（如 application/json）', '確認 API 支援的格式'], seoRelevant: false, cacheable: false, common: false },
+            { code: 416, name: 'Range Not Satisfiable', category: '4xx', officialDesc: 'The range specified by the Range header field in the request cannot be fulfilled.', zhDesc: '請求中 Range 標頭指定的範圍無法滿足（例如請求的位元組範圍超出檔案大小）。', causes: ['Range 請求超出檔案大小', 'Range 格式錯誤'], fixes: ['檢查檔案大小', '修正 Range 範圍'], seoRelevant: false, cacheable: false, common: false },
+            { code: 417, name: 'Expectation Failed', category: '4xx', officialDesc: 'The expectation given in the request\'s Expect header could not be met.', zhDesc: '無法滿足請求 Expect 標頭中的期望。', causes: ['Expect 標頭要求不被支援'], fixes: ['移除 Expect 標頭', '調整伺服器設定以支援該期望'], seoRelevant: false, cacheable: false, common: false },
+            { code: 418, name: 'I\'m a Teapot', category: '4xx', officialDesc: 'The server refuses the attempt to brew coffee with a teapot. (RFC 2324 April Fools\' joke)', zhDesc: '伺服器拒絕用茶壺煮咖啡。RFC 2324 的愚人節玩笑，但被許多框架保留作為彩蛋。', causes: ['嘗試用茶壺煮咖啡', '被防火牆或 WAF 攔截的幽默回應'], fixes: ['不要用茶壺煮咖啡...', '如果從 WAF 收到，檢查請求是否被誤判'], seoRelevant: false, cacheable: false, common: false },
+            { code: 421, name: 'Misdirected Request', category: '4xx', officialDesc: 'The request was directed at a server that is not able to produce a response.', zhDesc: '請求被導向到無法產生回應的伺服器（例如 HTTP/2 連線重用的問題）。', causes: ['HTTP/2 連線被錯誤路由', '反向代理設定問題'], fixes: ['檢查伺服器路由設定', '重新建立連線'], seoRelevant: false, cacheable: false, common: false },
+            { code: 422, name: 'Unprocessable Entity', category: '4xx', officialDesc: 'The server understands the content type and syntax but was unable to process the contained instructions.', zhDesc: '伺服器理解請求格式，但無法處理其中的指令（語義錯誤、驗證失敗）。常用於 REST API。', causes: ['表單驗證失敗', 'JSON 欄位類型錯誤', '必填欄位缺失', '業務邏輯驗證失敗'], fixes: ['檢查請求內容的語義正確性', '查看 API 文件中的驗證規則', '修正資料格式'], seoRelevant: false, cacheable: false, common: false },
+            { code: 423, name: 'Locked', category: '4xx', officialDesc: 'The resource that is being accessed is locked.', zhDesc: '存取的資源已被鎖定（例如被其他使用者編輯中）。', causes: ['資源被其他使用者鎖定', '檔案正在編輯中'], fixes: ['等待鎖定解除', '聯繫鎖定資源的使用者'], seoRelevant: false, cacheable: false, common: false },
+            { code: 424, name: 'Failed Dependency', category: '4xx', officialDesc: 'The request failed because it depended on another request and that request failed.', zhDesc: '請求失敗，因為它依賴於另一個請求，且該請求失敗了。', causes: ['相依的請求失敗', '批次操作中某一項失敗'], fixes: ['修復相依請求的問題', '重新提交整個批次'], seoRelevant: false, cacheable: false, common: false },
+            { code: 425, name: 'Too Early', category: '4xx', officialDesc: 'The server is unwilling to risk processing a request that might be replayed.', zhDesc: '伺服器不願意冒險處理可能被重放的請求（與 TLS 1.3 0-RTT 相關）。', causes: ['TLS 1.3 0-RTT 重放風險'], fixes: ['重試請求', '禁用 0-RTT'], seoRelevant: false, cacheable: false, common: false },
+            { code: 426, name: 'Upgrade Required', category: '4xx', officialDesc: 'The server refuses to perform the request using the current protocol but might be willing to do so after upgrade.', zhDesc: '伺服器拒絕使用當前協定執行請求，但可能在客戶端升級協定後願意執行。', causes: ['需要升級到 TLS/HTTPS', '需要升級到 HTTP/2'], fixes: ['使用 HTTPS', '升級到新版本協定'], seoRelevant: true, cacheable: false, common: false },
+            { code: 428, name: 'Precondition Required', category: '4xx', officialDesc: 'The origin server requires the request to be conditional.', zhDesc: '伺服器要求請求必須是條件式的（使用 If-Match 等標頭），以防止「遺失更新」問題。', causes: ['缺少條件式請求標頭'], fixes: ['加入 If-Match 或 If-Unmodified-Since 標頭'], seoRelevant: false, cacheable: false, common: false },
+            { code: 429, name: 'Too Many Requests', category: '4xx', officialDesc: 'The user has sent too many requests in a given amount of time ("rate limiting").', zhDesc: '使用者在給定時間內發送了過多請求（速率限制）。常見於 API 呼叫限制。', causes: ['超過 API 速率限制', 'DDoS 防護觸發', '爬蟲請求過於頻繁'], fixes: ['降低請求頻率', '實作指數退避重試', '查看 Retry-After 標頭', '升級 API 方案'], seoRelevant: true, cacheable: false, common: true },
+            { code: 431, name: 'Request Header Fields Too Large', category: '4xx', officialDesc: 'The server is unwilling to process the request because its header fields are too large.', zhDesc: '請求標頭欄位過大，伺服器拒絕處理（例如 Cookie 過多或過大）。', causes: ['Cookie 過多或過大', '自訂標頭過多'], fixes: ['減少 Cookie 大小和數量', '清理不必要的自訂標頭'], seoRelevant: false, cacheable: false, common: false },
+            { code: 451, name: 'Unavailable For Legal Reasons', category: '4xx', officialDesc: 'The server is denying access to the resource as a consequence of a legal demand.', zhDesc: '因法律要求，伺服器拒絕存取該資源（例如 GDPR 地區限制、政府審查）。', causes: ['GDPR 地區限制', '法院命令封鎖', '版權投訴'], fixes: ['使用 VPN（取決於當地法律）', '查看是否有替代來源'], seoRelevant: true, cacheable: false, common: false },
+
+            // ===== 5xx =====
+            { code: 500, name: 'Internal Server Error', category: '5xx', officialDesc: 'The server has encountered a situation it does not know how to handle.', zhDesc: '伺服器遇到無法處理的狀況。這是伺服器端最常見的通用錯誤。', causes: ['程式碼錯誤或例外', '資料庫連線失敗', '伺服器設定錯誤', '.htaccess 語法錯誤'], fixes: ['檢查伺服器錯誤日誌', '修正程式碼 Bug', '確認資料庫連線', '檢查 .htaccess 語法', '逐步除錯找出問題'], seoRelevant: true, cacheable: false, common: true },
+            { code: 501, name: 'Not Implemented', category: '5xx', officialDesc: 'The request method is not supported by the server and cannot be handled.', zhDesc: '伺服器不支援請求方法（例如伺服器不支援 PATCH 方法）。', causes: ['使用了伺服器不支援的 HTTP 方法', '伺服器軟體版本過舊'], fixes: ['使用伺服器支援的方法', '升級伺服器軟體'], seoRelevant: false, cacheable: false, common: false },
+            { code: 502, name: 'Bad Gateway', category: '5xx', officialDesc: 'The server, while acting as a gateway or proxy, received an invalid response from the upstream server.', zhDesc: '作為閘道或代理的伺服器，從上游伺服器收到了無效的回應。常見於 Nginx 反向代理。', causes: ['上游伺服器當機', 'PHP-FPM 沒有執行', '代理設定錯誤', 'DNS 解析失敗'], fixes: ['檢查上游伺服器狀態', '重啟 PHP-FPM 或應用伺服器', '檢查代理設定', '確認 DNS 設定'], seoRelevant: true, cacheable: false, common: true },
+            { code: 503, name: 'Service Unavailable', category: '5xx', officialDesc: 'The server is not ready to handle the request. Common causes are server maintenance or overload.', zhDesc: '伺服器暫時無法處理請求。常見原因包括伺服器維護中或過載。', causes: ['伺服器維護中', '伺服器過載', '應用程式重新啟動中', '資源耗盡（記憶體、連線數）'], fixes: ['查看 Retry-After 標頭', '等待伺服器恢復', '使用 CDN 顯示維護頁面', '擴充伺服器資源'], seoRelevant: true, cacheable: '不應快取，但可設定 Retry-After', common: true },
+            { code: 504, name: 'Gateway Timeout', category: '5xx', officialDesc: 'The server, while acting as a gateway or proxy, did not receive a timely response from the upstream server.', zhDesc: '作為閘道或代理的伺服器，未能在時限內收到上游伺服器的回應。', causes: ['上游伺服器回應過慢', '長時間執行的資料庫查詢', 'PHP 執行超時', '網路延遲'], fixes: ['增加代理超時設定', '優化慢查詢', '增加 PHP max_execution_time', '檢查網路延遲'], seoRelevant: true, cacheable: false, common: true },
+            { code: 505, name: 'HTTP Version Not Supported', category: '5xx', officialDesc: 'The HTTP version used in the request is not supported by the server.', zhDesc: '伺服器不支援請求中使用的 HTTP 版本。', causes: ['使用了過舊或過新的 HTTP 版本'], fixes: ['使用伺服器支援的 HTTP 版本', '升級伺服器軟體'], seoRelevant: false, cacheable: false, common: false },
+            { code: 506, name: 'Variant Also Negotiates', category: '5xx', officialDesc: 'The server has an internal configuration error: transparent content negotiation results in a circular reference.', zhDesc: '伺服器內部設定錯誤：透明內容協商導致循環引用。', causes: ['伺服器內容協商設定錯誤'], fixes: ['修正伺服器內容協商設定'], seoRelevant: false, cacheable: false, common: false },
+            { code: 507, name: 'Insufficient Storage', category: '5xx', officialDesc: 'The server is unable to store the representation needed to complete the request.', zhDesc: '伺服器儲存空間不足，無法完成請求。', causes: ['磁碟空間已滿', '資料庫儲存空間不足'], fixes: ['清理磁碟空間', '擴充儲存容量', '刪除不必要的資料'], seoRelevant: false, cacheable: false, common: false },
+            { code: 508, name: 'Loop Detected', category: '5xx', officialDesc: 'The server terminated an operation because it encountered an infinite loop.', zhDesc: '伺服器因遇到無限迴圈而終止操作。', causes: ['重定向迴圈', '代理迴圈'], fixes: ['檢查重定向鏈', '確認代理設定無迴圈'], seoRelevant: true, cacheable: false, common: false },
+            { code: 510, name: 'Not Extended', category: '5xx', officialDesc: 'Further extensions to the request are required for the server to fulfill it.', zhDesc: '伺服器需要請求的進一步擴展才能完成處理。', causes: ['缺少必要的請求擴展'], fixes: ['根據伺服器回應加入必要的擴展'], seoRelevant: false, cacheable: false, common: false },
+            { code: 511, name: 'Network Authentication Required', category: '5xx', officialDesc: 'The client needs to authenticate to gain network access.', zhDesc: '客戶端需要進行網路認證才能獲得網路存取權（例如 Wi-Fi 強制門戶 Captive Portal）。', causes: ['Wi-Fi 熱點需要登入', '飯店/機場網路認證'], fixes: ['完成網路認證頁面', '登入 Wi-Fi 熱點'], seoRelevant: false, cacheable: false, common: false },
+
+            // ===== Non-standard / Platform-specific =====
+            { code: 444, name: 'No Response', category: '4xx', officialDesc: 'A non-standard status code used by nginx to indicate that the server has returned no information to the client and closed the connection.', zhDesc: 'Nginx 使用的非標準狀態碼。伺服器不向客戶端回傳任何資訊並直接關閉連線（常用於阻擋惡意請求）。', causes: ['被 WAF 或 Nginx 規則阻擋', '惡意請求被直接丟棄'], fixes: ['檢查 Nginx 安全規則', '確認請求未被防火牆誤擋'], seoRelevant: false, cacheable: false, common: false },
+            { code: 499, name: 'Client Closed Request', category: '4xx', officialDesc: 'A non-standard status code introduced by nginx for when the client closes the connection before the server responds.', zhDesc: 'Nginx 使用的非標準狀態碼。客戶端在伺服器回應前關閉了連線。', causes: ['客戶端取消請求', '瀏覽器關閉分頁', '客戶端超時'], fixes: ['優化伺服器回應速度', '使用非同步處理'], seoRelevant: false, cacheable: false, common: false },
+            { code: 520, name: 'Web Server Returned an Unknown Error', category: '5xx', officialDesc: 'Cloudflare returns this when the origin server returns an empty, unknown, or unexpected response.', zhDesc: 'Cloudflare 在源站伺服器回傳空白、未知或未預期回應時回傳此錯誤。', causes: ['源站伺服器崩潰', '源站回傳了無效回應'], fixes: ['檢查源站伺服器狀態', '查看源站日誌'], seoRelevant: false, cacheable: false, common: false },
+            { code: 521, name: 'Web Server Is Down', category: '5xx', officialDesc: 'The origin server refused connections from Cloudflare.', zhDesc: '源站伺服器拒絕了 Cloudflare 的連線。', causes: ['源站伺服器當機', '防火牆封鎖了 Cloudflare IP'], fixes: ['重啟源站伺服器', '確認防火牆允許 Cloudflare IP'], seoRelevant: false, cacheable: false, common: false },
+            { code: 522, name: 'Connection Timed Out', category: '5xx', officialDesc: 'Cloudflare could not negotiate a TCP handshake with the origin server.', zhDesc: 'Cloudflare 無法與源站伺服器完成 TCP 握手。', causes: ['伺服器過載', '防火牆規則', '網路問題'], fixes: ['檢查伺服器負載', '確認防火牆規則', '聯繫主機商'], seoRelevant: false, cacheable: false, common: false },
+            { code: 523, name: 'Origin Is Unreachable', category: '5xx', officialDesc: 'Cloudflare cannot reach the origin server.', zhDesc: 'Cloudflare 無法連接到源站伺服器（DNS 解析失敗）。', causes: ['DNS 記錄不正確', '源站 IP 變更'], fixes: ['檢查 DNS 設定', '確認源站 IP 正確'], seoRelevant: false, cacheable: false, common: false },
+            { code: 524, name: 'A Timeout Occurred', category: '5xx', officialDesc: 'Cloudflare established a TCP connection but the origin server did not respond in a timely manner.', zhDesc: 'Cloudflare 建立了 TCP 連線但源站伺服器未及時回應。', causes: ['長時間執行的操作', '伺服器效能不足'], fixes: ['優化應用效能', '增加伺服器資源', '檢查慢查詢'], seoRelevant: false, cacheable: false, common: false },
+            { code: 525, name: 'SSL Handshake Failed', category: '5xx', officialDesc: 'Cloudflare could not negotiate a SSL/TLS handshake with the origin server.', zhDesc: 'Cloudflare 無法與源站伺服器完成 SSL/TLS 握手。', causes: ['SSL 憑證過期', '憑證不受信任', '加密協定不相容'], fixes: ['更新 SSL 憑證', '確認憑證有效', '檢查加密協定設定'], seoRelevant: false, cacheable: false, common: false },
+            { code: 530, name: 'Site Frozen', category: '5xx', officialDesc: 'Used by some platforms to indicate the site has been frozen or suspended.', zhDesc: '網站已被凍結或暫停（常見於主機平台暫停服務）。', causes: ['帳號暫停', '付款逾期', '違反服務條款'], fixes: ['聯繫主機商', '檢查帳號狀態'], seoRelevant: false, cacheable: false, common: false },
+        ];
+
+        const COMMON_CODES = new Set([200, 201, 204, 301, 302, 304, 400, 401, 403, 404, 405, 408, 429, 500, 502, 503, 504]);
+
+        // ===== STATE =====
+        let favorites = (() => { try { return JSON.parse(localStorage.getItem('http-status-favorites') || '[]'); } catch(e) { return []; } })();
+        let recentQueries = (() => { try { return JSON.parse(localStorage.getItem('http-status-recent') || '[]'); } catch(e) { return []; } })();
+        let activeCategory = 'all';
+        let searchQuery = '';
+        let showFavoritesOnly = false;
+        let debounceTimer = null;
+
+        // ===== DOM REFS =====
+        const grid = document.getElementById('codes-grid');
+        const searchInput = document.getElementById('search-input');
+        const clearSearch = document.getElementById('clear-search');
+        const favToggle = document.getElementById('fav-toggle');
+        const recentBtn = document.getElementById('recent-btn');
+        const recentPanel = document.getElementById('recent-panel');
+        const recentList = document.getElementById('recent-list');
+        const clearRecent = document.getElementById('clear-recent');
+        const resultCount = document.getElementById('result-count');
+
+        function updateCategoryCounts() {
+            const all = STATUS_CODES.length;
+            document.getElementById('count-all').textContent = all;
+            ['1xx','2xx','3xx','4xx','5xx'].forEach(cat => {
+                const count = STATUS_CODES.filter(s => s.category === cat).length;
+                document.getElementById(`count-${cat}`).textContent = count;
+            });
+        }
+
+        function getFilteredCodes() {
+            let codes = STATUS_CODES;
+            if (activeCategory !== 'all') {
+                codes = codes.filter(s => s.category === activeCategory);
+            }
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                codes = codes.filter(s =>
+                    String(s.code).includes(q) ||
+                    s.name.toLowerCase().includes(q) ||
+                    s.zhDesc.toLowerCase().includes(q) ||
+                    s.category === q ||
+                    s.causes.some(c => c.toLowerCase().includes(q)) ||
+                    s.fixes.some(f => f.toLowerCase().includes(q))
+                );
+            }
+            if (showFavoritesOnly) {
+                codes = codes.filter(s => favorites.includes(s.code));
+            }
+            return codes;
+        }
+
+        function renderCards() {
+            const codes = getFilteredCodes();
+            const sorted = [...codes].sort((a, b) => {
+                const aCommon = COMMON_CODES.has(a.code);
+                const bCommon = COMMON_CODES.has(b.code);
+                if (aCommon && !bCommon) return -1;
+                if (!aCommon && bCommon) return 1;
+                return a.code - b.code;
+            });
+
+            if (sorted.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-16">
+                        <i class="ph ph-magnifying-glass text-4xl text-slate-600 block mb-3"></i>
+                        <p class="text-slate-500 text-sm">${searchQuery ? '沒有符合條件的狀態碼，請嘗試其他關鍵字' : showFavoritesOnly ? '還沒有收藏任何狀態碼，點擊 ⭐ 圖示開始收藏' : '暫無資料'}</p>
+                    </div>
+                `;
+                resultCount.textContent = '顯示 0 個狀態碼';
+                return;
+            }
+
+            let html = '';
+            for (const s of sorted) {
+                const cc = CATEGORY_COLORS[s.category];
+                const isFav = favorites.includes(s.code);
+                const isCommon = COMMON_CODES.has(s.code);
+                const hasSeoIssue = s.seoRelevant;
+                const displayDesc = window.ToolHubI18n?.t(s.zhDesc) || s.zhDesc;
+
+                let causesList = '';
+                if (s.causes && s.causes.length) {
+                    causesList = s.causes.map(c => `<li>${c}</li>`).join('');
+                }
+                let fixesList = '';
+                if (s.fixes && s.fixes.length) {
+                    fixesList = s.fixes.map(f => `<li>${f}</li>`).join('');
+                }
+
+                html += `
+                    <div class="status-card${isCommon ? ' ring-1 ring-orange-500/20' : ''}" data-code="${s.code}" data-category="${s.category}" onclick="toggleDetail(this)">
+                        <div class="category-bar" style="background:${cc.hex}"></div>
+                        <div class="flex items-start justify-between mb-2 pl-2">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="code-badge shrink-0" style="color:${cc.hex}">${s.code}</span>
+                                <div class="min-w-0">
+                                    <h3 class="text-white font-semibold text-sm truncate">${s.name}</h3>
+                                    <p class="text-slate-400 text-xs truncate">${displayDesc.length > 40 ? displayDesc.slice(0, 40) + '…' : displayDesc}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2 pl-2">
+                            <span class="tag-pill" style="background:${cc.hex}15;color:${cc.hex};border:1px solid ${cc.hex}30">${s.category} ${cc.label}</span>
+                            ${isCommon ? '<span class="tag-pill bg-amber-500/10 text-amber-400 border border-amber-500/20">⭐ 常用</span>' : ''}
+                            ${hasSeoIssue ? '<span class="tag-pill bg-orange-500/10 text-orange-400 border border-orange-500/20">SEO 相關</span>' : ''}
+                            ${s.cacheable ? '<span class="tag-pill bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">可快取</span>' : '<span class="tag-pill bg-slate-500/10 text-slate-400 border border-slate-500/20">不可快取</span>'}
+                        </div>
+                        <div class="flex items-center justify-between pl-2" onclick="event.stopPropagation()">
+                            <button class="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors expand-btn" onclick="event.stopPropagation();toggleDetail(this.closest('.status-card'))">
+                                <i class="ph ph-caret-down text-sm transition-transform"></i> 查看詳細
+                            </button>
+                            <div class="flex items-center gap-1">
+                                <button class="p-1.5 rounded-lg hover:bg-amber-500/10 transition-colors favorite-btn" onclick="event.stopPropagation();toggleFavorite(${s.code})" title="${isFav ? '取消收藏' : '加入收藏'}">
+                                    <i class="ph ${isFav ? 'ph-fill ph-star' : 'ph-star'} text-lg ${isFav ? 'text-amber-400' : 'text-slate-500'}"></i>
+                                </button>
+                                <button class="p-1.5 rounded-lg hover:bg-amber-500/10 transition-colors" onclick="event.stopPropagation();copyCode(${s.code})" title="複製狀態碼說明">
+                                    <i class="ph ph-copy text-lg text-slate-500"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="detail-panel hidden">
+                            <dl>
+                                <dt>📋 官方說明</dt>
+                                <dd>${s.officialDesc}</dd>
+                                <dt>📝 詳細說明</dt>
+                                <dd>${s.zhDesc}</dd>
+                                ${causesList ? `<dt>🔍 常見原因</dt><dd><ul>${causesList}</ul></dd>` : ''}
+                                ${fixesList ? `<dt>🔧 修復建議</dt><dd><ul>${fixesList}</ul></dd>` : ''}
+                                ${s.cacheable ? `<dt>💾 快取策略</dt><dd>${typeof s.cacheable === 'string' ? s.cacheable : '可快取'}</dd>` : ''}
+                            </dl>
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+            resultCount.textContent = `顯示 ${sorted.length} 個狀態碼`;
+        }
+
+        function toggleDetail(card) {
+            // Accordion: close all other cards first
+            const allCards = card.parentElement.querySelectorAll('.status-card');
+            allCards.forEach(c => {
+                if (c !== card && c.classList.contains('expanded')) {
+                    c.classList.remove('expanded');
+                    const d = c.querySelector('.detail-panel');
+                    if (d) d.classList.add('hidden');
+                    const b = c.querySelector('.expand-btn i');
+                    if (b) b.classList.remove('rotate-180');
+                }
+            });
+            // Toggle clicked card
+            card.classList.toggle('expanded');
+            const detail = card.querySelector('.detail-panel');
+            const btn = card.querySelector('.expand-btn i');
+            if (detail) detail.classList.toggle('hidden');
+            if (btn) btn.classList.toggle('rotate-180');
+
+            // Track recent query
+            const code = parseInt(card.dataset.code);
+            addRecent(code);
+        }
+
+        function toggleFavorite(code) {
+            const idx = favorites.indexOf(code);
+            if (idx > -1) {
+                favorites.splice(idx, 1);
+            } else {
+                favorites.push(code);
+            }
+            try { localStorage.setItem('http-status-favorites', JSON.stringify(favorites)); } catch(e) {}
+            renderCards();
+            showToast(idx > -1 ? '已取消收藏' : '已加入收藏');
+        }
+
+        function copyCode(code) {
+            const s = STATUS_CODES.find(s => s.code === code);
+            if (!s) return;
+            const text = `${s.code} ${s.name} - ${s.zhDesc}`;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已複製到剪貼簿');
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已複製到剪貼簿');
+            });
+        }
+
+        function addRecent(code) {
+            recentQueries = recentQueries.filter(c => c !== code);
+            recentQueries.unshift(code);
+            if (recentQueries.length > 10) recentQueries = recentQueries.slice(0, 10);
+            try { localStorage.setItem('http-status-recent', JSON.stringify(recentQueries)); } catch(e) {}
+        }
+
+        function renderRecent() {
+            if (recentQueries.length === 0) {
+                recentList.innerHTML = '<span class="text-xs text-slate-600">尚無查詢記錄</span>';
+                return;
+            }
+            let html = '';
+            for (const code of recentQueries) {
+                const s = STATUS_CODES.find(st => st.code === code);
+                if (!s) continue;
+                const cc = CATEGORY_COLORS[s.category];
+                html += `<button class="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors" style="background:${cc.hex}12;color:${cc.hex};border:1px solid ${cc.hex}25" onclick="searchByCode(${code})">${s.code} ${s.name}</button>`;
+            }
+            recentList.innerHTML = html;
+        }
+
+        function searchByCode(code) {
+            const s = STATUS_CODES.find(st => st.code === code);
+            if (!s) return;
+            searchInput.value = String(code);
+            searchQuery = String(code);
+            clearSearch.classList.remove('hidden');
+            activeCategory = 'all';
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-category="all"]').classList.add('active');
+            recentPanel.classList.add('hidden');
+            renderCards();
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-orange-400';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // ===== EVENT BINDINGS =====
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                searchQuery = searchInput.value.trim();
+                clearSearch.classList.toggle('hidden', !searchQuery);
+                renderCards();
+            }, 150);
+        });
+
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearch.classList.add('hidden');
+            renderCards();
+            searchInput.focus();
+        });
+
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeCategory = tab.dataset.category;
+                // If switching category, turn off favorites filter
+                if (showFavoritesOnly && activeCategory !== 'all') {
+                    favToggle.checked = false;
+                    showFavoritesOnly = false;
+                }
+                renderCards();
+            });
+        });
+
+        favToggle.addEventListener('change', () => {
+            showFavoritesOnly = favToggle.checked;
+            renderCards();
+            showToast(showFavoritesOnly ? '只顯示收藏的狀態碼' : '顯示所有狀態碼');
+        });
+
+        recentBtn.addEventListener('click', () => {
+            recentPanel.classList.toggle('hidden');
+            if (!recentPanel.classList.contains('hidden')) {
+                renderRecent();
+            }
+        });
+
+        clearRecent.addEventListener('click', () => {
+            recentQueries = [];
+            try { localStorage.setItem('http-status-recent', JSON.stringify(recentQueries)); } catch(e) {}
+            renderRecent();
+            showToast('已清除查詢記錄');
+        });
+
+        // ===== INIT =====
+        updateCategoryCounts();
+        renderCards();
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

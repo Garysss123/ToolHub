@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manifest.json Generator - PWA Manifest 線上產生器 | ToolHub</title>
+    <meta name="description" content="免費線上 PWA Manifest 產生器。快速建立符合 Progressive Web App 規範的 manifest.json，支援完整欄位設定、應用程式圖示管理、Shortcuts、Screenshots 與即時驗證。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="Manifest.json Generator, PWA Manifest, manifest.json 產生器, Progressive Web App, PWA 安裝, Web App Manifest, 應用程式圖示, Shortcuts, 線上工具">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Manifest.json Generator - PWA Manifest 線上產生器 | ToolHub">
+    <meta property="og:description" content="快速建立符合 Progressive Web App（PWA）規範的 manifest.json，支援完整欄位設定、圖示管理與即時驗證。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/manifest-generator/">
+    <meta property="og:image" content="https://toolhuben.com/og-image.png">
+    <meta property="og:locale" content="zh_TW">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Manifest.json Generator - PWA Manifest 線上產生器 | ToolHub">
+    <meta name="twitter:description" content="快速建立符合 Progressive Web App（PWA）規範的 manifest.json，支援完整欄位設定、圖示管理與即時驗證。">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://toolhuben.com/manifest-generator/">
+
+    <!-- JSON-LD Schema.org -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Manifest.json Generator",
+        "description": "快速建立符合 Progressive Web App（PWA）規範的 manifest.json，提供完整欄位設定、圖示管理、即時預覽與 JSON 匯出。",
+        "url": "https://toolhuben.com/manifest-generator/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "TWD"
+        },
+        "author": {
+            "@type": "Organization",
+            "name": "ToolHub"
+        }
+    }
+    </script>
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                            manifest: '#A3E635',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #A3E635; }
+
+        .config-input {
+            width: 100%;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            padding: 0.55rem 0.7rem;
+            outline: none;
+            font-size: 0.85rem;
+            border-radius: 0.5rem;
+            transition: border-color 0.2s;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .config-input:focus {
+            border-color: #A3E635;
+            box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.1);
+        }
+        .config-input::placeholder { color: #475569; }
+
+        select.config-input { cursor: pointer; }
+        select.config-input option { background: #151F32; color: #e2e8f0; }
+
+        .color-input-wrap { position: relative; }
+        .color-input-wrap input[type="color"] {
+            width: 44px;
+            height: 38px;
+            border: 1px solid #1E293B;
+            border-radius: 0.5rem;
+            background: #0f172a;
+            cursor: pointer;
+            padding: 3px;
+        }
+        .color-input-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+        .color-input-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+        .section-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .item-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .item-card:focus-within { border-color: rgba(163, 230, 53, 0.4); }
+
+        .mini-btn {
+            padding: 0.3rem 0.55rem;
+            border-radius: 0.4rem;
+            font-size: 0.7rem;
+            border: 1px solid #1E293B;
+            background: #151F32;
+            color: #64748b;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .mini-btn:hover { color: #A3E635; border-color: #A3E635; }
+        .mini-btn.danger:hover { color: #FB7185; border-color: rgba(251, 113, 133, 0.5); }
+
+        .mode-btn {
+            padding: 0.5rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.72rem;
+            font-weight: 500;
+            border: 1px solid #1E293B;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+        }
+        .mode-btn:hover { background: #1E293B; color: #A3E635; border-color: #A3E635; }
+        .mode-btn.active {
+            background: rgba(163, 230, 53, 0.12);
+            color: #A3E635;
+            border-color: #A3E635;
+        }
+
+        /* JSON Preview */
+        #json-preview {
+            background: #0f172a;
+            color: #A3E635;
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.72rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 200px;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+        #json-preview::-webkit-scrollbar { width: 6px; }
+        #json-preview::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 6px; }
+
+        /* Validation */
+        .v-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            margin-bottom: 0.4rem;
+        }
+        .v-item .v-icon { flex-shrink: 0; margin-top: 1px; }
+        .v-pass { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); color: #34D399; }
+        .v-warn { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); color: #FBBF24; }
+        .v-error { background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); color: #FB7185; }
+        .v-item .v-text strong { color: inherit; }
+
+        .action-btn {
+            padding: 0.55rem 0.9rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid #1E293B;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .action-btn:hover { background: #1E293B; color: #A3E635; border-color: #A3E635; }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+
+        /* SEO Article */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #A3E635;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #A3E635;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(163, 230, 53, 0.05);
+            border-left: 3px solid #A3E635;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+        .seo-article .code-block {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 0.78rem;
+            line-height: 1.7;
+            color: #A3E635;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/manifest-generator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/manifest-generator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/manifest-generator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#A3E635;--classic-accent-rgb:163,230,53" data-tool-visual data-classic-tool data-classic-layout="editorial">
+
+    <!-- 1. Header -->
+    <div id="component-header"></div>
+    <!-- 2. Sidebar -->
+    <div id="component-sidebar"></div>
+
+    <!-- 3. Core Module: Manifest.json Generator -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-xs text-slate-500 mb-4">
+            <a href="/" class="hover:text-hub-manifest transition-colors">首頁</a>
+            <span>/</span>
+            <span class="text-slate-300">Manifest.json Generator</span>
+        </nav>
+
+        <!-- Module Title -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-manifest">
+                <span class="flex w-2 h-2 bg-hub-manifest rounded-full animate-pulse mr-2"></span>
+                PWA 規範 · 完整欄位 · 即時驗證
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Manifest.json Generator <span class="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">PWA Manifest 產生器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                快速建立符合 Progressive Web App（PWA）規範的 manifest.json。<br class="hidden sm:block"/>
+                支援完整欄位設定、圖示管理、Shortcuts、Screenshots 與即時驗證。
+            </p>
+        </div>
+
+        <!-- Main Tool Area -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+
+            <!-- Tool Header -->
+            <div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="ph ph-app-window text-hub-manifest text-lg"></i>
+                    <span class="text-xs font-bold text-hub-manifest uppercase tracking-widest">Manifest.json 產生器</span>
+                </div>
+                <button id="btn-reset" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 bg-hub-800 border-hub-700 text-slate-400 hover:border-red-500/50 hover:text-red-400">
+                    <i class="ph ph-trash"></i> 重設全部
+                </button>
+            </div>
+
+            <!-- Tool Content -->
+            <div class="flex flex-col lg:flex-row min-h-[500px]">
+
+                <!-- ===== LEFT PANEL: Config ===== -->
+                <div class="w-full lg:w-3/5 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- 基本資訊 -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center gap-2">
+                            <i class="ph ph-info text-hub-manifest text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">基本資訊</span>
+                        </div>
+                        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label for="mf-name" class="section-label mb-1.5 block">App Name（應用程式名稱）*</label>
+                                <input type="text" id="mf-name" class="config-input" placeholder="例如：ToolHub">
+                            </div>
+                            <div>
+                                <label for="mf-short-name" class="section-label mb-1.5 block">Short Name（簡稱）*</label>
+                                <input type="text" id="mf-short-name" class="config-input" placeholder="例如：ToolHub">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label for="mf-description" class="section-label mb-1.5 block">Description（描述）</label>
+                                <input type="text" id="mf-description" class="config-input" placeholder="例如：免費線上實用工具箱">
+                            </div>
+                            <div>
+                                <label for="mf-lang" class="section-label mb-1.5 block">Language（語言）</label>
+                                <input type="text" id="mf-lang" class="config-input" placeholder="例如：zh-TW" value="zh-TW">
+                            </div>
+                            <div>
+                                <label for="mf-start-url" class="section-label mb-1.5 block">Start URL（起始頁面）*</label>
+                                <input type="text" id="mf-start-url" class="config-input" placeholder="例如：/" value="/">
+                            </div>
+                            <div>
+                                <label for="mf-scope" class="section-label mb-1.5 block">Scope（作用範圍）</label>
+                                <input type="text" id="mf-scope" class="config-input" placeholder="例如：/" value="/">
+                            </div>
+                            <div>
+                                <label for="mf-id" class="section-label mb-1.5 block">ID（應用程式識別碼）</label>
+                                <input type="text" id="mf-id" class="config-input" placeholder="例如：/">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Display / Orientation / Theme -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center gap-2">
+                            <i class="ph ph-sliders-horizontal text-hub-manifest text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">顯示與主題</span>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <!-- Display Mode -->
+                            <div>
+                                <div class="section-label mb-2">Display Mode（顯示模式）*</div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <button class="mode-btn" data-display="browser">browser</button>
+                                    <button class="mode-btn active" data-display="standalone">standalone</button>
+                                    <button class="mode-btn" data-display="fullscreen">fullscreen</button>
+                                    <button class="mode-btn" data-display="minimal-ui">minimal-ui</button>
+                                </div>
+                            </div>
+                            <!-- Orientation -->
+                            <div>
+                                <div class="section-label mb-2">Orientation（方向）</div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button class="mode-btn" data-orientation="portrait">portrait</button>
+                                    <button class="mode-btn" data-orientation="landscape">landscape</button>
+                                    <button class="mode-btn active" data-orientation="any">any</button>
+                                </div>
+                            </div>
+                            <!-- Theme -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label for="mf-theme" class="section-label mb-1.5 block">Theme Color（主題色）</label>
+                                    <div class="flex gap-2 items-center">
+                                        <div class="color-input-wrap">
+                                            <input type="color" id="mf-theme" value="#0B1120">
+                                        </div>
+                                        <input type="text" id="mf-theme-hex" class="config-input" placeholder="#0B1120" value="#0B1120" maxlength="9">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="mf-bg" class="section-label mb-1.5 block">Background Color（背景色）</label>
+                                    <div class="flex gap-2 items-center">
+                                        <div class="color-input-wrap">
+                                            <input type="color" id="mf-bg" value="#0B1120">
+                                        </div>
+                                        <input type="text" id="mf-bg-hex" class="config-input" placeholder="#0B1120" value="#0B1120" maxlength="9">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- App Icons -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-image-square text-hub-manifest text-sm"></i>
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">App Icons（應用程式圖示）</span>
+                            </div>
+                            <div class="flex gap-1.5">
+                                <button id="btn-add-icon" class="mini-btn flex items-center gap-1">
+                                    <i class="ph ph-plus"></i> 新增
+                                </button>
+                                <button id="btn-preset-icons" class="mini-btn">加入標準尺寸</button>
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div id="icon-list" class="space-y-3"></div>
+                            <p class="text-[10px] text-slate-600 leading-relaxed">💡 PWA 安裝要求至少 192×192 與 512×512 的圖示；「加入標準尺寸」會一次加入 72–512 共 8 種尺寸。</p>
+                        </div>
+                    </div>
+
+                    <!-- Shortcuts -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-lightning text-hub-manifest text-sm"></i>
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">Shortcuts（捷徑）</span>
+                            </div>
+                            <button id="btn-add-shortcut" class="mini-btn flex items-center gap-1">
+                                <i class="ph ph-plus"></i> 新增
+                            </button>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div id="shortcut-list" class="space-y-3"></div>
+                            <p class="text-[10px] text-slate-600 leading-relaxed">Shortcuts 讓使用者長按應用程式圖示時快速跳轉至指定頁面（Android 支援）。</p>
+                        </div>
+                    </div>
+
+                    <!-- Screenshots -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-device-mobile text-hub-manifest text-sm"></i>
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">Screenshots（畫面截圖）</span>
+                            </div>
+                            <div class="flex gap-1.5">
+                                <button id="btn-add-shot-d" class="mini-btn flex items-center gap-1">
+                                    <i class="ph ph-monitor"></i> Desktop
+                                </button>
+                                <button id="btn-add-shot-m" class="mini-btn flex items-center gap-1">
+                                    <i class="ph ph-device-mobile"></i> Mobile
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div id="shot-list" class="space-y-3"></div>
+                            <p class="text-[10px] text-slate-600 leading-relaxed">Screenshots 用於應用程式商店與安裝介面展示（Android 與桌面 Chrome 支援）。</p>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center gap-2">
+                            <i class="ph ph-tag text-hub-manifest text-sm"></i>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">Categories（分類）</span>
+                        </div>
+                        <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="productivity">productivity</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="utilities">utilities</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="education">education</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="developer">developer</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="entertainment">entertainment</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="finance">finance</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="business">business</label>
+                            <label class="mode-btn cat-toggle flex items-center justify-center gap-1 cursor-pointer" data-cat="tools">tools</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== RIGHT PANEL: JSON + Validation + Actions ===== -->
+                <div class="w-full lg:w-2/5 border-t lg:border-t-0 lg:border-l border-hub-700 p-4 sm:p-6 flex flex-col gap-4">
+
+                    <!-- JSON Preview -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-file-json text-hub-manifest text-sm"></i>
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">manifest.json 即時預覽</span>
+                            </div>
+                            <span id="json-size" class="text-xs text-slate-500 font-mono">0 B</span>
+                        </div>
+                        <div class="p-4">
+                            <pre id="json-preview">{}</pre>
+                        </div>
+                        <div class="px-4 pb-4">
+                            <button id="btn-copy" class="action-btn w-full py-3 bg-hub-manifest/10 hover:bg-hub-manifest/20 border-hub-manifest/40 text-hub-manifest flex items-center justify-center gap-2">
+                                <i class="ph ph-copy"></i> 複製 JSON
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Validation -->
+                    <div class="bg-hub-900/50 rounded-xl border border-hub-700 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-hub-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-check-square text-hub-manifest text-sm"></i>
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">驗證結果</span>
+                            </div>
+                            <span id="v-summary" class="text-xs font-mono"></span>
+                        </div>
+                        <div id="v-results" class="p-4">
+                            <p class="text-xs text-slate-500">設定欄位後將即時驗證…</p>
+                        </div>
+                    </div>
+
+                    <!-- Download -->
+                    <div class="flex flex-col gap-2">
+                        <button id="btn-download" class="action-btn w-full py-3 bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/50 text-emerald-400 flex items-center justify-center gap-2">
+                            <i class="ph ph-download-simple"></i> 下載 manifest.json
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Ad Banner ===== -->
+        <div class="mt-8 text-center text-xs text-slate-600 border border-hub-700/50 rounded-xl py-6 bg-hub-800/30">
+            <i class="ph ph-ad text-slate-600 text-lg block mb-1"></i>
+            <span>廣告空間</span>
+        </div>
+
+        <!-- ===== FAQ SECTION ===== -->
+        <div class="mt-12 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ 常見問題 <span class="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">FAQ</span></h2>
+                <p class="text-slate-400 text-sm">關於 manifest.json 與 PWA 的常見疑問</p>
+            </div>
+
+            <div class="space-y-3">
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>manifest.json 是什麼？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">manifest.json</strong>（Web App Manifest）是一個 JSON 格式的設定檔案，描述網頁應用程式的<strong class="text-white">名稱、圖示、顯示模式、起始頁面</strong>等資訊。瀏覽器讀取後，能讓您的網站以「應用程式」的方式呈現。</p>
+                        <p class="mt-2">在 HTML 中透過一行標籤引用：<code>&lt;link rel="manifest" href="/manifest.json"&gt;</code></p>
+                        <p class="mt-2">manifest.json 的作用包括：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>讓使用者可將網站「安裝」到主畫面或桌面</li>
+                            <li>定義應用程式圖示與啟動畫面</li>
+                            <li>控制顯示模式（全螢幕、獨立視窗等）</li>
+                            <li>設定主題色與背景色</li>
+                            <li>宣告 Android 長按捷徑（Shortcuts）</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>什麼是 PWA？為什麼需要 manifest.json？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p><strong class="text-white">PWA（Progressive Web App）</strong> 是一種結合網頁與原生應用程式優點的技術。PWA 可被安裝、離線運作、接收通知，卻不需要透過應用程式商店發布。</p>
+                        <p class="mt-2">一個完整的 PWA 需要三個核心要素：</p>
+                        <ol class="list-decimal pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">manifest.json</strong> — 宣告應用程式身份與安裝資訊（本工具產生）</li>
+                            <li><strong class="text-white">Service Worker</strong> — 提供離線快取與背景功能</li>
+                            <li><strong class="text-white">HTTPS</strong> — 安全傳輸的必要條件</li>
+                        </ol>
+                        <p class="mt-2">💡 manifest.json 是讓瀏覽器顯示「安裝應用程式」提示的必要條件，也是 PWA 評分的重要項目。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>各欄位代表什麼意思？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>以下是 manifest.json 主要欄位的說明：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong class="text-white">name / short_name</strong> — 應用程式全名與安裝後顯示的簡稱（short_name 建議 ≤ 12 字元）</li>
+                            <li><strong class="text-white">start_url</strong> — 啟動應用程式時開啟的頁面，建議為相對路徑（如 /）</li>
+                            <li><strong class="text-white">scope</strong> — 應用程式的導覽範圍，範圍外的連結將以瀏覽器開啟</li>
+                            <li><strong class="text-white">display</strong> — 顯示模式：<code>standalone</code>（獨立視窗）、<code>fullscreen</code>（全螢幕）、<code>minimal-ui</code>（精簡介面）、<code>browser</code>（瀏覽器）</li>
+                            <li><strong class="text-white">theme_color</strong> — 工具列與系統列的顏色</li>
+                            <li><strong class="text-white">background_color</strong> — 啟動畫面與載入階段的背景色</li>
+                            <li><strong class="text-white">orientation</strong> — 建議方向：portrait、landscape、any</li>
+                            <li><strong class="text-white">icons</strong> — 應用程式圖示，包含 src、sizes、type、purpose</li>
+                            <li><strong class="text-white">shortcuts</strong> — 長按圖示時顯示的快速捷徑（Android）</li>
+                            <li><strong class="text-white">screenshots</strong> — 安裝介面展示的截圖</li>
+                            <li><strong class="text-white">categories</strong> — 應用程式分類（最大 3 個）</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>為什麼需要 192×192 與 512×512 的圖示？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>Google 的 PWA 安裝標準明確要求 manifest 中必須包含以下兩種圖示：</p>
+                        <div class="highlight-box mt-2">
+                            <p><strong class="text-white">192×192</strong> — 安裝後顯示於主畫面與應用程式列表</p>
+                            <p class="mt-1"><strong class="text-white">512×512</strong> — 安裝提示與啟動畫面使用</p>
+                        </div>
+                        <p class="mt-2">缺少任一種都會導致瀏覽器不顯示「安裝應用程式」的提示。完整提供 72–512 各種尺寸則能確保在所有裝置上都有最佳顯示品質。</p>
+                        <p class="mt-2">💡 每個圖示應指定 <code>purpose</code>：<code>any</code>（一般）、<code>maskable</code>（可遮罩，含安全邊距）、<code>monochrome</code>（單色）。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>manifest.json 應該放在哪裡？如何部署？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>manifest.json 通常放置於網站<strong class="text-white">根目錄</strong>，並在 HTML 的 <code>&lt;head&gt;</code> 中引用：</p>
+                        <div class="code-block" style="margin:0.5rem 0;">&lt;link rel="manifest" href="/manifest.json"&gt;</div>
+                        <p class="mt-2"><strong class="text-white">部署步驟：</strong></p>
+                        <ol class="list-decimal pl-5 mt-1 space-y-1">
+                            <li>使用本工具設定欄位並下載 manifest.json</li>
+                            <li>上傳至網站根目錄（與圖示檔案同一目錄）</li>
+                            <li>在 HTML head 中加入 manifest 引用標籤</li>
+                            <li>確認 <code>start_url</code> 與 <code>scope</code> 指向正確的相對路徑</li>
+                            <li>使用 Chrome DevTools 的 Application 面板檢查 manifest 載入狀態</li>
+                        </ol>
+                        <p class="mt-2">⚠️ 注意：manifest 中的圖示路徑是<strong class="text-white">相對於 manifest 檔案位置</strong>，若 manifest 在根目錄，圖示路徑通常以 / 開頭。</p>
+                    </div>
+                </details>
+
+                <details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+                    <summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+                        <span>這個工具安全嗎？支援哪些瀏覽器？</span>
+                        <svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+                        <p>完全安全！Manifest.json Generator 是一個 <strong class="text-white">100% 純前端工具</strong>：</p>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>✅ 所有欄位設定、JSON 產生與驗證都在您的瀏覽器中完成</li>
+                            <li>✅ 不會將任何資料上傳至伺服器</li>
+                            <li>✅ 不需要註冊或登入，載入後可完全離線使用</li>
+                            <li>✅ 不會儲存您的任何設定</li>
+                        </ul>
+                        <p class="mt-2"><strong class="text-white">瀏覽器相容性：</strong>本工具相容於所有主流瀏覽器的最新版本（Chrome、Firefox、Safari、Edge、Opera）。</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- ===== SEO ARTICLE ===== -->
+        <div class="mt-12 max-w-4xl mx-auto seo-article">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 PWA Manifest 完全指南：從零建立可安裝的網頁應用程式</h2>
+                <p class="text-slate-400 text-sm">深入了解 manifest.json 與 Progressive Web App</p>
+            </div>
+
+            <div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+
+                <h2>功能介紹</h2>
+                <p>Manifest.json Generator 是 ToolHub 推出的免費 PWA Manifest 建立工具。透過圖形化介面設定 <strong class="text-white">應用程式名稱、簡稱、描述、語言、起始頁面與作用範圍</strong>，選擇 <strong class="text-white">顯示模式、方向、主題色</strong>，並管理 <strong class="text-white">應用程式圖示、Shortcuts 捷徑、Screenshots 截圖與分類</strong>。右側即時產生格式化的 manifest.json，並自動驗證必填欄位、圖示完整性與顏色有效性。</p>
+
+                <h2>manifest.json 是什麼？</h2>
+                <p><strong class="text-white">Web App Manifest</strong> 是 W3C 制定的標準，以 JSON 格式描述網頁應用程式的中繼資料。瀏覽器與作業系統讀取 manifest 後，可以將網站呈現為原生應用程式：顯示於主畫面、提供獨立視窗、設定啟動畫面與圖示。</p>
+                <p>一個最簡單的 manifest.json 範例：</p>
+                <div class="code-block">{
+  "name": "ToolHub",
+  "short_name": "ToolHub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1120",
+  "theme_color": "#0B1120",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}</div>
+
+                <h2>PWA 簡介：為什麼要讓網站「可安裝」？</h2>
+                <p><strong class="text-white">PWA（Progressive Web App）</strong> 讓網頁應用程式獲得原生應用程式的使用體驗：</p>
+                <ul>
+                    <li><strong class="text-white">可安裝</strong> — 直接安裝到主畫面，不需經過應用程式商店</li>
+                    <li><strong class="text-white">可離線</strong> — 搭配 Service Worker 提供離線存取</li>
+                    <li><strong class="text-white">高效能</strong> — 啟動快速、介面沉浸（全螢幕或獨立視窗）</li>
+                    <li><strong class="text-white">低門檻</strong> — 不需要上架審核，更新即時生效</li>
+                    <li><strong class="text-white">跨平台</strong> — 同一份程式碼支援 Android、Windows、iOS（部分支援）與 macOS</li>
+                </ul>
+                <p>manifest.json 是 PWA 的「身分證」，缺少它，瀏覽器就無法將網站視為可安裝的應用程式。</p>
+
+                <h2>欄位說明</h2>
+                <h3>必備欄位</h3>
+                <ul>
+                    <li><code>name</code> 或 <code>short_name</code> — 至少一個，應用程式名稱</li>
+                    <li><code>start_url</code> — 啟動頁面</li>
+                    <li><code>display</code> — 顯示模式</li>
+                    <li><code>icons</code> — 至少一個圖示；建議包含 192×192 與 512×512</li>
+                </ul>
+                <h3>重要欄位</h3>
+                <ul>
+                    <li><code>description</code> — 應用程式描述</li>
+                    <li><code>lang</code> — 主要語言（如 zh-TW、en）</li>
+                    <li><code>scope</code> — 導覽範圍，建議與 start_url 同層或更上層</li>
+                    <li><code>orientation</code> — 方向偏好</li>
+                    <li><code>theme_color</code> / <code>background_color</code> — 主題與背景色</li>
+                    <li><code>shortcuts</code> — Android 長按捷徑（最多 4 個建議）</li>
+                    <li><code>screenshots</code> — 安裝介面截圖</li>
+                    <li><code>categories</code> — 分類標籤（最多 3 個）</li>
+                </ul>
+
+                <h2>最佳實踐</h2>
+                <ul>
+                    <li><strong class="text-white">short_name 保持在 12 字元內</strong>，避免在主畫面被截斷</li>
+                    <li><strong class="text-white">提供 maskable 圖示</strong> — purpose 設為 maskable 的圖示應在四邊留有安全邊距（內容占中央 80%）</li>
+                    <li><strong class="text-white">theme_color 與網站品牌一致</strong> — 會影響行動裝置工具列與系統列配色</li>
+                    <li><strong class="text-white">使用相對路徑的 start_url</strong> — 避免網域更換時路徑失效</li>
+                    <li><strong class="text-white">搭配 favicon 一起管理</strong> — 圖示可與 favicon-generator 產出的 PWA 圖示共用</li>
+                </ul>
+
+                <h2>瀏覽器相容性</h2>
+                <p>本工具基於現代 Web 標準開發，相容於所有主流瀏覽器的最新版本：Google Chrome、Mozilla Firefox、Apple Safari、Microsoft Edge 與 Opera。建議使用最新版本以獲得最佳體驗。</p>
+
+                <h2>隱私權保護</h2>
+                <p>ToolHub 高度重視您的資料隱私。Manifest.json Generator 採用 <strong class="text-white">100% 純前端架構</strong>，所有欄位設定、JSON 產生與驗證均在您的瀏覽器中完成，不會將任何資料傳輸至外部伺服器。我們不會儲存、分析或分享您輸入的任何內容，請放心使用。</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-manifest" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 4. Footer -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- System Init Script -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/manifest-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Manifest.json Generator Business Logic -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ==================== DOM References ====================
+            const fName = document.getElementById('mf-name');
+            const fShortName = document.getElementById('mf-short-name');
+            const fDesc = document.getElementById('mf-description');
+            const fLang = document.getElementById('mf-lang');
+            const fStartUrl = document.getElementById('mf-start-url');
+            const fScope = document.getElementById('mf-scope');
+            const fId = document.getElementById('mf-id');
+            const displayBtns = document.querySelectorAll('[data-display]');
+            const orientBtns = document.querySelectorAll('[data-orientation]');
+            const fTheme = document.getElementById('mf-theme');
+            const fThemeHex = document.getElementById('mf-theme-hex');
+            const fBg = document.getElementById('mf-bg');
+            const fBgHex = document.getElementById('mf-bg-hex');
+            const iconList = document.getElementById('icon-list');
+            const btnAddIcon = document.getElementById('btn-add-icon');
+            const btnPresetIcons = document.getElementById('btn-preset-icons');
+            const shortcutList = document.getElementById('shortcut-list');
+            const btnAddShortcut = document.getElementById('btn-add-shortcut');
+            const shotList = document.getElementById('shot-list');
+            const btnAddShotD = document.getElementById('btn-add-shot-d');
+            const btnAddShotM = document.getElementById('btn-add-shot-m');
+            const catBtns = document.querySelectorAll('.cat-toggle');
+            const jsonPreview = document.getElementById('json-preview');
+            const jsonSize = document.getElementById('json-size');
+            const vResults = document.getElementById('v-results');
+            const vSummary = document.getElementById('v-summary');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+            const btnReset = document.getElementById('btn-reset');
+
+            // ==================== State ====================
+            let displayMode = 'standalone';
+            let orientation = 'any';
+            const categories = new Set();
+            let icons = [];
+            let shortcuts = [];
+            let shots = [];
+
+            // ==================== 標準 Icon 尺寸 ====================
+            const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+
+            // ==================== 顏色聯動 ====================
+            function bindColor(picker, hexInput) {
+                picker.addEventListener('input', () => {
+                    hexInput.value = picker.value;
+                    updateAll();
+                });
+                hexInput.addEventListener('input', () => {
+                    const v = hexInput.value.trim();
+                    if (/^#[0-9a-fA-F]{6}$/.test(v) || /^#[0-9a-fA-F]{8}$/.test(v)) {
+                        picker.value = v;
+                    }
+                    updateAll();
+                });
+            }
+            bindColor(fTheme, fThemeHex);
+            bindColor(fBg, fBgHex);
+
+            // ==================== Icons ====================
+            function renderIcons() {
+                iconList.innerHTML = '';
+                icons.forEach((icon, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="section-label">Icon ${index + 1}</span>
+                            <button class="mini-btn danger del-icon">刪除</button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div class="sm:col-span-2">
+                                <label class="section-label mb-1 block">src（圖示路徑）*</label>
+                                <input type="text" class="config-input icon-src" placeholder="/icon-192.png" value="${escapeAttr(icon.src)}">
+                            </div>
+                            <div>
+                                <label class="section-label mb-1 block">sizes *</label>
+                                <input type="text" class="config-input icon-sizes" placeholder="192x192" value="${escapeAttr(icon.sizes)}">
+                            </div>
+                            <div>
+                                <label class="section-label mb-1 block">type</label>
+                                <select class="config-input icon-type">
+                                    <option value="image/png" ${icon.type === 'image/png' ? 'selected' : ''}>image/png</option>
+                                    <option value="image/svg+xml" ${icon.type === 'image/svg+xml' ? 'selected' : ''}>image/svg+xml</option>
+                                    <option value="image/webp" ${icon.type === 'image/webp' ? 'selected' : ''}>image/webp</option>
+                                    <option value="image/avif" ${icon.type === 'image/avif' ? 'selected' : ''}>image/avif</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="section-label mb-1 block">purpose</label>
+                                <select class="config-input icon-purpose">
+                                    <option value="any" ${icon.purpose === 'any' ? 'selected' : ''}>any</option>
+                                    <option value="maskable" ${icon.purpose === 'maskable' ? 'selected' : ''}>maskable</option>
+                                    <option value="any maskable" ${icon.purpose === 'any maskable' ? 'selected' : ''}>any maskable</option>
+                                    <option value="monochrome" ${icon.purpose === 'monochrome' ? 'selected' : ''}>monochrome</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                    card.querySelector('.del-icon').addEventListener('click', () => {
+                        icons.splice(index, 1);
+                        renderIcons();
+                        updateAll();
+                    });
+                    card.querySelector('.icon-src').addEventListener('input', (e) => { icon.src = e.target.value; updateAll(); });
+                    card.querySelector('.icon-sizes').addEventListener('input', (e) => { icon.sizes = e.target.value; updateAll(); });
+                    card.querySelector('.icon-type').addEventListener('change', (e) => { icon.type = e.target.value; updateAll(); });
+                    card.querySelector('.icon-purpose').addEventListener('change', (e) => { icon.purpose = e.target.value; updateAll(); });
+                    iconList.appendChild(card);
+                });
+            }
+
+            btnAddIcon.addEventListener('click', () => {
+                icons.push({ src: '', sizes: '192x192', type: 'image/png', purpose: 'any' });
+                renderIcons();
+                updateAll();
+            });
+
+            btnPresetIcons.addEventListener('click', () => {
+                icons = ICON_SIZES.map(s => ({
+                    src: `/icon-${s}x${s}.png`,
+                    sizes: `${s}x${s}`,
+                    type: 'image/png',
+                    purpose: 'any'
+                }));
+                renderIcons();
+                updateAll();
+                showToast(`已加入 ${icons.length} 種標準尺寸圖示`);
+            });
+
+            // ==================== Shortcuts ====================
+            function renderShortcuts() {
+                shortcutList.innerHTML = '';
+                shortcuts.forEach((sc, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="section-label">Shortcut ${index + 1}</span>
+                            <button class="mini-btn danger del-sc">刪除</button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="section-label mb-1 block">名稱 *</label>
+                                <input type="text" class="config-input sc-name" placeholder="例如：搜尋" value="${escapeAttr(sc.name)}">
+                            </div>
+                            <div>
+                                <label class="section-label mb-1 block">URL *</label>
+                                <input type="text" class="config-input sc-url" placeholder="例如：/search" value="${escapeAttr(sc.url)}">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="section-label mb-1 block">描述</label>
+                                <input type="text" class="config-input sc-desc" placeholder="捷徑描述" value="${escapeAttr(sc.description)}">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="section-label mb-1 block">Icon（圖示路徑）</label>
+                                <input type="text" class="config-input sc-icon" placeholder="/icon-192.png" value="${escapeAttr(sc.icon)}">
+                            </div>
+                        </div>
+                    `;
+                    card.querySelector('.del-sc').addEventListener('click', () => {
+                        shortcuts.splice(index, 1);
+                        renderShortcuts();
+                        updateAll();
+                    });
+                    card.querySelector('.sc-name').addEventListener('input', (e) => { sc.name = e.target.value; updateAll(); });
+                    card.querySelector('.sc-url').addEventListener('input', (e) => { sc.url = e.target.value; updateAll(); });
+                    card.querySelector('.sc-desc').addEventListener('input', (e) => { sc.description = e.target.value; updateAll(); });
+                    card.querySelector('.sc-icon').addEventListener('input', (e) => { sc.icon = e.target.value; updateAll(); });
+                    shortcutList.appendChild(card);
+                });
+            }
+
+            btnAddShortcut.addEventListener('click', () => {
+                shortcuts.push({ name: '', url: '', description: '', icon: '' });
+                renderShortcuts();
+                updateAll();
+            });
+
+            // ==================== Screenshots ====================
+            function renderShots() {
+                shotList.innerHTML = '';
+                shots.forEach((shot, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="section-label">Screenshot ${index + 1}（${shot.form_factor === 'wide' ? 'Desktop' : 'Mobile'}）</span>
+                            <button class="mini-btn danger del-shot">刪除</button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div class="sm:col-span-2">
+                                <label class="section-label mb-1 block">src（截圖路徑）*</label>
+                                <input type="text" class="config-input shot-src" placeholder="/screenshot.png" value="${escapeAttr(shot.src)}">
+                            </div>
+                            <div>
+                                <label class="section-label mb-1 block">sizes *</label>
+                                <input type="text" class="config-input shot-sizes" placeholder="1280x720" value="${escapeAttr(shot.sizes)}">
+                            </div>
+                            <div>
+                                <label class="section-label mb-1 block">type</label>
+                                <select class="config-input shot-type">
+                                    <option value="image/png" ${shot.type === 'image/png' ? 'selected' : ''}>image/png</option>
+                                    <option value="image/jpeg" ${shot.type === 'image/jpeg' ? 'selected' : ''}>image/jpeg</option>
+                                    <option value="image/webp" ${shot.type === 'image/webp' ? 'selected' : ''}>image/webp</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                    card.querySelector('.del-shot').addEventListener('click', () => {
+                        shots.splice(index, 1);
+                        renderShots();
+                        updateAll();
+                    });
+                    card.querySelector('.shot-src').addEventListener('input', (e) => { shot.src = e.target.value; updateAll(); });
+                    card.querySelector('.shot-sizes').addEventListener('input', (e) => { shot.sizes = e.target.value; updateAll(); });
+                    card.querySelector('.shot-type').addEventListener('change', (e) => { shot.type = e.target.value; updateAll(); });
+                    shotList.appendChild(card);
+                });
+            }
+
+            btnAddShotD.addEventListener('click', () => {
+                shots.push({ src: '', sizes: '1280x720', type: 'image/png', form_factor: 'wide' });
+                renderShots();
+                updateAll();
+            });
+            btnAddShotM.addEventListener('click', () => {
+                shots.push({ src: '', sizes: '750x1334', type: 'image/png', form_factor: 'narrow' });
+                renderShots();
+                updateAll();
+            });
+
+            // ==================== Categories ====================
+            catBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const cat = btn.dataset.cat;
+                    if (categories.has(cat)) {
+                        categories.delete(cat);
+                        btn.classList.remove('active');
+                    } else {
+                        if (categories.size >= 3) {
+                            showToast('Categories 最多選擇 3 個', 'warning-circle');
+                            return;
+                        }
+                        categories.add(cat);
+                        btn.classList.add('active');
+                    }
+                    updateAll();
+                });
+            });
+
+            // ==================== Display / Orientation ====================
+            displayBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    displayBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    displayMode = btn.dataset.display;
+                    updateAll();
+                });
+            });
+            orientBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    orientBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    orientation = btn.dataset.orientation;
+                    updateAll();
+                });
+            });
+
+            // ==================== 欄位綁定 ====================
+            [fName, fShortName, fDesc, fLang, fStartUrl, fScope, fId].forEach(el => {
+                el.addEventListener('input', updateAll);
+            });
+
+            // ==================== Build JSON ====================
+            function buildManifest() {
+                const m = {};
+                const name = fName.value.trim();
+                const shortName = fShortName.value.trim();
+                const desc = fDesc.value.trim();
+                const lang = fLang.value.trim();
+                const startUrl = fStartUrl.value.trim();
+                const scope = fScope.value.trim();
+                const id = fId.value.trim();
+
+                if (name) m.name = name;
+                if (shortName) m.short_name = shortName;
+                if (desc) m.description = desc;
+                if (lang) m.lang = lang;
+                if (startUrl) m.start_url = startUrl;
+                if (scope) m.scope = scope;
+                if (id) m.id = id;
+                m.display = displayMode;
+                if (orientation !== 'any') m.orientation = orientation;
+
+                const theme = fThemeHex.value.trim();
+                if (theme) m.theme_color = theme;
+                const bg = fBgHex.value.trim();
+                if (bg) m.background_color = bg;
+
+                // icons（只輸出有 src 的）
+                const validIcons = icons.filter(i => i.src.trim());
+                if (validIcons.length > 0) {
+                    m.icons = validIcons.map(i => {
+                        const obj = { src: i.src.trim(), sizes: i.sizes.trim() };
+                        if (i.type) obj.type = i.type;
+                        if (i.purpose) obj.purpose = i.purpose;
+                        return obj;
+                    });
+                }
+
+                // shortcuts
+                const validSc = shortcuts.filter(s => s.name.trim() && s.url.trim());
+                if (validSc.length > 0) {
+                    m.shortcuts = validSc.map(s => {
+                        const obj = { name: s.name.trim(), url: s.url.trim() };
+                        if (s.description.trim()) obj.description = s.description.trim();
+                        if (s.icon.trim()) obj.icon = s.icon.trim();
+                        return obj;
+                    });
+                }
+
+                // screenshots
+                const validShots = shots.filter(s => s.src.trim() && s.sizes.trim());
+                if (validShots.length > 0) {
+                    m.screenshots = validShots.map(s => {
+                        const obj = {
+                            src: s.src.trim(),
+                            sizes: s.sizes.trim(),
+                            type: s.type || 'image/png',
+                            form_factor: s.form_factor
+                        };
+                        return obj;
+                    });
+                }
+
+                // categories
+                if (categories.size > 0) {
+                    m.categories = Array.from(categories);
+                }
+
+                return m;
+            }
+
+            // ==================== Validate ====================
+            function validate(m) {
+                const results = [];
+                let errors = 0, warnings = 0, passes = 0;
+
+                // 1. 必填：name 或 short_name
+                if (!m.name && !m.short_name) {
+                    results.push({ level: 'error', text: '缺少必填欄位：name 或 short_name（至少一個）' });
+                    errors++;
+                } else {
+                    results.push({ level: 'pass', text: m.name ? `name：「${m.name}」` : `short_name：「${m.short_name}」` });
+                    passes++;
+                }
+
+                // 2. 必填：start_url
+                if (!m.start_url) {
+                    results.push({ level: 'error', text: '缺少必填欄位：start_url' });
+                    errors++;
+                } else {
+                    results.push({ level: 'pass', text: `start_url：「${m.start_url}」` });
+                    passes++;
+                }
+
+                // 3. display
+                if (!m.display) {
+                    results.push({ level: 'error', text: '缺少必填欄位：display' });
+                    errors++;
+                } else {
+                    results.push({ level: 'pass', text: `display：「${m.display}」` });
+                    passes++;
+                }
+
+                // 4. 圖示
+                if (!m.icons || m.icons.length === 0) {
+                    results.push({ level: 'error', text: '缺少 icons：至少需要一個應用程式圖示' });
+                    errors++;
+                } else {
+                    results.push({ level: 'pass', text: `已設定 ${m.icons.length} 個圖示` });
+                    passes++;
+                    // 每個 icon 完整性
+                    m.icons.forEach((icon, i) => {
+                        if (!icon.src) {
+                            results.push({ level: 'error', text: `Icon ${i + 1} 缺少 src` });
+                            errors++;
+                        }
+                        if (!icon.sizes) {
+                            results.push({ level: 'error', text: `Icon ${i + 1} 缺少 sizes` });
+                            errors++;
+                        } else if (!/^\d+x\d+$/.test(icon.sizes)) {
+                            results.push({ level: 'error', text: `Icon ${i + 1} 的 sizes「${icon.sizes}」格式應為 192x192` });
+                            errors++;
+                        }
+                    });
+                    // PWA 安裝要求
+                    const has192 = m.icons.some(i => i.sizes === '192x192');
+                    const has512 = m.icons.some(i => i.sizes === '512x512');
+                    if (!has192) {
+                        results.push({ level: 'warn', text: '缺少 192×192 圖示（PWA 安裝要求之一）' });
+                        warnings++;
+                    }
+                    if (!has512) {
+                        results.push({ level: 'warn', text: '缺少 512×512 圖示（PWA 安裝要求之一）' });
+                        warnings++;
+                    }
+                    if (has192 && has512) {
+                        results.push({ level: 'pass', text: '已包含 192×192 與 512×512 圖示（符合 PWA 安裝要求）' });
+                        passes++;
+                    }
+                    // maskable 建議
+                    const hasMaskable = m.icons.some(i => (i.purpose || '').includes('maskable'));
+                    if (!hasMaskable) {
+                        results.push({ level: 'warn', text: '建議加入 purpose 為 maskable 的圖示（Android 自適應圖示最佳實踐）' });
+                        warnings++;
+                    }
+                }
+
+                // 5. 顏色有效性
+                ['theme_color', 'background_color'].forEach(field => {
+                    if (m[field]) {
+                        if (!/^#[0-9a-fA-F]{6}$/.test(m[field]) && !/^#[0-9a-fA-F]{8}$/.test(m[field])) {
+                            results.push({ level: 'error', text: `${field}「${m[field]}」不是有效的 HEX 顏色（應為 #RRGGBB 或 #RRGGBBAA）` });
+                            errors++;
+                        } else {
+                            results.push({ level: 'pass', text: `${field}：「${m[field]}」有效` });
+                            passes++;
+                        }
+                    }
+                });
+
+                // 6. 建議：short_name 長度
+                if (m.short_name && m.short_name.length > 12) {
+                    results.push({ level: 'warn', text: `short_name「${m.short_name}」超過 12 字元，主畫面顯示可能被截斷` });
+                    warnings++;
+                }
+
+                // 7. scope 與 start_url 關係
+                if (m.scope && m.start_url) {
+                    const start = m.start_url.replace(/^https?:\/\//, '');
+                    const sc = m.scope.replace(/^https?:\/\//, '');
+                    if (!start.startsWith(sc.replace(/\/$/, ''))) {
+                        results.push({ level: 'warn', text: 'start_url 不在 scope 範圍內，應用程式可能無法正常啟動' });
+                        warnings++;
+                    } else {
+                        results.push({ level: 'pass', text: 'start_url 位於 scope 範圍內' });
+                        passes++;
+                    }
+                }
+
+                // 8. categories 數量
+                if (m.categories && m.categories.length > 3) {
+                    results.push({ level: 'warn', text: 'categories 最多 3 個，目前超過限制' });
+                    warnings++;
+                }
+
+                // 9. JSON 合法
+                try {
+                    JSON.parse(JSON.stringify(m));
+                    results.push({ level: 'pass', text: 'JSON 格式合法' });
+                    passes++;
+                } catch (e) {
+                    results.push({ level: 'error', text: 'JSON 產生失敗：' + e.message });
+                    errors++;
+                }
+
+                vSummary.textContent = `${passes} 通過 · ${warnings} 警告 · ${errors} 錯誤`;
+                vSummary.className = 'text-xs font-mono ' +
+                    (errors > 0 ? 'text-rose-400' : warnings > 0 ? 'text-amber-400' : 'text-emerald-400');
+
+                vResults.innerHTML = results.map(r => {
+                    const icon = r.level === 'pass' ? 'ph-check-circle' : r.level === 'warn' ? 'ph-warning-circle' : 'ph-x-circle';
+                    return `<div class="v-item v-${r.level}"><i class="ph ${icon} v-icon"></i><span class="v-text">${escapeHtml(r.text)}</span></div>`;
+                }).join('');
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function escapeAttr(str) {
+                return String(str || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            // ==================== Update ====================
+            function updateAll() {
+                const m = buildManifest();
+                const pretty = JSON.stringify(m, null, 2);
+                jsonPreview.textContent = pretty;
+                jsonSize.textContent = `${new Blob([pretty]).size} B`;
+                validate(m);
+            }
+
+            // ==================== Copy / Download ====================
+            btnCopy.addEventListener('click', () => {
+                const content = jsonPreview.textContent;
+                if (!content || content === '{}') {
+                    showToast('請先設定欄位', 'warning-circle');
+                    return;
+                }
+                navigator.clipboard.writeText(content).then(() => {
+                    showToast('JSON 已複製');
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = content;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('JSON 已複製');
+                });
+            });
+
+            btnDownload.addEventListener('click', () => {
+                const content = jsonPreview.textContent;
+                if (!content || content === '{}') {
+                    showToast('請先設定欄位', 'warning-circle');
+                    return;
+                }
+                const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'manifest.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('manifest.json 已下載');
+            });
+
+            // ==================== Reset ====================
+            btnReset.addEventListener('click', () => {
+                fName.value = '';
+                fShortName.value = '';
+                fDesc.value = '';
+                fLang.value = 'zh-TW';
+                fStartUrl.value = '/';
+                fScope.value = '/';
+                fId.value = '';
+                displayMode = 'standalone';
+                orientation = 'any';
+                displayBtns.forEach(b => b.classList.toggle('active', b.dataset.display === 'standalone'));
+                orientBtns.forEach(b => b.classList.toggle('active', b.dataset.orientation === 'any'));
+                fTheme.value = '#0B1120';
+                fThemeHex.value = '#0B1120';
+                fBg.value = '#0B1120';
+                fBgHex.value = '#0B1120';
+                icons = [];
+                shortcuts = [];
+                shots = [];
+                categories.clear();
+                catBtns.forEach(b => b.classList.remove('active'));
+                renderIcons();
+                renderShortcuts();
+                renderShots();
+                updateAll();
+                showToast('已重設全部設定', 'trash');
+            });
+
+            // ==================== Toast ====================
+            function showToast(msg, icon = 'check-circle') {
+                const toast = document.getElementById('toast');
+                const toastMsg = document.getElementById('toast-msg');
+                const toastIcon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                toastIcon.className = `ph-fill ph-${icon} text-lg text-hub-manifest`;
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                }, 2200);
+            }
+
+            // ==================== Init ====================
+            renderIcons();
+            renderShortcuts();
+            renderShots();
+            updateAll();
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

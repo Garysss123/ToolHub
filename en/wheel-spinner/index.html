@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Wheel Spinner | Free Online Tool - ToolHub</title>
+<meta content="Free online lottery roulette. Paste the list and you can randomly spin the lottery. It supports removal of winners, sound effects and repeated draws." name="description"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 絕對剛體約束的輪盤容器 */
+        .wheel-container {
+            position: relative;
+            width: 100%;
+            max-width: 420px; 
+            margin: 0 auto;
+            border-radius: 50%;
+            flex-shrink: 0; 
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 2px solid #334155;
+        }
+
+        .wheel-container::before {
+            content: "";
+            display: block;
+            padding-top: 100%;
+        }
+
+        canvas {
+            position: absolute;
+            top: 8px; left: 8px; right: 8px; bottom: 8px;
+            width: calc(100% - 16px);
+            height: calc(100% - 16px);
+            border-radius: 50%;
+            display: block;
+        }
+
+        /* 指針 (Pointer) */
+        .wheel-pointer {
+            position: absolute;
+            top: 50%;
+            right: -10px; 
+            transform: translateY(-50%);
+            width: 40px;
+            height: 30px;
+            background: #facc15;
+            clip-path: polygon(100% 0%, 100% 100%, 0% 50%);
+            z-index: 20;
+            filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.6));
+            transform-origin: right center;
+            transition: transform 0.05s ease-out;
+        }
+        .wheel-pointer.ticking {
+            transform: translateY(-50%) rotate(-15deg);
+        }
+
+        /* 中心按鈕 */
+        .wheel-center-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #334155, #1e293b);
+            border: 4px solid #475569;
+            border-radius: 50%;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 900;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.2);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            letter-spacing: 1px;
+        }
+        .wheel-center-btn:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+            border-color: #f43f5e;
+            color: #f43f5e;
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.4), inset 0 2px 5px rgba(255,255,255,0.2);
+        }
+        .wheel-center-btn:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+        .wheel-center-btn.disabled {
+            pointer-events: none;
+            opacity: 0.8;
+            filter: grayscale(1);
+        }
+
+        /* 慶典粒子層 */
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 100;
+        }
+
+        /* 結果彈窗 */
+        .winner-modal {
+            position: absolute; inset: 0; z-index: 50;
+            background: rgba(11, 17, 32, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex; flex-col items-center justify-center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            border-radius: 1rem;
+        }
+        .winner-modal.show { opacity: 1; pointer-events: auto; }
+        
+        .winner-card {
+            transform: scale(0.8) translateY(20px); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .winner-modal.show .winner-card { transform: scale(1) translateY(0); }
+
+        @keyframes pop { 0% { transform: scale(0.95); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s ease-out; }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/wheel-spinner/" property="og:url"/>
+<meta content="Wheel Spinner | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free online lottery roulette. Paste the list and you can randomly spin the lottery. It supports removal of winners, sound effects and repeated draws." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Wheel Spinner | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free online lottery roulette. Paste the list and you can randomly spin the lottery. It supports removal of winners, sound effects and repeated draws." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Online lottery roulette","url":"https://toolhuben.com/en/wheel-spinner/","description":"Free online lottery roulette. Paste the list and you can randomly spin the lottery. It supports removal of winners, sound effects and repeated draws.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"author":{"@type":"Organization","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Online lottery roulette","item":"https://toolhuben.com/en/wheel-spinner/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is online lottery roulette suitable for?","acceptedAnswer":{"@type":"Answer","text":"The random wheel turns the list into an intuitive visual selection, suitable for classroom roll call, activity interaction and general grouping. Before use, please explain whether duplication is allowed, whether to remove the prize after winning, and how to deal with duplicate items on the list."}},{"@type":"Question","name":"How to use online lottery roulette?","acceptedAnswer":{"@type":"Answer","text":"Enter and check the list of participants line by line, remove blanks and errors; set whether to keep it after extraction, and publicly explain the selection rules; record the results after rotation, and retain the screen or conduct additional audits if necessary."}},{"@type":"Question","name":"What should I pay attention to when using online lottery roulette?","acceptedAnswer":{"@type":"Answer","text":"Visual Roulette is intended for general interaction and does not represent a legally binding and verifiable lottery system. When bonuses or public promotions are involved, event rules and local regulations should be followed."}},{"@type":"Question","name":"Will online lottery roulette upload information?","acceptedAnswer":{"@type":"Answer","text":"The list and lottery status remain on the browser page and will not be uploaded or account created."}},{"@type":"Question","name":"Do I need to install software or register an account?","acceptedAnswer":{"@type":"Answer","text":"No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed."}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/wheel-spinner/" rel="canonical"/><link href="https://toolhuben.com/wheel-spinner/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/wheel-spinner/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/wheel-spinner/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","吃火鍋 吃拉麵 吃壽司 吃速食 吃便當 隨便 再想一下":"Eat hot pot, eat ramen, eat sushi, eat fast food, eat bento, whatever. Think again.","名單已打亂":"The list has been scrambled","名單已清空":"The list has been cleared","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","已將中獎者從名單中剔除":"Winner removed from list","已生成":"Generated","建立理念":"Our Founding Idea","建議":"Recommendation","成功匯入":"Imported successfully","檔案內容為空":"File content is empty","清空":"Clear","為確保瀏覽器效能，請限制在 1000 個以內":"To ensure browser performance, please limit it to 1000","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","筆號碼":"pen number","筆資料":"pen information","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","請在左側輸入名單":"Please enter the list on the left","請輸入有效的數字範圍":"Please enter a valid number range","項目":"Project","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","確定清空?":"Are you sure about this?","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="blueprint" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#f43f5e;--classic-accent-rgb:244,63,94">
+<!-- 1. 系統組件：Header & Sidebar -->
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 粒子系統圖層 -->
+<canvas id="confetti-canvas"></canvas>
+<!-- 3. 核心模塊：Wheel Matrix -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="bread crumbs" class="seo-upgrade-breadcrumb"><a href="/en/">Home</a><span>›</span><span>Online lottery roulette</span></nav>
+<!-- SEO 友善標題區 -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-rose-950/30 border border-rose-900/50 text-xs text-rose-400 shadow-inner">
+<i class="ph-fill ph-aperture mr-1.5 text-sm animate-spin-slow"></i>
+                High-definition physics roulette and acoustic engine
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Online lottery roulette <span class="text-transparent bg-clip-text bg-gradient-to-r from-wheel-spin to-purple-500">Random Wheel</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                A must-have for tail tooth draws, class roll call, and those with difficulty choosing. Supports custom lists, imported TXT files and rapid generation of digital ranges. It has real physical scrolling effects, lottery sound effects and automatic elimination of winners.
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- ========================================== -->
+<!-- 左側：資料池控制台 (Data Pool Matrix)         -->
+<!-- ========================================== -->
+<div class="lg:col-span-4 flex flex-col gap-5">
+<div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl border border-hub-700/50 h-full relative">
+<div class="flex justify-between items-center border-b border-hub-700 pb-3">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-list-numbers text-sky-400 text-lg"></i> Participant List (Items)
+                        </h3>
+<span class="text-xs font-mono font-bold bg-hub-800 text-sky-400 px-2 py-0.5 rounded border border-hub-700" id="pool-count">0 items</span>
+</div>
+<!-- 資料輸入區 -->
+<div class="flex-grow flex flex-col gap-2 relative">
+<label class="text-[10px] text-slate-500 font-mono uppercase tracking-wider">One per line represents one option</label>
+<textarea class="w-full flex-grow bg-hub-900/80 border border-hub-700 rounded-xl p-4 text-white font-sans text-sm sm:text-base outline-none resize-none shadow-inner leading-relaxed focus:border-sky-500 transition-colors min-h-[220px]" id="in-items" placeholder="Enter options..."></textarea>
+</div>
+<!-- 高階資料匯入工具 -->
+<div class="grid grid-cols-2 gap-2">
+<input accept=".txt" class="hidden" id="file-txt" type="file"/>
+<button class="py-2 bg-hub-800 hover:bg-sky-900/40 border border-hub-700 hover:border-sky-500/50 text-slate-300 hover:text-sky-400 font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs shadow-sm" id="btn-import-txt">
+<i class="ph-fill ph-file-text text-base"></i> Import TXT file
+                        </button>
+<button class="py-2 bg-hub-800 hover:bg-emerald-900/40 border border-hub-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs shadow-sm" id="btn-toggle-range">
+<i class="ph-bold ph-list-numbers text-base"></i> generate range of numbers
+                        </button>
+</div>
+<!-- 數字範圍產生器面板 -->
+<div class="hidden bg-hub-900 border border-hub-700 rounded-lg p-3 flex-col gap-3 animate-[fadeIn_0.2s_ease-out]" id="panel-range">
+<div class="flex items-center gap-2">
+<input class="w-full bg-hub-800 border border-hub-700 rounded px-2 py-1.5 text-white font-mono text-sm outline-none text-center focus:border-emerald-500" id="range-min" type="number" value="1"/>
+<span class="text-slate-500 font-bold">~</span>
+<input class="w-full bg-hub-800 border border-hub-700 rounded px-2 py-1.5 text-white font-mono text-sm outline-none text-center focus:border-emerald-500" id="range-max" type="number" value="100"/>
+</div>
+<button class="w-full py-1.5 bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-500/50 text-emerald-400 font-bold rounded transition-colors text-xs" id="btn-gen-range">
+                            Cover and generate list
+                        </button>
+</div>
+<!-- 陣列操作按鈕 -->
+<div class="grid grid-cols-3 gap-2 border-t border-hub-700 pt-4 mt-2">
+<button class="py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs" id="btn-shuffle">
+<i class="ph-bold ph-shuffle"></i> disrupt
+                        </button>
+<button class="py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs" id="btn-sort">
+<i class="ph-bold ph-sort-ascending"></i> sort
+                        </button>
+<button class="py-2.5 bg-hub-900 hover:bg-red-900/50 border border-hub-700 hover:border-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs" id="btn-clear">
+<i class="ph-bold ph-trash"></i> Clear
+                        </button>
+</div>
+<!-- 引擎設定 -->
+<div class="border-t border-hub-700 pt-4 mt-2 space-y-4">
+<label class="flex items-center justify-between cursor-pointer group w-full">
+<span class="text-xs font-bold text-slate-400 group-hover:text-white transition-colors flex items-center gap-2"><i class="ph-fill ph-speaker-high text-amber-400"></i> Tick Sound</span>
+<input checked="" class="rounded border-slate-600 text-amber-400 focus:ring-0 bg-hub-900 cursor-pointer" id="toggle-sound" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between cursor-pointer group w-full">
+<span class="text-xs font-bold text-slate-400 group-hover:text-white transition-colors flex items-center gap-2"><i class="ph-fill ph-magic-wand text-fuchsia-400"></i> Confetti</span>
+<input checked="" class="rounded border-slate-600 text-fuchsia-400 focus:ring-0 bg-hub-900 cursor-pointer" id="toggle-confetti" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：物理輪盤競技場 (Wheel Arena)             -->
+<!-- ========================================== -->
+<div class="lg:col-span-8 flex flex-col gap-5 h-full">
+<div class="glass-panel p-6 sm:p-10 shadow-2xl relative border border-hub-700/50 flex flex-col items-center justify-center min-h-[450px] overflow-hidden">
+<!-- 輪盤本體 -->
+<div class="wheel-container" id="wheel-wrapper">
+<!-- Retina 畫布 -->
+<canvas id="wheel-canvas"></canvas>
+<!-- 棘輪指針 -->
+<div class="wheel-pointer" id="wheel-pointer"></div>
+<!-- 啟動按鈕 -->
+<div class="wheel-center-btn" id="btn-spin">Lottery</div>
+</div>
+<!-- 結果彈窗 (浮動於畫布之上) -->
+<div class="winner-modal" id="winner-modal">
+<div class="winner-card bg-hub-800 border border-hub-700 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-wheel-spin/10 to-transparent pointer-events-none"></div>
+<p class="text-sm text-slate-400 font-bold uppercase tracking-widest mb-2"><i class="ph-fill ph-crown text-yellow-400"></i> Drawing results</p>
+<h2 class="text-3xl sm:text-4xl font-bold text-white mb-8 drop-shadow-md break-words border-b border-hub-700 pb-6" id="winner-name">Winner Name</h2>
+<div class="flex flex-col gap-3 relative z-10">
+<button class="w-full py-3 bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2 active:scale-[0.98]" id="btn-remove-winner">
+<i class="ph-bold ph-user-minus text-lg"></i> Remove from list (Remove)
+                                </button>
+<button class="w-full py-3 bg-hub-900 hover:bg-hub-700 border border-hub-700 text-slate-300 font-bold rounded-xl transition-colors flex items-center justify-center gap-2" id="btn-keep-winner">
+                                    Keep options and close
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="Online Lottery Roulette Tutorial and Frequently Asked Questions" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>Complete Guide to Using Online Lottery Roulette</h2>
+<p>The random wheel turns the list into an intuitive visual selection, suitable for classroom roll call, activity interaction and general grouping. Before use, please explain whether duplication is allowed, whether to remove the prize after winning, and how to deal with duplicate items on the list.</p>
+<h3>Operation steps</h3>
+<ol><li>Enter and check the participant list line by line, removing blank spaces and typos</li><li>Set whether to keep it after drawing, and publicly explain the drawing rules</li><li>Record the results after rotation, and retain the screen or conduct additional audits if necessary</li></ol>
+<h3>Practical suggestions and limitations</h3>
+<p>Visual Roulette is intended for general interaction and does not represent a legally binding and verifiable lottery system. When bonuses or public promotions are involved, event rules and local regulations should be followed.</p>
+<h3>Privacy and native processing</h3>
+<p>The list and lottery status remain on the browser page and will not be uploaded or account created.</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>Online Lottery Roulette Frequently Asked Questions</h2>
+<details><summary>What is online lottery roulette suitable for?</summary><div class="seo-upgrade-answer">The random wheel turns the list into an intuitive visual selection, suitable for classroom roll call, activity interaction and general grouping. Before use, please explain whether duplication is allowed, whether to remove the prize after winning, and how to deal with duplicate items on the list.</div></details>
+<details><summary>How to use online lottery roulette?</summary><div class="seo-upgrade-answer">Enter and check the list of participants line by line, remove blanks and errors; set whether to keep it after extraction, and publicly explain the selection rules; record the results after rotation, and retain the screen or conduct additional audits if necessary.</div></details>
+<details><summary>What should I pay attention to when using online lottery roulette?</summary><div class="seo-upgrade-answer">Visual Roulette is intended for general interaction and does not represent a legally binding and verifiable lottery system. When bonuses or public promotions are involved, event rules and local regulations should be followed.</div></details>
+<details><summary>Will online lottery roulette upload information?</summary><div class="seo-upgrade-answer">The list and lottery status remain on the browser page and will not be uploaded or account created.</div></details>
+<details><summary>Do I need to install software or register an account?</summary><div class="seo-upgrade-answer">No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed.</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/wheel-spinner'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：物理輪盤、聲學合成與渲染引擎   -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- DOM Elements ---
+            const inItems = document.getElementById('in-items');
+            const poolCount = document.getElementById('pool-count');
+            const btnShuffle = document.getElementById('btn-shuffle');
+            const btnSort = document.getElementById('btn-sort');
+            const btnClear = document.getElementById('btn-clear');
+            
+            const btnImportTxt = document.getElementById('btn-import-txt');
+            const fileTxt = document.getElementById('file-txt');
+            const btnToggleRange = document.getElementById('btn-toggle-range');
+            const panelRange = document.getElementById('panel-range');
+            const rangeMin = document.getElementById('range-min');
+            const rangeMax = document.getElementById('range-max');
+            const btnGenRange = document.getElementById('btn-gen-range');
+
+            const toggleSound = document.getElementById('toggle-sound');
+            const toggleConfetti = document.getElementById('toggle-confetti');
+            
+            const canvas = document.getElementById('wheel-canvas');
+            const ctx = canvas.getContext('2d');
+            const btnSpin = document.getElementById('btn-spin');
+            const wheelPointer = document.getElementById('wheel-pointer');
+            
+            const winnerModal = document.getElementById('winner-modal');
+            const winnerName = document.getElementById('winner-name');
+            const btnRemoveWinner = document.getElementById('btn-remove-winner');
+            const btnKeepWinner = document.getElementById('btn-keep-winner');
+            const confettiCanvas = document.getElementById('confetti-canvas');
+
+            // --- State Matrix ---
+            const STORAGE_KEY = 'toolhub_wheel_items';
+            let items = [];
+            let isSpinning = false;
+            let currentAngle = 0; 
+            let lastTickAngle = 0;
+            let currentWinnerIndex = -1;
+            
+            // Cyberpunk 霓虹色譜陣列
+            const colorPalette = [
+                '#f43f5e', '#8b5cf6', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#f97316', '#d946ef'
+            ];
+
+            // --- 聲學引擎 (Web Audio API Procedural Synthesis) ---
+            let audioCtx = null;
+            const playTickSound = () => {
+                if (!toggleSound.checked) return;
+                
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.1);
+
+                wheelPointer.classList.add('ticking');
+                setTimeout(() => wheelPointer.classList.remove('ticking'), 50);
+            };
+
+            // --- 資料陣列解析與存儲 ---
+            const parseItems = () => {
+                const raw = inItems.value.trim();
+                if (raw) {
+                    items = raw.split('\n').map(i => i.trim()).filter(i => i !== '');
+                } else {
+                    items = [];
+                }
+                poolCount.textContent = `${items.length} 項目`;
+                localStorage.setItem(STORAGE_KEY, inItems.value);
+                drawWheel();
+            };
+
+            const loadItems = () => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved !== null) {
+                    inItems.value = saved;
+                } else {
+                    inItems.value = "吃火鍋\n吃拉麵\n吃壽司\n吃速食\n吃便當\n隨便\n再想一下"; 
+                }
+                parseItems();
+            };
+
+            inItems.addEventListener('input', parseItems);
+
+            // --- 陣列操作：高階工具 ---
+            btnImportTxt.addEventListener('click', () => {
+                if(isSpinning) return;
+                fileTxt.click();
+            });
+
+            fileTxt.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const text = ev.target.result;
+                    const lines = text.split(/\r?\n/).map(i => i.trim()).filter(i => i !== '');
+                    if (lines.length > 0) {
+                        inItems.value = lines.join('\n');
+                        parseItems();
+                        showToast(`成功匯入 ${lines.length} 筆資料`);
+                    } else {
+                        showToast('檔案內容為空', true);
+                    }
+                    fileTxt.value = ''; 
+                };
+                reader.readAsText(file);
+            });
+
+            btnToggleRange.addEventListener('click', () => {
+                if(isSpinning) return;
+                panelRange.classList.toggle('hidden');
+                panelRange.classList.toggle('flex');
+            });
+
+            btnGenRange.addEventListener('click', () => {
+                const min = parseInt(rangeMin.value);
+                const max = parseInt(rangeMax.value);
+                
+                if (isNaN(min) || isNaN(max) || min > max) {
+                    return showToast('請輸入有效的數字範圍', true);
+                }
+                if (max - min > 1000) {
+                    return showToast('為確保瀏覽器效能，請限制在 1000 個以內', true);
+                }
+                
+                let newArr = [];
+                for(let i = min; i <= max; i++) {
+                    newArr.push(i.toString());
+                }
+                
+                inItems.value = newArr.join('\n');
+                parseItems();
+                panelRange.classList.add('hidden');
+                panelRange.classList.remove('flex');
+                showToast(`已生成 ${newArr.length} 筆號碼`);
+            });
+
+            btnShuffle.addEventListener('click', () => {
+                if (isSpinning) return;
+                let arr = [...items];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                inItems.value = arr.join('\n');
+                parseItems();
+                showToast('名單已打亂');
+            });
+
+            btnSort.addEventListener('click', () => {
+                if (isSpinning) return;
+                let arr = [...items].sort((a, b) => a.localeCompare(b, 'zh-TW'));
+                inItems.value = arr.join('\n');
+                parseItems();
+            });
+
+            let clearConfirmTimer;
+            btnClear.addEventListener('click', () => {
+                if (isSpinning) return;
+                
+                if (btnClear.dataset.confirm === 'true') {
+                    inItems.value = '';
+                    parseItems();
+                    
+                    btnClear.dataset.confirm = 'false';
+                    btnClear.innerHTML = '<i class="ph-bold ph-trash"></i> 清空';
+                    btnClear.className = "py-2.5 bg-hub-900 hover:bg-red-900/50 border border-hub-700 hover:border-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs";
+                    
+                    showToast('名單已清空');
+                    clearTimeout(clearConfirmTimer);
+                } else {
+                    btnClear.dataset.confirm = 'true';
+                    btnClear.innerHTML = '<i class="ph-bold ph-warning"></i> 確定清空?';
+                    btnClear.className = "py-2.5 bg-red-900 border border-red-500 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs shadow-[0_0_10px_rgba(239,68,68,0.3)]";
+                    
+                    clearConfirmTimer = setTimeout(() => {
+                        btnClear.dataset.confirm = 'false';
+                        btnClear.innerHTML = '<i class="ph-bold ph-trash"></i> 清空';
+                        btnClear.className = "py-2.5 bg-hub-900 hover:bg-red-900/50 border border-hub-700 hover:border-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs";
+                    }, 3000);
+                }
+            });
+
+            // --- Retina 級光學渲染引擎 ---
+            const resizeCanvas = () => {
+                const rect = canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                
+                ctx.setTransform(1, 0, 0, 1, 0, 0); 
+                ctx.scale(dpr, dpr);
+                drawWheel();
+            };
+
+            window.addEventListener('resize', resizeCanvas);
+
+            const drawWheel = () => {
+                const rect = canvas.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = Math.min(centerX, centerY);
+
+                ctx.clearRect(0, 0, width, height);
+
+                if (items.length === 0) {
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fill();
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = 'bold 16px "Noto Sans TC", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('請在左側輸入名單', centerX, centerY);
+                    return;
+                }
+
+                const arc = (2 * Math.PI) / items.length;
+                const shouldDrawText = items.length <= 80;
+
+                for (let i = 0; i < items.length; i++) {
+                    const angle = currentAngle + i * arc;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, angle, angle + arc);
+                    ctx.lineTo(centerX, centerY);
+                    
+                    ctx.fillStyle = colorPalette[i % colorPalette.length];
+                    ctx.fill();
+                    
+                    if (items.length < 150) {
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.lineWidth = items.length > 50 ? 1 : 2;
+                        ctx.stroke();
+                    }
+
+                    if (shouldDrawText) {
+                        ctx.save();
+                        ctx.translate(centerX, centerY);
+                        ctx.rotate(angle + arc / 2);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                        ctx.shadowBlur = 4;
+                        
+                        let fontSize = Math.max(10, Math.min(24, (radius * Math.PI * 2) / items.length / 3));
+                        ctx.font = `bold ${fontSize}px "Noto Sans TC", sans-serif`;
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'middle';
+                        
+                        const textRadius = radius * 0.85; 
+                        const text = items[i];
+                        
+                        let displayText = text;
+                        if(ctx.measureText(text).width > textRadius - 40) {
+                            displayText = text.substring(0, 15) + '...';
+                        }
+                        
+                        ctx.fillText(displayText, textRadius, 0);
+                        ctx.restore();
+                    }
+                }
+            };
+
+            // --- 物理阻尼旋轉引擎 (Kinematics) ---
+            let spinAnimation;
+            const spinWheel = () => {
+                if (isSpinning || items.length === 0) return;
+                
+                isSpinning = true;
+                btnSpin.classList.add('disabled');
+                winnerModal.classList.remove('show');
+                
+                if (toggleSound.checked && !audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+                const winIndex = Math.floor(Math.random() * items.length);
+                currentWinnerIndex = winIndex;
+                
+                const arc = (2 * Math.PI) / items.length;
+                
+                // ⚠️ 核心修復：圈數必須嚴格取整數，否則會產生小數圈的軌跡脫鉤
+                const baseSpins = Math.floor(8 + Math.random() * 5); 
+                const totalRotationRaw = baseSpins * 2 * Math.PI;
+                
+                const randomOffsetWithinSector = arc * 0.1 + Math.random() * (arc * 0.8); 
+                const finalTargetModulo = (2*Math.PI) - (winIndex * arc + randomOffsetWithinSector);
+                
+                const targetAngle = totalRotationRaw + finalTargetModulo;
+                
+                const startAngle = currentAngle;
+                const duration = 5000 + Math.random() * 2000; 
+                let startTime = null;
+                lastTickAngle = startAngle;
+
+                const easeOutQuart = (x) => {
+                    return 1 - Math.pow(1 - x, 4);
+                };
+
+                const animate = (time) => {
+                    if (!startTime) startTime = time;
+                    const elapsed = time - startTime;
+                    let progress = elapsed / duration;
+                    
+                    if (progress > 1) progress = 1;
+                    
+                    const easedProgress = easeOutQuart(progress);
+                    currentAngle = startAngle + (targetAngle - startAngle) * easedProgress;
+                    
+                    const angleDiff = currentAngle - lastTickAngle;
+                    if (angleDiff >= arc) {
+                        playTickSound();
+                        lastTickAngle += arc; 
+                    }
+
+                    drawWheel();
+
+                    if (progress < 1) {
+                        spinAnimation = requestAnimationFrame(animate);
+                    } else {
+                        finishSpin();
+                    }
+                };
+
+                spinAnimation = requestAnimationFrame(animate);
+            };
+
+            const finishSpin = () => {
+                isSpinning = false;
+                btnSpin.classList.remove('disabled');
+                
+                currentAngle = currentAngle % (2 * Math.PI);
+                lastTickAngle = currentAngle; 
+                
+                const winnerText = items[currentWinnerIndex];
+                winnerName.textContent = winnerText;
+                winnerModal.classList.add('show');
+                
+                if(toggleConfetti.checked) fireConfetti();
+            };
+
+            // --- 無情剔除機制 (Elimination Matrix) ---
+            btnRemoveWinner.addEventListener('click', () => {
+                if (currentWinnerIndex > -1 && currentWinnerIndex < items.length) {
+                    items.splice(currentWinnerIndex, 1);
+                    inItems.value = items.join('\n');
+                    parseItems(); 
+                    showToast('已將中獎者從名單中剔除');
+                }
+                winnerModal.classList.remove('show');
+            });
+
+            btnKeepWinner.addEventListener('click', () => {
+                winnerModal.classList.remove('show');
+            });
+
+            btnSpin.addEventListener('click', spinWheel);
+
+            // --- 粒子慶典引擎 (Zero-Dependency Confetti) ---
+            let particles = [];
+            let confettiAnimation;
+            const cCanvas = document.getElementById('confetti-canvas');
+            const cCtx = cCanvas.getContext('2d');
+
+            const resizeConfetti = () => {
+                cCanvas.width = window.innerWidth;
+                cCanvas.height = window.innerHeight;
+            };
+            window.addEventListener('resize', resizeConfetti);
+            resizeConfetti();
+
+            const fireConfetti = () => {
+                particles = [];
+                const colors = ['#f43f5e', '#38bdf8', '#10b981', '#facc15', '#a855f7'];
+                
+                for (let i = 0; i < 150; i++) {
+                    particles.push({
+                        x: cCanvas.width / 2,
+                        y: cCanvas.height / 2 + 100, 
+                        r: Math.random() * 6 + 2,
+                        dx: Math.random() * 15 - 7.5,
+                        dy: Math.random() * -15 - 5, 
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        tilt: Math.floor(Math.random() * 10) - 10,
+                        tiltAngleInc: (Math.random() * 0.07) + 0.05,
+                        tiltAngle: 0
+                    });
+                }
+                
+                if(confettiAnimation) cancelAnimationFrame(confettiAnimation);
+                animateConfetti();
+            };
+
+            const animateConfetti = () => {
+                requestAnimationFrame(animateConfetti);
+                cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+                
+                let activeParticles = 0;
+                
+                particles.forEach(p => {
+                    p.tiltAngle += p.tiltAngleInc;
+                    p.y += (Math.cos(p.tiltAngle) + 1 + p.r / 2) / 2;
+                    p.x += Math.sin(p.tiltAngle) * 2;
+                    p.dy += 0.2; 
+                    p.x += p.dx;
+                    p.y += p.dy;
+                    
+                    if (p.y <= cCanvas.height) activeParticles++;
+                    
+                    cCtx.beginPath();
+                    cCtx.lineWidth = p.r;
+                    cCtx.strokeStyle = p.color;
+                    cCtx.moveTo(p.x + p.tilt + p.r, p.y);
+                    cCtx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+                    cCtx.stroke();
+                });
+                
+                if (activeParticles === 0) {
+                    cancelAnimationFrame(confettiAnimation);
+                }
+            };
+
+            // --- 啟動 ---
+            loadItems();
+            setTimeout(resizeCanvas, 50); 
+
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

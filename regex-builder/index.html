@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regex Builder 正規表達式產生器 | Cheat Sheet & Pattern Builder | ToolHub</title>
+    <meta name="description" content="免費線上 Regex Builder 正規表達式產生器。透過勾選條件自動產生正則，內建 Cheat Sheet、Common Templates、Regex Explain 解析與 Complexity Meter 複雜度分析。適合初學者學習與開發者快速建立 Regex。">
+    <meta name="keywords" content="Regex, Regex Builder, 正規表達式, 正則產生器, Pattern Builder, Cheat Sheet, Regex Explain, 災難性回溯, Catastrophic Backtracking, 正規表達式學習, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' },
+                        rbl: { DEFAULT: '#F97316', light: '#FB923C', dark: '#EA580C' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F97316; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 500; transition: all 0.2s;
+            border: 1px solid transparent; white-space: nowrap; color: #94A3B8;
+        }
+        .tab-btn:hover { background: rgba(249,115,22,0.05); color: #E2E8F0; }
+        .tab-btn.active {
+            background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.3);
+            color: #FB923C;
+        }
+
+        .builder-opt {
+            display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+            padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            border: 1px solid #1E293B; background: rgba(15,23,42,0.4);
+            transition: all 0.2s; font-size: 0.8125rem; color: #94A3B8;
+        }
+        .builder-opt:hover { border-color: #334155; color: #E2E8F0; }
+        .builder-opt.active { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); color: #FB923C; }
+        .builder-opt input[type="checkbox"] { accent-color: #F97316; width: 1rem; height: 1rem; }
+
+        .cheat-item {
+            padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            border: 1px solid #1E293B; transition: all 0.2s; cursor: pointer;
+        }
+        .cheat-item:hover { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.04); }
+        .cheat-item .token { font-family: "Fira Code", monospace; font-weight: 600; color: #F97316; }
+        .cheat-item .desc { font-size: 0.75rem; color: #64748B; }
+
+        .template-chip {
+            padding: 0.375rem 0.75rem; border-radius: 999px; cursor: pointer;
+            font-size: 0.75rem; border: 1px solid #1E293B; color: #94A3B8;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .template-chip:hover { border-color: rgba(249,115,22,0.3); color: #FB923C; background: rgba(249,115,22,0.05); }
+        .template-chip.active { border-color: #F97316; background: rgba(249,115,22,0.1); color: #FB923C; }
+
+        .explain-segment {
+            padding: 0.5rem 0; border-bottom: 1px solid rgba(30,41,59,0.5);
+            display: flex; gap: 1rem; align-items: flex-start;
+        }
+        .explain-segment:last-child { border-bottom: none; }
+        .explain-segment .part { font-family: "Fira Code", monospace; font-weight: 500; color: #F97316; font-size: 0.875rem; min-width: 80px; }
+        .explain-segment .meaning { color: #94A3B8; font-size: 0.8125rem; }
+
+        .meter-bar {
+            height: 6px; border-radius: 3px; background: #1E293B; overflow: hidden;
+        }
+        .meter-fill { height: 100%; border-radius: 3px; transition: width 0.4s, background 0.4s; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #F97316; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .output-input {
+            width: 100%; background: #0f172a; border: 1px solid #1E293B;
+            border-radius: 0.5rem; padding: 0.75rem 1rem; outline: none;
+            font-family: "Fira Code", monospace; font-size: 0.9rem; color: #E2E8F0;
+        }
+        .output-input:focus { border-color: #F97316; }
+
+        textarea.explain-input {
+            width: 100%; min-height: 80px; background: #0f172a;
+            border: 1px solid #1E293B; border-radius: 0.5rem; padding: 0.75rem 1rem;
+            outline: none; font-family: "Fira Code", monospace; font-size: 0.85rem;
+            color: #E2E8F0; resize: vertical;
+        }
+        textarea.explain-input:focus { border-color: #F97316; }
+        textarea.explain-input::placeholder { color: #475569; }
+
+        .btn-primary {
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            color: white; font-weight: 600; font-size: 0.8125rem;
+            transition: all 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(249,115,22,0.25); }
+        .btn-secondary {
+            padding: 0.375rem 0.875rem; border-radius: 0.5rem;
+            background: rgba(30,41,59,0.5); border: 1px solid #1E293B;
+            color: #94A3B8; font-size: 0.75rem; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-secondary:hover { background: rgba(30,41,59,0.8); color: #E2E8F0; border-color: #334155; }
+
+        @media (max-width: 640px) {
+            .builder-grid { grid-template-columns: 1fr !important; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/regex-builder/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/regex-builder/">
+    <meta property="og:title" content="Regex Builder 正規表達式產生器">
+    <meta property="og:description" content="免費線上 Regex Builder 正規表達式產生器。透過勾選條件自動產生正則，內建 Cheat Sheet、Common Templates、Regex Explain 解析與 Complexity Meter 複雜度分析。適合初學者學習與開發者快速建立 Regex。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Regex Builder 正規表達式產生器">
+    <meta name="twitter:description" content="免費線上 Regex Builder 正規表達式產生器。透過勾選條件自動產生正則，內建 Cheat Sheet、Common Templates、Regex Explain 解析與 Complexity Meter 複雜度分析。適合初學者學習與開發者快速建立 Regex。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Regex Builder 正規表達式產生器","url":"https://toolhuben.com/regex-builder/","description":"免費線上 Regex Builder 正規表達式產生器。透過勾選條件自動產生正則，內建 Cheat Sheet、Common Templates、Regex Explain 解析與 Complexity Meter 複雜度分析。適合初學者學習與開發者快速建立 Regex。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Regex Builder 正規表達式產生器","item":"https://toolhuben.com/regex-builder/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/regex-builder/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/regex-builder/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/regex-builder/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen font-sans" style="--classic-accent:#F97316;--classic-accent-rgb:249,115,22" data-tool-visual data-classic-tool data-classic-layout="aurora">
+
+    <!-- System Components -->
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+
+        <!-- Hero Section -->
+        <div class="text-center space-y-3 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 rounded-full bg-hub-800 border border-hub-700 text-xs text-rbl">
+                <span class="flex w-2 h-2 bg-rbl rounded-full animate-pulse mr-2"></span>
+                視覺化 Regex 建構器 · 內建 Cheat Sheet 與複雜度分析
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Regex 正規表達式產生器
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-rbl to-amber-500"> Builder & Cheat Sheet</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                透過勾選條件自動產生正規表達式，內建常用模板庫與語法速查表。
+                支援 Regex Explain 解析與 Complexity Meter 複雜度分析，幫助你學習與建立高效的正規表達式。
+            </p>
+        </div>
+
+        <!-- Main Layout: Tabs -->
+        <div class="flex flex-wrap gap-1.5 mb-4 border-b border-hub-700 pb-3" id="main-tabs">
+            <button class="tab-btn active" data-tab="builder"><i data-lucide="puzzle" class="w-3.5 h-3.5 inline"></i> Pattern Builder</button>
+            <button class="tab-btn" data-tab="cheatsheet"><i data-lucide="book" class="w-3.5 h-3.5 inline"></i> Cheat Sheet</button>
+            <button class="tab-btn" data-tab="templates"><i data-lucide="layout-grid" class="w-3.5 h-3.5 inline"></i> 常用模板</button>
+            <button class="tab-btn" data-tab="explain"><i data-lucide="search" class="w-3.5 h-3.5 inline"></i> Regex Explain</button>
+        </div>
+
+        <!-- Tab: Builder -->
+        <div class="tab-content" data-tab="builder">
+            <div class="flex flex-col lg:flex-row gap-6">
+
+                <!-- Left: Builder Options -->
+                <div class="w-full lg:w-[360px] shrink-0 glass-panel p-5 space-y-4">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-1.5 border-b border-hub-700 pb-2">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-rbl"></i> 條件設定
+                    </h2>
+
+                    <!-- Anchors -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">定位點 (Anchors)</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <label class="builder-opt"><input type="checkbox" data-regex="^"> 開頭 ^</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="$"> 結尾 $</label>
+                        </div>
+                    </div>
+
+                    <!-- Character Classes -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">字元類別 (Character Classes)</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <label class="builder-opt"><input type="checkbox" data-regex="\d"> 數字 \d</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="\w"> 英數字 \w</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="\s"> 空白 \s</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="."> 任意字元 .</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="[A-Z]"> 大寫 A-Z</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="[a-z]"> 小寫 a-z</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="[0-9]"> 數字 [0-9]</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="[A-Za-z]"> 字母</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="[^ ]"> 否定字元集</label>
+                        </div>
+                    </div>
+
+                    <!-- Quantifiers -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">量詞 (Quantifiers)</label>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <label class="builder-opt"><input type="checkbox" data-regex="?"> 零或一 ?</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="*"> 零或多 *</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="+"> 一或多 +</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="{n}"> 固定 n</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="{n,}"> 至少 n</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="{n,m}"> n 到 m</label>
+                        </div>
+                    </div>
+
+                    <!-- Groups & Special -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">群組與特殊</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <label class="builder-opt"><input type="checkbox" data-regex="(...)"> 捕獲群組</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="(?:...)"> 非捕獲群組</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="|"> 或 (OR)</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="(?=...)"> 前瞻 Lookahead</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="(?!...)"> 否定前瞻</label>
+                            <label class="builder-opt"><input type="checkbox" data-regex="(?<=...)"> 後顧 Lookbehind</label>
+                        </div>
+                    </div>
+
+                    <!-- Common Patterns Quick-Add -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">快速插入</label>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button class="template-chip" data-quick="\d{4}-\d{2}-\d{2}">日期</button>
+                            <button class="template-chip" data-quick="[\w.-]+@[\w.-]+\.\w+">Email</button>
+                            <button class="template-chip" data-quick="https?://[\w./?-]+">URL</button>
+                            <button class="template-chip" data-quick="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">IPv4</button>
+                            <button class="template-chip" data-quick="[A-Za-z0-9]{6,}">密碼</button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Input -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">自訂片段</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="builder-custom" placeholder="輸入自訂 Regex 片段" class="flex-1 bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-xs outline-none focus:border-rbl placeholder:text-slate-700">
+                            <button id="btn-add-custom" class="btn-primary text-xs">加入</button>
+                        </div>
+                    </div>
+
+                    <!-- Flags -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 block">旗標 (Flags)</label>
+                        <div class="flex gap-2">
+                            <label class="builder-opt text-xs py-1.5"><input type="checkbox" id="flag-g" checked> g (全域)</label>
+                            <label class="builder-opt text-xs py-1.5"><input type="checkbox" id="flag-i"> i (忽略大小寫)</label>
+                            <label class="builder-opt text-xs py-1.5"><input type="checkbox" id="flag-m"> m (多行)</label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2 pt-2 border-t border-hub-700">
+                        <button id="btn-build" class="btn-primary flex-1 justify-center"><i data-lucide="wand-2" class="w-3.5 h-3.5"></i> 產生 Regex</button>
+                        <button id="btn-clear-builder" class="btn-secondary"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                    </div>
+                </div>
+
+                <!-- Right: Preview & Explain -->
+                <div class="flex-1 glass-panel p-5 space-y-4">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-1.5 border-b border-hub-700 pb-2">
+                        <i data-lucide="eye" class="w-4 h-4 text-rbl"></i> Live Preview
+                    </h2>
+
+                    <!-- Generated Regex -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1.5">Generated Regex</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="generated-regex" class="output-input flex-1" readonly placeholder="勾選上方條件後點擊產生⋯" value="">
+                            <button id="btn-copy-regex" class="btn-secondary shrink-0" title="複製 Regex"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Segment Explanation -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1.5">逐段解說</label>
+                        <div id="segment-explain" class="bg-hub-900/50 border border-hub-700 rounded-xl p-4 min-h-[120px]">
+                            <p class="text-slate-600 text-xs">尚未產生 Regex，請勾選條件後點擊「產生 Regex」</p>
+                        </div>
+                    </div>
+
+                    <!-- Complexity Meter -->
+                    <div>
+                        <label class="text-xs text-slate-500 mb-2 flex items-center gap-1.5">
+                            <i data-lucide="gauge" class="w-3.5 h-3.5 text-rbl"></i> Complexity Meter
+                        </label>
+                        <div class="bg-hub-900/50 border border-hub-700 rounded-xl p-4">
+                            <div class="flex items-center gap-4 flex-wrap">
+                                <div>
+                                    <span class="text-xs text-slate-500">複雜度</span>
+                                    <div id="complexity-stars" class="text-lg">☆☆☆☆☆</div>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-slate-500">效能風險</span>
+                                    <div id="complexity-risk" class="text-sm font-medium text-emerald-400">Low</div>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-slate-500">巢狀量詞</span>
+                                    <div id="complexity-nested" class="text-sm font-mono text-slate-400">None</div>
+                                </div>
+                            </div>
+                            <div class="meter-bar mt-3">
+                                <div id="complexity-bar" class="meter-fill" style="width: 0%"></div>
+                            </div>
+                            <p id="complexity-advice" class="text-xs text-slate-600 mt-2">等待分析⋯</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Cheat Sheet -->
+        <div class="tab-content hidden" data-tab="cheatsheet">
+            <div class="glass-panel p-5 md:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="book" class="w-5 h-5 text-rbl"></i> Regex 語法速查表
+                    </h2>
+                    <input type="text" id="cheat-search" placeholder="搜尋語法..." class="w-full sm:w-64 bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-xs outline-none focus:border-rbl placeholder:text-slate-700">
+                </div>
+                <div id="cheat-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                    <!-- Cheat items injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Templates -->
+        <div class="tab-content hidden" data-tab="templates">
+            <div class="glass-panel p-5 md:p-6">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-5">
+                    <i data-lucide="layout-grid" class="w-5 h-5 text-rbl"></i> 常用模板庫
+                </h2>
+                <div id="templates-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Templates injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Regex Explain -->
+        <div class="tab-content hidden" data-tab="explain">
+            <div class="glass-panel p-5 md:p-6">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                    <i data-lucide="search" class="w-5 h-5 text-rbl"></i> Regex Explain 解析
+                </h2>
+                <p class="text-slate-400 text-sm mb-4">貼上任意正規表達式，自動拆解每一段落的用途。</p>
+                <div class="flex gap-2 mb-4">
+                    <textarea id="explain-input" class="explain-input" placeholder="貼上 Regex，例如：^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$"></textarea>
+                    <button id="btn-explain" class="btn-primary self-start mt-1"><i data-lucide="search" class="w-4 h-4"></i> 解析</button>
+                </div>
+                <div id="explain-flags" class="flex gap-2 mb-3">
+                    <label class="builder-opt text-xs py-1"><input type="checkbox" id="explain-flag-g"> g</label>
+                    <label class="builder-opt text-xs py-1"><input type="checkbox" id="explain-flag-i"> i</label>
+                    <label class="builder-opt text-xs py-1"><input type="checkbox" id="explain-flag-m"> m</label>
+                </div>
+                <div id="explain-output" class="bg-hub-900/50 border border-hub-700 rounded-xl p-4 min-h-[150px]">
+                    <p class="text-slate-600 text-xs">貼上 Regex 並點擊「解析」查看逐段解說</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test String Area (for Builder) -->
+        <div class="mt-6 glass-panel p-5">
+            <div class="flex items-center justify-between mb-3">
+                <label class="text-sm font-bold text-white flex items-center gap-1.5">
+                    <i data-lucide="text" class="w-4 h-4 text-rbl"></i> 即時測試
+                </label>
+                <span id="test-match-info" class="text-xs text-slate-500 font-mono">0 matches</span>
+            </div>
+            <textarea id="test-string" class="w-full min-h-[100px] bg-hub-900 border border-hub-700 rounded-xl p-4 text-white font-mono text-sm outline-none focus:border-rbl resize-y" placeholder="輸入測試字串，即時比對產生的 Regex⋯"></textarea>
+        </div>
+
+        <!-- FAQ Section -->
+        <section class="mt-12 glass-panel p-6 md:p-8" itemscope itemtype="https://schema.org/FAQPage">
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <i data-lucide="help-circle" class="w-5 h-5 text-rbl"></i> 常見問題
+            </h2>
+            <div class="space-y-2 divide-y divide-hub-700/50">
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Regex 是什麼？為什麼需要學它？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            <strong>正規表達式（Regular Expression，簡稱 Regex）</strong>是一種用來描述字串模式的語言。透過特殊的語法，你可以比對、搜尋、取代符合特定規則的文字。<br><br>
+                            舉例來說，<code class="text-rbl font-mono text-xs px-1">^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$</code> 這串看似複雜的符號，其實就是在描述「Email 地址」的格式規則。<br><br>
+                            學習 Regex 可以讓你在資料驗證、文字處理、日誌分析、程式碼重構等場景中大幅提升效率。雖然初看有點嚇人，但掌握核心概念後，你會發現它是開發者工具箱中最強大的武器之一。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Regex Tester 和 Regex Builder 有什麼不同？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            兩者是互補的工具：<br><br>
+                            <strong>Regex Tester</strong> 專注於「測試與除錯」——你輸入一組 Regex 和測試字串，它能即時顯示匹配結果、捕獲群組、標記高亮，幫助你驗證 Regex 是否正確。<br><br>
+                            <strong>Regex Builder</strong> 則專注於「組合與學習」——透過勾選條件、選擇模板，自動產生 Regex 程式碼。對於正在學習 Regex 或不想從頭寫語法的人來說，Builder 能大幅降低使用門檻。<br><br>
+                            建議搭配使用：先用 Builder 快速產生基礎 Regex，再複製到 Regex Tester 中進行細節調整與驗證。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">什麼是 Catastrophic Backtracking（災難性回溯）？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            災難性回溯是正規表達式引擎因為「巢狀量詞」（如 <code class="text-rbl font-mono text-xs px-1">(a+)+$</code>）而導致的指數級運算爆炸。<br><br>
+                            當 Regex 中存在巢狀的 <code class="text-rbl font-mono text-xs px-1">+</code>、<code class="text-rbl font-mono text-xs px-1">*</code> 或 <code class="text-rbl font-mono text-xs px-1">{n,m}</code>，且輸入字串「幾乎符合但又不完全符合」時，引擎會嘗試所有可能的組合，導致運算時間指數級增長。<br><br>
+                            <strong>經典範例：</strong> <code class="text-rbl font-mono text-xs px-1">(a+)+b</code> 搭配輸入 <code class="text-rbl font-mono text-xs px-1">aaaaaaaaaaaaaX</code>（15 個 a），引擎需要嘗試 2^15 = 32,768 條路徑；30 個 a 則暴增到 10 億條以上。<br><br>
+                            本工具的 Complexity Meter 會自動偵測潛在的巢狀量詞風險，幫助你避免寫出危險的正則表達式。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">如何提升 Regex 的可讀性？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            以下四個技巧可以大幅提升 Regex 的可讀性：<br><br>
+                            <strong>1. 使用具名捕獲群組</strong><br>
+                            與其寫 <code class="text-rbl font-mono text-xs px-1">(\d{4})-(\d{2})-(\d{2})</code>，不如寫 <code class="text-rbl font-mono text-xs px-1">(?&lt;year&gt;\d{4})-(?&lt;month&gt;\d{2})-(?&lt;day&gt;\d{2})</code>，一目瞭然。<br><br>
+                            <strong>2. 用 <code class="text-rbl font-mono text-xs px-1">/x</code> 模式加入註解</strong><br>
+                            在某些 Regex 引擎中（如 PCRE、Perl），可以使用 verbose 模式，在 Regex 中加入空白與註解。<br><br>
+                            <strong>3. 將複雜 Regex 拆解為變數組合</strong><br>
+                            將複雜的部分先指派給變數再組合，例如：<code class="text-rbl font-mono text-xs px-1">const email = /^[\w.-]+@[\w.-]+\.\w+$/</code>。<br><br>
+                            <strong>4. 逐步構建</strong><br>
+                            不要一次寫完複雜的 Regex。先寫最簡單的部分，確認正確後再逐步疊加條件——這正是 Regex Builder 的設計理念。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Regex 中的 Lookahead 和 Lookbehind 是什麼？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            Lookahead（前瞻）和 Lookbehind（後顧）合稱為 <strong>Lookaround Assertions（環視斷言）</strong>，它們會檢查「位置前後的條件」，但不會消耗字元或將匹配內容納入結果。<br><br>
+                            <strong>前瞻 Lookahead <code class="text-rbl font-mono text-xs px-1">(?=...)</code>：</strong> 檢查前方是否為指定模式。<br>
+                            範例：<code class="text-rbl font-mono text-xs px-1">\d(?=px)</code> 可匹配 <code class="text-rbl font-mono text-xs px-1">16px</code> 中的 <code class="text-rbl font-mono text-xs px-1">6</code>（但不會匹配 <code class="text-rbl font-mono text-xs px-1">16em</code> 中的 <code class="text-rbl font-mono text-xs px-1">6</code>）。<br><br>
+                            <strong>否定前瞻 <code class="text-rbl font-mono text-xs px-1">(?!...)</code>：</strong> 檢查前方「不是」指定模式。<br><br>
+                            <strong>後顧 Lookbehind <code class="text-rbl font-mono text-xs px-1">(?&lt;=...)</code>：</strong> 檢查後方是否為指定模式。<br>
+                            範例：<code class="text-rbl font-mono text-xs px-1">(?&lt;=\$)100</code> 可匹配 <code class="text-rbl font-mono text-xs px-1">$100</code> 中的 <code class="text-rbl font-mono text-xs px-1">100</code>。<br><br>
+                            注意：Lookbehind 在部分瀏覽器或舊版 JavaScript 中支援度有限，使用前建議先確認目標環境。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Regex 中的貪婪與懶惰量詞有什麼不同？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            <strong>貪婪（Greedy）</strong>是量詞的預設行為：<code class="text-rbl font-mono text-xs px-1">*</code>、<code class="text-rbl font-mono text-xs px-1">+</code>、<code class="text-rbl font-mono text-xs px-1">{n,m}</code> 在預設情況下會匹配「儘可能多的字元」。<br><br>
+                            <strong>懶惰（Lazy / Non-greedy）</strong>則是在量詞後加上 <code class="text-rbl font-mono text-xs px-1">?</code>，使其匹配「儘可能少的字元」。<br><br>
+                            <strong>範例說明：</strong><br>
+                            對字串 <code class="text-rbl font-mono text-xs px-1">&lt;div&gt;&lt;p&gt;text&lt;/p&gt;&lt;/div&gt;</code>：<br>
+                            • <code class="text-rbl font-mono text-xs px-1">&lt;.+&gt;</code>（貪婪）會匹配整個字串<br>
+                            • <code class="text-rbl font-mono text-xs px-1">&lt;.+?&gt;</code>（懶惰）只會匹配 <code class="text-rbl font-mono text-xs px-1">&lt;div&gt;</code><br><br>
+                            選擇貪婪還是懶惰取決於你的需求。過度使用貪婪量詞可能導致效能問題（特別是巢狀結構時），適時使用懶惰量詞可以提升匹配效率與準確性。
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- SEO Article -->
+        <section class="mt-12 glass-panel p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-rbl"></i> 正規表達式完全入門：從零開始建立你的第一個 Regex
+            </h2>
+            <article class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+                <p>正規表達式（Regular Expression）是程式開發中最強大也最容易被低估的工具之一。無論你是剛開始學習程式設計的新手，還是經驗豐富的工程師，Regex 都能幫助你用更少的程式碼處理更複雜的文字邏輯。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">Regex 的核心概念</h3>
+                <p>正規表達式的本質是「一種描述字串模式的語言」。它由普通字元（如字母、數字）和特殊字元（稱為「元字元」metacharacters）組成。舉例來說，<code class="text-rbl font-mono text-xs px-1">[0-9]</code> 代表「任何一個數字」，而 <code class="text-rbl font-mono text-xs px-1">+</code> 則代表「前面的一個字元可以出現一次或多次」。</p>
+                <p>學習 Regex 的捷徑不是死背語法，而是理解三個基本元素：<strong>字元類別（Character Classes）</strong>告訴引擎要匹配什麼類型的字元；<strong>量詞（Quantifiers）</strong>告訴引擎要匹配多少個；<strong>定位點（Anchors）</strong>告訴引擎要在字串的哪個位置進行匹配。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">常見應用場景</h3>
+                <p><strong>表單驗證：</strong> Email、電話號碼、密碼強度、網址格式的驗證幾乎都依賴 Regex。一個好的 Regex 可以在使用者提交表單前就完成格式檢查，提升使用者體驗。</p>
+                <p><strong>文字搜尋與取代：</strong> IDE 中的「Find in Files」功能、sed 指令、VS Code 的搜尋取代都支援 Regex。學會 Regex 可以讓你在數萬行程式碼中精準定位目標。</p>
+                <p><strong>日誌分析：</strong> 伺服器日誌（如 Nginx、Apache、Docker logs）通常使用 Regex 來擷取特定的時間戳、IP 位址、錯誤碼等資訊。</p>
+                <p><strong>資料清洗：</strong> 從混亂的文字中萃取結構化資料——例如從 HTML 中提取所有連結、從 CSV 中過濾特定格式的資料行。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">學習路徑建議</h3>
+                <p>如果你剛開始接觸 Regex，建議按照以下順序學習：先掌握單一字元匹配（<code class="text-rbl font-mono text-xs px-1">.</code>、<code class="text-rbl font-mono text-xs px-1">\d</code>、<code class="text-rbl font-mono text-xs px-1">\w</code>、<code class="text-rbl font-mono text-xs px-1">\s</code>），再理解量詞（<code class="text-rbl font-mono text-xs px-1">*</code>、<code class="text-rbl font-mono text-xs px-1">+</code>、<code class="text-rbl font-mono text-xs px-1">?</code>、<code class="text-rbl font-mono text-xs px-1">{n,m}</code>），然後是定位點（<code class="text-rbl font-mono text-xs px-1">^</code>、<code class="text-rbl font-mono text-xs px-1">$</code>），最後才是群組與環視斷言。使用本工具的 Pattern Builder 與 Cheat Sheet 搭配學習，可以讓學習曲線更加平緩。</p>
+            </article>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <div id="component-footer"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i data-lucide="check-circle" class="w-4 h-4 text-rbl" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- System Initialization                       -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/regex-builder';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Regex Builder Core Engine                   -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- DOM Refs ---
+            const mainTabs = document.querySelectorAll('#main-tabs .tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            const builderChecks = document.querySelectorAll('.builder-opt input[type="checkbox"]');
+            const generatedRegex = document.getElementById('generated-regex');
+            const segmentExplain = document.getElementById('segment-explain');
+            const btnBuild = document.getElementById('btn-build');
+            const btnClearBuilder = document.getElementById('btn-clear-builder');
+            const btnCopyRegex = document.getElementById('btn-copy-regex');
+            const builderCustom = document.getElementById('builder-custom');
+            const btnAddCustom = document.getElementById('btn-add-custom');
+            const quickBtns = document.querySelectorAll('[data-quick]');
+            const flagG = document.getElementById('flag-g');
+            const flagI = document.getElementById('flag-i');
+            const flagM = document.getElementById('flag-m');
+
+            // Test string
+            const testString = document.getElementById('test-string');
+            const testMatchInfo = document.getElementById('test-match-info');
+
+            // Cheat Sheet
+            const cheatGrid = document.getElementById('cheat-grid');
+            const cheatSearch = document.getElementById('cheat-search');
+
+            // Templates
+            const templatesGrid = document.getElementById('templates-grid');
+
+            // Explain
+            const explainInput = document.getElementById('explain-input');
+            const btnExplain = document.getElementById('btn-explain');
+            const explainOutput = document.getElementById('explain-output');
+            const explainFlagG = document.getElementById('explain-flag-g');
+            const explainFlagI = document.getElementById('explain-flag-i');
+            const explainFlagM = document.getElementById('explain-flag-m');
+
+            // Complexity elements
+            const complexityStars = document.getElementById('complexity-stars');
+            const complexityRisk = document.getElementById('complexity-risk');
+            const complexityNested = document.getElementById('complexity-nested');
+            const complexityBar = document.getElementById('complexity-bar');
+            const complexityAdvice = document.getElementById('complexity-advice');
+
+            // Toast
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+
+            let customParts = [];
+
+            // =============================
+            // Toast
+            // =============================
+            function showToast(msg, isError = false) {
+                const icon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'w-4 h-4 text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'w-4 h-4 text-rbl';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            }
+
+            // =============================
+            // Tab switching
+            // =============================
+            mainTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    mainTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const target = tab.dataset.tab;
+                    tabContents.forEach(tc => {
+                        tc.classList.toggle('hidden', tc.dataset.tab !== target);
+                    });
+                });
+            });
+
+            // =============================
+            // Builder Core
+            // =============================
+
+            function getActiveParts() {
+                const parts = [];
+                builderChecks.forEach(cb => {
+                    if (cb.checked && cb.dataset.regex) {
+                        parts.push(cb.dataset.regex);
+                    }
+                });
+                parts.push(...customParts);
+                return parts;
+            }
+
+            function buildRegex() {
+                const parts = getActiveParts();
+                if (parts.length === 0) {
+                    generatedRegex.value = '';
+                    segmentExplain.innerHTML = '<p class="text-slate-600 text-xs">請先勾選至少一個條件</p>';
+                    updateTestMatch('');
+                    updateComplexity('');
+                    return;
+                }
+
+                const joined = parts.join('');
+                const flags = [];
+                if (flagG.checked) flags.push('g');
+                if (flagI.checked) flags.push('i');
+                if (flagM.checked) flags.push('m');
+                const flagStr = flags.length ? '/' + flags.join('') : '';
+                const full = '/' + joined + '/' + flagStr;
+                generatedRegex.value = full;
+
+                // Build segment explanation
+                let html = '';
+                parts.forEach(p => {
+                    const meaning = getSegmentMeaning(p);
+                    html += `<div class="explain-segment"><span class="part">${escapeHtml(p)}</span><span class="meaning">${meaning}</span></div>`;
+                });
+                if (flagStr) {
+                    html += `<div class="explain-segment"><span class="part">${flagStr}</span><span class="meaning">${getFlagsMeaning(flags)}</span></div>`;
+                }
+                segmentExplain.innerHTML = html;
+
+                // Update live test
+                try {
+                    const re = new RegExp(joined, flags.join(''));
+                    updateTestMatch(re);
+                } catch (e) {
+                    updateTestMatch(null, e.message);
+                }
+
+                updateComplexity(joined);
+            }
+
+            function getSegmentMeaning(p) {
+                const map = {
+                    '^': 'Start of string — 字串開頭',
+                    '$': 'End of string — 字串結尾',
+                    '\\d': 'Digit [0-9] — 數字',
+                    '\\w': 'Word character [A-Za-z0-9_] — 英數字與底線',
+                    '\\s': 'Whitespace — 空白字元（空格、Tab、換行）',
+                    '.': 'Any character (except newline) — 任意字元（不含換行）',
+                    '[A-Z]': 'Uppercase letters A-Z — 大寫字母',
+                    '[a-z]': 'Lowercase letters a-z — 小寫字母',
+                    '[0-9]': 'Digits 0-9 — 數字',
+                    '[A-Za-z]': 'Any letter — 任意字母',
+                    '[^ ]': 'Negated character set — 否定字元集',
+                    '?': 'Zero or one (optional) — 零或一次',
+                    '*': 'Zero or more — 零或多次',
+                    '+': 'One or more — 一或多次',
+                    '{n}': 'Exactly n times — 固定次數',
+                    '{n,}': 'n or more times — 至少 n 次',
+                    '{n,m}': 'Between n and m times — n 到 m 次',
+                    '(...)': 'Capturing group — 捕獲群組',
+                    '(?:...)': 'Non-capturing group — 非捕獲群組',
+                    '|': 'OR (alternation) — 或',
+                    '(?=...)': 'Lookahead assertion — 前瞻斷言',
+                    '(?!...)': 'Negative lookahead — 否定前瞻',
+                    '(?<=...)': 'Lookbehind assertion — 後顧斷言',
+                };
+                return map[p] || 'Custom pattern — 自訂模式';
+            }
+
+            function getFlagsMeaning(flags) {
+                const parts = [];
+                if (flags.includes('g')) parts.push('Global — 全域匹配');
+                if (flags.includes('i')) parts.push('Case insensitive — 忽略大小寫');
+                if (flags.includes('m')) parts.push('Multiline — 多行模式');
+                return parts.join(', ');
+            }
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            // =============================
+            // Live Test
+            // =============================
+            function updateTestMatch(regex, error) {
+                const text = testString.value;
+                if (!text || !regex || error) {
+                    testMatchInfo.textContent = error ? `Error: ${error}` : '0 matches';
+                    return;
+                }
+                try {
+                    const matches = text.match(regex);
+                    const count = matches ? matches.length : 0;
+                    testMatchInfo.textContent = `${count} match${count !== 1 ? 'es' : ''}`;
+                } catch (e) {
+                    testMatchInfo.textContent = `Error: ${e.message}`;
+                }
+            }
+
+            testString.addEventListener('input', () => {
+                const joined = getActiveParts().join('');
+                if (!joined) { testMatchInfo.textContent = '0 matches'; return; }
+                const flags = [];
+                if (flagG.checked) flags.push('g');
+                if (flagI.checked) flags.push('i');
+                if (flagM.checked) flags.push('m');
+                try {
+                    const re = new RegExp(joined, flags.join(''));
+                    updateTestMatch(re);
+                } catch (e) {
+                    updateTestMatch(null, e.message);
+                }
+            });
+
+            // =============================
+            // Complexity Meter
+            // =============================
+            function updateComplexity(pattern) {
+                if (!pattern) {
+                    complexityStars.textContent = '☆☆☆☆☆';
+                    complexityRisk.textContent = '—';
+                    complexityNested.textContent = '—';
+                    complexityBar.style.width = '0%';
+                    complexityAdvice.textContent = '等待分析⋯';
+                    return;
+                }
+
+                // Count different features
+                const hasNestedQuant = /\([^)]*[+*{][^)]*\)[+*?]/.test(pattern);
+                const quantCount = (pattern.match(/[+*{]/g) || []).length;
+                const groupCount = (pattern.match(/\(/g) || []).length;
+                const length = pattern.length;
+                const hasOr = pattern.includes('|');
+
+                // Check for nested quantifiers (catastrophic backtracking risk)
+                const nestedMatches = pattern.match(/\([^)]*[+*][^)]*\)\s*[+*?]/g);
+                const nestedRisk = nestedMatches ? nestedMatches.length : 0;
+
+                // Calculate complexity score
+                let score = 0;
+                score += Math.min(length / 5, 20);          // length
+                score += quantCount * 5;                     // quantifiers
+                score += groupCount * 4;                     // groups
+                if (hasOr) score += 5;
+                if (nestedRisk > 0) score += 30;
+
+                const maxScore = 100;
+                const pct = Math.min(score / maxScore * 100, 100);
+                complexityBar.style.width = pct + '%';
+
+                // Stars
+                const stars = Math.min(Math.floor(pct / 20) + 1, 5);
+                complexityStars.textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+                complexityBar.style.background = pct < 30 ? '#10B981' : pct < 60 ? '#F59E0B' : '#EF4444';
+
+                // Risk level
+                if (nestedRisk > 0) {
+                    complexityRisk.textContent = '⚠ High';
+                    complexityRisk.className = 'text-sm font-medium text-red-400';
+                } else if (pct < 30) {
+                    complexityRisk.textContent = 'Low';
+                    complexityRisk.className = 'text-sm font-medium text-emerald-400';
+                } else if (pct < 60) {
+                    complexityRisk.textContent = 'Medium';
+                    complexityRisk.className = 'text-sm font-medium text-amber-400';
+                } else {
+                    complexityRisk.textContent = 'Moderate';
+                    complexityRisk.className = 'text-sm font-medium text-orange-400';
+                }
+
+                // Nested quantifier analysis
+                if (nestedRisk > 0) {
+                    complexityNested.textContent = `${nestedRisk} found ⚠`;
+                    complexityNested.className = 'text-sm font-mono text-red-400';
+                } else if (hasNestedQuant) {
+                    complexityNested.textContent = 'Possible';
+                    complexityNested.className = 'text-sm font-mono text-amber-400';
+                } else {
+                    complexityNested.textContent = 'None ✓';
+                    complexityNested.className = 'text-sm font-mono text-emerald-400';
+                }
+
+                // Advice
+                if (nestedRisk > 0) {
+                    complexityAdvice.textContent = '⚠ 偵測到巢狀量詞，可能導致 Catastrophic Backtracking。建議避免 (a+)+ 或類似模式，改用原子群組或簡化結構。';
+                } else if (pct > 60) {
+                    complexityAdvice.textContent = '此 Regex 結構較複雜，建議拆解為多個簡單 Regex 或加入註解提升可讀性。';
+                } else if (pct > 30) {
+                    complexityAdvice.textContent = '結構適中，效能良好。可考慮使用非捕獲群組 (?:...) 優化。';
+                } else {
+                    complexityAdvice.textContent = '簡潔高效，沒有明顯的效能風險。';
+                }
+            }
+
+            // =============================
+            // Builder events
+            // =============================
+            btnBuild.addEventListener('click', buildRegex);
+            builderChecks.forEach(cb => cb.addEventListener('change', buildRegex));
+            flagG.addEventListener('change', buildRegex);
+            flagI.addEventListener('change', buildRegex);
+            flagM.addEventListener('change', buildRegex);
+
+            btnClearBuilder.addEventListener('click', () => {
+                builderChecks.forEach(cb => cb.checked = false);
+                customParts = [];
+                generatedRegex.value = '';
+                segmentExplain.innerHTML = '<p class="text-slate-600 text-xs">已清除所有條件</p>';
+                updateTestMatch('');
+                updateComplexity('');
+                showToast('已清除');
+            });
+
+            btnAddCustom.addEventListener('click', () => {
+                const val = builderCustom.value.trim();
+                if (!val) { showToast('請輸入自訂片段', true); return; }
+                customParts.push(val);
+                builderCustom.value = '';
+                buildRegex();
+                showToast(`已加入: ${val}`);
+            });
+
+            builderCustom.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') btnAddCustom.click();
+            });
+
+            quickBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const val = btn.dataset.quick;
+                    customParts.push(val);
+                    buildRegex();
+                    showToast(`已插入: ${val}`);
+                });
+            });
+
+            btnCopyRegex.addEventListener('click', () => {
+                if (!generatedRegex.value) { showToast('沒有可複製的內容', true); return; }
+                navigator.clipboard.writeText(generatedRegex.value).then(() => showToast('已複製 Regex'));
+            });
+
+            // =============================
+            // Cheat Sheet Data
+            // =============================
+            const cheatData = [
+                { token: '.', desc: '任意字元（不含換行符）', example: 'a.b → "acb", "a-b"' },
+                { token: '?', desc: '前面字元零次或一次', example: 'colou?r → "color", "colour"' },
+                { token: '+', desc: '前面字元一次或多次', example: '\\d+ → "123", "9"' },
+                { token: '*', desc: '前面字元零次或多次', example: 'ab*c → "ac", "abc", "abbc"' },
+                { token: '[]', desc: '字元集 — 匹配其中之一', example: '[aeiou] → 任一母音' },
+                { token: '[^]', desc: '否定字元集', example: '[^0-9] → 非數字字元' },
+                { token: '()', desc: '捕獲群組', example: '(ab)+ → "abab", "ab"' },
+                { token: '(?:)', desc: '非捕獲群組', example: '(?:ab)+ — 不分組捕獲' },
+                { token: '{}', desc: '次數指定', example: '\\d{3} → 三位數字' },
+                { token: '{n,}', desc: '至少 n 次', example: 'a{2,} → "aa", "aaa"' },
+                { token: '{n,m}', desc: 'n 到 m 次', example: 'a{2,4} → "aa","aaa","aaaa"' },
+                { token: '|', desc: 'OR（或）', example: 'cat|dog → "cat" 或 "dog"' },
+                { token: '^', desc: '字串開頭', example: '^Hello → 開頭的 Hello' },
+                { token: '$', desc: '字串結尾', example: 'end$ → 結尾的 end' },
+                { token: '\\d', desc: '數字 [0-9]', example: '\\d{2,4} → "42", "2024"' },
+                { token: '\\w', desc: '英數字與底線 [A-Za-z0-9_]', example: '\\w+ → "hello_123"' },
+                { token: '\\s', desc: '空白字元', example: '\\s → 空格、Tab、換行' },
+                { token: '\\b', desc: '單字邊界', example: '\\bword\\b → 完整 "word"' },
+                { token: '\\D', desc: '非數字', example: '\\D+ → "abc", "!@#"' },
+                { token: '\\W', desc: '非英數字', example: '\\W → "!", "@", "#"' },
+                { token: '\\S', desc: '非空白字元', example: '\\S+ → "hello"' },
+                { token: '(?=...)', desc: '前瞻 — 後面是', example: '\\d(?=px) → "16px" 中的 "6"' },
+                { token: '(?!...)', desc: '否定前瞻 — 後面不是', example: '\\d(?!px) → "16em" 中的 "6"' },
+                { token: '(?<=...)', desc: '後顧 — 前面是', example: '(?<=\\$)100 → "$100" 中的 "100"' },
+                { token: '(?<!...)', desc: '否定後顧 — 前面不是', example: '(?<!\\$)100 → "€100" 中的 "100"' },
+            ];
+
+            function renderCheatSheet(query) {
+                const q = (query || '').toLowerCase();
+                let html = '';
+                cheatData.forEach(item => {
+                    if (q && !item.token.toLowerCase().includes(q) && !item.desc.toLowerCase().includes(q)) return;
+                    html += `<div class="cheat-item" data-token="${escapeHtml(item.token)}">
+                        <div class="token">${escapeHtml(item.token)}</div>
+                        <div class="desc">${escapeHtml(item.desc)}</div>
+                        <div class="text-xs text-slate-700 font-mono mt-0.5">${escapeHtml(item.example)}</div>
+                    </div>`;
+                });
+                cheatGrid.innerHTML = html;
+
+                // Click to copy
+                cheatGrid.querySelectorAll('.cheat-item').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const token = el.dataset.token;
+                        navigator.clipboard.writeText(token).then(() => showToast(`已複製: ${token}`));
+                    });
+                });
+            }
+
+            cheatSearch.addEventListener('input', () => renderCheatSheet(cheatSearch.value));
+            renderCheatSheet('');
+
+            // =============================
+            // Templates Data
+            // =============================
+            const templateData = [
+                { name: 'Email Address', pattern: '^[\\w.%+-]+@[\\w.-]+\\.[A-Za-z]{2,}$', desc: '標準 Email 格式驗證' },
+                { name: 'Password (Strong)', pattern: '^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%]).{8,32}$', desc: '至少 1 大寫、1 小寫、1 數字、1 特殊字元，8-32 位' },
+                { name: 'Username', pattern: '^[A-Za-z0-9_]{3,20}$', desc: '3-20 位，僅限字母、數字、底線' },
+                { name: 'URL', pattern: '^https?://[\\w./?-]+$', desc: 'HTTP/HTTPS 網址' },
+                { name: 'IPv4', pattern: '^(?:\\d{1,3}\\.){3}\\d{1,3}$', desc: '0.0.0.0 - 255.255.255.255' },
+                { name: 'IPv6', pattern: '^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$', desc: '標準 IPv6 格式' },
+                { name: 'MAC Address', pattern: '^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$', desc: 'MAC 實體位址' },
+                { name: 'Hex Color', pattern: '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$', desc: '#RGB 或 #RRGGBB' },
+                { name: 'Credit Card', pattern: '^\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}$', desc: '16 位信用卡號碼（含分隔）' },
+                { name: 'ISO Date', pattern: '^\\d{4}-\\d{2}-\\d{2}$', desc: 'YYYY-MM-DD 格式' },
+                { name: 'Time (HH:MM)', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$', desc: '24 小時制時間' },
+                { name: 'HTML Tag', pattern: '^<([A-Za-z][A-Za-z0-9]*)\\b[^>]*>(.*?)</\\1>$', desc: '匹配成對 HTML 標籤' },
+                { name: 'Phone Number', pattern: '^\\+?\\d{1,3}[-.\\s]?\\(?\\d{1,4}\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}$', desc: '國際電話號碼' },
+                { name: 'Postal Code (US)', pattern: '^\\d{5}(-\\d{4})?$', desc: '美國 ZIP 郵遞區號' },
+            ];
+
+            function renderTemplates() {
+                let html = '';
+                templateData.forEach(t => {
+                    html += `<div class="glass-panel p-4 border border-hub-700 cursor-pointer hover:border-rbl/30 transition-all template-card" data-pattern="${escapeHtml(t.pattern)}" data-name="${escapeHtml(t.name)}">
+                        <h3 class="text-sm font-bold text-white mb-1">${escapeHtml(t.name)}</h3>
+                        <p class="text-[10px] text-slate-600 mb-2">${escapeHtml(t.desc)}</p>
+                        <code class="block text-xs font-mono text-rbl bg-hub-900/50 rounded p-2 truncate">${escapeHtml(t.pattern)}</code>
+                        <div class="flex gap-1.5 mt-2">
+                            <button class="btn-primary text-[10px] px-2 py-1 load-template">載入到 Builder</button>
+                            <button class="btn-secondary text-[10px] px-2 py-1 copy-template">複製</button>
+                        </div>
+                    </div>`;
+                });
+                templatesGrid.innerHTML = html;
+
+                templatesGrid.querySelectorAll('.load-template').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const card = e.target.closest('.template-card');
+                        const pattern = card.dataset.pattern;
+                        loadPatternToBuilder(pattern);
+                        showToast(`已載入: ${card.dataset.name}`);
+                    });
+                });
+
+                templatesGrid.querySelectorAll('.copy-template').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const card = e.target.closest('.template-card');
+                        navigator.clipboard.writeText(card.dataset.pattern).then(() => showToast('已複製'));
+                    });
+                });
+            }
+
+            function loadPatternToBuilder(pattern) {
+                // Clear all
+                builderChecks.forEach(cb => cb.checked = false);
+                customParts = [];
+
+                // Parse and add custom parts
+                // For simplicity, just add the whole pattern as a custom part
+                customParts.push(pattern);
+                // Switch to builder tab
+                mainTabs.forEach(t => t.classList.remove('active'));
+                document.querySelector('[data-tab="builder"]').classList.add('active');
+                tabContents.forEach(tc => tc.classList.toggle('hidden', tc.dataset.tab !== 'builder'));
+                buildRegex();
+            }
+
+            renderTemplates();
+
+            // =============================
+            // Regex Explain
+            // =============================
+            btnExplain.addEventListener('click', () => {
+                const input = explainInput.value.trim();
+                if (!input) { showToast('請輸入 Regex', true); return; }
+
+                // Remove outer // if present
+                let pattern = input;
+                let flags = '';
+                if (pattern.startsWith('/')) {
+                    const lastSlash = pattern.lastIndexOf('/');
+                    if (lastSlash > 0) {
+                        flags = pattern.slice(lastSlash + 1);
+                        pattern = pattern.slice(1, lastSlash);
+                    }
+                }
+                if (explainFlagG.checked && !flags.includes('g')) flags += 'g';
+                if (explainFlagI.checked && !flags.includes('i')) flags += 'i';
+                if (explainFlagM.checked && !flags.includes('m')) flags += 'm';
+
+                // Try to validate
+                try {
+                    new RegExp(pattern, flags);
+                } catch (e) {
+                    explainOutput.innerHTML = `<p class="text-red-400 text-xs">❌ 無效的 Regex：${e.message}</p>`;
+                    return;
+                }
+
+                // Parse into segments
+                const segments = parseRegexSegments(pattern);
+                let html = '';
+                if (flags) {
+                    html += `<div class="explain-segment"><span class="part">/${flags}</span><span class="meaning">${getFlagsMeaning(flags.split(''))}</span></div>`;
+                }
+                segments.forEach(s => {
+                    html += `<div class="explain-segment"><span class="part">${escapeHtml(s.token)}</span><span class="meaning">${s.meaning}</span></div>`;
+                });
+                if (!html) {
+                    html = '<p class="text-slate-500 text-xs">無法拆解此 Regex，請嘗試更簡單的模式。</p>';
+                }
+                explainOutput.innerHTML = html;
+                showToast('解析完成');
+            });
+
+            function parseRegexSegments(pattern) {
+                const segments = [];
+                const parts = pattern.split(/((?:\\.|[^\\])+?)/).filter(Boolean);
+
+                // Simple heuristic tokenizer
+                let i = 0;
+                while (i < pattern.length) {
+                    // Lookahead/lookbehind
+                    if (pattern.slice(i).match(/^\(\?[=!]/)) {
+                        const m = pattern.slice(i).match(/^\(\?[=!][^)]+\)/);
+                        if (m) {
+                            const tok = m[0];
+                            segments.push({ token: tok, meaning: tok.startsWith('(?=') ? 'Lookahead — 前方條件' : 'Negative lookahead — 否定前方條件' });
+                            i += tok.length;
+                            continue;
+                        }
+                    }
+                    if (pattern.slice(i).match(/^\(\?<[=!]/)) {
+                        const m = pattern.slice(i).match(/^\(\?<[=!][^)]+\)/);
+                        if (m) {
+                            const tok = m[0];
+                            segments.push({ token: tok, meaning: tok.startsWith('(?<=') ? 'Lookbehind — 後方條件' : 'Negative lookbehind — 否定後方條件' });
+                            i += tok.length;
+                            continue;
+                        }
+                    }
+                    // Named group
+                    if (pattern.slice(i).match(/^\(\?<\w+>/)) {
+                        const m = pattern.slice(i).match(/^\(\?<\w+>/);
+                        if (m) {
+                            const tok = m[0];
+                            segments.push({ token: tok, meaning: `具名捕獲群組: ${tok.slice(3, -1)}` });
+                            i += tok.length;
+                            continue;
+                        }
+                    }
+                    // Capturing group
+                    if (pattern[i] === '(') {
+                        let depth = 1;
+                        let j = i + 1;
+                        while (j < pattern.length && depth > 0) {
+                            if (pattern[j] === '(') depth++;
+                            if (pattern[j] === ')') depth--;
+                            j++;
+                        }
+                        const tok = pattern.slice(i, j);
+                        segments.push({ token: tok, meaning: tok.startsWith('(?:') ? '非捕獲群組' : '捕獲群組' });
+                        i = j;
+                        continue;
+                    }
+                    // Character class
+                    if (pattern[i] === '[') {
+                        let j = i + 1;
+                        while (j < pattern.length && pattern[j] !== ']') j++;
+                        j++;
+                        segments.push({ token: pattern.slice(i, j), meaning: '字元集' });
+                        i = j;
+                        continue;
+                    }
+                    // Quantifiers
+                    if ('+*?'.includes(pattern[i]) || (pattern[i] === '{' )) {
+                        if (pattern[i] === '{') {
+                            let j = i + 1;
+                            while (j < pattern.length && pattern[j] !== '}') j++;
+                            j++;
+                            segments.push({ token: pattern.slice(i, j), meaning: '次數指定' });
+                            i = j;
+                        } else {
+                            const tok = pattern[i] + (pattern[i+1] === '?' ? '?' : '');
+                            const meaning = { '+': '一次或多次', '*': '零次或多次', '?': '零或一次', '+?': '懶惰一次或多次', '*?': '懶惰零次或多次', '??': '懶惰選擇' }[tok] || '量詞';
+                            segments.push({ token: tok, meaning });
+                            i += tok.length;
+                        }
+                        continue;
+                    }
+                    // Escape sequences
+                    if (pattern[i] === '\\' && i + 1 < pattern.length) {
+                        const tok = pattern.slice(i, i + 2);
+                        const meaning = {
+                            '\\d': '數字', '\\D': '非數字', '\\w': '英數字', '\\W': '非英數字',
+                            '\\s': '空白', '\\S': '非空白', '\\b': '字邊界', '\\B': '非字邊界',
+                            '\\t': 'Tab', '\\n': '換行', '\\r': '回車'
+                        }[tok] || '跳脫字元';
+                        segments.push({ token: tok, meaning });
+                        i += 2;
+                        continue;
+                    }
+                    // Anchor
+                    if (pattern[i] === '^' || pattern[i] === '$') {
+                        segments.push({ token: pattern[i], meaning: pattern[i] === '^' ? '字串開頭' : '字串結尾' });
+                        i++;
+                        continue;
+                    }
+                    // Pipe
+                    if (pattern[i] === '|') {
+                        segments.push({ token: '|', meaning: 'OR（或）' });
+                        i++;
+                        continue;
+                    }
+                    // Dot
+                    if (pattern[i] === '.') {
+                        segments.push({ token: '.', meaning: '任意字元（不含換行）' });
+                        i++;
+                        continue;
+                    }
+                    // Regular char
+                    let j = i + 1;
+                    while (j < pattern.length && !'^$()[]{}.*+?|\\'.includes(pattern[j])) j++;
+                    const tok = pattern.slice(i, j);
+                    if (tok) {
+                        segments.push({ token: tok, meaning: '文字字元 — 精確匹配' });
+                    }
+                    i = j;
+                }
+                return segments;
+            }
+
+            // Initial builder state
+            buildRegex();
+
+            // Default explain example
+            setTimeout(() => {
+                explainInput.value = '^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{8,}$';
+            }, 500);
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

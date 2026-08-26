@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU 性價比分析器 | ToolHub - 顯示卡價值評估 · 電費估算 · A/B 比較</title>
+    <meta name="description" content="最專業的 GPU 性價比分析工具。支援 NVIDIA/AMD/Intel 超過 55 款 GPU 型號，提供每 GB VRAM 成本、每 TFLOPS 成本、AI 性價比分數、電費估算、A/B 比較、雷達圖與購買建議。">
+    <meta name="keywords" content="GPU 性價比, 顯示卡推薦, GPU 比較, 顯卡 CP 值, VRAM 成本, AI 顯卡推薦, LLM 顯卡, 二手 GPU, 電費計算, 深度學習顯卡">
+    <meta name="author" content="ToolHub">
+    <meta property="og:title" content="GPU 性價比分析器 - ToolHub">
+    <meta property="og:description" content="超過 55 款 GPU 完整分析，支援 AI 推論、遊戲、剪輯等多場景性價比評估與購買建議。">
+    <meta property="og:type" content="website">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://toolhuben.com/gpu-value-calculator/">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        gpu: {
+                            primary: '#F59E0B',
+                            gold: '#FBBF24',
+                            amber: '#F59E0B',
+                            green: '#10B981',
+                            blue: '#3B82F6',
+                            red: '#EF4444',
+                            orange: '#F97316',
+                            purple: '#A78BFA',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+        .brand-filter-btn, .use-case-btn, .gpu-select-item, .compare-tab-btn {
+            transition: all 0.2s ease;
+        }
+        .brand-filter-btn.active, .use-case-btn.active, .compare-tab-btn.active {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #F59E0B;
+            color: #FCD34D;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
+        }
+        .gpu-select-item.active {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: #F59E0B;
+        }
+
+        .bar-animate { transition: width 0.8s ease-out; }
+
+        .gpu-list-container::-webkit-scrollbar { width: 4px; }
+        .gpu-list-container::-webkit-scrollbar-track { background: transparent; }
+        .gpu-list-container::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; }
+
+        .badge-strong-buy { background: rgba(16, 185, 129, 0.2); border-color: #10B981; color: #34D399; }
+        .badge-good-value { background: rgba(59, 130, 246, 0.2); border-color: #3B82F6; color: #60A5FA; }
+        .badge-fair-price { background: rgba(245, 158, 11, 0.2); border-color: #F59E0B; color: #FBBF24; }
+        .badge-overpriced { background: rgba(249, 115, 22, 0.2); border-color: #F97316; color: #FB923C; }
+        .badge-poor-value { background: rgba(239, 68, 68, 0.2); border-color: #EF4444; color: #F87171; }
+
+        .score-gauge-fill {
+            transition: width 0.8s ease-out;
+        }
+
+        .recommend-card {
+            transition: all 0.3s ease;
+        }
+        .recommend-card:hover {
+            transform: translateY(-2px);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #1E293B;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #F59E0B;
+            cursor: pointer;
+            border: 2px solid #F59E0B;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #F59E0B;
+            cursor: pointer;
+            border: 2px solid #F59E0B;
+        }
+
+        @media (max-width: 640px) {
+            .glass-panel { padding: 1rem !important; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <meta property="og:url" content="https://toolhuben.com/gpu-value-calculator/">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GPU 性價比分析器">
+    <meta name="twitter:description" content="最專業的 GPU 性價比分析工具。支援 NVIDIA/AMD/Intel 超過 55 款 GPU 型號，提供每 GB VRAM 成本、每 TFLOPS 成本、AI 性價比分數、電費估算、A/B 比較、雷達圖與購買建議。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"GPU 性價比分析器","url":"https://toolhuben.com/gpu-value-calculator/","description":"最專業的 GPU 性價比分析工具。支援 NVIDIA/AMD/Intel 超過 55 款 GPU 型號，提供每 GB VRAM 成本、每 TFLOPS 成本、AI 性價比分數、電費估算、A/B 比較、雷達圖與購買建議。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"GPU 性價比分析器","item":"https://toolhuben.com/gpu-value-calculator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/gpu-value-calculator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/gpu-value-calculator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/gpu-value-calculator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="min-h-screen text-slate-200 font-sans selection:bg-amber-500/30 flex flex-col relative overflow-x-hidden" style="--classic-accent:#F59E0B;--classic-accent-rgb:245,158,11" data-tool-visual data-classic-tool data-classic-layout="aurora">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-4 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ========== HERO ========== -->
+        <section class="mb-10">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs sm:text-sm font-medium mb-4">
+                <span class="flex w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                性價比分析引擎
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight mb-4">
+                <span class="bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 bg-clip-text text-transparent">GPU 性價比分析器</span>
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base leading-relaxed max-w-3xl">
+                綜合 VRAM、運算效能、功耗、AI 推論能力與每元效益，提供完整的 GPU 購買建議。
+                支援超過 <span class="text-amber-400 font-medium">55 款</span> NVIDIA、AMD、Intel GPU 型號，
+                A/B 比較、電費估算與場景化推薦，助您做出最佳決策。
+            </p>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- ========== LEFT COLUMN: INPUT ========== -->
+            <div class="lg:col-span-5 space-y-4">
+
+                <!-- GPU 選擇 -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-5 h-5 text-amber-400"></i>
+                        選擇 GPU
+                    </h2>
+
+                    <!-- Brand filters -->
+                    <div class="flex gap-2 mb-3">
+                        <button class="brand-filter-btn active px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 border border-amber-500 text-amber-300" data-brand="all">全部</button>
+                        <button class="brand-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-hub-900 text-slate-400 border border-hub-700 hover:border-amber-500/50 hover:text-amber-300" data-brand="nvidia">NVIDIA</button>
+                        <button class="brand-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-hub-900 text-slate-400 border border-hub-700 hover:border-amber-500/50 hover:text-amber-300" data-brand="amd">AMD</button>
+                        <button class="brand-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-hub-900 text-slate-400 border border-hub-700 hover:border-amber-500/50 hover:text-amber-300" data-brand="intel">Intel</button>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="relative mb-3">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                        <input type="text" id="gpu-search" placeholder="搜尋 GPU 型號…" class="w-full bg-hub-900 border border-hub-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-amber-500/50 transition-all">
+                    </div>
+
+                    <!-- GPU List -->
+                    <div id="gpu-list" class="gpu-list-container max-h-[320px] overflow-y-auto space-y-1.5 pr-1">
+                        <!-- Rendered by JS -->
+                    </div>
+
+                    <div id="selected-gpu-info" class="mt-4 hidden">
+                        <div class="bg-hub-900 rounded-lg p-4 border border-amber-500/20">
+                            <div class="flex items-center justify-between mb-2">
+                                <span id="sel-gpu-name" class="text-white font-bold text-base"></span>
+                                <span id="sel-gpu-brand" class="text-xs text-slate-500"></span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                                <div><span class="text-slate-500">VRAM</span><br><span id="sel-gpu-vram" class="text-amber-400 font-bold"></span></div>
+                                <div><span class="text-slate-500">FP32</span><br><span id="sel-gpu-fp32" class="text-amber-400 font-bold"></span></div>
+                                <div><span class="text-slate-500">TDP</span><br><span id="sel-gpu-tdp" class="text-amber-400 font-bold"></span></div>
+                                <div><span class="text-slate-500">頻寬</span><br><span id="sel-gpu-bw" class="text-amber-400 font-bold"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 使用情境 -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="target" class="w-5 h-5 text-amber-400"></i>
+                        使用情境
+                    </h2>
+                    <div id="use-case-grid" class="grid grid-cols-3 gap-2">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- 價格與電費 -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="dollar-sign" class="w-5 h-5 text-amber-400"></i>
+                        價格與電費設定
+                    </h2>
+
+                    <!-- Price -->
+                    <div class="mb-4">
+                        <label class="text-slate-400 text-xs font-medium mb-1.5 block">購買價格</label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <span id="price-currency-symbol" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">NT$</span>
+                                <input type="number" id="in-price" placeholder="輸入價格" min="0" class="w-full bg-hub-900 border border-hub-700 rounded-lg pl-10 pr-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-amber-500/50 transition-all">
+                            </div>
+                            <button id="btn-currency" class="px-3 py-2 bg-hub-900 border border-hub-700 rounded-lg text-xs font-medium text-slate-300 hover:border-amber-500/50 transition-all">TWD ↔ USD</button>
+                        </div>
+                        <div id="msrp-hint" class="text-xs text-slate-500 mt-1.5 hidden">
+                            建議售價 (MSRP): <span id="msrp-value" class="text-slate-400"></span>
+                        </div>
+                    </div>
+
+                    <!-- Electricity -->
+                    <div class="mb-4">
+                        <label class="text-slate-400 text-xs font-medium mb-1.5 block">電費 (每度/kWh)</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="in-electricity" value="3.5" step="0.1" min="0" class="w-24 bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50">
+                            <span class="text-slate-500 text-sm self-center">NT$ / kWh</span>
+                            <div class="flex gap-1 ml-auto">
+                                <button class="elect-preset px-2 py-1.5 rounded bg-hub-900 border border-hub-700 text-xs text-slate-400 hover:border-amber-500/50" data-rate="3.5">台灣</button>
+                                <button class="elect-preset px-2 py-1.5 rounded bg-hub-900 border border-hub-700 text-xs text-slate-400 hover:border-amber-500/50" data-rate="0.12">美國</button>
+                                <button class="elect-preset px-2 py-1.5 rounded bg-hub-900 border border-hub-700 text-xs text-slate-400 hover:border-amber-500/50" data-rate="0.33">日本</button>
+                                <button class="elect-preset px-2 py-1.5 rounded bg-hub-900 border border-hub-700 text-xs text-slate-400 hover:border-amber-500/50" data-rate="0.28">歐洲</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daily hours slider -->
+                    <div>
+                        <label class="text-slate-400 text-xs font-medium mb-1.5 block flex items-center justify-between">
+                            <span>每天使用時數</span>
+                            <span id="hours-display" class="text-amber-400 font-bold">8 小時</span>
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <input type="range" id="hours-slider" min="1" max="24" value="8" class="flex-1">
+                            <input type="number" id="hours-input" value="8" min="1" max="24" class="w-14 bg-hub-900 border border-hub-700 rounded text-center py-1 text-white font-mono text-xs outline-none focus:border-amber-500/50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 計算按鈕 -->
+                <button id="btn-calculate" class="w-full py-3.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-900/30 active:scale-[0.98] text-sm sm:text-base">
+                    <i data-lucide="zap" class="w-5 h-5 inline-block mr-2"></i>
+                    計算性價比
+                </button>
+            </div>
+
+            <!-- ========== RIGHT COLUMN: RESULTS ========== -->
+            <div class="lg:col-span-7 space-y-4">
+
+                <!-- 值得買嗎？ -->
+                <div id="worth-it-card" class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="award" class="w-5 h-5 text-amber-400"></i>
+                        性價比分析結果
+                    </h2>
+                    <div id="worth-it-content" class="text-center py-8 text-slate-500">
+                        <i data-lucide="arrow-left" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                        <p class="text-sm">請先選擇 GPU 並輸入價格</p>
+                    </div>
+                </div>
+
+                <!-- 成本效益 -->
+                <div id="cost-metrics-card" class="glass-panel p-4 sm:p-6 hidden">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-amber-400"></i>
+                        成本效益分析
+                    </h2>
+                    <div id="cost-metrics-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <div id="electricity-breakdown" class="mt-4 pt-4 border-t border-hub-700/50">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- 視覺化圖表 -->
+                <div id="charts-card" class="glass-panel p-4 sm:p-6 hidden">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="w-5 h-5 text-amber-400"></i>
+                        視覺化分析
+                    </h2>
+                    <div id="charts-content" class="space-y-6">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- AI 分析 -->
+                <div id="ai-analysis-card" class="glass-panel p-4 sm:p-6 hidden">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-amber-400"></i>
+                        AI 智慧分析
+                    </h2>
+                    <div id="ai-analysis-text" class="text-sm text-slate-300 leading-relaxed">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- 常用推薦 -->
+                <div id="recommendations-card" class="glass-panel p-4 sm:p-6 hidden">
+                    <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-amber-400"></i>
+                        推薦 GPU 排名
+                    </h2>
+                    <div id="recommendations-list" class="space-y-3">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== GPU COMPARISON SECTION ========== -->
+        <section id="comparison-section" class="mt-10">
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="git-compare" class="w-5 h-5 text-amber-400"></i>
+                    GPU 比較 (A vs B)
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="text-slate-400 text-xs font-medium mb-1.5 block">GPU A (主要)</label>
+                        <select id="compare-select-a" class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50">
+                            <option value="">請選擇 GPU A</option>
+                        </select>
+                        <div id="compare-a-info" class="mt-2 text-xs text-slate-500"></div>
+                    </div>
+                    <div>
+                        <label class="text-slate-400 text-xs font-medium mb-1.5 block">GPU B (比較)</label>
+                        <select id="compare-select-b" class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50">
+                            <option value="">請選擇 GPU B</option>
+                        </select>
+                        <div id="compare-b-info" class="mt-2 text-xs text-slate-500"></div>
+                    </div>
+                </div>
+
+                <div id="comparison-results">
+                    <!-- Rendered by JS -->
+                </div>
+
+                <!-- Radar Chart -->
+                <div id="radar-chart-container" class="mt-6 hidden">
+                    <h3 class="text-sm font-bold text-white mb-3">效能雷達圖</h3>
+                    <div class="flex justify-center">
+                        <canvas id="radar-canvas" width="400" height="400" class="max-w-full" style="max-height: 400px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== COMMON RECOMMENDATIONS ========== -->
+        <section class="mt-10">
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-base sm:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <i data-lucide="lightbulb" class="w-5 h-5 text-amber-400"></i>
+                    常見用途推薦
+                </h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div class="bg-hub-900 rounded-xl p-4 border border-hub-700 text-center hover:border-amber-500/30 transition-all">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="user" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">AI 新手</h4>
+                        <p class="text-amber-400 text-xs font-medium mt-1">RTX 3060 12GB</p>
+                        <p class="text-slate-500 text-[10px] mt-1">入門首選·12GB VRAM</p>
+                    </div>
+                    <div class="bg-hub-900 rounded-xl p-4 border border-hub-700 text-center hover:border-amber-500/30 transition-all">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">AI 玩家</h4>
+                        <p class="text-amber-400 text-xs font-medium mt-1">RTX 3090</p>
+                        <p class="text-slate-500 text-[10px] mt-1">24GB VRAM·高 CP 值</p>
+                    </div>
+                    <div class="bg-hub-900 rounded-xl p-4 border border-hub-700 text-center hover:border-amber-500/30 transition-all">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="server" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">AI 工作站</h4>
+                        <p class="text-amber-400 text-xs font-medium mt-1">RTX 5090</p>
+                        <p class="text-slate-500 text-[10px] mt-1">32GB VRAM·旗艦效能</p>
+                    </div>
+                    <div class="bg-hub-900 rounded-xl p-4 border border-hub-700 text-center hover:border-amber-500/30 transition-all">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="brain" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">LLM 部署</h4>
+                        <p class="text-amber-400 text-xs font-medium mt-1">A100 80GB</p>
+                        <p class="text-slate-500 text-[10px] mt-1">80GB·資料中心級</p>
+                    </div>
+                    <div class="bg-hub-900 rounded-xl p-4 border border-hub-700 text-center hover:border-amber-500/30 transition-all">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="gamepad-2" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">遊戲玩家</h4>
+                        <p class="text-amber-400 text-xs font-medium mt-1">RTX 5070</p>
+                        <p class="text-slate-500 text-[10px] mt-1">次世代·DLSS 4</p>
+                    </div>
+                    <div class="bg-hub-900 rounded-xl p-4 border border-hub-700 text-center hover:border-amber-500/30 transition-all">
+                        <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <i data-lucide="star" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <h4 class="text-white font-bold text-sm">CP 值首選</h4>
+                        <p class="text-amber-400 text-xs font-medium mt-1">RTX 4070 Super</p>
+                        <p class="text-slate-500 text-[10px] mt-1">12GB·效能與價格平衡</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== SEO CONTENT ========== -->
+        <section class="mt-10 max-w-4xl mx-auto">
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg sm:text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i>
+                    GPU 選購知識庫
+                </h2>
+                <div class="space-y-6">
+
+                    <!-- Article 1 -->
+                    <article itemscope itemtype="https://schema.org/Article">
+                        <h3 itemprop="name" class="text-base sm:text-lg font-bold text-white mb-2">如何挑選顯示卡？完整選購指南</h3>
+                        <div itemprop="articleBody" class="text-slate-400 text-sm leading-relaxed space-y-2">
+                            <p>挑選顯示卡（GPU）是組裝電腦或升級工作站最重要的決策之一。以下是幾個關鍵評估維度：</p>
+                            <p><strong class="text-white">① 根據用途決定預算</strong> — 遊戲為主的用戶應關注 FP32 效能與 VRAM，AI 使用者則以 VRAM 和 Tensor Core 為核心指標。影片剪輯與 3D 渲染介於兩者之間，重視編碼器支援與 CUDA 核心數量。</p>
+                            <p><strong class="text-white">② VRAM 容量是關鍵</strong> — 8GB 足以應付 1080p 遊戲，但 AI 推論（尤其是 LLM）至少需要 12GB，建議 24GB 以上。Stable Diffusion 在 12GB 以上可流暢生成 1024×1024 圖像。</p>
+                            <p><strong class="text-white">③ 注意世代差異</strong> — 新世代 GPU 不僅效能更高，往往還支援更新的技術（如 DLSS 4、AV1 編碼、FP8/FP4 精確度），這些對 AI 和工作負載都有顯著影響。</p>
+                        </div>
+                    </article>
+
+                    <!-- Article 2 -->
+                    <article itemscope itemtype="https://schema.org/Article">
+                        <h3 itemprop="name" class="text-base sm:text-lg font-bold text-white mb-2">VRAM 為什麼重要？深度解析</h3>
+                        <div itemprop="articleBody" class="text-slate-400 text-sm leading-relaxed space-y-2">
+                            <p>VRAM（Video Random Access Memory，顯示記憶體）是 GPU 專用的記憶體，用於存放渲染所需的紋理、緩衝區、AI 模型權重與中間計算結果。VRAM 大小直接決定了 GPU 能夠處理的工作負載規模。</p>
+                            <p>在 AI 應用中，VRAM 尤為關鍵：大型語言模型（LLM）的權重參數必須完整載入 VRAM 才能運行。例如，70B 參數的模型在 FP16 下需要約 140GB VRAM，即便是 Q4 量化也需要約 35GB。VRAM 不足時，模型被迫使用系統 RAM（通過 offloading），導致推論速度大幅下降。</p>
+                            <p>一般建議：遊戲 1080p → 8GB，1440p → 12GB，4K → 16GB+；AI 入門 → 12GB，專業 AI → 24GB+，LLM 部署 → 48GB+（或使用多 GPU）。</p>
+                        </div>
+                    </article>
+
+                    <!-- Article 3 -->
+                    <article itemscope itemtype="https://schema.org/Article">
+                        <h3 itemprop="name" class="text-base sm:text-lg font-bold text-white mb-2">CUDA 是什麼？NVIDIA 的平行運算平台</h3>
+                        <div itemprop="articleBody" class="text-slate-400 text-sm leading-relaxed space-y-2">
+                            <p>CUDA（Compute Unified Device Architecture）是 NVIDIA 推出的平行運算平台與程式設計模型，讓開發者能夠利用 GPU 的大量核心進行通用計算（GPGPU）。CUDA 核心是 NVIDIA GPU 中的基本運算單元，類似 CPU 的核心但數量龐大（RTX 4090 擁有 16384 個 CUDA 核心）。</p>
+                            <p>在 AI 領域，CUDA 生態系（搭配 cuDNN、TensorRT 等函式庫）幾乎成為業界標準：PyTorch、TensorFlow、JAX 等框架底層都依賴 CUDA 加速。這意味著 NVIDIA GPU 在 AI 工作負載中具有天然的生態系優勢。</p>
+                            <p>AMD 使用 Stream Processors 實現類似功能，搭配 ROCm 平台。雖然近年 AMD 在 AI 框架支援上有顯著進步，但整體生態系的成熟度與 NVIDIA 仍有差距，特別是在 LLM 推論與 Stable Diffusion 等應用中。</p>
+                        </div>
+                    </article>
+
+                    <!-- Article 4 -->
+                    <article itemscope itemtype="https://schema.org/Article">
+                        <h3 itemprop="name" class="text-base sm:text-lg font-bold text-white mb-2">Tensor Core 是什麼？AI 加速的關鍵技術</h3>
+                        <div itemprop="articleBody" class="text-slate-400 text-sm leading-relaxed space-y-2">
+                            <p>Tensor Core 是 NVIDIA GPU 中的專用硬體單元，專門設計用於執行矩陣乘法與累加運算（GEMM），這是深度學習中最重要的運算類型。自 Volta 架構（2017）引入以來，Tensor Core 已發展多個世代，每代支援更多精確度格式。</p>
+                            <p>Tensor Core 支援的精度包含：FP16（16位浮點）、BF16（bfloat16）、TF32（Tensor Float 32）、INT8（8位整數）、INT4 與 FP4（最新的 Blackwell 架構）。使用 Tensor Core 進行 FP16 矩陣運算可比傳統 FP32 快達 8 倍（搭配稀疏化可達 16 倍）。</p>
+                            <p>除了 AI 訓練與推論，Tensor Core 也用於 NVIDIA DLSS（深度學習超級採樣）技術，通過 AI 將低解析度畫面即時重建為高解析度，在不犧牲效能的同時提升畫質。對於 AI 使用者來說，Tensor Core 的數量與世代是評估 GPU 的重要指標。</p>
+                        </div>
+                    </article>
+
+                    <!-- Article 5 -->
+                    <article itemscope itemtype="https://schema.org/Article">
+                        <h3 itemprop="name" class="text-base sm:text-lg font-bold text-white mb-2">AI 工作站如何挑選 GPU？完整指南</h3>
+                        <div itemprop="articleBody" class="text-slate-400 text-sm leading-relaxed space-y-2">
+                            <p>建置 AI 工作站時，GPU 選擇直接影響工作效率與可使用模型規模。以下是專業建議：</p>
+                            <p><strong class="text-white">VRAM 優先</strong> — 對 AI 而言，VRAM 是唯一的硬限制。參數規模 7B 的模型（如 Llama 3 8B）在 FP16 下需要 16GB VRAM，70B 模型需要約 140GB。建議至少 24GB（RTX 3090/4090），專業用戶直上 48GB 以上（RTX 5090 或雙 4090）。</p>
+                            <p><strong class="text-white">Tensor Core 世代</strong> — 越新的 Tensor Core 支援越多的精度格式（如 FP8、FP4），可以直接提升訓練速度與記憶體效率。RTX 40 系列（Ada Lovelace）比 RTX 30 系列（Ampere）在 AI 訓練中快約 30-50%。</p>
+                            <p><strong class="text-white">生態系相容性</strong> — 目前 AI 框架對 NVIDIA CUDA 的支援最完善，AMD ROCm 正在追趕但相容性仍需確認。對於生產環境，NVIDIA 仍是安全性最高的選擇。消費級 GPU（RTX）相比資料中心級（A100/H100）具有極佳的性價比，適合個人與小型團隊。</p>
+                        </div>
+                    </article>
+
+                    <!-- Article 6 -->
+                    <article itemscope itemtype="https://schema.org/Article">
+                        <h3 itemprop="name" class="text-base sm:text-lg font-bold text-white mb-2">二手 GPU 值得買嗎？優缺點與注意事項</h3>
+                        <div itemprop="articleBody" class="text-slate-400 text-sm leading-relaxed space-y-2">
+                            <p>二手 GPU 市場提供了絕佳的性價比，但也伴隨風險。以下是綜合分析：</p>
+                            <p><strong class="text-white">優點：</strong> 價格通常為原價的 50-70%（兩代前的 GPU 甚至更低）。RTX 3090 24GB 二手價格約 NT$20,000-25,000，性價比極高。對於 AI 使用者來說，老一代旗艦的 VRAM 優勢常讓它比新一代中階卡更適合。</p>
+                            <p><strong class="text-white">缺點與風險：</strong> ① 礦卡風險 — 長期挖礦的 GPU 因持續滿載運作，散熱模組老化、風扇磨損較嚴重；② 保固問題 — 二手卡通常無原廠保固或保固期短；③ 世代技術差異 — 老 GPU 缺乏新功能（如 AV1 編碼、DLSS 4、FP8 支援）。</p>
+                            <p><strong class="text-white">購買建議：</strong> 優先選擇有原始購買證明的賣家，避免購買明顯用於挖礦的 GPU（多卡無擋板、無原盒）。RTX 3090、RTX 3080 Ti、RTX 2080 Ti 是目前二手市場中 AI 應用性價比最高的選擇。交易前要求賣家提供 GPU-Z 截圖與壓力測試結果。</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== FAQ ========== -->
+        <section class="mt-10 max-w-4xl mx-auto">
+            <div class="glass-panel p-4 sm:p-6" itemscope itemtype="https://schema.org/FAQPage">
+                <h2 class="text-lg sm:text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
+                    常見問題 (FAQ)
+                </h2>
+                <div class="space-y-4">
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: GPU 的 CP 值 (性價比) 怎麼計算？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">本工具採用多維度權重分析法：根據您選擇的使用情境（AI 推論、遊戲、影片剪輯等），系統會對 VRAM、FP16/Fp32 效能、記憶體頻寬、功耗效率等指標加權計算，並結合您輸入的價格與市場建議售價（MSRP），最終得出 0-100 分的性價比分數與購買建議。</p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: 二手顯示卡值得買嗎？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">取決於價格與用途。一般來說，前一代旗艦卡（如 RTX 3090）若價格低於原價 60-70%，且不是礦卡，對於 AI 應用具有極佳的性價比。但需注意老 GPU 缺乏新技術支援（如 AV1 編碼、FP8 精度），對遊戲和最新 AI 模型可能造成限制。</p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: AI 推論和 AI 訓練對 GPU 的需求有什麼不同？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">AI 推論（Inference）主要依賴 VRAM 來載入模型權重，以及 Tensor Core 來加速矩陣運算，對記憶體頻寬同樣敏感。AI 訓練（Training）除了同樣需要大量 VRAM，更看重 FP16/BF16 的運算吞吐量，因為訓練過程中需要反覆進行前向與反向傳播。總體而言，訓練對 GPU 的要求更高，建議使用具備最新 Tensor Core 的高階 GPU。</p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: 多少 VRAM 才夠用？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">1080p 遊戲建議 8GB，1440p 建議 12GB，4K 建議 16GB 以上。AI 入門建議 12GB（可運行 7B 量化模型），專業 AI 建議 24GB 以上（可運行 13B-70B 量化模型），LLM 部署建議 48GB 以上。Stable Diffusion 生成 1024×1024 圖像建議 12GB+。</p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: 為什麼 AI 應用偏好 NVIDIA 顯卡？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">主要原因有三：① CUDA 生態系 — PyTorch、TensorFlow 等主流框架對 CUDA 的支援最成熟完善；② Tensor Core — NVIDIA GPU 的專用 AI 加速硬體，大幅提升矩陣運算效率；③ 軟體支援 — NVIDIA 提供 cuDNN、TensorRT、CUDA Toolkit 等完整的 AI 開發工具鏈。AMD 的 ROCm 平台正在追趕，但在 LLM 與 Stable Diffusion 等應用中仍有相容性差距。</p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: 功耗對總擁有成本影響有多大？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">以台灣電價 NT$3.5/kWh 估算：一張 RTX 4090（450W）每日使用 8 小時，年電費約 NT$4,600。若使用 RTX 5090（575W），年電費約 NT$5,876。雖然單一 GPU 的電費差異不大，但若長期運行（24/7 訓練）、多卡配置（4-8 GPU）或在電價較高的地區（歐洲約 NT$9/kWh），電費將成為顯著成本。本工具已將電費估算納入性價比分析。</p>
+                        </div>
+                    </div>
+
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <h3 itemprop="name" class="text-sm sm:text-base font-bold text-white mb-2">Q: 遊戲顯卡可以用來跑 AI 嗎？</h3>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">可以，消費級 NVIDIA RTX 系列完全支援 CUDA 與 Tensor Core，是個人 AI 專案的最佳選擇。RTX 4090 在許多 AI 工作負載中的表現甚至超越專業級 Tesla V100。唯一的限制是 VRAM — 消費級 GPU 最大僅 24GB（RTX 4090），而資料中心 GPU（如 A100 80GB）可處理更大的模型。對個人來說，RTX 3090/4090 的性價比遠高於專業卡。</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="component-footer"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i data-lucide="check-circle" class="w-5 h-5 text-amber-400"></i>
+        <span id="toast-msg">已更新</span>
+    </div>
+
+    <!-- ========== COMPONENT LOADER ========== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlay = e.target.closest('#sidebar-overlay');
+                if (triggerBtn) { document.getElementById('sidebar-container')?.classList.toggle('translate-x-0'); document.getElementById('sidebar-overlay')?.classList.toggle('opacity-0'); document.getElementById('sidebar-overlay')?.classList.toggle('pointer-events-none'); return; }
+                if (closeBtn || overlay) { document.getElementById('sidebar-container')?.classList.remove('translate-x-0'); document.getElementById('sidebar-overlay')?.classList.add('opacity-0'); document.getElementById('sidebar-overlay')?.classList.add('pointer-events-none'); }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            setTimeout(() => {
+                const path = window.location.pathname.replace(/\/index\.html$/, '') || '/';
+                document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                    const href = item.getAttribute('href');
+                    if (href && path.startsWith(href.replace(/\/index\.html$/, '')) && href !== '/') {
+                        item.classList.add('text-[#3ebcf0]', 'bg-slate-800/70', 'border-l-[#3ebcf0]');
+                    }
+                });
+            }, 300);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html'),
+            ]).then(() => {
+                lucide.createIcons();
+                setupEventDelegation();
+                setupSidebarActiveState();
+                initApp();
+            });
+        });
+    </script>
+
+    <!-- ========== MAIN APPLICATION ========== -->
+    <script>
+        // === SECTION 0: DOM HELPER ===
+        const $ = id => document.getElementById(id);
+
+        // === SECTION 1: GPU DATABASE ===
+        const GPU_DB = [
+            // ====== NVIDIA GeForce RTX 20 Series (Turing) ======
+            { id:'rtx-2060', name:'RTX 2060', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:6, memoryType:'GDDR6', busWidth:192, bandwidth:336, tdp:160, cudaCores:1920, tensorCores:240, rtCores:30, fp16:13.4, fp32:6.5, msrp:349, pcieGen:3, processNode:'12nm', relGaming:42, relAI:18, relBlender:25, displayName:'NVIDIA GeForce RTX 2060 6GB' },
+            { id:'rtx-2060-super', name:'RTX 2060 Super', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:448, tdp:175, cudaCores:2176, tensorCores:272, rtCores:34, fp16:15.2, fp32:7.6, msrp:399, pcieGen:3, processNode:'12nm', relGaming:47, relAI:21, relBlender:29, displayName:'NVIDIA GeForce RTX 2060 Super 8GB' },
+            { id:'rtx-2070', name:'RTX 2070', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:448, tdp:175, cudaCores:2304, tensorCores:288, rtCores:36, fp16:16.1, fp32:8.1, msrp:499, pcieGen:3, processNode:'12nm', relGaming:50, relAI:22, relBlender:32, displayName:'NVIDIA GeForce RTX 2070 8GB' },
+            { id:'rtx-2070-super', name:'RTX 2070 Super', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:448, tdp:215, cudaCores:2560, tensorCores:320, rtCores:40, fp16:17.9, fp32:9.0, msrp:499, pcieGen:3, processNode:'12nm', relGaming:54, relAI:24, relBlender:35, displayName:'NVIDIA GeForce RTX 2070 Super 8GB' },
+            { id:'rtx-2080', name:'RTX 2080', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:448, tdp:215, cudaCores:2944, tensorCores:368, rtCores:46, fp16:20.6, fp32:10.3, msrp:699, pcieGen:3, processNode:'12nm', relGaming:58, relAI:27, relBlender:38, displayName:'NVIDIA GeForce RTX 2080 8GB' },
+            { id:'rtx-2080-super', name:'RTX 2080 Super', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:496, tdp:250, cudaCores:3072, tensorCores:384, rtCores:48, fp16:21.5, fp32:10.8, msrp:699, pcieGen:3, processNode:'12nm', relGaming:60, relAI:28, relBlender:40, displayName:'NVIDIA GeForce RTX 2080 Super 8GB' },
+            { id:'rtx-2080-ti', name:'RTX 2080 Ti', brand:'nvidia', series:'RTX 20', arch:'Turing', type:'consumer', releaseYear:2019, vram:11, memoryType:'GDDR6', busWidth:352, bandwidth:616, tdp:260, cudaCores:4352, tensorCores:544, rtCores:68, fp16:30.5, fp32:15.2, msrp:1199, pcieGen:3, processNode:'12nm', relGaming:72, relAI:35, relBlender:50, displayName:'NVIDIA GeForce RTX 2080 Ti 11GB' },
+            { id:'titan-rtx', name:'Titan RTX', brand:'nvidia', series:'Titan', arch:'Turing', type:'consumer', releaseYear:2018, vram:24, memoryType:'GDDR6', busWidth:384, bandwidth:672, tdp:280, cudaCores:4608, tensorCores:576, rtCores:72, fp16:32.3, fp32:16.2, msrp:2499, pcieGen:3, processNode:'12nm', relGaming:75, relAI:45, relBlender:55, displayName:'NVIDIA Titan RTX 24GB' },
+
+            // ====== NVIDIA GeForce GTX 16 Series ======
+            { id:'gtx-1660', name:'GTX 1660', brand:'nvidia', series:'GTX 16', arch:'Turing', type:'consumer', releaseYear:2019, vram:6, memoryType:'GDDR5', busWidth:192, bandwidth:192, tdp:120, cudaCores:1408, tensorCores:0, rtCores:0, fp16:9.0, fp32:4.5, msrp:219, pcieGen:3, processNode:'12nm', relGaming:30, relAI:5, relBlender:15, displayName:'NVIDIA GeForce GTX 1660 6GB' },
+            { id:'gtx-1660-super', name:'GTX 1660 Super', brand:'nvidia', series:'GTX 16', arch:'Turing', type:'consumer', releaseYear:2019, vram:6, memoryType:'GDDR6', busWidth:192, bandwidth:336, tdp:125, cudaCores:1408, tensorCores:0, rtCores:0, fp16:9.1, fp32:4.6, msrp:229, pcieGen:3, processNode:'12nm', relGaming:32, relAI:5, relBlender:16, displayName:'NVIDIA GeForce GTX 1660 Super 6GB' },
+            { id:'gtx-1660-ti', name:'GTX 1660 Ti', brand:'nvidia', series:'GTX 16', arch:'Turing', type:'consumer', releaseYear:2019, vram:6, memoryType:'GDDR6', busWidth:192, bandwidth:288, tdp:120, cudaCores:1536, tensorCores:0, rtCores:0, fp16:9.8, fp32:4.9, msrp:279, pcieGen:3, processNode:'12nm', relGaming:34, relAI:5, relBlender:18, displayName:'NVIDIA GeForce GTX 1660 Ti 6GB' },
+
+            // ====== NVIDIA GeForce RTX 30 Series (Ampere) ======
+            { id:'rtx-3050', name:'RTX 3050', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2022, vram:8, memoryType:'GDDR6', busWidth:128, bandwidth:224, tdp:130, cudaCores:2560, tensorCores:80, rtCores:20, fp16:18.2, fp32:9.1, msrp:249, pcieGen:4, processNode:'8nm', relGaming:38, relAI:15, relBlender:22, displayName:'NVIDIA GeForce RTX 3050 8GB' },
+            { id:'rtx-3060-12g', name:'RTX 3060 12GB', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2021, vram:12, memoryType:'GDDR6', busWidth:192, bandwidth:360, tdp:170, cudaCores:3584, tensorCores:112, rtCores:28, fp16:25.5, fp32:12.7, msrp:329, pcieGen:4, processNode:'8nm', relGaming:48, relAI:28, relBlender:30, displayName:'NVIDIA GeForce RTX 3060 12GB' },
+            { id:'rtx-3060-ti', name:'RTX 3060 Ti', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2021, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:448, tdp:200, cudaCores:4864, tensorCores:152, rtCores:38, fp16:32.4, fp32:16.2, msrp:399, pcieGen:4, processNode:'8nm', relGaming:55, relAI:30, relBlender:36, displayName:'NVIDIA GeForce RTX 3060 Ti 8GB' },
+            { id:'rtx-3070', name:'RTX 3070', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2021, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:448, tdp:220, cudaCores:5888, tensorCores:184, rtCores:46, fp16:40.6, fp32:20.3, msrp:499, pcieGen:4, processNode:'8nm', relGaming:62, relAI:34, relBlender:42, displayName:'NVIDIA GeForce RTX 3070 8GB' },
+            { id:'rtx-3070-ti', name:'RTX 3070 Ti', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2021, vram:8, memoryType:'GDDR6X', busWidth:256, bandwidth:608, tdp:290, cudaCores:6144, tensorCores:192, rtCores:48, fp16:43.5, fp32:21.7, msrp:599, pcieGen:4, processNode:'8nm', relGaming:64, relAI:36, relBlender:44, displayName:'NVIDIA GeForce RTX 3070 Ti 8GB' },
+            { id:'rtx-3080-10g', name:'RTX 3080 10GB', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2020, vram:10, memoryType:'GDDR6X', busWidth:320, bandwidth:760, tdp:320, cudaCores:8704, tensorCores:272, rtCores:68, fp16:59.5, fp32:29.8, msrp:699, pcieGen:4, processNode:'8nm', relGaming:78, relAI:45, relBlender:55, displayName:'NVIDIA GeForce RTX 3080 10GB' },
+            { id:'rtx-3080-ti', name:'RTX 3080 Ti', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2021, vram:12, memoryType:'GDDR6X', busWidth:384, bandwidth:912, tdp:350, cudaCores:10240, tensorCores:320, rtCores:80, fp16:68.2, fp32:34.1, msrp:1199, pcieGen:4, processNode:'8nm', relGaming:85, relAI:50, relBlender:60, displayName:'NVIDIA GeForce RTX 3080 Ti 12GB' },
+            { id:'rtx-3090', name:'RTX 3090', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2020, vram:24, memoryType:'GDDR6X', busWidth:384, bandwidth:936, tdp:350, cudaCores:10496, tensorCores:328, rtCores:82, fp16:71.2, fp32:35.6, msrp:1499, pcieGen:4, processNode:'8nm', relGaming:88, relAI:60, relBlender:65, displayName:'NVIDIA GeForce RTX 3090 24GB' },
+            { id:'rtx-3090-ti', name:'RTX 3090 Ti', brand:'nvidia', series:'RTX 30', arch:'Ampere', type:'consumer', releaseYear:2022, vram:24, memoryType:'GDDR6X', busWidth:384, bandwidth:1008, tdp:450, cudaCores:10752, tensorCores:336, rtCores:84, fp16:80.0, fp32:40.0, msrp:1999, pcieGen:4, processNode:'8nm', relGaming:90, relAI:62, relBlender:68, displayName:'NVIDIA GeForce RTX 3090 Ti 24GB' },
+
+            // ====== NVIDIA GeForce RTX 40 Series (Ada Lovelace) ======
+            { id:'rtx-4060', name:'RTX 4060', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2023, vram:8, memoryType:'GDDR6', busWidth:128, bandwidth:272, tdp:115, cudaCores:3072, tensorCores:96, rtCores:24, fp16:30.2, fp32:15.1, msrp:299, pcieGen:4, processNode:'4N', relGaming:52, relAI:32, relBlender:35, displayName:'NVIDIA GeForce RTX 4060 8GB' },
+            { id:'rtx-4060-ti-8g', name:'RTX 4060 Ti 8GB', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2023, vram:8, memoryType:'GDDR6', busWidth:128, bandwidth:288, tdp:160, cudaCores:4352, tensorCores:136, rtCores:34, fp16:44.1, fp32:22.1, msrp:399, pcieGen:4, processNode:'4N', relGaming:58, relAI:38, relBlender:40, displayName:'NVIDIA GeForce RTX 4060 Ti 8GB' },
+            { id:'rtx-4060-ti-16g', name:'RTX 4060 Ti 16GB', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2023, vram:16, memoryType:'GDDR6', busWidth:128, bandwidth:288, tdp:165, cudaCores:4352, tensorCores:136, rtCores:34, fp16:44.1, fp32:22.1, msrp:499, pcieGen:4, processNode:'4N', relGaming:59, relAI:42, relBlender:40, displayName:'NVIDIA GeForce RTX 4060 Ti 16GB' },
+            { id:'rtx-4070', name:'RTX 4070', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2023, vram:12, memoryType:'GDDR6X', busWidth:192, bandwidth:504, tdp:200, cudaCores:5888, tensorCores:184, rtCores:46, fp16:58.3, fp32:29.2, msrp:599, pcieGen:4, processNode:'4N', relGaming:70, relAI:48, relBlender:48, displayName:'NVIDIA GeForce RTX 4070 12GB' },
+            { id:'rtx-4070-super', name:'RTX 4070 Super', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2024, vram:12, memoryType:'GDDR6X', busWidth:192, bandwidth:504, tdp:220, cudaCores:7168, tensorCores:224, rtCores:56, fp16:71.0, fp32:35.5, msrp:599, pcieGen:4, processNode:'4N', relGaming:75, relAI:52, relBlender:52, displayName:'NVIDIA GeForce RTX 4070 Super 12GB' },
+            { id:'rtx-4070-ti', name:'RTX 4070 Ti', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2023, vram:12, memoryType:'GDDR6X', busWidth:192, bandwidth:504, tdp:285, cudaCores:7680, tensorCores:240, rtCores:60, fp16:80.2, fp32:40.1, msrp:799, pcieGen:4, processNode:'4N', relGaming:78, relAI:54, relBlender:55, displayName:'NVIDIA GeForce RTX 4070 Ti 12GB' },
+            { id:'rtx-4070-ti-super', name:'RTX 4070 Ti Super', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2024, vram:16, memoryType:'GDDR6X', busWidth:256, bandwidth:672, tdp:285, cudaCores:8448, tensorCores:264, rtCores:66, fp16:88.2, fp32:44.1, msrp:799, pcieGen:4, processNode:'4N', relGaming:81, relAI:58, relBlender:58, displayName:'NVIDIA GeForce RTX 4070 Ti Super 16GB' },
+            { id:'rtx-4080', name:'RTX 4080', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2022, vram:16, memoryType:'GDDR6X', busWidth:256, bandwidth:717, tdp:320, cudaCores:9728, tensorCores:304, rtCores:76, fp16:97.5, fp32:48.7, msrp:1199, pcieGen:4, processNode:'4N', relGaming:88, relAI:64, relBlender:65, displayName:'NVIDIA GeForce RTX 4080 16GB' },
+            { id:'rtx-4080-super', name:'RTX 4080 Super', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2024, vram:16, memoryType:'GDDR6X', busWidth:256, bandwidth:736, tdp:320, cudaCores:10240, tensorCores:320, rtCores:80, fp16:104.4, fp32:52.2, msrp:999, pcieGen:4, processNode:'4N', relGaming:90, relAI:66, relBlender:67, displayName:'NVIDIA GeForce RTX 4080 Super 16GB' },
+            { id:'rtx-4090', name:'RTX 4090', brand:'nvidia', series:'RTX 40', arch:'Ada Lovelace', type:'consumer', releaseYear:2022, vram:24, memoryType:'GDDR6X', busWidth:384, bandwidth:1008, tdp:450, cudaCores:16384, tensorCores:512, rtCores:128, fp16:165.2, fp32:82.6, msrp:1599, pcieGen:4, processNode:'4N', relGaming:100, relAI:85, relBlender:100, displayName:'NVIDIA GeForce RTX 4090 24GB' },
+
+            // ====== NVIDIA GeForce RTX 50 Series (Blackwell) ======
+            { id:'rtx-5070', name:'RTX 5070', brand:'nvidia', series:'RTX 50', arch:'Blackwell', type:'consumer', releaseYear:2025, vram:12, memoryType:'GDDR7', busWidth:192, bandwidth:672, tdp:250, cudaCores:6144, tensorCores:192, rtCores:48, fp16:70.0, fp32:35.0, msrp:549, pcieGen:5, processNode:'4NP', relGaming:76, relAI:55, relBlender:54, displayName:'NVIDIA GeForce RTX 5070 12GB' },
+            { id:'rtx-5070-ti', name:'RTX 5070 Ti', brand:'nvidia', series:'RTX 50', arch:'Blackwell', type:'consumer', releaseYear:2025, vram:16, memoryType:'GDDR7', busWidth:256, bandwidth:896, tdp:300, cudaCores:8960, tensorCores:280, rtCores:70, fp16:105.0, fp32:52.5, msrp:749, pcieGen:5, processNode:'4NP', relGaming:84, relAI:62, relBlender:60, displayName:'NVIDIA GeForce RTX 5070 Ti 16GB' },
+            { id:'rtx-5080', name:'RTX 5080', brand:'nvidia', series:'RTX 50', arch:'Blackwell', type:'consumer', releaseYear:2025, vram:16, memoryType:'GDDR7', busWidth:256, bandwidth:960, tdp:360, cudaCores:10752, tensorCores:336, rtCores:84, fp16:130.0, fp32:65.0, msrp:999, pcieGen:5, processNode:'4NP', relGaming:92, relAI:70, relBlender:70, displayName:'NVIDIA GeForce RTX 5080 16GB' },
+            { id:'rtx-5090', name:'RTX 5090', brand:'nvidia', series:'RTX 50', arch:'Blackwell', type:'consumer', releaseYear:2025, vram:32, memoryType:'GDDR7', busWidth:512, bandwidth:1792, tdp:575, cudaCores:21760, tensorCores:680, rtCores:170, fp16:210.0, fp32:105.0, msrp:1999, pcieGen:5, processNode:'4NP', relGaming:108, relAI:95, relBlender:80, displayName:'NVIDIA GeForce RTX 5090 32GB' },
+
+            // ====== NVIDIA Data Center ======
+            { id:'tesla-p100-16g', name:'Tesla P100 16GB', brand:'nvidia', series:'Pascal', arch:'Pascal', type:'datacenter', releaseYear:2016, vram:16, memoryType:'HBM2', busWidth:4096, bandwidth:732, tdp:250, cudaCores:3584, tensorCores:0, rtCores:0, fp16:18.7, fp32:9.3, msrp:4899, pcieGen:3, processNode:'16nm', relGaming:5, relAI:12, relBlender:10, displayName:'NVIDIA Tesla P100 16GB' },
+            { id:'tesla-v100-16g', name:'Tesla V100 16GB', brand:'nvidia', series:'Volta', arch:'Volta', type:'datacenter', releaseYear:2017, vram:16, memoryType:'HBM2', busWidth:4096, bandwidth:900, tdp:250, cudaCores:5120, tensorCores:640, rtCores:0, fp16:28.3, fp32:14.1, msrp:6899, pcieGen:3, processNode:'12nm', relGaming:8, relAI:30, relBlender:15, displayName:'NVIDIA Tesla V100 16GB' },
+            { id:'tesla-v100-32g', name:'Tesla V100 32GB', brand:'nvidia', series:'Volta', arch:'Volta', type:'datacenter', releaseYear:2017, vram:32, memoryType:'HBM2', busWidth:4096, bandwidth:900, tdp:250, cudaCores:5120, tensorCores:640, rtCores:0, fp16:28.3, fp32:14.1, msrp:7899, pcieGen:3, processNode:'12nm', relGaming:8, relAI:32, relBlender:15, displayName:'NVIDIA Tesla V100 32GB' },
+            { id:'a100-40g', name:'A100 40GB', brand:'nvidia', series:'Ampere DC', arch:'Ampere', type:'datacenter', releaseYear:2020, vram:40, memoryType:'HBM2e', busWidth:5120, bandwidth:1555, tdp:400, cudaCores:6912, tensorCores:432, rtCores:0, fp16:77.0, fp32:38.5, msrp:9900, pcieGen:4, processNode:'7nm', relGaming:10, relAI:70, relBlender:20, displayName:'NVIDIA A100 40GB' },
+            { id:'a100-80g', name:'A100 80GB', brand:'nvidia', series:'Ampere DC', arch:'Ampere', type:'datacenter', releaseYear:2020, vram:80, memoryType:'HBM2e', busWidth:5120, bandwidth:2039, tdp:400, cudaCores:6912, tensorCores:432, rtCores:0, fp16:77.0, fp32:38.5, msrp:11900, pcieGen:4, processNode:'7nm', relGaming:10, relAI:72, relBlender:20, displayName:'NVIDIA A100 80GB' },
+            { id:'h100-80g', name:'H100 80GB', brand:'nvidia', series:'Hopper DC', arch:'Hopper', type:'datacenter', releaseYear:2022, vram:80, memoryType:'HBM3', busWidth:5120, bandwidth:3352, tdp:700, cudaCores:16896, tensorCores:528, rtCores:0, fp16:197.0, fp32:98.5, msrp:19800, pcieGen:5, processNode:'4N', relGaming:12, relAI:95, relBlender:25, displayName:'NVIDIA H100 80GB' },
+            { id:'h200-141g', name:'H200 141GB', brand:'nvidia', series:'Hopper DC', arch:'Hopper', type:'datacenter', releaseYear:2024, vram:141, memoryType:'HBM3e', busWidth:6144, bandwidth:4800, tdp:700, cudaCores:16896, tensorCores:528, rtCores:0, fp16:197.0, fp32:98.5, msrp:26800, pcieGen:5, processNode:'4N', relGaming:13, relAI:100, relBlender:25, displayName:'NVIDIA H200 141GB' },
+
+            // ====== AMD Radeon RX 6000 Series (RDNA 2) ======
+            { id:'rx-6600', name:'RX 6600', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2021, vram:8, memoryType:'GDDR6', busWidth:128, bandwidth:224, tdp:132, cudaCores:0, tensorCores:0, rtCores:0, fp16:13.2, fp32:6.6, streamProcessors:1792, msrp:329, pcieGen:4, processNode:'7nm', relGaming:36, relAI:10, relBlender:20, displayName:'AMD Radeon RX 6600 8GB' },
+            { id:'rx-6600-xt', name:'RX 6600 XT', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2021, vram:8, memoryType:'GDDR6', busWidth:128, bandwidth:256, tdp:160, cudaCores:0, tensorCores:0, rtCores:0, fp16:20.6, fp32:10.3, streamProcessors:2048, msrp:379, pcieGen:4, processNode:'7nm', relGaming:42, relAI:12, relBlender:24, displayName:'AMD Radeon RX 6600 XT 8GB' },
+            { id:'rx-6700-xt', name:'RX 6700 XT', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2021, vram:12, memoryType:'GDDR6', busWidth:192, bandwidth:384, tdp:230, cudaCores:0, tensorCores:0, rtCores:0, fp16:26.8, fp32:13.4, streamProcessors:2560, msrp:479, pcieGen:4, processNode:'7nm', relGaming:50, relAI:15, relBlender:30, displayName:'AMD Radeon RX 6700 XT 12GB' },
+            { id:'rx-6800', name:'RX 6800', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2020, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:512, tdp:250, cudaCores:0, tensorCores:0, rtCores:0, fp16:32.4, fp32:16.2, streamProcessors:3840, msrp:579, pcieGen:4, processNode:'7nm', relGaming:60, relAI:18, relBlender:36, displayName:'AMD Radeon RX 6800 16GB' },
+            { id:'rx-6800-xt', name:'RX 6800 XT', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2020, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:512, tdp:300, cudaCores:0, tensorCores:0, rtCores:0, fp16:40.2, fp32:20.1, streamProcessors:4608, msrp:649, pcieGen:4, processNode:'7nm', relGaming:66, relAI:20, relBlender:40, displayName:'AMD Radeon RX 6800 XT 16GB' },
+            { id:'rx-6900-xt', name:'RX 6900 XT', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2020, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:512, tdp:300, cudaCores:0, tensorCores:0, rtCores:0, fp16:46.3, fp32:23.2, streamProcessors:5120, msrp:999, pcieGen:4, processNode:'7nm', relGaming:72, relAI:22, relBlender:44, displayName:'AMD Radeon RX 6900 XT 16GB' },
+            { id:'rx-6950-xt', name:'RX 6950 XT', brand:'amd', series:'RX 6000', arch:'RDNA 2', type:'consumer', releaseYear:2022, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:576, tdp:335, cudaCores:0, tensorCores:0, rtCores:0, fp16:48.0, fp32:24.0, streamProcessors:5120, msrp:1099, pcieGen:4, processNode:'7nm', relGaming:75, relAI:23, relBlender:46, displayName:'AMD Radeon RX 6950 XT 16GB' },
+
+            // ====== AMD Radeon RX 7000 Series (RDNA 3) ======
+            { id:'rx-7600', name:'RX 7600', brand:'amd', series:'RX 7000', arch:'RDNA 3', type:'consumer', releaseYear:2023, vram:8, memoryType:'GDDR6', busWidth:128, bandwidth:288, tdp:165, cudaCores:0, tensorCores:0, rtCores:0, fp16:32.6, fp32:16.3, streamProcessors:2048, msrp:269, pcieGen:4, processNode:'6nm', relGaming:44, relAI:14, relBlender:26, displayName:'AMD Radeon RX 7600 8GB' },
+            { id:'rx-7700-xt', name:'RX 7700 XT', brand:'amd', series:'RX 7000', arch:'RDNA 3', type:'consumer', releaseYear:2023, vram:12, memoryType:'GDDR6', busWidth:192, bandwidth:432, tdp:245, cudaCores:0, tensorCores:0, rtCores:0, fp16:43.8, fp32:21.9, streamProcessors:3456, msrp:449, pcieGen:4, processNode:'6nm', relGaming:56, relAI:18, relBlender:34, displayName:'AMD Radeon RX 7700 XT 12GB' },
+            { id:'rx-7800-xt', name:'RX 7800 XT', brand:'amd', series:'RX 7000', arch:'RDNA 3', type:'consumer', releaseYear:2023, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:624, tdp:263, cudaCores:0, tensorCores:0, rtCores:0, fp16:54.4, fp32:27.2, streamProcessors:3840, msrp:499, pcieGen:4, processNode:'6nm', relGaming:64, relAI:20, relBlender:38, displayName:'AMD Radeon RX 7800 XT 16GB' },
+            { id:'rx-7900-gre', name:'RX 7900 GRE', brand:'amd', series:'RX 7000', arch:'RDNA 3', type:'consumer', releaseYear:2024, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:576, tdp:260, cudaCores:0, tensorCores:0, rtCores:0, fp16:56.8, fp32:28.4, streamProcessors:3840, msrp:549, pcieGen:4, processNode:'6nm', relGaming:66, relAI:22, relBlender:40, displayName:'AMD Radeon RX 7900 GRE 16GB' },
+            { id:'rx-7900-xt', name:'RX 7900 XT', brand:'amd', series:'RX 7000', arch:'RDNA 3', type:'consumer', releaseYear:2022, vram:20, memoryType:'GDDR6', busWidth:320, bandwidth:800, tdp:315, cudaCores:0, tensorCores:0, rtCores:0, fp16:83.2, fp32:41.6, streamProcessors:5376, msrp:899, pcieGen:4, processNode:'6nm', relGaming:76, relAI:26, relBlender:48, displayName:'AMD Radeon RX 7900 XT 20GB' },
+            { id:'rx-7900-xtx', name:'RX 7900 XTX', brand:'amd', series:'RX 7000', arch:'RDNA 3', type:'consumer', releaseYear:2022, vram:24, memoryType:'GDDR6', busWidth:384, bandwidth:960, tdp:355, cudaCores:0, tensorCores:0, rtCores:0, fp16:98.4, fp32:49.2, streamProcessors:6144, msrp:999, pcieGen:4, processNode:'6nm', relGaming:82, relAI:28, relBlender:52, displayName:'AMD Radeon RX 7900 XTX 24GB' },
+
+            // ====== AMD Radeon RX 9000 Series (RDNA 4) ======
+            { id:'rx-9070', name:'RX 9070', brand:'amd', series:'RX 9000', arch:'RDNA 4', type:'consumer', releaseYear:2025, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:640, tdp:260, cudaCores:0, tensorCores:0, rtCores:0, fp16:72.0, fp32:36.0, streamProcessors:3584, msrp:549, pcieGen:5, processNode:'4nm', relGaming:74, relAI:30, relBlender:45, displayName:'AMD Radeon RX 9070 16GB' },
+            { id:'rx-9070-xt', name:'RX 9070 XT', brand:'amd', series:'RX 9000', arch:'RDNA 4', type:'consumer', releaseYear:2025, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:640, tdp:304, cudaCores:0, tensorCores:0, rtCores:0, fp16:84.0, fp32:42.0, streamProcessors:4096, msrp:599, pcieGen:5, processNode:'4nm', relGaming:80, relAI:34, relBlender:50, displayName:'AMD Radeon RX 9070 XT 16GB' },
+
+            // ====== Intel Arc (Alchemist) ======
+            { id:'arc-a580', name:'Arc A580', brand:'intel', series:'Arc A', arch:'Alchemist', type:'consumer', releaseYear:2023, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:512, tdp:175, cudaCores:0, tensorCores:0, rtCores:0, fp16:24.6, fp32:12.3, streamProcessors:0, xmxEngines:384, msrp:179, pcieGen:4, processNode:'6nm', relGaming:38, relAI:12, relBlender:22, displayName:'Intel Arc A580 8GB' },
+            { id:'arc-a750', name:'Arc A750', brand:'intel', series:'Arc A', arch:'Alchemist', type:'consumer', releaseYear:2022, vram:8, memoryType:'GDDR6', busWidth:256, bandwidth:512, tdp:225, cudaCores:0, tensorCores:0, rtCores:0, fp16:34.2, fp32:17.1, streamProcessors:0, xmxEngines:448, msrp:289, pcieGen:4, processNode:'6nm', relGaming:44, relAI:16, relBlender:28, displayName:'Intel Arc A750 8GB' },
+            { id:'arc-a770-16g', name:'Arc A770 16GB', brand:'intel', series:'Arc A', arch:'Alchemist', type:'consumer', releaseYear:2022, vram:16, memoryType:'GDDR6', busWidth:256, bandwidth:560, tdp:225, cudaCores:0, tensorCores:0, rtCores:0, fp16:39.8, fp32:19.9, streamProcessors:0, xmxEngines:512, msrp:349, pcieGen:4, processNode:'6nm', relGaming:48, relAI:20, relBlender:30, displayName:'Intel Arc A770 16GB' },
+            { id:'arc-b580', name:'Arc B580', brand:'intel', series:'Arc B', arch:'Battlemage', type:'consumer', releaseYear:2025, vram:12, memoryType:'GDDR6', busWidth:192, bandwidth:456, tdp:190, cudaCores:0, tensorCores:0, rtCores:0, fp16:45.0, fp32:22.5, streamProcessors:0, xmxEngines:160, msrp:249, pcieGen:4, processNode:'5nm', relGaming:55, relAI:24, relBlender:34, displayName:'Intel Arc B580 12GB' },
+        ];
+
+        // === SECTION 2: USE CASE WEIGHTS ===
+        const USE_CASES = [
+            { id:'ai-inference', label:'AI 推論', icon:'brain', weights:{ vram:0.40, fp16:0.30, bandwidth:0.20, tensor:0.10, gaming:0, tdp_inv:0, encoder:0, cuda:0, fp32:0 } },
+            { id:'ai-training', label:'AI 訓練', icon:'chart-line-up', weights:{ vram:0.25, fp16:0.25, fp32:0.10, bandwidth:0.15, tensor:0.25, gaming:0, tdp_inv:0, encoder:0, cuda:0 } },
+            { id:'gaming', label:'遊戲', icon:'game-controller', weights:{ vram:0.15, fp32:0.10, bandwidth:0.10, gaming:0.50, tdp_inv:0.05, encoder:0, cuda:0, tensor:0, fp16:0 } },
+            { id:'video-editing', label:'影片剪輯', icon:'video', weights:{ vram:0.20, fp32:0.10, bandwidth:0.15, cuda:0.20, encoder:0.20, tdp_inv:0.05, gaming:0, tensor:0, fp16:0 } },
+            { id:'blender', label:'Blender', icon:'cube', weights:{ vram:0.25, fp32:0.20, bandwidth:0.10, cuda:0.30, tdp_inv:0.05, encoder:0, gaming:0, tensor:0, fp16:0 } },
+            { id:'stable-diffusion', label:'Stable Diffusion', icon:'image', weights:{ vram:0.35, fp16:0.20, bandwidth:0.15, tensor:0.20, tdp_inv:0.05, gaming:0, encoder:0, cuda:0, fp32:0 } },
+            { id:'llm', label:'LLM 部署', icon:'robot', weights:{ vram:0.50, fp16:0.15, bandwidth:0.25, tensor:0.05, gaming:0, tdp_inv:0, encoder:0, cuda:0, fp32:0 } },
+            { id:'nas-gpu', label:'NAS 轉檔', icon:'hard-drives', weights:{ tdp_inv:0.30, fp16:0.15, encoder:0.30, vram:0.10, bandwidth:0.10, gaming:0, cuda:0, tensor:0, fp32:0 } },
+            { id:'general', label:'綜合用途', icon:'star', weights:{ vram:0.17, fp32:0.13, fp16:0.10, bandwidth:0.15, gaming:0.20, cuda:0.10, tdp_inv:0.05, encoder:0.05, tensor:0.05 } },
+        ];
+
+        const USE_CASE_MAP = {};
+        USE_CASES.forEach(u => USE_CASE_MAP[u.id] = u);
+
+        // === SECTION 3: STATE ===
+        const STATE = {
+            gpuId: null,
+            gpu: null,
+            price: 0,
+            currency: 'TWD',
+            useCase: 'ai-inference',
+            electricityRate: 3.5,
+            dailyHours: 8,
+            compareA: null,
+            compareB: null,
+        };
+
+        const TWD_PER_USD = 32.5;
+        const ELEC_PRESETS = { '台灣': 3.5, '美國': 0.12, '日本': 0.33, '歐洲': 0.28 };
+
+        // === SECTION 4: SCORING ENGINE ===
+        function normalizeValue(gpu, key) {
+            const maxVals = {
+                vram: Math.max(...GPU_DB.map(g => g.vram)),
+                fp16: Math.max(...GPU_DB.map(g => g.fp16)),
+                fp32: Math.max(...GPU_DB.map(g => g.fp32)),
+                bandwidth: Math.max(...GPU_DB.map(g => g.bandwidth)),
+                tensor: Math.max(...GPU_DB.map(g => g.tensorCores)),
+                cuda: Math.max(...GPU_DB.map(g => g.cudaCores || g.streamProcessors || g.xmxEngines || 1)),
+                gaming: 108,
+                tdp_inv: 0,
+                encoder: 0,
+            };
+            if (key === 'tdp_inv') return 1.0 - (gpu.tdp / Math.max(...GPU_DB.map(g => g.tdp)));
+            if (key === 'encoder') return gpu.arch === 'Ada Lovelace' || gpu.arch === 'Blackwell' || gpu.series === 'RX 7000' || gpu.series === 'RX 9000' || gpu.arch === 'Alchemist' || gpu.arch === 'Battlemage' ? 1.0 : (gpu.releaseYear >= 2019 ? 0.5 : 0.0);
+            if (key === 'cuda') {
+                const cores = gpu.cudaCores || gpu.streamProcessors || gpu.xmxEngines || 0;
+                const maxCores = Math.max(...GPU_DB.map(g => g.cudaCores || g.streamProcessors || g.xmxEngines || 0));
+                return cores / maxCores;
+            }
+            if (key === 'gaming') return gpu.relGaming / maxVals.gaming;
+            const val = gpu[key] || 0;
+            return maxVals[key] > 0 ? val / maxVals[key] : 0;
+        }
+
+        function computeUseCaseScore(gpu, useCaseId) {
+            const uc = USE_CASE_MAP[useCaseId];
+            if (!uc) return 0;
+            let score = 0;
+            const dims = ['vram','fp16','fp32','bandwidth','tensor','cuda','gaming','tdp_inv','encoder'];
+            dims.forEach(d => {
+                if (uc.weights[d]) score += uc.weights[d] * normalizeValue(gpu, d);
+            });
+            return Math.min(1, Math.max(0, score));
+        }
+
+        function computeValueScore(gpu, price, useCaseId) {
+            if (!gpu || !price) return 0;
+            const perfScore = computeUseCaseScore(gpu, useCaseId);
+            const msrpPrice = gpu.msrp || 500;
+            const effectivePrice = price > 0 ? price : msrpPrice;
+            const expectedPrice = gpu.msrp * (1 - Math.min(0.6, (2026 - gpu.releaseYear) * 0.15));
+            const valueRatio = Math.max(0.1, expectedPrice / effectivePrice);
+            const score = Math.min(100, Math.round((perfScore * 60 + Math.min(1, valueRatio) * 40) * 100) / 100);
+            return score;
+        }
+
+        function getWorthItBadge(gpu, price, valueScore) {
+            if (!gpu || !price) return { tier: 'none', label: '請輸入價格', color: 'slate', css: '' };
+            const priceVsMsrp = price / (gpu.msrp || 500);
+            const age = 2026 - gpu.releaseYear;
+            const fairPrice = gpu.msrp * (age <= 1 ? 0.95 : age <= 2 ? 0.85 : age <= 3 ? 0.75 : age <= 5 ? 0.60 : 0.45);
+            const ratio = price / fairPrice;
+
+            if (ratio <= 0.55) return { tier:'strong-buy', label:'🟢 超值 Strong Buy', color:'text-green-400', css:'badge-strong-buy', text:'以目前價格來看，這張 GPU 遠低於市場合理價格，是非常划算的購買選擇。對於有需求的用戶，強烈建議入手。' };
+            if (ratio <= 0.80) return { tier:'good-value', label:'🔵 值得購買 Good Value', color:'text-blue-400', css:'badge-good-value', text:'價格低於市場合理價位，性價比優秀。在同價位區間中，這張 GPU 提供了具競爭力的效能與 VRAM 配置。' };
+            if (ratio <= 1.20) return { tier:'fair-price', label:'🟡 價格合理 Fair Price', color:'text-amber-400', css:'badge-fair-price', text:'價格接近市場行情，屬於合理範圍。若此 GPU 符合您的使用需求，可以考慮購入。建議對比同級產品再做決定。' };
+            if (ratio <= 1.60) return { tier:'overpriced', label:'🟠 偏貴 Overpriced', color:'text-orange-400', css:'badge-overpriced', text:'價格高於市場合理價位。建議等待降價或尋找其他替代型號，除非急需使用，否則不太建議以此價格購入。' };
+            return { tier:'poor-value', label:'🔴 不建議購買 Poor Value', color:'text-red-400', css:'badge-poor-value', text:'價格遠高於合理範圍，性價比極低。強烈建議尋找其他選項，或等待價格回落至合理區間後再考慮。' };
+        }
+
+        function getStarRating(score) {
+            const stars = Math.max(1, Math.min(5, Math.round(score / 20)));
+            return '★'.repeat(stars) + '☆'.repeat(5 - stars);
+        }
+
+        function estimateFPS(gpu) {
+            if (!gpu || gpu.type === 'datacenter') return null;
+            const fps = Math.round((gpu.relGaming / 100) * 144);
+            return Math.max(15, fps);
+        }
+
+        function calculateElectricity(tdp, hours, rate, currency) {
+            const dailyKwh = (tdp * hours) / 1000;
+            const daily = dailyKwh * rate;
+            const monthly = daily * 30;
+            const yearly = daily * 365;
+            let symbol = 'NT$';
+            if (currency === 'USD') symbol = 'US$';
+            return { dailyKwh: dailyKwh.toFixed(2), daily: daily.toFixed(1), monthly: monthly.toFixed(0), yearly: yearly.toFixed(0), symbol };
+        }
+
+        function getCostPerGB(gpu, price) {
+            if (!gpu || !price || !gpu.vram) return null;
+            return price / gpu.vram;
+        }
+
+        function getCostPerTFLOP(gpu, price, useCaseId) {
+            if (!gpu || !price) return null;
+            const tflop = useCaseId.startsWith('ai') || useCaseId === 'stable-diffusion' || useCaseId === 'llm' ? (gpu.fp16 || gpu.fp32) : gpu.fp32;
+            return tflop > 0 ? price / tflop : null;
+        }
+
+        // === SECTION 5: SEARCH & FILTER ===
+        function filterGPUs(brand, query) {
+            let list = GPU_DB;
+            if (brand !== 'all') list = list.filter(g => g.brand === brand);
+            if (query.trim()) {
+                const q = query.toLowerCase();
+                list = list.filter(g => g.name.toLowerCase().includes(q) || g.displayName.toLowerCase().includes(q) || g.series.toLowerCase().includes(q));
+            }
+            return list;
+        }
+
+        function renderGPUList(brand, query) {
+            const container = $('gpu-list');
+            const list = filterGPUs(brand, query);
+            if (!list.length) {
+                container.innerHTML = '<div class="text-center py-8 text-slate-500 text-sm">找不到符合條件的 GPU</div>';
+                return;
+            }
+            container.innerHTML = list.map(g => `
+                <div class="gpu-select-item cursor-pointer px-3 py-2.5 rounded-lg border border-transparent hover:border-amber-500/30 hover:bg-hub-900/50 transition-all ${STATE.gpuId === g.id ? 'active border-amber-500 bg-amber-500/10' : 'border-hub-700/50 bg-hub-900/30'}" data-id="${g.id}">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-white">${g.name}</span>
+                        <span class="text-xs ${g.brand === 'nvidia' ? 'text-green-400' : g.brand === 'amd' ? 'text-red-400' : 'text-blue-400'}">${g.brand === 'nvidia' ? 'N' : g.brand === 'amd' ? 'A' : 'I'}</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-[11px] text-slate-500 mt-0.5">
+                        <span>${g.vram}GB ${g.memoryType}</span>
+                        <span>${g.tdp}W</span>
+                        <span>${g.relGaming || 0}pt</span>
+                        <span class="ml-auto">${g.releaseYear}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            container.querySelectorAll('.gpu-select-item').forEach(el => {
+                el.addEventListener('click', () => selectGPU(el.dataset.id));
+            });
+        }
+
+        function selectGPU(id) {
+            STATE.gpuId = id;
+            STATE.gpu = GPU_DB.find(g => g.id === id);
+            if (!STATE.gpu) return;
+            renderGPUList(currentBrand, currentQuery);
+            updateSelectedGPUInfo();
+            updateAll();
+        }
+
+        let currentBrand = 'all';
+        let currentQuery = '';
+
+        function updateSelectedGPUInfo() {
+            const g = STATE.gpu;
+            const info = $('selected-gpu-info');
+            if (!g) { info.classList.add('hidden'); return; }
+            info.classList.remove('hidden');
+            $('sel-gpu-name').textContent = g.name;
+            $('sel-gpu-brand').textContent = g.brand === 'nvidia' ? 'NVIDIA' : g.brand === 'amd' ? 'AMD' : 'Intel';
+            $('sel-gpu-vram').textContent = g.vram + 'GB';
+            $('sel-gpu-fp32').textContent = g.fp32.toFixed(1) + 'T';
+            $('sel-gpu-tdp').textContent = g.tdp + 'W';
+            $('sel-gpu-bw').textContent = g.bandwidth + 'GB/s';
+
+            const msrpHint = $('msrp-hint');
+            if (g.msrp) {
+                msrpHint.classList.remove('hidden');
+                const priceInTWD = STATE.currency === 'TWD' ? `NT$${Math.round(g.msrp * TWD_PER_USD).toLocaleString()}` : `US$${g.msrp.toLocaleString()}`;
+                $('msrp-value').textContent = priceInTWD;
+            } else {
+                msrpHint.classList.add('hidden');
+            }
+        }
+
+        function renderUseCaseButtons() {
+            const grid = $('use-case-grid');
+            grid.innerHTML = USE_CASES.map(uc => `
+                <button class="use-case-btn px-2 py-3 rounded-lg text-xs font-medium text-center transition-all ${STATE.useCase === uc.id ? 'active bg-amber-500/20 border-amber-500 text-amber-300 border' : 'bg-hub-900 text-slate-400 border border-hub-700 hover:border-amber-500/50 hover:text-amber-300'}" data-id="${uc.id}">
+                    <i data-lucide="${uc.icon}" class="w-4 h-4 mx-auto mb-1"></i>
+                    <span>${uc.label}</span>
+                </button>
+            `).join('');
+            grid.querySelectorAll('.use-case-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.use-case-btn').forEach(b => {
+                        b.classList.remove('active', 'bg-amber-500/20', 'border-amber-500', 'text-amber-300');
+                        b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                    });
+                    btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                    btn.classList.add('active', 'bg-amber-500/20', 'border-amber-500', 'text-amber-300');
+                    STATE.useCase = btn.dataset.id;
+                    updateAll();
+                });
+            });
+            lucide.createIcons();
+        }
+
+        // === SECTION 6: UPDATE & RENDER RESULTS ===
+        function updateAll() {
+            const gpu = STATE.gpu;
+            const price = STATE.price;
+            const useCase = STATE.useCase;
+
+            const worthCard = $('worth-it-card');
+            const costCard = $('cost-metrics-card');
+            const chartsCard = $('charts-card');
+            const aiCard = $('ai-analysis-card');
+            const recCard = $('recommendations-card');
+
+            if (!gpu || !price) {
+                // Show empty state
+                $('worth-it-content').innerHTML = '<i data-lucide="arrow-left" class="w-12 h-12 mx-auto mb-3 opacity-30"></i><p class="text-sm">請先選擇 GPU 並輸入價格</p>';
+                [costCard, chartsCard, aiCard, recCard].forEach(c => c.classList.add('hidden'));
+                lucide.createIcons();
+                return;
+            }
+
+            [costCard, chartsCard, aiCard, recCard].forEach(c => c.classList.remove('hidden'));
+
+            // Compute scores
+            const valueScore = computeValueScore(gpu, price, useCase);
+            const badge = getWorthItBadge(gpu, price, valueScore);
+            const stars = getStarRating(valueScore);
+            const perfScore = computeUseCaseScore(gpu, useCase);
+            const fps = estimateFPS(gpu);
+            const elec = calculateElectricity(gpu.tdp, STATE.dailyHours, STATE.electricityRate, STATE.currency);
+            const costPerGB = getCostPerGB(gpu, price);
+            const costPerTFLOP = getCostPerTFLOP(gpu, price, useCase);
+
+            // Render worth-it badge
+            const symbol = STATE.currency === 'TWD' ? 'NT$' : 'US$';
+            const worthHTML = `
+                <div class="text-center">
+                    <div class="inline-block px-4 py-2 rounded-full text-sm font-bold border mb-2 ${badge.css}">
+                        ${badge.label}
+                    </div>
+                    <div class="mt-3">
+                        <div class="inline-flex items-center gap-1 text-2xl sm:text-3xl font-bold text-white">
+                            <span class="text-amber-400">${Math.round(valueScore)}</span>
+                            <span class="text-base text-slate-500">/ 100</span>
+                        </div>
+                        <div class="text-xl text-yellow-400 mt-1 tracking-wider">${stars}</div>
+                    </div>
+                    <div class="w-full bg-hub-900 rounded-full h-2.5 mt-3 overflow-hidden">
+                        <div class="score-gauge-fill h-full rounded-full bg-gradient-to-r from-red-500 via-amber-500 to-green-500" style="width: ${Math.round(valueScore)}%"></div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-hub-700/50">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                        ${computeStatTile('每 GB VRAM', symbol + (costPerGB ? Math.round(costPerGB).toLocaleString() : '—'), '資料盒', gpu.brand)}
+                        ${computeStatTile('每 TFLOPS', symbol + (costPerTFLOP ? Math.round(costPerTFLOP).toLocaleString() : '—'), 'flash', useCase)}
+                        ${fps ? computeStatTile('每 FPS（估）', symbol + Math.round(price / fps).toLocaleString(), 'crosshair', '遊戲') : computeStatTile('每 FPS（估）', '—', 'crosshair', '')}
+                        ${computeStatTile('AI 評分', Math.round(valueScore) + '/100', 'trending-up', `效能 ${Math.round(perfScore * 100)}%`)}
+                    </div>
+                </div>
+            `;
+            const worthContent = $('worth-it-content');
+            worthContent.innerHTML = worthHTML;
+            // Animate
+            const gauge = worthContent.querySelector('.score-gauge-fill');
+            if (gauge) setTimeout(() => gauge.style.width = Math.round(valueScore) + '%', 50);
+
+            // Electricity
+            $(`electricity-breakdown`).innerHTML = `
+                <h3 class="text-xs font-medium text-slate-400 mb-2">預估耗電成本 (${gpu.tdp}W · ${STATE.dailyHours}小時/天)</h3>
+                <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div class="bg-hub-900 rounded-lg p-2"><div class="text-slate-500">每日</div><div class="text-white font-bold mt-0.5">${elec.symbol}${elec.daily}</div></div>
+                    <div class="bg-hub-900 rounded-lg p-2"><div class="text-slate-500">每月</div><div class="text-white font-bold mt-0.5">${elec.symbol}${parseFloat(elec.monthly).toLocaleString()}</div></div>
+                    <div class="bg-hub-900 rounded-lg p-2"><div class="text-slate-500">每年</div><div class="text-white font-bold mt-0.5">${elec.symbol}${parseFloat(elec.yearly).toLocaleString()}</div></div>
+                    <div class="bg-hub-900 rounded-lg p-2"><div class="text-slate-500">每日用電</div><div class="text-white font-bold mt-0.5">${elec.dailyKwh} kWh</div></div>
+                </div>
+            `;
+
+            // Cost metrics grid
+            $('cost-metrics-grid').innerHTML = `
+                ${costPerGB ? `
+                <div class="bg-hub-900 rounded-xl p-4 border border-hub-700">
+                    <div class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5"></i> 每 GB VRAM</div>
+                    <div class="text-xl font-bold text-white mt-1">${symbol}${Math.round(costPerGB).toLocaleString()}</div>
+                    <div class="text-[10px] text-slate-600 mt-0.5">${gpu.vram}GB 總容量</div>
+                </div>` : ''}
+                ${costPerTFLOP ? `
+                <div class="bg-hub-900 rounded-xl p-4 border border-hub-700">
+                    <div class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="zap" class="w-3.5 h-3.5"></i> 每 TFLOPS</div>
+                    <div class="text-xl font-bold text-white mt-1">${symbol}${Math.round(costPerTFLOP).toLocaleString()}</div>
+                    <div class="text-[10px] text-slate-600 mt-0.5">${(useCase.startsWith('ai')||useCase==='llm'||useCase==='stable-diffusion' ? 'FP16' : 'FP32')}</div>
+                </div>` : ''}
+                <div class="bg-hub-900 rounded-xl p-4 border border-hub-700">
+                    <div class="text-xs text-slate-500 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 年電費占比</div>
+                    <div class="text-xl font-bold text-white mt-1">${(parseFloat(elec.yearly) / price * 100).toFixed(1)}%</div>
+                    <div class="text-[10px] text-slate-600 mt-0.5">${Math.round(price).toLocaleString()} 購入成本</div>
+                </div>
+            `;
+
+            // Charts (VRAM bar, power bar, value bar)
+            $('charts-content').innerHTML = `
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1.5"><span class="text-slate-400">VRAM 容量</span><span class="text-white font-medium">${gpu.vram}GB</span></div>
+                    <div class="w-full h-3 bg-hub-900 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full bar-animate bg-gradient-to-r from-amber-500 to-yellow-400" style="width: ${Math.min(100, (gpu.vram / 48) * 100)}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1.5"><span class="text-slate-400">功耗 (TDP)</span><span class="text-white font-medium">${gpu.tdp}W</span></div>
+                    <div class="w-full h-3 bg-hub-900 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full bar-animate bg-gradient-to-r from-green-500 via-amber-500 to-red-500" style="width: ${Math.min(100, (gpu.tdp / 575) * 100)}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1.5"><span class="text-slate-400">性價比得分</span><span class="text-white font-medium">${Math.round(valueScore)}/100</span></div>
+                    <div class="w-full h-4 bg-hub-900 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full bar-animate ${valueScore >= 70 ? 'bg-gradient-to-r from-green-500 to-emerald-400' : valueScore >= 50 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-red-500 to-orange-400'}" style="width: ${Math.round(valueScore)}%"></div>
+                    </div>
+                </div>
+            `;
+
+            // AI Analysis text
+            const perfDesc = perfScore >= 0.8 ? '非常適合' : perfScore >= 0.6 ? '適合' : perfScore >= 0.4 ? '基本可用於' : '不太適合';
+            const vramAdvice = gpu.vram >= 24 ? '擁有充足的 VRAM，能夠應付大多數 LLM 與 AI 推論需求' : gpu.vram >= 12 ? 'VRAM 水準適中，可滿足多數入門 AI 與遊戲需求' : 'VRAM 較為有限，建議優先考慮輕量級工作負載';
+            const brandNote = gpu.brand === 'nvidia' ? 'NVIDIA 擁有成熟的 CUDA 生態系，在 AI 框架相容性上最具優勢' : gpu.brand === 'amd' ? 'AMD ROCm 生態系持續進步，但在部分 AI 框架中相容性仍需注意' : 'Intel Arc 的 AI 生態系尚在發展初期，建議確認軟體相容性';
+            const generationNote = gpu.arch === 'Blackwell' || gpu.arch === 'Ada Lovelace' ? '搭載最新世代架構，支援 FP8/INT4 等新精度格式，AI 效能顯著' : gpu.arch === 'Ampere' ? 'Ampere 架構仍具競爭力，Tensor Core 支援完整' : gpu.arch === 'Turing' ? 'Turing 架構較為老舊，缺乏最新精度支援' : '架構世代較舊，建議考量升級方案';
+
+            $('ai-analysis-text').innerHTML = `
+                <p class="mb-2"><span class="text-white font-medium">${gpu.name}</span> 以 ${symbol}${Math.round(price).toLocaleString()} 的價格，${perfDesc} ${USE_CASE_MAP[useCase]?.label || '您選擇的用途'}。</p>
+                <p class="mb-2">${vramAdvice}。${generationNote}。</p>
+                <p class="mb-2">${brandNote}。${badge.text}</p>
+                <p class="text-slate-500 text-xs mt-3">* 以上分析基於硬體規格與當前市場價格綜合評估，實際表現可能因驅動版本、散熱條件與工作負載而異。</p>
+            `;
+
+            // Recommendations
+            renderRecommendations(useCase);
+
+            // Comparison
+            renderComparisonSelects();
+
+            // Lucide icons
+            lucide.createIcons();
+        }
+
+        function computeStatTile(label, value, icon, sublabel) {
+            return `<div class="bg-hub-900 rounded-lg p-3 border border-hub-700/50">
+                <div class="text-[10px] text-slate-500">${label}</div>
+                <div class="text-sm sm:text-base font-bold text-white mt-0.5">${value}</div>
+                ${sublabel ? `<div class="text-[10px] text-slate-600">${sublabel}</div>` : ''}
+            </div>`;
+        }
+
+        function renderRecommendations(useCaseId) {
+            const list = $('recommendations-list');
+            const scored = GPU_DB.filter(g => g.type !== 'datacenter' || useCaseId === 'llm' || useCaseId === 'ai-training')
+                .map(g => ({ gpu: g, score: computeUseCaseScore(g, useCaseId) * 100 }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5);
+            list.innerHTML = scored.map((item, i) => `
+                <div class="recommend-card flex items-center gap-3 bg-hub-900 rounded-xl px-4 py-3 border border-hub-700/50 cursor-pointer hover:border-amber-500/30" data-id="${item.gpu.id}">
+                    <div class="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-xs">${i + 1}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-white">${item.gpu.name}</span>
+                            <span class="text-[10px] ${item.gpu.brand === 'nvidia' ? 'text-green-500' : item.gpu.brand === 'amd' ? 'text-red-500' : 'text-blue-500'}">${item.gpu.brand.toUpperCase()}</span>
+                        </div>
+                        <div class="text-xs text-slate-500">${item.gpu.vram}GB · ${item.gpu.tdp}W · ${item.gpu.fp32.toFixed(1)} TFLOPS</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-amber-400">${Math.round(item.score)}</div>
+                        <div class="text-[10px] text-slate-600">推薦分</div>
+                    </div>
+                </div>
+            `).join('');
+            list.querySelectorAll('.recommend-card').forEach(el => {
+                el.addEventListener('click', () => selectGPU(el.dataset.id));
+            });
+        }
+
+        // === SECTION 7: COMPARISON ===
+        function renderComparisonSelects() {
+            const selA = $('compare-select-a');
+            const selB = $('compare-select-b');
+            const options = GPU_DB.map(g => `<option value="${g.id}">${g.name} (${g.vram}GB)</option>`).join('');
+            const currentA = selA.value;
+            const currentB = selB.value;
+            selA.innerHTML = `<option value="">請選擇 GPU A</option>${options}`;
+            selB.innerHTML = `<option value="">請選擇 GPU B</option>${options}`;
+            if (currentA) selA.value = currentA;
+            if (currentB) selB.value = currentB;
+            updateComparisonInfo();
+        }
+
+        function updateComparisonInfo() {
+            const idA = $('compare-select-a').value;
+            const idB = $('compare-select-b').value;
+            const gpuA = idA ? GPU_DB.find(g => g.id === idA) : null;
+            const gpuB = idB ? GPU_DB.find(g => g.id === idB) : null;
+            STATE.compareA = gpuA;
+            STATE.compareB = gpuB;
+            $('compare-a-info').textContent = gpuA ? `${gpuA.name} · ${gpuA.vram}GB · ${gpuA.tdp}W` : '';
+            $('compare-b-info').textContent = gpuB ? `${gpuB.name} · ${gpuB.vram}GB · ${gpuB.tdp}W` : '';
+            renderComparisonResults(gpuA, gpuB);
+        }
+
+        function renderComparisonResults(gpuA, gpuB) {
+            const container = $('comparison-results');
+            const radarContainer = $('radar-chart-container');
+            if (!gpuA || !gpuB) {
+                container.innerHTML = '<div class="text-center py-6 text-slate-500 text-sm">請選擇兩張 GPU 進行比較</div>';
+                radarContainer.classList.add('hidden');
+                return;
+            }
+            if (gpuA.id === gpuB.id) {
+                container.innerHTML = '<div class="text-center py-4 text-amber-400 text-sm">您選擇了相同的 GPU，請選擇不同的型號進行比較</div>';
+                radarContainer.classList.add('hidden');
+                return;
+            }
+
+            const fields = [
+                { label: 'VRAM', a: gpuA.vram + 'GB', b: gpuB.vram + 'GB', pct: gpuA.vram / Math.max(gpuA.vram, gpuB.vram) * 100 },
+                { label: 'FP32 TFLOPS', a: gpuA.fp32.toFixed(1), b: gpuB.fp32.toFixed(1), pct: gpuA.fp32 / Math.max(gpuA.fp32, gpuB.fp32) * 100 },
+                { label: 'FP16 TFLOPS', a: (gpuA.fp16 || 0).toFixed(1), b: (gpuB.fp16 || 0).toFixed(1), pct: (gpuA.fp16 || 0) / Math.max(gpuA.fp16 || 0, gpuB.fp16 || 0) * 100 },
+                { label: '頻寬 (GB/s)', a: gpuA.bandwidth, b: gpuB.bandwidth, pct: gpuA.bandwidth / Math.max(gpuA.bandwidth, gpuB.bandwidth) * 100 },
+                { label: 'TDP (W)', a: gpuA.tdp + 'W', b: gpuB.tdp + 'W', pct: (1 - gpuA.tdp / Math.max(gpuA.tdp, gpuB.tdp)) * 100 },
+                { label: 'CUDA/SP', a: (gpuA.cudaCores || gpuA.streamProcessors || 0).toLocaleString(), b: (gpuB.cudaCores || gpuB.streamProcessors || 0).toLocaleString(), pct: (gpuA.cudaCores || gpuA.streamProcessors || 0) / Math.max(gpuA.cudaCores || gpuA.streamProcessors || 0, gpuB.cudaCores || gpuB.streamProcessors || 0) * 100 },
+                { label: 'Tensor Core', a: (gpuA.tensorCores || 0).toLocaleString(), b: (gpuB.tensorCores || 0).toLocaleString(), pct: (gpuA.tensorCores || 0) / Math.max(gpuA.tensorCores || 0, gpuB.tensorCores || 0) * 100 },
+                { label: '遊戲效能', a: (gpuA.relGaming || 0) + 'pt', b: (gpuB.relGaming || 0) + 'pt', pct: (gpuA.relGaming || 0) / Math.max(gpuA.relGaming || 0, gpuB.relGaming || 0) * 100 },
+            ];
+
+            // Calculate winner counts
+            const aWins = fields.filter(f => parseFloat(f.a) > parseFloat(f.b)).length;
+            const bWins = fields.filter(f => parseFloat(f.a) < parseFloat(f.b)).length;
+
+            const tick = '<i data-lucide="check" class="w-3.5 h-3.5 inline text-green-400"></i>';
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs sm:text-sm">
+                        <thead>
+                            <tr class="border-b border-hub-700">
+                                <th class="text-left py-2 pr-4 text-slate-500 font-medium">規格</th>
+                                <th class="text-center py-2 px-2 text-amber-400 font-bold">${gpuA.name}</th>
+                                <th class="text-center py-2 px-2 text-blue-400 font-bold">${gpuB.name}</th>
+                                <th class="text-left py-2 pl-4 text-slate-500 font-medium min-w-[120px]">比較</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${fields.map(f => {
+                                const aVal = parseFloat(f.a);
+                                const bVal = parseFloat(f.b);
+                                const winner = aVal > bVal ? 'A' : bVal > aVal ? 'B' : 'EQ';
+                                return `<tr class="border-b border-hub-700/50">
+                                    <td class="py-2.5 pr-4 text-slate-400">${f.label}</td>
+                                    <td class="py-2.5 px-2 text-center font-medium text-white">${f.a}${winner === 'A' ? ' ' + tick : ''}</td>
+                                    <td class="py-2.5 px-2 text-center font-medium text-white">${f.b}${winner === 'B' ? ' ' + tick : ''}</td>
+                                    <td class="py-2.5 pl-4"><div class="w-full h-1.5 bg-hub-900 rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400" style="width:${Math.round(f.pct)}%"></div></div></td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-center text-xs">
+                    <span class="text-amber-400 font-bold">${gpuA.name}</span> 贏得 <span class="text-white font-bold">${aWins}</span> 項 vs <span class="text-blue-400 font-bold">${gpuB.name}</span> 贏得 <span class="text-white font-bold">${bWins}</span> 項
+                    ${aWins > bWins ? `<span class="text-green-400 ml-2">→ ${gpuA.name} 整體規格較優</span>` : bWins > aWins ? `<span class="text-blue-400 ml-2">→ ${gpuB.name} 整體規格較優</span>` : '<span class="text-slate-400 ml-2">→ 兩者實力相當</span>'}
+                </div>
+            `;
+
+            // Radar chart
+            radarContainer.classList.remove('hidden');
+            drawRadarChart(gpuA, gpuB);
+        }
+
+        // === SECTION 8: RADAR CHART (Canvas) ===
+        function drawRadarChart(gpuA, gpuB) {
+            const canvas = document.getElementById('radar-canvas');
+            if (!canvas) return;
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth || 400, 400);
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const dimensions = [
+                { key:'vram', label:'VRAM', normA: normalizeValue(gpuA, 'vram'), normB: normalizeValue(gpuB, 'vram') },
+                { key:'fp32', label:'FP32', normA: normalizeValue(gpuA, 'fp32'), normB: normalizeValue(gpuB, 'fp32') },
+                { key:'fp16', label:'FP16/AI', normA: normalizeValue(gpuA, 'fp16'), normB: normalizeValue(gpuB, 'fp16') },
+                { key:'bandwidth', label:'頻寬', normA: normalizeValue(gpuA, 'bandwidth'), normB: normalizeValue(gpuB, 'bandwidth') },
+                { key:'gaming', label:'遊戲', normA: normalizeValue(gpuA, 'gaming'), normB: normalizeValue(gpuB, 'gaming') },
+                { key:'tdp_inv', label:'能效', normA: normalizeValue(gpuA, 'tdp_inv'), normB: normalizeValue(gpuB, 'tdp_inv') },
+            ];
+
+            const cx = size / 2;
+            const cy = size / 2;
+            const r = size * 0.35;
+            const levels = 5;
+            const n = dimensions.length;
+
+            ctx.clearRect(0, 0, size, size);
+
+            // Grid
+            for (let lvl = 1; lvl <= levels; lvl++) {
+                const rl = (r / levels) * lvl;
+                ctx.beginPath();
+                for (let i = 0; i <= n; i++) {
+                    const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+                    const x = cx + rl * Math.cos(angle);
+                    const y = cy + rl * Math.sin(angle);
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // Axes
+            for (let i = 0; i < n; i++) {
+                const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+                ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                ctx.stroke();
+
+                // Labels
+                const lx = cx + (r + 25) * Math.cos(angle);
+                const ly = cy + (r + 25) * Math.sin(angle);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.font = '11px sans-serif';
+                ctx.fillText(dimensions[i].label, lx, ly);
+            }
+
+            // GPU A polygon
+            ctx.beginPath();
+            for (let i = 0; i <= n; i++) {
+                const idx = i % n;
+                const angle = (Math.PI * 2 * idx / n) - Math.PI / 2;
+                const val = Math.max(0.02, dimensions[idx].normA);
+                const x = cx + r * val * Math.cos(angle);
+                const y = cy + r * val * Math.sin(angle);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // GPU B polygon
+            ctx.beginPath();
+            for (let i = 0; i <= n; i++) {
+                const idx = i % n;
+                const angle = (Math.PI * 2 * idx / n) - Math.PI / 2;
+                const val = Math.max(0.02, dimensions[idx].normB);
+                const x = cx + r * val * Math.cos(angle);
+                const y = cy + r * val * Math.sin(angle);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = '#3B82F6';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Legend
+            ctx.fillStyle = '#F59E0B';
+            ctx.fillRect(cx - r * 0.6, cy + r + 20, 12, 12);
+            ctx.fillStyle = '#fff';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(gpuA.name, cx - r * 0.6 + 18, cy + r + 30);
+
+            ctx.fillStyle = '#3B82F6';
+            ctx.fillRect(cx + 10, cy + r + 20, 12, 12);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(gpuB.name, cx + 28, cy + r + 30);
+        }
+
+        // === SECTION 9: TOAST ===
+        let toastTimer = null;
+        function showToast(msg, isError) {
+            const toast = $('toast');
+            const toastMsg = $('toast-msg');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastMsg.textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            if (isError) {
+                toast.classList.add('bg-red-950', 'border-red-900');
+                toast.querySelector('i').setAttribute('data-lucide', 'alert-triangle');
+            } else {
+                toast.classList.remove('bg-red-950', 'border-red-900');
+                toast.querySelector('i').setAttribute('data-lucide', 'check-circle');
+            }
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // === SECTION 10: EVENT BINDINGS & INIT ===
+        function initApp() {
+            // Brand filters
+            document.querySelectorAll('.brand-filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.brand-filter-btn').forEach(b => {
+                        b.classList.remove('active', 'bg-amber-500/20', 'border-amber-500', 'text-amber-300');
+                        b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                    });
+                    btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                    btn.classList.add('active', 'bg-amber-500/20', 'border-amber-500', 'text-amber-300');
+                    currentBrand = btn.dataset.brand;
+                    renderGPUList(currentBrand, currentQuery);
+                });
+            });
+
+            // Search
+            $('gpu-search').addEventListener('input', (e) => {
+                currentQuery = e.target.value;
+                renderGPUList(currentBrand, currentQuery);
+            });
+
+            // Price input
+            $('in-price').addEventListener('input', (e) => {
+                STATE.price = parseFloat(e.target.value) || 0;
+            });
+
+            // Currency toggle
+            $('btn-currency').addEventListener('click', () => {
+                const price = parseFloat($('in-price').value) || 0;
+                if (STATE.currency === 'TWD') {
+                    STATE.currency = 'USD';
+                    $('price-currency-symbol').textContent = 'US$';
+                    if (price) $('in-price').value = Math.round(price / TWD_PER_USD);
+                    $('btn-currency').textContent = 'USD ↔ TWD';
+                } else {
+                    STATE.currency = 'TWD';
+                    $('price-currency-symbol').textContent = 'NT$';
+                    if (price) $('in-price').value = Math.round(price * TWD_PER_USD);
+                    $('btn-currency').textContent = 'TWD ↔ USD';
+                }
+                STATE.price = parseFloat($('in-price').value) || 0;
+                updateAll();
+                updateSelectedGPUInfo();
+            });
+
+            // Electricity
+            $('in-electricity').addEventListener('input', (e) => {
+                STATE.electricityRate = parseFloat(e.target.value) || 0;
+            });
+
+            document.querySelectorAll('.elect-preset').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rate = parseFloat(btn.dataset.rate);
+                    STATE.electricityRate = rate;
+                    $('in-electricity').value = rate;
+                    updateAll();
+                });
+            });
+
+            // Hours slider sync
+            const slider = $('hours-slider');
+            const input = $('hours-input');
+            const display = $('hours-display');
+            function syncHours(val) {
+                const v = Math.max(1, Math.min(24, parseInt(val) || 8));
+                slider.value = v;
+                input.value = v;
+                display.textContent = v + ' 小時';
+                STATE.dailyHours = v;
+                if (STATE.gpu && STATE.price) updateAll();
+            }
+            slider.addEventListener('input', (e) => syncHours(e.target.value));
+            input.addEventListener('input', (e) => syncHours(e.target.value));
+
+            // Calculate button
+            $('btn-calculate').addEventListener('click', () => {
+                STATE.price = parseFloat($('in-price').value) || 0;
+                STATE.electricityRate = parseFloat($('in-electricity').value) || 0;
+                if (!STATE.gpu) { showToast('請先選擇 GPU', true); return; }
+                if (!STATE.price) { showToast('請輸入價格', true); return; }
+                updateAll();
+                // Scroll to results on mobile
+                if (window.innerWidth < 1024) {
+                    $('worth-it-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                showToast('分析完成！');
+            });
+
+            // Compare selectors
+            $('compare-select-a').addEventListener('change', updateComparisonInfo);
+            $('compare-select-b').addEventListener('change', updateComparisonInfo);
+
+            // Initial render
+            renderGPUList('all', '');
+            renderUseCaseButtons();
+            renderComparisonSelects();
+        }
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

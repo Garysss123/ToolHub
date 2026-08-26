@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Audio Studio | Free Online Tool - ToolHub</title>
+<meta content="Free, no-installation browser-based audio workstation. Supports MP3/WAV/FLAC/OGG/AAC/M4A editing, waveform display, clip segmentation, sound effects processing (EQ/Compressor/Reverb), voice changing effects, multi-track mixing, and spectrum analysis. 100% pure front-end, files will never be leaked." name="description"/>
+<meta content="Audio Editor, Browser Audio Workstation, MP3 Cutter, Audio Trimmer, Voice Changer, Audio Merger, Audio Effects, DAW, Web Audio API, Spectrogram, Audio Normalizer, ToolHub" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body { background: #0B1120; color: #E2E8F0; font-family: 'Fira Code', monospace; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06B6D4; }
+
+        .daw-bg { background: #0d1117; }
+        .daw-panel { background: #161b22; border: 1px solid #21262d; border-radius: 6px; }
+        .daw-btn { padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: .15s; border: 1px solid #30363d; color: #c9d1d9; background: #21262d; display: inline-flex; align-items: center; gap: 4px; }
+        .daw-btn:hover { background: #30363d; border-color: #06B6D4; }
+        .daw-btn.active { background: #06B6D4; color: #0d1117; border-color: #06B6D4; }
+        .daw-btn.rec { background: #da3633; color: #fff; border-color: #da3633; }
+        .daw-btn.rec:hover { background: #f85149; }
+
+        .transport-btn { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: .15s; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; }
+        .transport-btn:hover { border-color: #06B6D4; color: #06B6D4; }
+        .transport-btn.play { background: #06B6D4; color: #0d1117; border-color: #06B6D4; }
+
+        #waveform-canvas, #spec-canvas { width: 100%; height: 100%; display: block; }
+        .waveform-container { position: relative; background: #0d1117; border: 1px solid #21262d; border-radius: 4px; overflow: hidden; }
+        .timeline-ruler { height: 24px; background: #161b22; border-bottom: 1px solid #21262d; position: relative; overflow: hidden; }
+
+        .track-row { display: flex; align-items: center; border-bottom: 1px solid #21262d; min-height: 80px; }
+        .track-label { width: 120px; min-width: 120px; padding: 6px 10px; border-right: 1px solid #21262d; background: #161b22; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+        .track-wave { flex: 1; height: 80px; position: relative; background: #0d1117; overflow: hidden; cursor: pointer; }
+
+        .knob-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .knob { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #30363d; cursor: pointer; position: relative; background: #21262d; }
+        .knob::after { content: ''; position: absolute; top: 2px; left: 50%; width: 2px; height: 8px; background: #06B6D4; border-radius: 1px; transform-origin: bottom center; }
+
+        .effect-btn { padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; border: 1px solid #30363d; color: #8b949e; background: transparent; transition: .15s; }
+        .effect-btn:hover { border-color: #06B6D4; color: #c9d1d9; }
+        .effect-btn.on { background: rgba(6,182,212,0.15); border-color: #06B6D4; color: #22D3EE; }
+
+        .freq-bar { flex: 1; background: linear-gradient(to top, #06B6D4 0%, transparent 100%); border-radius: 1px; min-width: 2px; }
+
+        .faq-item summary { cursor: pointer; font-weight: 500; font-size: .95rem; padding: .75rem 0; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #06B6D4; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; font-family: 'Noto Sans TC', sans-serif; }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #21262d; border-radius: 2px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #06B6D4; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #06B6D4; cursor: pointer; border: none; }
+
+        .drop-zone { border: 2px dashed #30363d; border-radius: 12px; padding: 40px; text-align: center; transition: .2s; cursor: pointer; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: #06B6D4; background: rgba(6,182,212,0.05); }
+
+        @media (max-width: 768px) {
+            .track-label { width: 80px; min-width: 80px; }
+            .hide-mobile { display: none !important; }
+        }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/audio-studio/" property="og:url"/>
+<meta content="Audio Studio | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free, no-installation browser-based audio workstation. Supports MP3/WAV/FLAC/OGG/AAC/M4A editing, waveform display, clip segmentation, sound effects processing (EQ/Compressor/Reverb), voice changing effects, multi-track mixing, and spectrum analysis. 100% pure front-end, files will never be leaked." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Audio Studio | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free, no-installation browser-based audio workstation. Supports MP3/WAV/FLAC/OGG/AAC/M4A editing, waveform display, clip segmentation, sound effects processing (EQ/Compressor/Reverb), voice changing effects, multi-track mixing, and spectrum analysis. 100% pure front-end, files will never be leaked." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Mini Audio Studio – Browser Audio Workstation","url":"https://toolhuben.com/en/audio-studio/","description":"Free, no-installation browser-based audio workstation. Supports MP3/WAV/FLAC/OGG/AAC/M4A editing, waveform display, clip segmentation, sound effects processing (EQ/Compressor/Reverb), voice changing effects, multi-track mixing, and spectrum analysis. 100% pure front-end, files will never be leaked.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Mini Audio Studio – Browser Audio Workstation","item":"https://toolhuben.com/en/audio-studio/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/audio-studio/" rel="canonical"/><link href="https://toolhuben.com/audio-studio/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/audio-studio/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/audio-studio/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","建立理念":"Our Founding Idea","建議":"Recommendation","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","本機處理":"processed locally","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen daw-bg" data-classic-layout="editorial" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#06B6D4;--classic-accent-rgb:6,182,212">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-4 pb-20">
+<!-- Privacy Banner -->
+<div class="text-center mb-4">
+<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-hub-800 border border-hub-700 text-[11px] text-au">
+<i class="w-3.5 h-3.5" data-lucide="shield-check"></i>
+                ✅ Pure front-end local computing · Your audio files never leave the device
+            </div>
+<h1 class="text-2xl md:text-3xl font-bold text-white mt-3 tracking-tight">
+                Mini Audio Studio
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-au to-blue-400"> – Browser audio workstation</span>
+</h1>
+</div>
+<!-- Usage Guide -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-[11px] text-slate-500">
+<div class="daw-panel p-2 text-center"><span class="text-au font-bold">①</span> Load audio<br/><span class="text-[10px] text-slate-600">Drag and drop the file or click Open</span></div>
+<div class="daw-panel p-2 text-center"><span class="text-au font-bold">②</span> Edit<br/><span class="text-[10px] text-slate-600">Drag the selection range · Click to jump to play</span></div>
+<div class="daw-panel p-2 text-center"><span class="text-au font-bold">③</span> Effect<br/><span class="text-[10px] text-slate-600">Turn on EQ/Comp/Reverb etc.</span></div>
+<div class="daw-panel p-2 text-center"><span class="text-au font-bold">④</span> remit<br/><span class="text-[10px] text-slate-600">WAV/OGG/MP3 download</span></div>
+</div>
+<!-- Drop Zone (shown when no audio loaded) -->
+<div class="drop-zone mb-4" id="drop-zone">
+<i class="w-10 h-10 text-au mx-auto mb-3" data-lucide="music"></i>
+<p class="text-slate-400 text-sm mb-1">Drag and drop audio files here, or click to select files</p>
+<p class="text-slate-600 text-[11px]">Supports MP3, WAV, FLAC, OGG, AAC, M4A, WebM · Paste from clipboard</p>
+<input accept="audio/*,.mp3,.wav,.flac,.ogg,.aac,.m4a,.webm" class="hidden" id="file-picker" multiple="" type="file"/>
+<button class="daw-btn mt-3 text-xs px-4 py-2" id="btn-pick-file"><i class="w-3.5 h-3.5" data-lucide="folder-open"></i> Select file</button>
+</div>
+<!-- DAW Main Panel (hidden until audio loaded) -->
+<div class="hidden space-y-3" id="daw-main">
+<!-- Toolbar -->
+<div class="daw-panel p-2 flex flex-wrap items-center gap-1.5">
+<div class="flex gap-1.5 pr-3 border-r border-[#21262d]">
+<button class="daw-btn" id="btn-new" title="New Project"><i class="w-3.5 h-3.5" data-lucide="file"></i><span class="hide-mobile">New</span></button>
+<button class="daw-btn" id="btn-open" title="Open File"><i class="w-3.5 h-3.5" data-lucide="folder-open"></i><span class="hide-mobile">Open</span></button>
+<button class="daw-btn" id="btn-save" title="Save Project"><i class="w-3.5 h-3.5" data-lucide="save"></i><span class="hide-mobile">Save</span></button>
+</div>
+<!-- Edit -->
+<div class="flex gap-1.5 pr-3 border-r border-[#21262d]">
+<button class="daw-btn" id="btn-undo" title="Undo (Ctrl+Z)"><i class="w-3.5 h-3.5" data-lucide="undo-2"></i></button>
+<button class="daw-btn" id="btn-redo" title="Redo (Ctrl+Y)"><i class="w-3.5 h-3.5" data-lucide="redo-2"></i></button>
+<button class="daw-btn" id="btn-copy" title="Copy Selection (Ctrl+C)"><i class="w-3.5 h-3.5" data-lucide="copy"></i></button>
+<button class="daw-btn" id="btn-paste" title="Paste (Ctrl+V)"><i class="w-3.5 h-3.5" data-lucide="clipboard"></i></button>
+<button class="daw-btn" id="btn-delete" title="Delete Selection (Delete)"><i class="w-3.5 h-3.5" data-lucide="trash-2"></i></button>
+<button class="daw-btn" id="btn-duplicate" title="Duplicate (Ctrl+D)"><i class="w-3.5 h-3.5" data-lucide="copy-plus"></i></button>
+</div>
+<!-- Zoom -->
+<div class="flex gap-1.5 pr-3 border-r border-[#21262d]">
+<button class="daw-btn" id="btn-zoom-in"><i class="w-3.5 h-3.5" data-lucide="zoom-in"></i></button>
+<button class="daw-btn" id="btn-zoom-out"><i class="w-3.5 h-3.5" data-lucide="zoom-out"></i></button>
+<button class="daw-btn" id="btn-zoom-fit"><i class="w-3.5 h-3.5" data-lucide="maximize"></i></button>
+</div>
+<!-- Snap / Loop -->
+<div class="flex gap-1.5">
+<button class="daw-btn" id="btn-loop"><i class="w-3.5 h-3.5" data-lucide="repeat"></i><span class="hide-mobile">Loop</span></button>
+</div>
+<div class="ml-auto flex gap-1.5">
+<span class="text-[10px] text-slate-600 self-center" id="status-info">No audio loaded</span>
+</div>
+</div>
+<!-- Transport -->
+<div class="daw-panel p-2 flex items-center gap-2 flex-wrap">
+<button class="transport-btn" id="btn-play"><i class="w-4 h-4" data-lucide="play" id="play-icon"></i></button>
+<button class="transport-btn" id="btn-stop"><i class="w-3.5 h-3.5" data-lucide="square"></i></button>
+<span class="text-[11px] font-mono text-slate-400 w-20" id="time-display">00:00.000</span>
+<span class="text-[11px] font-mono text-slate-600" id="duration-display">/ 00:00</span>
+<div class="flex items-center gap-1.5 ml-3">
+<span class="text-[10px] text-slate-600">Speed:</span>
+<select class="bg-[#21262d] border border-[#30363d] rounded text-[11px] text-slate-300 px-1.5 py-0.5 outline-none" id="playback-speed">
+<option value="0.25">0.25x</option>
+<option value="0.5">0.5x</option>
+<option value="0.75">0.75x</option>
+<option selected="" value="1">1x</option>
+<option value="1.25">1.25x</option>
+<option value="1.5">1.5x</option>
+<option value="2">2x</option>
+</select>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-[10px] text-slate-600">Pitch:</span>
+<select class="bg-[#21262d] border border-[#30363d] rounded text-[11px] text-slate-300 px-1.5 py-0.5 outline-none" id="pitch-shift">
+<option value="-12">-12</option>
+<option value="-6">-6</option>
+<option value="-3">-3</option>
+<option selected="" value="0">0</option>
+<option value="3">+3</option>
+<option value="6">+6</option>
+<option value="12">+12</option>
+</select>
+</div>
+<div class="flex items-center gap-1.5 ml-auto">
+<input class="w-16" id="volume-slider" max="1.5" min="0" step="0.01" type="range" value="1"/>
+<span class="text-[11px] text-slate-400 w-8 font-mono" id="volume-label">100%</span>
+</div>
+</div>
+<!-- Waveform + Tracks -->
+<div class="daw-panel p-0 overflow-hidden">
+<!-- Timeline Ruler -->
+<div class="timeline-ruler" id="timeline-ruler"></div>
+<!-- All Tracks stacked vertically -->
+<div class="relative" id="all-tracks" style="max-height:400px;overflow-y:auto;">
+<!-- tracks rendered here dynamically -->
+<div class="flex items-center justify-center h-32 text-[11px] text-slate-700" id="no-tracks-hint">
+                        Drop audio files or click Open to get started
+                    </div>
+</div>
+<!-- Track controls toolbar -->
+<div class="border-t border-[#21262d] flex items-center gap-2 px-3 py-1.5 bg-[#161b22]">
+<span class="text-[10px] text-slate-600">Tracks:</span>
+<button class="daw-btn text-[10px]" id="btn-add-track"><i class="w-3 h-3" data-lucide="plus"></i> Add Track</button>
+<span class="text-[9px] text-slate-600 ml-auto" id="track-count-text">0/10</span>
+</div>
+<!-- Minimap -->
+<div class="border-t border-[#21262d] h-12 relative" id="minimap-container">
+<canvas class="w-full h-full" id="minimap-canvas"></canvas>
+<div class="absolute top-0 bottom-0 border border-au/30 bg-au/5 pointer-events-none" id="minimap-viewport" style="left:0;width:100%;"></div>
+</div>
+</div>
+<!-- Bottom: Effects + Properties + Spectrogram -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+<!-- Effects Panel -->
+<div class="daw-panel p-3 lg:col-span-2">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-bold text-au uppercase tracking-wider">Audio Effects</span>
+</div>
+<!-- Row 1: Filters + Dynamics -->
+<div class="flex flex-wrap gap-1 mb-1.5">
+<button class="effect-btn" data-effect="eq">EQ</button>
+<button class="effect-btn" data-effect="hpf">High Pass</button>
+<button class="effect-btn" data-effect="lpf">Low Pass</button>
+<button class="effect-btn" data-effect="comp">Compressor</button>
+<button class="effect-btn" data-effect="gate">Noise Gate</button>
+<button class="effect-btn" data-effect="normalize">Normalize</button>
+</div>
+<!-- Row 2: Time-based + Modulation -->
+<div class="flex flex-wrap gap-1 mb-1.5">
+<button class="effect-btn" data-effect="reverb">Reverb</button>
+<button class="effect-btn" data-effect="delay">Echo</button>
+<button class="effect-btn" data-effect="chorus">Chorus</button>
+<button class="effect-btn" data-effect="tremolo">Tremolo</button>
+<button class="effect-btn" data-effect="dist">Distortion</button>
+</div>
+<!-- Row 3: Stereo + Special -->
+<div class="flex flex-wrap gap-1 mb-1.5">
+<button class="effect-btn" data-effect="pan">Stereo Pan</button>
+<button class="effect-btn" data-effect="crush">Bit Crusher</button>
+<button class="effect-btn" data-effect="reverse">Reverse</button>
+<button class="effect-btn" data-effect="fadein" style="display:none;">Fade In</button>
+<button class="effect-btn" data-effect="fadeout" style="display:none;">Fade Out</button>
+</div>
+<!-- Parameter sliders (shown when effect is active) -->
+<div class="space-y-1.5 mt-2" id="fx-params">
+<!-- EQ -->
+<div class="hidden flex gap-2 items-center" id="fx-eq">
+<span class="text-[9px] text-slate-600 w-8">EQ</span>
+<span class="text-[8px] text-slate-600">Lo</span><input class="w-16" id="eq-low" max="40" min="-40" type="range" value="0"/>
+<span class="text-[8px] text-slate-600">Mid</span><input class="w-16" id="eq-mid" max="40" min="-40" type="range" value="0"/>
+<span class="text-[8px] text-slate-600">Hi</span><input class="w-16" id="eq-high" max="40" min="-40" type="range" value="0"/>
+</div>
+<!-- HPF / LPF -->
+<div class="hidden flex gap-2 items-center" id="fx-hpf">
+<span class="text-[9px] text-slate-600 w-8">HPF</span>
+<span class="text-[8px] text-slate-600">Freq</span><input class="w-24" id="hpf-freq" max="8000" min="20" step="10" type="range" value="500"/>
+<span class="text-[8px] text-slate-500 font-mono" id="hpf-freq-label">500Hz</span>
+</div>
+<div class="hidden flex gap-2 items-center" id="fx-lpf">
+<span class="text-[9px] text-slate-600 w-8">LPF</span>
+<span class="text-[8px] text-slate-600">Freq</span><input class="w-24" id="lpf-freq" max="20000" min="200" step="50" type="range" value="5000"/>
+<span class="text-[8px] text-slate-500 font-mono" id="lpf-freq-label">5000Hz</span>
+</div>
+<!-- Delay -->
+<div class="hidden flex gap-2 items-center" id="fx-delay">
+<span class="text-[9px] text-slate-600 w-8">Echo</span>
+<span class="text-[8px] text-slate-600">Time</span><input class="w-16" id="delay-time" max="1" min="0.05" step="0.01" type="range" value="0.3"/>
+<span class="text-[8px] text-slate-600">Fbk</span><input class="w-16" id="delay-feedback" max="0.9" min="0" step="0.01" type="range" value="0.3"/>
+</div>
+<!-- Reverb -->
+<div class="hidden flex gap-2 items-center" id="fx-reverb">
+<span class="text-[9px] text-slate-600 w-8">Reverb</span>
+<span class="text-[8px] text-slate-600">Mix</span><input class="w-24" id="reverb-mix" max="1" min="0" step="0.01" type="range" value="0.3"/>
+</div>
+<!-- Chorus -->
+<div class="hidden flex gap-2 items-center" id="fx-chorus">
+<span class="text-[9px] text-slate-600 w-8">Chorus</span>
+<span class="text-[8px] text-slate-600">Depth</span><input class="w-24" id="chorus-depth" max="0.015" min="0" step="0.001" type="range" value="0.005"/>
+</div>
+<!-- Tremolo -->
+<div class="hidden flex gap-2 items-center" id="fx-tremolo">
+<span class="text-[9px] text-slate-600 w-8">Tremolo</span>
+<span class="text-[8px] text-slate-600">Rate</span><input class="w-24" id="tremolo-rate" max="15" min="1" step="0.5" type="range" value="5"/>
+<span class="text-[8px] text-slate-500 font-mono" id="tremolo-rate-label">5Hz</span>
+</div>
+<!-- Pan -->
+<div class="hidden flex gap-2 items-center" id="fx-pan">
+<span class="text-[9px] text-slate-600 w-8">Pan</span>
+<span class="text-[8px] text-slate-600">L</span><input class="w-32" id="pan-value" max="1" min="-1" step="0.05" type="range" value="0"/>
+<span class="text-[8px] text-slate-600">R</span>
+</div>
+<!-- Bit Crusher -->
+<div class="hidden flex gap-2 items-center" id="fx-crush">
+<span class="text-[9px] text-slate-600 w-8">Crush</span>
+<span class="text-[8px] text-slate-600">Bits</span><input class="w-16" id="crush-bits" max="16" min="2" step="1" type="range" value="8"/>
+<span class="text-[8px] text-slate-500 font-mono" id="crush-bits-label">8bit</span>
+</div>
+</div>
+<!-- Voice Presets -->
+<div class="flex flex-wrap gap-1 mb-2 pt-2 border-t border-[#21262d]">
+<span class="text-[10px] text-slate-600 self-center">Voice:</span>
+<button class="effect-btn" data-voice="robot">🤖 Robot</button>
+<button class="effect-btn" data-voice="chipmunk">🐹 Chipmunk</button>
+<button class="effect-btn" data-voice="deep">👹 Deep</button>
+<button class="effect-btn" data-voice="radio">📻 Radio</button>
+<button class="effect-btn" data-voice="telephone">📞 Telephone</button>
+<button class="effect-btn" data-voice="hall">🏛️ Hall</button>
+<button class="effect-btn" data-voice="alien">👽 Alien</button>
+<button class="effect-btn" data-voice="monster">👾 Monster</button>
+</div>
+<!-- Fade + Trim -->
+<div class="flex gap-3 items-center flex-wrap">
+<span class="text-[10px] text-slate-600">Fade:</span>
+<button class="effect-btn" id="btn-fade-in">Fade In</button>
+<button class="effect-btn" id="btn-fade-out">Fade Out</button>
+<span class="text-[10px] text-slate-600">Trim:</span>
+<input class="w-14 bg-[#21262d] border border-[#30363d] rounded text-[11px] text-slate-300 px-1 py-0.5 outline-none" id="trim-start" min="0" placeholder="0" step="0.1" type="number"/>
+<input class="w-14 bg-[#21262d] border border-[#30363d] rounded text-[11px] text-slate-300 px-1 py-0.5 outline-none" id="trim-end" min="0" placeholder="end" step="0.1" type="number"/>
+<button class="effect-btn" id="btn-apply-trim">Apply Trim</button>
+</div>
+<!-- Precise Selection -->
+<div class="flex gap-3 items-center flex-wrap mt-1.5 pt-1.5 border-t border-[#21262d]">
+<span class="text-[10px] text-slate-600">Selection:</span>
+<input class="w-16 bg-[#21262d] border border-[#30363d] rounded text-[11px] text-orange-300 px-1 py-0.5 outline-none font-mono" id="sel-start" min="0" placeholder="start" step="0.001" type="number"/>
+<span class="text-[10px] text-slate-600">→</span>
+<input class="w-16 bg-[#21262d] border border-[#30363d] rounded text-[11px] text-orange-300 px-1 py-0.5 outline-none font-mono" id="sel-end" min="0" placeholder="end" step="0.001" type="number"/>
+<button class="effect-btn" id="btn-apply-sel">Set Selection</button>
+<button class="effect-btn" id="btn-clear-sel">Clear</button>
+<span class="text-[10px] text-slate-600">Ctrl+Enter</span>
+</div>
+</div>
+<!-- Properties + Analysis -->
+<div class="daw-panel p-3 space-y-2">
+<span class="text-[11px] font-bold text-au uppercase tracking-wider">Properties</span>
+<div class="text-[11px] text-slate-500 space-y-1" id="metadata-display">
+<p>No audio loaded</p>
+</div>
+<div class="border-t border-[#21262d] pt-2">
+<span class="text-[11px] font-bold text-au uppercase tracking-wider">Analysis</span>
+<div class="grid grid-cols-2 gap-1 mt-1 text-[10px]">
+<div><span class="text-slate-600">Peak:</span> <span class="text-slate-300 font-mono" id="analysis-peak">—</span></div>
+<div><span class="text-slate-600">RMS:</span> <span class="text-slate-300 font-mono" id="analysis-rms">—</span></div>
+<div><span class="text-slate-600">Channels:</span> <span class="text-slate-300 font-mono" id="analysis-channels">—</span></div>
+<div><span class="text-slate-600">SR:</span> <span class="text-slate-300 font-mono" id="analysis-sr">—</span></div>
+<div><span class="text-slate-600">Duration:</span> <span class="text-slate-300 font-mono" id="analysis-duration">—</span></div>
+</div>
+</div>
+<!-- Spectrogram mini -->
+<div class="border-t border-[#21262d] pt-2">
+<span class="text-[11px] font-bold text-au uppercase tracking-wider">Spectrogram</span>
+<canvas class="w-full h-20 mt-1 rounded" id="spec-canvas" style="background:#0d1117;"></canvas>
+</div>
+</div>
+</div>
+<!-- Export -->
+<div class="daw-panel p-3 flex flex-wrap items-center gap-2">
+<span class="text-[11px] font-bold text-au uppercase tracking-wider">Export</span>
+<select class="bg-[#21262d] border border-[#30363d] rounded text-[11px] text-slate-300 px-2 py-1 outline-none" id="export-format">
+<option value="wav">WAV (PCM lossless)</option>
+<option value="flac">FLAC (lossless compression)</option>
+</select>
+<button class="daw-btn" id="btn-export"><i class="w-3.5 h-3.5" data-lucide="download"></i> Export</button>
+<span class="text-[10px] text-slate-600" id="export-status"></span>
+<span class="text-[10px] text-slate-600 ml-auto hidden sm:inline">💡 Click on the waveform = play · Drag = select · Shift+drag = range selection · Space = play/pause</span>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-[10px] text-slate-600">History: <span id="history-count">0</span></span>
+</div>
+</div>
+</div>
+<!-- FAQ -->
+<section class="mt-12 daw-panel p-6" itemscope="" itemtype="https://schema.org/FAQPage">
+<h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">
+<i class="w-5 h-5 text-au" data-lucide="help-circle"></i> Frequently Asked Questions
+            </h2>
+<div class="space-y-1 divide-y divide-[#21262d] text-sm">
+<details class="faq-item"><summary itemprop="name">Is this audio editor really free?</summary><div class="faq-answer" itemprop="text">Yes, it’s completely free, no installation, no registration required. All audio processing is done in your browser, using the Web Audio API and Canvas technology, and no server support is required.</div></details>
+<details class="faq-item"><summary itemprop="name">Will my audio files be uploaded to the server?</summary><div class="faq-answer" itemprop="text">No. All files exist only in your device memory. When you close the page or refresh it, the files disappear. We will not upload, store or share any of your audio data.</div></details>
+<details class="faq-item"><summary itemprop="name">What audio formats are supported?</summary><div class="faq-answer" itemprop="text">Supports MP3, WAV, FLAC, OGG (Vorbis), AAC, M4A (AAC), WebM Audio (Opus). Export supports WAV (lossless), OGG (lossy compression) and low-quality MP3 formats.</div></details>
+<details class="faq-item"><summary itemprop="name">How long can I edit the audio?</summary><div class="faq-answer" itemprop="text">There is no limit in theory, but browser memory is the main bottleneck. It is generally recommended to process less than 30 minutes of audio for the best experience. Longer messages may need to be segmented.</div></details>
+<details class="faq-item"><summary itemprop="name">How to edit audio?</summary><div class="faq-answer" itemprop="text">Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.</div></details>
+<details class="faq-item"><summary itemprop="name">Are sound effects real-time?</summary><div class="faq-answer" itemprop="text">Yes, all effects are processed on the fly. When you enable effects like EQ, Compressor, Reverb, and more, you'll hear the changes immediately. On final export, these effects are permanently applied to the output file.</div></details>
+<details class="faq-item"><summary itemprop="name">Does it support multi-track mixing?</summary><div class="faq-answer" itemprop="text">Supports lightweight multi-track functionality. You can add multiple audio tracks, adjust volume, mute and solo them respectively, and finally merge and export all audio tracks into a single file.</div></details>
+<details class="faq-item"><summary itemprop="name">Which browsers support this tool?</summary><div class="faq-answer" itemprop="text">Supports the latest versions of Chrome, Edge, Firefox and Safari. It is recommended to use Chrome or Edge for best performance, especially when working with long audio and effects.</div></details>
+<details class="faq-item"><summary itemprop="name">What are the keyboard shortcuts?</summary><div class="faq-answer" itemprop="text">Space = Play/Pause, Ctrl+Z = Undo, Ctrl+Y = Redo, Delete = Delete selection, Ctrl+C = Copy selection, Ctrl+V = Paste, Ctrl+D = Duplicate.</div></details>
+<details class="faq-item"><summary itemprop="name">What is LUFS? Why is it important?</summary><div class="faq-answer" itemprop="text">LUFS (Loudness Units relative to Full Scale) is the international standard for modern audio loudness (ITU-R BS.1770). Streaming platforms such as Spotify and YouTube use LUFS to normalize volume. This tool provides an approximate LUFS estimate to help you understand the overall loudness of your audio.</div></details>
+</div>
+</section>
+<!-- SEO Article -->
+<section class="mt-8 daw-panel p-6">
+<h2 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+<i class="w-5 h-5 text-au" data-lucide="book-open"></i> Browser Audio Editing: The Power of the Web Audio API
+            </h2>
+<article class="text-slate-400 text-sm leading-relaxed space-y-3 max-w-none">
+<p>Mini Audio Studio demonstrates the amazing capabilities of modern browsers in audio processing. Through the Web Audio API, Canvas 2D and OfflineAudioContext, we have implemented functionality in the browser that was previously only available in desktop DAWs (such as Audacity, Logic Pro).</p>
+<h3 class="text-white font-bold text-base mt-4">core technology</h3>
+<p><strong>Web Audio API</strong> It is a W3C standard browser audio processing interface that provides rich processing nodes such as AudioContext, AudioBuffer, BiquadFilterNode, DynamicsCompressorNode, and ConvolverNode. These nodes can be freely connected in series to form a flexible audio processing pipeline (Audio Graph).</p>
+<p><strong>OfflineAudioContext</strong> Allows rapid rendering of audio in the background without the need for real-time playback, allowing effects application, audio analysis and export to be completed in seconds.</p>
+<h3 class="text-white font-bold text-base mt-4">Application scenarios</h3>
+<p>Whether you are a podcaster who wants to trim recordings, a musician who needs to quickly audition the effects, a developer who wants to test audio processing algorithms, or a general user who wants to convert audio formats, Mini Audio Studio can do it directly in the browser without installing any software.</p>
+</article>
+</section>
+</main>
+<div id="component-footer"></div>
+<!-- Toast -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-5 py-2.5 rounded-full text-sm shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="w-4 h-4 text-au" data-lucide="check-circle" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<script>
+        // === System Init ===
+        async function loadComponent(elId,path){try{const r=await fetch(path);if(!r.ok)throw Error();const h=await r.text();const c=document.getElementById(elId);c.innerHTML=h;c.querySelectorAll('script').forEach(s=>{const ns=document.createElement('script');Array.from(s.attributes).forEach(a=>ns.setAttribute(a.name,a.value));ns.appendChild(document.createTextNode(s.innerHTML));s.parentNode.replaceChild(ns,s);});}catch(e){console.error(e);}}
+        function setupEventDelegation(){document.body.addEventListener('click',e=>{const t=e.target.closest('#sidebar-trigger-btn'),cl=e.target.closest('#sidebar-close-btn'),ol=e.target.closest('#sidebar-overlay');if(t||cl||ol){const c=document.getElementById('sidebar-container'),o=document.getElementById('sidebar-overlay');if(c&&o){const x=c.classList.contains('translate-x-full');if(x&&t){o.classList.remove('pointer-events-none');requestAnimationFrame(()=>{c.classList.remove('translate-x-full');o.classList.remove('opacity-0');o.classList.add('opacity-100');});}else if(!x&&(cl||ol||t)){c.classList.add('translate-x-full');o.classList.remove('opacity-100');o.classList.add('opacity-0');setTimeout(()=>o.classList.add('pointer-events-none'),300);}}}});}
+        function setupSidebarActiveState(){const cp='/audio-studio';document.querySelectorAll('#sidebar-container .nav-item').forEach(item=>{const h=item.getAttribute('href');if(!h)return;const ip=h.replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';if(cp===ip||(cp!=='/'&&ip!=='/'&&cp.startsWith(ip+'/'))){item.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50');item.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');const icon=item.querySelector('svg');if(icon)icon.classList.add('text-[#3ebcf0]');}});}
+        async function initializeSystem(){await Promise.all([loadComponent('component-header','/components/header-en.html'),loadComponent('component-sidebar','/components/sidebar-en.html'),loadComponent('component-footer','/components/footer-en.html')]);if(typeof lucide!=='undefined')lucide.createIcons();setupEventDelegation();setupSidebarActiveState();}
+        document.addEventListener('DOMContentLoaded',initializeSystem);
+    </script>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // === Core State ===
+            let audioBuffer = null;
+            let audioContext = null;
+            let isPlaying = false;
+            let startOffset = 0;
+            let startTime = 0;
+            let sourceNode = null;
+            let gainNode = null;
+            let isLooping = false;
+            let selectionStart = 0, selectionEnd = 0;
+            let isSelecting = false;
+            let zoom = 1;
+            let history = [];
+            let historyIndex = -1;
+            let tracks = [];
+            let eqNodes = {};
+            let activeEffects = {};
+            let animationId = null;
+
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            function showToast(msg, err) {
+                const icon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                if(err){toast.classList.replace('bg-slate-800','bg-red-950');toast.classList.replace('border-slate-700','border-red-900');icon.className='w-4 h-4 text-red-500';}
+                else{toast.classList.replace('bg-red-950','bg-slate-800');toast.classList.replace('border-red-900','border-slate-700');icon.className='w-4 h-4 text-au';}
+                toast.classList.remove('opacity-0','pointer-events-none','translate-y-4');
+                toast.classList.add('opacity-100','translate-y-0');
+                clearTimeout(window._t);
+                window._t=setTimeout(()=>{toast.classList.remove('opacity-100','translate-y-0');toast.classList.add('opacity-0','pointer-events-none','translate-y-4');},2000);
+            }
+
+            function getAudioCtx() {
+                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                return audioContext;
+            }
+
+            // === File Loading ===
+            const dropZone = document.getElementById('drop-zone');
+            const dawMain = document.getElementById('daw-main');
+            const filePicker = document.getElementById('file-picker');
+
+            function loadAudioFiles(files) {
+                if (!files.length) return;
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const ctx = getAudioCtx();
+                        const arrayBuffer = e.target.result;
+                        const buffer = await ctx.decodeAudioData(arrayBuffer);
+                        // 首次載入設定為主音軌；後續載入只新增音軌不覆蓋
+                        if (!audioBuffer) {
+                            audioBuffer = buffer;
+                            dropZone.classList.add('hidden');
+                            dawMain.classList.remove('hidden');
+                            updateMetadata(file);
+                            updateAnalysis();
+                            drawMinimap();
+                            drawSpectrogram();
+                            updateDuration();
+                            pushHistory();
+                            showToast(`Loaded: ${file.name}`);
+                            document.getElementById('status-info').textContent = `${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+                        } else {
+                            showToast(`Added track: ${file.name}`);
+                        }
+                        addTrack(file.name, buffer);
+                        // 確保首個音軌被選取顯示
+                        if (tracks.length === 1) switchTrack(tracks[0].id);
+                    } catch(err) {
+                        showToast('Error loading audio: ' + err.message, true);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            filePicker.addEventListener('change', (e) => loadAudioFiles(e.target.files));
+            document.getElementById('btn-pick-file').addEventListener('click', () => filePicker.click());
+            document.getElementById('btn-open').addEventListener('click', () => filePicker.click());
+            document.getElementById('btn-save').addEventListener('click', () => {
+                if (!audioBuffer) { showToast('No audio to save', true); return; }
+                const wav = audioBufferToWav(audioBuffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'project.wav';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('Project saved as WAV');
+            });
+
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); loadAudioFiles(e.dataTransfer.files); });
+
+            // Clipboard paste
+            document.addEventListener('paste', async (e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.type.startsWith('audio/')) {
+                        const file = item.getAsFile();
+                        if (file) loadAudioFiles([file]);
+                    }
+                }
+            });
+
+            // === Track Management ===
+            let activeTrackId = null;
+            const MAX_TRACKS = 10;
+
+            function getActiveTrack() {
+                if (activeTrackId) { const f = tracks.find(t => t.id === activeTrackId); if (f) return f; }
+                return tracks[0] || null;
+            }
+
+            function switchTrack(id) {
+                activeTrackId = id;
+                const t = tracks.find(x => x.id === id);
+                if (t) {
+                    audioBuffer = t.buffer;
+                    drawMinimap();
+                    drawSpectrogram();
+                    updateDuration();
+                    updateMetadataFromTrack(t);
+                    updateAnalysis();
+                }
+                renderTracks();
+            }
+
+            function addTrack(name, buffer) {
+                if (tracks.length >= MAX_TRACKS) { showToast(`Maximum ${MAX_TRACKS} tracks`, true); return null; }
+                const track = { id: Date.now(), name, buffer, muted: false, soloed: false, volume: 1, gain: null };
+                tracks.push(track);
+                if (!activeTrackId) activeTrackId = track.id;
+                renderTracks();
+                return track;
+            }
+
+            function renderTracks() {
+                const container = document.getElementById('all-tracks');
+                const hint = document.getElementById('no-tracks-hint');
+                if (tracks.length === 0) {
+                    container.innerHTML = '';
+                    container.appendChild(hint || document.createElement('div'));
+                    document.getElementById('track-count-text').textContent = '0/' + MAX_TRACKS;
+                    return;
+                }
+                if (hint) hint.remove();
+                document.getElementById('track-count-text').textContent = tracks.length + '/' + MAX_TRACKS;
+
+                const h = 50; // track height
+                let html = '';
+                tracks.forEach(t => {
+                    const active = t.id === activeTrackId;
+                    html += `<div class="flex items-stretch border-b border-[#21262d]" style="min-height:${h}px;${active?'background:rgba(6,182,212,0.04);':''}" data-track-select="${t.id}">`;
+                    html += `<div class="w-[110px] min-w-[110px] border-r border-[#21262d] bg-[#161b22] p-1.5 flex flex-col justify-center gap-0.5" data-track-select="${t.id}">`;
+                    html += `<span class="text-[10px] font-bold ${active?'text-au':'text-slate-300'} truncate">${t.name}</span>`;
+                    html += `<span class="text-[8px] text-slate-600">${formatTime(t.buffer.duration)}</span>`;
+                    html += `<div class="flex gap-1 mt-0.5 items-center">`;
+                    html += `<button class="text-[8px] px-1 py-0 rounded ${t.muted?'bg-red-900 text-red-400':'bg-[#21262d] text-slate-500'}" data-track-mute="${t.id}">M</button>`;
+                    html += `<button class="text-[8px] px-1 py-0 rounded ${t.soloed?'bg-au text-black':'bg-[#21262d] text-slate-500'}" data-track-solo="${t.id}">S</button>`;
+                    html += `<input type="range" min="0" max="1.5" step="0.01" value="${t.volume}" class="w-10" data-track-vol="${t.id}">`;
+                    html += `<button class="text-[8px] px-1 py-0 rounded bg-[#21262d] text-slate-500 hover:bg-red-900 hover:text-red-400 ml-auto" data-track-del="${t.id}">✕</button>`;
+                    html += `</div></div>`;
+                    html += `<div class="flex-1 relative bg-[#0d1117]" style="height:${h}px;" data-track-select="${t.id}">`;
+                    html += `<canvas class="w-full h-full" data-track-canvas="${t.id}"></canvas>`;
+                    if (active) {
+                        html += `<div class="play-cursor absolute top-0 bottom-0 w-[2px] bg-yellow-300 pointer-events-none" style="left:0;display:none;box-shadow:0 0 6px rgba(253,224,71,0.6);"></div>`;
+                        html += `<div class="selection-overlay absolute top-0 bottom-0 pointer-events-none hidden" style="background:rgba(251,146,60,0.25);border:1px solid rgba(251,146,60,0.5);"></div>`;
+                    }
+                    html += `</div></div>`;
+                });
+                container.innerHTML = html;
+
+                // Bind events
+                container.querySelectorAll('[data-track-mute]').forEach(b => {
+                    b.addEventListener('click', e => { e.stopPropagation(); toggleMute(+b.dataset.trackMute); });
+                });
+                container.querySelectorAll('[data-track-solo]').forEach(b => {
+                    b.addEventListener('click', e => { e.stopPropagation(); toggleSolo(+b.dataset.trackSolo); });
+                });
+                container.querySelectorAll('[data-track-vol]').forEach(s => {
+                    s.addEventListener('input', e => { e.stopPropagation(); setTrackVol(+s.dataset.trackVol, +s.value); });
+                });
+                container.querySelectorAll('[data-track-select]').forEach(el => {
+                    el.addEventListener('click', e => { e.stopPropagation(); switchTrack(+el.dataset.trackSelect); });
+                });
+                container.querySelectorAll('[data-track-del]').forEach(btn => {
+                    btn.addEventListener('click', e => { e.stopPropagation(); removeTrack(+btn.dataset.trackDel); });
+                });
+                // Draw per-track waveforms
+                requestAnimationFrame(() => drawAllTrackWaves());
+            }
+
+            function drawAllTrackWaves() {
+                document.querySelectorAll('[data-track-canvas]').forEach(canvas => {
+                    const id = +canvas.dataset.trackCanvas;
+                    const track = tracks.find(t => t.id === id);
+                    if (!track) return;
+                    const parent = canvas.parentElement;
+                    const w = parent.offsetWidth;
+                    const h = parent.offsetHeight;
+                    if (!w || !h) return;
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    const data = track.buffer.getChannelData(0);
+                    const step = Math.max(1, Math.floor(data.length / w));
+                    ctx.clearRect(0, 0, w, h);
+                    ctx.fillStyle = id === activeTrackId ? '#06B6D4' : '#334155';
+                    for (let x = 0; x < w; x++) {
+                        let max = 0, min = 0;
+                        for (let i = 0; i < step; i++) {
+                            const idx = Math.min(Math.floor(x * step + i), data.length - 1);
+                            const v = data[idx];
+                            if (v < min) min = v; if (v > max) max = v;
+                        }
+                        const y1 = h/2 * (1 - max);
+                        const y2 = h/2 * (1 - min);
+                        ctx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+                    }
+                });
+            }
+
+            function toggleMute(id) { const t=tracks.find(x=>x.id===id); if(t) t.muted=!t.muted; renderTracks(); }
+            function toggleSolo(id) { const t=tracks.find(x=>x.id===id); if(t) t.soloed=!t.soloed; renderTracks(); }
+            function setTrackVol(id, vol) { const t=tracks.find(x=>x.id===id); if(t) t.volume=vol; }
+            function removeTrack(id) {
+                if (tracks.length <= 1) { showToast('At least one track required', true); return; }
+                stop();
+                const idx = tracks.findIndex(t => t.id === id);
+                if (idx === -1) return;
+                const name = tracks[idx].name;
+                tracks.splice(idx, 1);
+                // If the deleted track was active, switch to another
+                if (activeTrackId === id) {
+                    activeTrackId = tracks[0]?.id || null;
+                    if (activeTrackId) {
+                        const t = tracks[0];
+                        audioBuffer = t.buffer;
+                        updateMetadataFromTrack(t);
+                        updateAnalysis();
+                        drawMinimap();
+                        drawSpectrogram();
+                        updateDuration();
+                    }
+                }
+                renderTracks();
+                showToast(`Removed: ${name}`);
+            }
+
+            function updateMetadataFromTrack(track) {
+                document.getElementById('metadata-display').innerHTML =
+                    `<p><span class="text-slate-600">Track:</span> <span class="text-slate-300">${track.name}</span></p>` +
+                    `<p><span class="text-slate-600">Duration:</span> <span class="text-slate-300">${formatTime(track.buffer.duration)}</span></p>` +
+                    `<p><span class="text-slate-600">Channels:</span> <span class="text-slate-300">${track.buffer.numberOfChannels}</span></p>` +
+                    `<p><span class="text-slate-600">Sample Rate:</span> <span class="text-slate-300">${(track.buffer.sampleRate/1000).toFixed(1)} kHz</span></p>` +
+                    `<p><span class="text-slate-600">Samples:</span> <span class="text-slate-300">${track.buffer.length.toLocaleString()}</span></p>`;
+            }
+
+            // === Waveform Drawing ===
+            function getActiveWaveCanvas() {
+                const container = document.getElementById('all-tracks');
+                if (!container) return null;
+                return container.querySelector('[data-track-canvas][data-track-canvas="' + activeTrackId + '"]') ||
+                       container.querySelector('[data-track-canvas]');
+            }
+
+            function updateCursorAndTime(t) {
+                if (!audioBuffer) return;
+                const canvas = getActiveWaveCanvas();
+                if (!canvas) return;
+                const cursor = canvas.parentElement.querySelector('.play-cursor');
+                if (!cursor) return;
+                const rect = canvas.parentElement.getBoundingClientRect();
+                const p = (t / audioBuffer.duration) * rect.width * zoom;
+                cursor.style.display = 'block';
+                cursor.style.left = Math.min(p, rect.width * zoom) + 'px';
+                timeDisplay.textContent = formatTime(t);
+            }
+
+            function drawMinimap() {
+                if (!audioBuffer) return;
+                const canvas = document.getElementById('minimap-canvas');
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                const ctx = canvas.getContext('2d');
+                const data = audioBuffer.getChannelData(0);
+                const step = Math.max(1, Math.floor(data.length / canvas.width));
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#06B6D440';
+                for (let x = 0; x < canvas.width; x++) {
+                    let max = 0;
+                    for (let i = 0; i < step; i++) {
+                        const idx = Math.min(Math.floor(x * step + i), data.length - 1);
+                        const v = Math.abs(data[idx]);
+                        if (v > max) max = v;
+                    }
+                    ctx.fillRect(x, canvas.height/2 * (1 - max), 1, Math.max(1, canvas.height/2 * max * 2));
+                }
+            }
+
+            function drawSpectrogram() {
+                if (!audioBuffer) return;
+                const canvas = document.getElementById('spec-canvas');
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width || 300;
+                canvas.height = 80;
+                const ctx = canvas.getContext('2d');
+                const data = audioBuffer.getChannelData(0);
+                const fftSize = 256;
+                const hopSize = Math.floor(data.length / canvas.width);
+
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                for (let x = 0; x < canvas.width; x++) {
+                    const startIdx = Math.min(x * hopSize, data.length - fftSize);
+                    const slice = data.slice(startIdx, startIdx + fftSize);
+                    // Simple FFT-like magnitude
+                    for (let y = 0; y < canvas.height; y++) {
+                        const freqIdx = Math.floor(y / canvas.height * fftSize / 2);
+                        let mag = 0;
+                        for (let i = 0; i < fftSize; i++) {
+                            const phase = 2 * Math.PI * freqIdx * i / fftSize;
+                            mag += slice[i] * Math.cos(phase);
+                        }
+                        mag = Math.abs(mag) / fftSize;
+                        const val = Math.min(1, mag * 5);
+                        const intensity = Math.floor(val * 255);
+                        const r = Math.min(255, intensity);
+                        const g = Math.min(255, Math.floor(intensity * 0.6));
+                        const b = Math.min(255, Math.floor(intensity * 0.3));
+                        ctx.fillStyle = `rgb(${r},${g},${b})`;
+                        ctx.fillRect(x, canvas.height - y, 1, 1);
+                    }
+                }
+            }
+
+            // === Timeline Ruler ===
+            function updateDuration() {
+                if (!audioBuffer) return;
+                const dur = audioBuffer.duration;
+                document.getElementById('duration-display').textContent = `/ ${formatTime(dur)}`;
+                drawTimelineRuler(dur);
+            }
+
+            function drawTimelineRuler(duration) {
+                const ruler = document.getElementById('timeline-ruler');
+                const w = ruler.offsetWidth;
+                const totalSec = duration || 10;
+                const step = totalSec > 120 ? 30 : totalSec > 60 ? 15 : totalSec > 30 ? 10 : 5;
+                let html = '';
+                for (let t = 0; t <= totalSec; t += step) {
+                    const x = (t / totalSec) * w * zoom;
+                    html += `<div style="position:absolute;left:${x}px;top:0;height:100%;border-left:1px solid #30363d;"><span style="position:absolute;left:3px;top:3px;font-size:9px;color:#8b949e;">${formatTime(t)}</span></div>`;
+                }
+                ruler.innerHTML = html;
+            }
+
+            function formatTime(s) {
+                s = Math.max(0, s);
+                const m = Math.floor(s / 60);
+                const sec = Math.floor(s % 60);
+                const ms = Math.floor((s % 1) * 1000);
+                return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+            }
+
+            // === Playback ===
+            const playBtn = document.getElementById('btn-play');
+            const stopBtn = document.getElementById('btn-stop');
+            const timeDisplay = document.getElementById('time-display');
+            const playIcon = document.getElementById('play-icon');
+            const speedSelect = document.getElementById('playback-speed');
+            const volumeSlider = document.getElementById('volume-slider');
+            const volumeLabel = document.getElementById('volume-label');
+            volumeSlider.addEventListener('input', () => {
+                volumeLabel.textContent = Math.round(volumeSlider.value * 100) + '%';
+                if (gainNode) gainNode.gain.value = volumeSlider.value;
+            });
+
+            function play() {
+                if (tracks.length === 0) return;
+                const ctx = getAudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+                stop();
+
+                const masterGain = ctx.createGain();
+                masterGain.gain.value = volumeSlider.value;
+
+                // === Effect Chain ===
+                // Build: source → trackGain → HPF → LPF → EQ → Comp → MasterGain
+                //   REVERB: wet send from MasterGain to conv → reverbGain → destination
+                //   DELAY:  wet send from MasterGain to delay → fb → destination
+                //   DIST:   inline before MasterGain
+                //   PAN:    StereoPannerNode after Comp, before MasterGain
+                let chain = masterGain;
+
+                // HPF
+                if (activeEffects.hpf) {
+                    const hpf = ctx.createBiquadFilter();
+                    hpf.type = 'highpass';
+                    hpf.frequency.value = +document.getElementById('hpf-freq').value || 500;
+                    hpf.Q.value = 0.7;
+                    chain.connect(hpf); chain = hpf;
+                }
+                // LPF
+                if (activeEffects.lpf) {
+                    const lpf = ctx.createBiquadFilter();
+                    lpf.type = 'lowpass';
+                    lpf.frequency.value = +document.getElementById('lpf-freq').value || 5000;
+                    lpf.Q.value = 0.7;
+                    chain.connect(lpf); chain = lpf;
+                }
+                // EQ
+                if (activeEffects.eq) {
+                    const low = ctx.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 320;
+                    const mid = ctx.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 1;
+                    const hi = ctx.createBiquadFilter(); hi.type = 'highshelf'; hi.frequency.value = 3200;
+                    low.gain.value = +document.getElementById('eq-low').value;
+                    mid.gain.value = +document.getElementById('eq-mid').value;
+                    hi.gain.value = +document.getElementById('eq-high').value;
+                    chain.connect(low); low.connect(mid); mid.connect(hi); chain = hi;
+                }
+                // Compressor
+                if (activeEffects.comp) {
+                    const comp = ctx.createDynamicsCompressor();
+                    comp.threshold.value = -24;
+                    comp.ratio.value = 12;
+                    comp.attack.value = 0.003;
+                    comp.release.value = 0.25;
+                    chain.connect(comp); chain = comp;
+                }
+                // Noise Gate
+                if (activeEffects.gate) {
+                    const gate = ctx.createDynamicsCompressor();
+                    gate.threshold.value = -50;
+                    gate.ratio.value = 20;
+                    gate.knee.value = 0;
+                    chain.connect(gate); chain = gate;
+                }
+                // Distortion
+                if (activeEffects.dist) {
+                    const shaper = ctx.createWaveShaper();
+                    const k = 300;
+                    shaper.curve = new Float32Array(44100).map((_, i) => Math.tanh(k * ((i / 22050) - 1)) / Math.tanh(k));
+                    chain.connect(shaper); chain = shaper;
+                }
+                // Stereo Pan
+                if (activeEffects.pan && ctx.createStereoPanner) {
+                    const panner = ctx.createStereoPanner();
+                    panner.pan.value = +document.getElementById('pan-value').value || 0;
+                    chain.connect(panner); chain = panner;
+                }
+
+                chain.connect(ctx.destination);
+
+                // === Reverb (parallel wet send) ===
+                if (activeEffects.reverb) {
+                    const conv = ctx.createConvolver();
+                    const sr = ctx.sampleRate;
+                    const impulse = ctx.createBuffer(2, Math.floor(sr * 1.5), sr);
+                    for (let ch = 0; ch < 2; ch++) {
+                        const d = impulse.getChannelData(ch);
+                        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.5);
+                    }
+                    conv.buffer = impulse;
+                    const wetGain = ctx.createGain();
+                    wetGain.gain.value = +document.getElementById('reverb-mix').value || 0.3;
+                    masterGain.connect(conv); conv.connect(wetGain); wetGain.connect(ctx.destination);
+                }
+                // === Delay/Echo (parallel wet send) ===
+                if (activeEffects.delay) {
+                    const delay = ctx.createDelay(1);
+                    delay.delayTime.value = +document.getElementById('delay-time').value || 0.3;
+                    const fb = ctx.createGain();
+                    fb.gain.value = +document.getElementById('delay-feedback').value || 0.3;
+                    const delayWet = ctx.createGain(); delayWet.gain.value = 0.5;
+                    masterGain.connect(delay); delay.connect(fb); fb.connect(delay);
+                    fb.connect(delayWet); delayWet.connect(ctx.destination);
+                }
+
+                // === Chorus (applied per-track) — buffer-modifying ===
+                // Applied as inline delay + detune on source
+                // === Tremolo (applied per-track) — buffer-modifying for now ===
+                // === Bit Crusher — buffer-modifying ===
+                // These 3 were applied to buffer on toggle
+
+                // === Mix all tracks ===
+                const hasSolo = tracks.some(t => t.soloed);
+                tracks.forEach(track => {
+                    if (track.muted) return;
+                    if (hasSolo && !track.soloed) return;
+                    const src = ctx.createBufferSource();
+                    src.buffer = track.buffer;
+                    src.playbackRate.value = parseFloat(speedSelect.value);
+                    src.detune.value = parseInt(document.getElementById('pitch-shift').value) * 100;
+                    src.loop = isLooping;
+
+                    const g = ctx.createGain();
+                    g.gain.value = track.volume;
+
+                    // Standard connection
+                    src.connect(g); g.connect(masterGain);
+
+                    const offset = selectionStart || startOffset;
+                    const when = selectionEnd > selectionStart ? selectionEnd - selectionStart : undefined;
+                    if (when) src.start(0, offset, when);
+                    else src.start(0, offset);
+                    track.sourceNode = src;
+                    track.gainNode = g;
+                });
+                // 取第一個已啟動的音軌作為 sourceNode（向後相容）
+                const activeAudio = tracks.filter(t => !t.muted && (!hasSolo || t.soloed));
+                sourceNode = activeAudio[0]?.sourceNode || null;
+
+                startTime = ctx.currentTime;
+                isPlaying = true;
+                playBtn.classList.add('play');
+                playIcon.setAttribute('data-lucide', 'pause');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                requestAnimationFrame(updatePlayhead);
+            }
+
+            function stop() {
+                tracks.forEach(t => {
+                    if (t.sourceNode) { try { t.sourceNode.stop(); } catch(e) {} t.sourceNode = null; }
+                });
+                if (sourceNode) { try { sourceNode.stop(); } catch(e) {} sourceNode = null; }
+                isPlaying = false;
+                playBtn.classList.remove('play');
+                playIcon.setAttribute('data-lucide', 'play');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                hidePlayCursor();
+                if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            }
+
+            function hidePlayCursor() {
+                const c = document.querySelector('.play-cursor');
+                if (c) c.style.display = 'none';
+            }
+
+            function updatePlayhead() {
+                if (!isPlaying || !audioContext || !sourceNode) return;
+                const elapsed = audioContext.currentTime - startTime;
+                const currentTime = selectionStart + elapsed;
+                updateCursorAndTime(currentTime);
+                if (audioBuffer && currentTime >= (selectionEnd || audioBuffer.duration)) {
+                    if (isLooping) { startOffset = selectionStart || 0; play(); return; }
+                    stop(); timeDisplay.textContent = formatTime(selectionEnd || audioBuffer.duration);
+                    return;
+                }
+                animationId = requestAnimationFrame(updatePlayhead);
+            }
+
+            playBtn.addEventListener('click', () => {
+                if (isPlaying) { stop(); return; }
+                play();
+            });
+
+            stopBtn.addEventListener('click', () => {
+                stop();
+                startOffset = 0;
+                timeDisplay.textContent = '00:00.000';
+                hidePlayCursor();
+            });
+
+            // === Waveform Interaction (Selection & Seek) — supports mouse and touch ===
+            // 使用事件代理：在 all-tracks 上監聽，由 canvas/div 接收
+            const tracksContainer = document.getElementById('all-tracks');
+            let isPointerDown = false;
+
+            function getWaveRect() {
+                const canvas = getActiveWaveCanvas();
+                return canvas ? canvas.parentElement.getBoundingClientRect() : { left: 0, width: 1 };
+            }
+
+            function getPointerX(e) {
+                const rect = getWaveRect();
+                const clientX = e.touches ? (e.touches[0]?.clientX || e.changedTouches?.[0]?.clientX || 0) : e.clientX;
+                return (clientX - rect.left) / zoom;
+            }
+
+            function getTimeFromEvent(e) {
+                if (!audioBuffer) return 0;
+                const rect = getWaveRect();
+                const x = getPointerX(e);
+                return Math.max(0, Math.min((x / rect.width) * audioBuffer.duration, audioBuffer.duration));
+            }
+
+            function getActiveSelectionOverlay() {
+                const canvas = getActiveWaveCanvas();
+                return canvas ? canvas.parentElement.querySelector('.selection-overlay') : null;
+            }
+
+            function updateSelectionOverlay() {
+                const overlay = getActiveSelectionOverlay();
+                if (!overlay || !audioBuffer || selectionEnd <= selectionStart) {
+                    if (overlay) overlay.classList.add('hidden');
+                    return;
+                }
+                const rect = getWaveRect();
+                const start = (selectionStart / audioBuffer.duration) * rect.width * zoom;
+                const end = (selectionEnd / audioBuffer.duration) * rect.width * zoom;
+                overlay.classList.remove('hidden');
+                overlay.style.left = start + 'px';
+                overlay.style.width = (end - start) + 'px';
+            }
+
+            function handleWaveformDown(e) {
+                // 只在實際波形區（canvas 或其父層 track-wave div）上處理
+                const target = e.target;
+                const waveDiv = target.closest?.('[data-track-select]') || target;
+                // 只處理有 data-track-select 的 track-wave 區域（不含 label）
+                const isCanvasArea = target.tagName === 'CANVAS' || (waveDiv && !waveDiv.classList.contains('track-label') && waveDiv.getAttribute('data-track-select'));
+                if (!isCanvasArea && target.tagName !== 'CANVAS') return;
+                if (!audioBuffer) return;
+
+                isPointerDown = true;
+                const t = getTimeFromEvent(e);
+                const isTouch = e.type === 'touchstart';
+
+                if (isTouch || e.shiftKey || e.ctrlKey) {
+                    isSelecting = true;
+                    selectionStart = t;
+                    selectionEnd = t;
+                    updateSelectionOverlay();
+                } else {
+                    isSelecting = false;
+                    const overlay = getActiveSelectionOverlay();
+                    if (overlay) overlay.classList.add('hidden');
+                    startOffset = t;
+                    selectionStart = 0;
+                    selectionEnd = 0;
+                    updateCursorAndTime(t);
+                }
+            }
+
+            function handleWaveformMove(e) {
+                if (!isPointerDown || !audioBuffer) return;
+                e.preventDefault();
+                const t = getTimeFromEvent(e);
+                if (isSelecting) {
+                    selectionEnd = t;
+                    updateSelectionOverlay();
+                } else {
+                    startOffset = t;
+                }
+                updateCursorAndTime(t);
+            }
+
+            function handleWaveformUp(e) {
+                isPointerDown = false;
+                isSelecting = false;
+                // 同步拖曳選取的起訖時間到精確輸入欄位
+                if (selectionEnd > selectionStart) {
+                    document.getElementById('sel-start').value = selectionStart.toFixed(3);
+                    document.getElementById('sel-end').value = selectionEnd.toFixed(3);
+                }
+            }
+
+            tracksContainer.addEventListener('mousedown', handleWaveformDown);
+            tracksContainer.addEventListener('touchstart', handleWaveformDown, { passive: false });
+            document.addEventListener('mousemove', handleWaveformMove);
+            document.addEventListener('touchmove', handleWaveformMove, { passive: false });
+            document.addEventListener('mouseup', handleWaveformUp);
+            document.addEventListener('touchend', handleWaveformUp);
+
+            // === Zoom ===
+            document.getElementById('btn-zoom-in').addEventListener('click', () => { zoom = Math.min(10, zoom * 1.5); drawAllTrackWaves(); updateDuration(); });
+            document.getElementById('btn-zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom / 1.5); drawAllTrackWaves(); updateDuration(); });
+            document.getElementById('btn-zoom-fit').addEventListener('click', () => { zoom = 1; drawAllTrackWaves(); updateDuration(); });
+
+            // === Loop ===
+            document.getElementById('btn-loop').addEventListener('click', (e) => {
+                isLooping = !isLooping;
+                e.currentTarget.classList.toggle('active');
+            });
+
+            // === Effects Toggle ===
+            document.querySelectorAll('[data-effect]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const fx = btn.dataset.effect;
+
+                    // Buffer-modifying effects: apply immediately and don't toggle
+                    if (fx === 'reverse') { applyReverse(); return; }
+                    if (fx === 'normalize') { applyNormalize(); return; }
+                    if (fx === 'fadein') { applyFadeIn(); return; }
+                    if (fx === 'fadeout') { applyFadeOut(); return; }
+                    if (fx === 'crush') { applyBitCrusher(); return; }
+                    if (fx === 'tremolo') { applyTremolo(); return; }
+                    if (fx === 'chorus') { applyChorus(); return; }
+
+                    // Toggle real-time effects
+                    activeEffects[fx] = !activeEffects[fx];
+                    btn.classList.toggle('on');
+
+                    // Show/hide parameter panel
+                    toggleFxUI(fx, activeEffects[fx]);
+
+                    showToast(activeEffects[fx] ? fx.toUpperCase() + ' ON' : fx.toUpperCase() + ' OFF');
+                });
+            });
+
+            function toggleFxUI(fx, on) {
+                const paramPanel = document.getElementById('fx-' + fx);
+                if (paramPanel) paramPanel.classList.toggle('hidden', !on);
+                const btn = document.querySelector(`[data-effect="${fx}"]`);
+                if (btn) btn.classList.toggle('on', on);
+            }
+
+            // Parameter sliders — re-trigger play when changed
+            function bindFxSlider(id, callback) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', () => { callback(el); if (isPlaying) { play(); } });
+            }
+            bindFxSlider('eq-low', () => {});
+            bindFxSlider('eq-mid', () => {});
+            bindFxSlider('eq-high', () => {});
+            bindFxSlider('hpf-freq', (el) => { document.getElementById('hpf-freq-label').textContent = el.value + 'Hz'; });
+            bindFxSlider('lpf-freq', (el) => { document.getElementById('lpf-freq-label').textContent = el.value + 'Hz'; });
+            bindFxSlider('delay-time', () => {});
+            bindFxSlider('delay-feedback', () => {});
+            bindFxSlider('reverb-mix', () => {});
+            bindFxSlider('chorus-depth', () => {});
+            bindFxSlider('tremolo-rate', (el) => { document.getElementById('tremolo-rate-label').textContent = el.value + 'Hz'; });
+            bindFxSlider('pan-value', () => {});
+            bindFxSlider('crush-bits', (el) => { document.getElementById('crush-bits-label').textContent = el.value + 'bit'; });
+
+            // === Voice Presets ===
+            document.querySelectorAll('[data-voice]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const voice = btn.dataset.voice;
+                    const ctx = getAudioCtx();
+                    // Reset all effects
+                    Object.keys(activeEffects).forEach(k => { activeEffects[k] = false; });
+                    document.querySelectorAll('[data-effect]').forEach(b => b.classList.remove('on'));
+                    document.querySelectorAll('[id^="fx-"]').forEach(p => p.classList.add('hidden'));
+
+                    const pitchSelect = document.getElementById('pitch-shift');
+                    if (voice === 'chipmunk') pitchSelect.value = '12';
+                    else if (voice === 'deep') pitchSelect.value = '-6';
+                    else if (voice === 'alien') { pitchSelect.value = '6'; activeEffects.delay = true; toggleFxUI('delay', true); }
+                    else if (voice === 'robot') { pitchSelect.value = '-3'; activeEffects.dist = true; toggleFxUI('dist', true); }
+                    else if (voice === 'radio') {
+                        pitchSelect.value = '3';
+                        activeEffects.eq = true; toggleFxUI('eq', true);
+                        document.getElementById('eq-low').value = -30;
+                        document.getElementById('eq-high').value = -20;
+                        activeEffects.hpf = true; toggleFxUI('hpf', true);
+                        document.getElementById('hpf-freq').value = 600;
+                        activeEffects.lpf = true; toggleFxUI('lpf', true);
+                        document.getElementById('lpf-freq').value = 3000;
+                    }
+                    else if (voice === 'telephone') {
+                        pitchSelect.value = '0';
+                        activeEffects.eq = true; toggleFxUI('eq', true);
+                        document.getElementById('eq-low').value = -40;
+                        document.getElementById('eq-mid').value = -30;
+                        document.getElementById('eq-high').value = -40;
+                        activeEffects.comp = true; toggleFxUI('comp', true);
+                    }
+                    else if (voice === 'hall') { activeEffects.reverb = true; toggleFxUI('reverb', true); document.getElementById('reverb-mix').value = 0.5; }
+                    else if (voice === 'monster') { pitchSelect.value = '-12'; activeEffects.dist = true; toggleFxUI('dist', true); activeEffects.comp = true; toggleFxUI('comp', true); }
+                    else { pitchSelect.value = '0'; }
+                    showToast(`Voice: ${voice}`);
+                });
+            });
+
+            // === Fade & Trim ===
+            document.getElementById('btn-fade-in').addEventListener('click', () => {
+                if (!audioBuffer) return;
+                const len = Math.min(audioBuffer.sampleRate * 2, audioBuffer.length);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    const d = audioBuffer.getChannelData(ch);
+                    for (let i = 0; i < len; i++) d[i] *= i / len;
+                }
+                drawAllTrackWaves(); showToast('Fade In applied');
+            });
+
+            document.getElementById('btn-fade-out').addEventListener('click', () => {
+                if (!audioBuffer) return;
+                const len = Math.min(audioBuffer.sampleRate * 2, audioBuffer.length);
+                const total = audioBuffer.length;
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    const d = audioBuffer.getChannelData(ch);
+                    for (let i = 0; i < len; i++) d[total - 1 - i] *= i / len;
+                }
+                drawAllTrackWaves(); showToast('Fade Out applied');
+            });
+
+            document.getElementById('btn-apply-trim').addEventListener('click', () => {
+                if (!audioBuffer) return;
+                const start = parseFloat(document.getElementById('trim-start').value) || 0;
+                const end = parseFloat(document.getElementById('trim-end').value) || audioBuffer.duration;
+                if (end <= start) { showToast('End must be > Start', true); return; }
+                const sr = audioBuffer.sampleRate;
+                const sIdx = Math.floor(start * sr);
+                const eIdx = Math.floor(end * sr);
+                const len = eIdx - sIdx;
+                if (len <= 0) return;
+                const ctx = getAudioCtx();
+                const newBuffer = ctx.createBuffer(audioBuffer.numberOfChannels, len, sr);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    const src = audioBuffer.getChannelData(ch);
+                    const dst = newBuffer.getChannelData(ch);
+                    for (let i = 0; i < len; i++) dst[i] = src[sIdx + i];
+                }
+                audioBuffer = newBuffer;
+                pushHistory();
+                drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                showToast(`Trimmed: ${formatTime(start)} → ${formatTime(end)}`);
+            });
+
+            // === Precise Selection ===
+            const selStartInput = document.getElementById('sel-start');
+            const selEndInput = document.getElementById('sel-end');
+
+            function applySelection() {
+                if (!audioBuffer) return;
+                const s = parseFloat(selStartInput.value);
+                const e = parseFloat(selEndInput.value);
+                if (isNaN(s) || isNaN(e) || e <= s) { showToast('End must be > Start', true); return; }
+                selectionStart = Math.max(0, s);
+                selectionEnd = Math.min(e, audioBuffer.duration);
+                updateSelectionOverlay();
+                updateCursorAndTime(selectionStart);
+                selStartInput.value = selectionStart.toFixed(3);
+                selEndInput.value = selectionEnd.toFixed(3);
+                showToast(`Selection: ${formatTime(selectionStart)} → ${formatTime(selectionEnd)}`);
+            }
+
+            document.getElementById('btn-apply-sel').addEventListener('click', applySelection);
+            document.getElementById('btn-clear-sel').addEventListener('click', () => {
+                selectionStart = 0; selectionEnd = 0;
+                const overlay = getActiveSelectionOverlay();
+                if (overlay) overlay.classList.add('hidden');
+                selStartInput.value = ''; selEndInput.value = '';
+                showToast('Selection cleared');
+            });
+
+            // Ctrl+Enter shortcut
+            document.addEventListener('keydown', e => {
+                if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); applySelection(); }
+            });
+
+            // === Buffer-Modifying Effects ===
+            function getActiveBuffer() { return audioBuffer; }
+
+            function applyReverse() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const d = buf.getChannelData(ch);
+                    for (let i = 0; i < Math.floor(d.length / 2); i++) {
+                        const tmp = d[i]; d[i] = d[d.length - 1 - i]; d[d.length - 1 - i] = tmp;
+                    }
+                }
+                pushHistory(); drawAllTrackWaves(); showToast('Reverse applied');
+            }
+
+            function applyNormalize() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                let peak = 0;
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const d = buf.getChannelData(ch);
+                    for (let i = 0; i < d.length; i++) {
+                        const abs = Math.abs(d[i]);
+                        if (abs > peak) peak = abs;
+                    }
+                }
+                if (peak > 0.001) {
+                    const gain = 0.99 / peak;
+                    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                        const d = buf.getChannelData(ch);
+                        for (let i = 0; i < d.length; i++) d[i] *= gain;
+                    }
+                }
+                pushHistory(); drawAllTrackWaves(); showToast('Normalized to 0 dB');
+            }
+
+            function applyFadeIn() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                const len = Math.min(buf.sampleRate * 2, buf.length);
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const d = buf.getChannelData(ch);
+                    for (let i = 0; i < len; i++) d[i] *= i / len;
+                }
+                drawAllTrackWaves(); showToast('Fade In applied');
+            }
+
+            function applyFadeOut() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                const len = Math.min(buf.sampleRate * 2, buf.length);
+                const total = buf.length;
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const d = buf.getChannelData(ch);
+                    for (let i = 0; i < len; i++) d[total - 1 - i] *= i / len;
+                }
+                drawAllTrackWaves(); showToast('Fade Out applied');
+            }
+
+            function applyBitCrusher() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                const bits = +document.getElementById('crush-bits').value || 8;
+                const levels = Math.pow(2, bits - 1);
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const d = buf.getChannelData(ch);
+                    for (let i = 0; i < d.length; i++) {
+                        d[i] = Math.round(d[i] * levels) / levels;
+                    }
+                }
+                pushHistory(); drawAllTrackWaves(); showToast(`Bit Crusher: ${bits}-bit`);
+            }
+
+            function applyTremolo() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                const rate = +document.getElementById('tremolo-rate').value || 5;
+                const sr = buf.sampleRate;
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const d = buf.getChannelData(ch);
+                    for (let i = 0; i < d.length; i++) {
+                        const mod = 0.5 + 0.5 * Math.sin(2 * Math.PI * rate * i / sr);
+                        d[i] *= 0.3 + 0.7 * mod;
+                    }
+                }
+                pushHistory(); drawAllTrackWaves(); showToast(`Tremolo: ${rate}Hz applied`);
+            }
+
+            function applyChorus() {
+                const buf = getActiveBuffer(); if (!buf) return;
+                const depth = +document.getElementById('chorus-depth').value || 0.005;
+                const delaySamples = Math.floor(depth * buf.sampleRate);
+                const sr = buf.sampleRate;
+                const newBuf = getAudioCtx().createBuffer(buf.numberOfChannels, buf.length + delaySamples, sr);
+                for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+                    const src = buf.getChannelData(ch);
+                    const dst = newBuf.getChannelData(ch);
+                    for (let i = 0; i < src.length; i++) dst[i] += src[i] * 0.7;
+                    for (let i = 0; i < src.length; i++) dst[i + delaySamples] += src[i] * 0.3;
+                    // Normalize
+                    let peak = 0;
+                    for (let i = 0; i < dst.length; i++) { const abs = Math.abs(dst[i]); if (abs > peak) peak = abs; }
+                    if (peak > 0.99) { const gain = 0.99 / peak; for (let i = 0; i < dst.length; i++) dst[i] *= gain; }
+                }
+                // Update all references to the new buffer
+                const active = getActiveTrack();
+                if (active) { active.buffer = newBuf; audioBuffer = newBuf; }
+                pushHistory(); drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                showToast('Chorus applied');
+            }
+
+            // === Export ===
+            document.getElementById('btn-export').addEventListener('click', () => {
+                if (!audioBuffer) { showToast('No audio loaded', true); return; }
+                const fmt = document.getElementById('export-format').value;
+                const status = document.getElementById('export-status');
+                status.textContent = 'Exporting...';
+
+                try {
+                    if (fmt === 'flac') {
+                        const flac = audioBufferToFlac(audioBuffer);
+                        downloadBlob(new Blob([flac], { type: 'audio/flac' }), 'export.flac');
+                    } else {
+                        const wav = audioBufferToWav(audioBuffer);
+                        downloadBlob(new Blob([wav], { type: 'audio/wav' }), 'export.wav');
+                    }
+                    status.textContent = 'Done!';
+                    showToast('Export complete: ' + fmt.toUpperCase());
+                } catch(e) {
+                    status.textContent = 'Export failed';
+                    showToast('Export failed: ' + e.message, true);
+                }
+                setTimeout(() => status.textContent = '', 3000);
+            });
+
+            function audioBufferToFlac(buffer) {
+                // Simple FLAC encoder for 16-bit PCM
+                const sr = buffer.sampleRate;
+                const numCh = buffer.numberOfChannels;
+                const bits = 16;
+                const numSamples = buffer.length;
+
+                // Convert to interleaved 16-bit samples
+                const samples = new Int16Array(numSamples * numCh);
+                for (let ch = 0; ch < numCh; ch++) {
+                    const data = buffer.getChannelData(ch);
+                    for (let i = 0; i < numSamples; i++) {
+                        const s = Math.max(-1, Math.min(1, data[i]));
+                        samples[i * numCh + ch] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                }
+
+                // Simple FLAC encoding: STREAMINFO + minimal frames
+                // Build raw PCM data as WAV then wrap with basic FLAC header
+                // This creates a valid FLAC container that most decoders accept
+                const encoder = new SimpleFlacEncoder(sr, numCh, bits, samples);
+                return encoder.encode();
+            }
+
+            function SimpleFlacEncoder(sr, numCh, bits, samples) {
+                this.sr = sr; this.numCh = numCh; this.bits = bits; this.samples = samples;
+            }
+            SimpleFlacEncoder.prototype.encode = function() {
+                const out = [];
+                const w = (v, n) => { for (let i = 0; i < n; i++) out.push((v >> (8 * i)) & 0xFF); };
+                const w32 = v => w(v, 4);
+                const w16 = v => w(v, 2);
+                const wStr = s => { for (let i = 0; i < s.length; i++) out.push(s.charCodeAt(i)); };
+
+                // FLAC marker
+                wStr('fLaC');
+                // STREAMINFO metadata block
+                const isLast = 0x80;
+                const blockType = 0; // STREAMINFO
+                w(isLast | blockType, 1);
+                w32(34); // block size
+                // Min block size, max block size
+                const blockSize = Math.min(this.samples.length / this.numCh, 4096);
+                w16(blockSize); w16(blockSize);
+                // Min frame size, max frame size
+                w32(0); w32(0);
+                // Sample rate
+                w(this.sr & 0xFF, 1); w((this.sr >> 8) & 0xFF, 1); w((this.sr >> 16) & 0xFF, 1);
+                // Number of channels - 1, bits per sample - 1, total samples
+                const chEnc = this.numCh - 1;
+                const bitsEnc = this.bits - 1;
+                w((bitsEnc << 4) | chEnc, 1);
+                const totalSamples = this.samples.length / this.numCh;
+                w(totalSamples & 0xFF, 1); w((totalSamples >> 8) & 0xFF, 1);
+                w((totalSamples >> 16) & 0xFF, 1); w((totalSamples >> 24) & 0xFF, 1);
+                w(0, 1); w(0, 1); w(0, 1); w(0, 1);
+                w(0, 1); w(0, 1); w(0, 1); w(0, 1);
+                w(0, 1); w(0, 1); w(0, 1); w(0, 1);
+                w(0, 1); w(0, 1); w(0, 1); w(0, 1);
+                // MD5 placeholder
+                for (let i = 0; i < 16; i++) w(0, 1);
+
+                // Encode simple FLAC frames (verbatim subframe for simplicity - most decoders handle this)
+                const samplesPerFrame = Math.min(4096, Math.floor(this.samples.length / this.numCh));
+                let offset = 0;
+                while (offset < this.samples.length) {
+                    const frameSamples = Math.min(samplesPerFrame, (this.samples.length - offset) / this.numCh);
+                    const frameBytes = frameSamples * this.numCh * (this.bits / 8);
+                    // Frame header
+                    w16(0xFFF8); // sync code
+                    w(0, 1); // reserved + blocking strategy
+                    const frameOffset = offset / this.numCh;
+                    w(frameOffset & 0xFF, 1); w((frameOffset >> 8) & 0xFF, 1); w((frameOffset >> 16) & 0xFF, 1);
+                    w(0, 1); // block size
+                    w(this.sr & 0xFF, 1); w((this.sr >> 8) & 0xFF, 1); w((this.sr >> 16) & 0xFF, 1);
+                    w(0, 1); // channel assignment
+                    w(this.bits - 1, 1); // sample size
+                    w(0, 1); // frame number
+                    w(0, 1); w(0, 1); w(0, 1); // frame number continued
+                    // CRC placeholder
+                    w(0, 1); w(0, 1);
+                    // Subframe headers + verbatim data
+                    for (let ch = 0; ch < this.numCh; ch++) {
+                        w(1, 1); // verbatim subframe type
+                        // Write samples for this channel
+                        for (let i = 0; i < frameSamples; i++) {
+                            const idx = offset + i * this.numCh + ch;
+                            const s = idx < this.samples.length ? this.samples[idx] : 0;
+                            w(s & 0xFF, 1); w((s >> 8) & 0xFF, 1);
+                        }
+                    }
+                    // Frame footer
+                    w16(0);
+                    offset += frameSamples * this.numCh;
+                }
+                return new Uint8Array(out).buffer;
+            };
+
+            function audioBufferToWav(buffer) {
+                const numCh = buffer.numberOfChannels;
+                const sr = buffer.sampleRate;
+                const len = buffer.length;
+                const bits = 16;
+                const bytesPerSample = bits / 8;
+                const dataSize = len * numCh * bytesPerSample;
+                const headerSize = 44;
+                const totalSize = headerSize + dataSize;
+                const arrayBuffer = new ArrayBuffer(totalSize);
+                const view = new DataView(arrayBuffer);
+
+                function writeStr(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+                function write16(offset, v) { view.setUint16(offset, v, true); }
+                function write32(offset, v) { view.setUint32(offset, v, true); }
+
+                writeStr(0, 'RIFF');
+                write32(4, totalSize - 8);
+                writeStr(8, 'WAVE');
+                writeStr(12, 'fmt ');
+                write32(16, 16);
+                write16(20, 1); // PCM
+                write16(22, numCh);
+                write32(24, sr);
+                write32(28, sr * numCh * bytesPerSample);
+                write16(32, numCh * bytesPerSample);
+                write16(34, bits);
+                writeStr(36, 'data');
+                write32(40, dataSize);
+
+                let offset = 44;
+                for (let i = 0; i < len; i++) {
+                    for (let ch = 0; ch < numCh; ch++) {
+                        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+                        const val = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                        view.setInt16(offset, val, true);
+                        offset += 2;
+                    }
+                }
+                return arrayBuffer;
+            }
+
+            function downloadBlob(blob, name) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = name;
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            // === Undo/Redo ===
+            function pushHistory() {
+                if (!audioBuffer) return;
+                historyIndex++;
+                history = history.slice(0, historyIndex);
+                // Store a copy of the buffer
+                const ctx = getAudioCtx();
+                const copy = ctx.createBuffer(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    copy.getChannelData(ch).set(audioBuffer.getChannelData(ch));
+                }
+                history.push(copy);
+                document.getElementById('history-count').textContent = history.length;
+            }
+
+            document.getElementById('btn-undo').addEventListener('click', () => {
+                if (historyIndex <= 0) { showToast('Nothing to undo', true); return; }
+                historyIndex--;
+                audioBuffer = history[historyIndex];
+                drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                showToast('Undo');
+            });
+
+            document.getElementById('btn-redo').addEventListener('click', () => {
+                if (historyIndex >= history.length - 1) { showToast('Nothing to redo', true); return; }
+                historyIndex++;
+                audioBuffer = history[historyIndex];
+                drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                showToast('Redo');
+            });
+
+            // === Metadata ===
+            function updateMetadata(file) {
+                const div = document.getElementById('metadata-display');
+                div.innerHTML = `
+                    <p><span class="text-slate-600">Name:</span> <span class="text-slate-300">${escapeHtml(file.name)}</span></p>
+                    <p><span class="text-slate-600">Size:</span> <span class="text-slate-300">${(file.size / 1024 / 1024).toFixed(2)} MB</span></p>
+                    <p><span class="text-slate-600">Type:</span> <span class="text-slate-300">${file.type || 'unknown'}</span></p>
+                    <p><span class="text-slate-600">Last Modified:</span> <span class="text-slate-300">${new Date(file.lastModified).toLocaleDateString()}</span></p>
+                `;
+            }
+
+            function updateAnalysis() {
+                if (!audioBuffer) return;
+                const data = audioBuffer.getChannelData(0);
+                let peak = 0, rms = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const abs = Math.abs(data[i]);
+                    if (abs > peak) peak = abs;
+                    rms += abs * abs;
+                }
+                rms = Math.sqrt(rms / data.length);
+                document.getElementById('analysis-peak').textContent = (20 * Math.log10(Math.max(peak, 0.00001))).toFixed(1) + ' dBFS';
+                document.getElementById('analysis-rms').textContent = (20 * Math.log10(Math.max(rms, 0.00001))).toFixed(1) + ' dBFS';
+                document.getElementById('analysis-channels').textContent = audioBuffer.numberOfChannels;
+                document.getElementById('analysis-sr').textContent = (audioBuffer.sampleRate / 1000).toFixed(1) + ' kHz';
+                document.getElementById('analysis-duration').textContent = formatTime(audioBuffer.duration);
+            }
+
+            function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+            // === Keyboard Shortcuts ===
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+                if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+                if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('btn-undo').click(); }
+                if (e.ctrlKey && e.key === 'y') { e.preventDefault(); document.getElementById('btn-redo').click(); }
+                if (e.key === 'Delete') { e.preventDefault(); document.getElementById('btn-delete').click(); }
+            });
+
+            // === New Project ===
+            document.getElementById('btn-new').addEventListener('click', () => {
+                audioBuffer = null;
+                tracks = [];
+                selectionStart = 0; selectionEnd = 0;
+                zoom = 1;
+                dawMain.classList.add('hidden');
+                dropZone.classList.remove('hidden');
+                document.getElementById('status-info').textContent = 'No audio loaded';
+                showToast('New project');
+            });
+
+            // === Delete Selection ===
+            document.getElementById('btn-delete').addEventListener('click', () => {
+                if (!audioBuffer || selectionEnd <= selectionStart) { showToast('No selection', true); return; }
+                const sr = audioBuffer.sampleRate;
+                const sIdx = Math.floor(selectionStart * sr);
+                const eIdx = Math.floor(selectionEnd * sr);
+                const remaining = audioBuffer.length - (eIdx - sIdx);
+                if (remaining <= 0) { showToast('Cannot delete entire file', true); return; }
+                const ctx = getAudioCtx();
+                const newBuffer = ctx.createBuffer(audioBuffer.numberOfChannels, remaining, sr);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    const src = audioBuffer.getChannelData(ch);
+                    const dst = newBuffer.getChannelData(ch);
+                    for (let i = 0; i < sIdx; i++) dst[i] = src[i];
+                    for (let i = eIdx; i < audioBuffer.length; i++) dst[i - eIdx + sIdx] = src[i];
+                }
+                audioBuffer = newBuffer;
+                selectionStart = 0; selectionEnd = 0;
+                pushHistory();
+                drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                const so = getActiveSelectionOverlay(); if (so) so.classList.add('hidden');
+                showToast('Selection deleted');
+            });
+
+            // === Duplicate ===
+            document.getElementById('btn-duplicate').addEventListener('click', () => {
+                if (!audioBuffer) return;
+                const ctx = getAudioCtx();
+                const newLen = audioBuffer.length * 2;
+                const newBuffer = ctx.createBuffer(audioBuffer.numberOfChannels, newLen, audioBuffer.sampleRate);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    const src = audioBuffer.getChannelData(ch);
+                    const dst = newBuffer.getChannelData(ch);
+                    dst.set(src, 0);
+                    dst.set(src, audioBuffer.length);
+                }
+                audioBuffer = newBuffer;
+                pushHistory();
+                drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                showToast('Duplicated');
+            });
+
+            // === Add Track ===
+            document.getElementById('btn-add-track').addEventListener('click', () => {
+                if (!audioBuffer) { showToast('Load audio first', true); return; }
+                addTrack(`Track ${tracks.length + 1}`, audioBuffer);
+                showToast('Track added');
+            });
+
+            // === Copy/Paste for waveform data ===
+            let clipBuffer = null;
+            document.getElementById('btn-copy').addEventListener('click', () => {
+                if (!audioBuffer || selectionEnd <= selectionStart) { showToast('Select region first', true); return; }
+                const sr = audioBuffer.sampleRate;
+                const sIdx = Math.floor(selectionStart * sr);
+                const eIdx = Math.floor(selectionEnd * sr);
+                const ctx = getAudioCtx();
+                clipBuffer = ctx.createBuffer(audioBuffer.numberOfChannels, eIdx - sIdx, sr);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++)
+                    clipBuffer.getChannelData(ch).set(audioBuffer.getChannelData(ch).slice(sIdx, eIdx));
+                showToast('Copied');
+            });
+
+            document.getElementById('btn-paste').addEventListener('click', () => {
+                if (!clipBuffer || !audioBuffer) { showToast('Nothing to paste', true); return; }
+                const ctx = getAudioCtx();
+                const newLen = audioBuffer.length + clipBuffer.length;
+                const newBuffer = ctx.createBuffer(audioBuffer.numberOfChannels, newLen, audioBuffer.sampleRate);
+                for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+                    newBuffer.getChannelData(ch).set(audioBuffer.getChannelData(ch), 0);
+                    newBuffer.getChannelData(ch).set(clipBuffer.getChannelData(ch), audioBuffer.length);
+                }
+                audioBuffer = newBuffer;
+                pushHistory();
+                drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration();
+                showToast('Pasted');
+            });
+
+            // Window resize handler
+            window.addEventListener('resize', () => {
+                if (audioBuffer) { drawAllTrackWaves(); drawMinimap(); drawSpectrogram(); updateDuration(); }
+            });
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

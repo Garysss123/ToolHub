@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM VRAM 記憶體需求估算器 | ToolHub - 本地 AI 模型 GPU 記憶體計算</title>
+    <meta name="description" content="免費 LLM VRAM 計算器。精準估算 Llama、DeepSeek、Qwen、Gemma、Mistral 等大型語言模型本地部署所需的 GPU 記憶體與系統 RAM。支援量化格式（FP16/Q4_K_M/Q8_0）、Context Length、GPU 相容性判斷與多 GPU 配置。">
+    <meta name="keywords" content="LLM VRAM 計算, GPU 記憶體需求, AI 模型部署, 量化格式比較, Ollama VRAM, LM Studio 記憶體, Local LLM, FP16, Q4_K_M, GPU 相容性">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        vram: {
+                            primary: '#0891B2',
+                            teal: '#22D3EE',
+                            cyan: '#06B6D4',
+                            blue: '#0EA5E9',
+                            green: '#10B981',
+                            amber: '#F59E0B',
+                            red: '#EF4444',
+                            purple: '#A78BFA'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #0891B2; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 8px rgba(8, 145, 178, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(8, 145, 178, 0.4); }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+        .size-btn, .quant-btn, .ctx-btn, .gpu-cnt-btn, .mode-btn, .common-btn {
+            transition: all 0.2s ease;
+        }
+        .size-btn.active, .quant-btn.active, .ctx-btn.active, .gpu-cnt-btn.active, .mode-btn.active {
+            background: rgba(8, 145, 178, 0.2);
+            border-color: #0891B2;
+            color: #22D3EE;
+            box-shadow: 0 0 15px rgba(8, 145, 178, 0.1);
+        }
+
+        .gpu-card {
+            transition: all 0.3s ease;
+        }
+        .gpu-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(8, 145, 178, 0.1);
+        }
+
+        .badge-compatible { color: #10B981; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
+        .badge-limited { color: #F59E0B; background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); }
+        .badge-impossible { color: #EF4444; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+
+        .vram-bar {
+            transition: width 0.8s ease;
+            border-radius: 6px;
+        }
+
+        .compat-row {
+            transition: all 0.2s ease;
+        }
+        .compat-row:hover {
+            background: rgba(8, 145, 178, 0.05);
+        }
+
+        .suggestion-card {
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        .suggestion-card:hover {
+            transform: translateX(4px);
+        }
+
+        @media (max-width: 640px) {
+            .glass-panel { padding: 1rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/llm-vram-calculator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/llm-vram-calculator/">
+    <meta property="og:title" content="LLM VRAM 記憶體需求估算器">
+    <meta property="og:description" content="免費 LLM VRAM 計算器。精準估算 Llama、DeepSeek、Qwen、Gemma、Mistral 等大型語言模型本地部署所需的 GPU 記憶體與系統 RAM。支援量化格式（FP16/Q4_K_M/Q8_0）、Context Length、GPU 相容性判斷與多 GPU 配置。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="LLM VRAM 記憶體需求估算器">
+    <meta name="twitter:description" content="免費 LLM VRAM 計算器。精準估算 Llama、DeepSeek、Qwen、Gemma、Mistral 等大型語言模型本地部署所需的 GPU 記憶體與系統 RAM。支援量化格式（FP16/Q4_K_M/Q8_0）、Context Length、GPU 相容性判斷與多 GPU 配置。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"LLM VRAM 記憶體需求估算器","url":"https://toolhuben.com/llm-vram-calculator/","description":"免費 LLM VRAM 計算器。精準估算 Llama、DeepSeek、Qwen、Gemma、Mistral 等大型語言模型本地部署所需的 GPU 記憶體與系統 RAM。支援量化格式（FP16/Q4_K_M/Q8_0）、Context Length、GPU 相容性判斷與多 GPU 配置。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"LLM VRAM 記憶體需求估算器","item":"https://toolhuben.com/llm-vram-calculator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/llm-vram-calculator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/llm-vram-calculator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/llm-vram-calculator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#0891B2;--classic-accent-rgb:8,145,178" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ===================== Hero ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-cyan-950/30 border border-cyan-900/50 text-xs text-cyan-400 shadow-inner">
+                <i class="ph-fill ph-lightning mr-1.5 text-sm"></i>
+                本地 LLM 部署記憶體估算引擎
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                LLM <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-400">VRAM 記憶體需求估算器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                精準估算 Llama、DeepSeek、Qwen、Gemma、Mistral 等大型語言模型本地部署所需的 GPU VRAM 與系統記憶體。
+                支援量化格式、Context Length、GPU 相容性判斷，以及「我的 GPU 可以跑哪些模型」反向查詢。
+            </p>
+        </div>
+
+        <!-- ===================== 主計算區域 ===================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ======== 左側：輸入面板 ======== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+
+                <!-- 模型大小 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-cube text-cyan-400 text-lg"></i> 模型大小
+                    </h3>
+                    <div class="grid grid-cols-5 sm:grid-cols-5 gap-1.5" id="size-selector">
+                        <button data-size="1" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">1B</button>
+                        <button data-size="3" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">3B</button>
+                        <button data-size="7" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">7B</button>
+                        <button data-size="8" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">8B</button>
+                        <button data-size="13" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">13B</button>
+                        <button data-size="14" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">14B</button>
+                        <button data-size="32" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">32B</button>
+                        <button data-size="70" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">70B</button>
+                        <button data-size="72" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">72B</button>
+                        <button data-size="123" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">123B</button>
+                        <button data-size="405" class="size-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 hover:text-cyan-300 transition-all">405B</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-500 whitespace-nowrap">或手動輸入：</span>
+                        <input type="number" id="in-custom-params" value="8" min="0.1" step="0.5"
+                            class="flex-1 bg-hub-900 border border-hub-700 rounded-lg px-3 py-1.5 text-white font-mono text-sm outline-none focus:border-cyan-400 transition-colors">
+                        <span class="text-xs text-slate-500">B（十億參數）</span>
+                    </div>
+                </div>
+
+                <!-- 量化格式 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-compress text-cyan-400 text-lg"></i> 量化格式
+                        <span class="text-[9px] text-slate-600 font-normal ml-auto">bits per param</span>
+                    </h3>
+                    <div class="grid grid-cols-5 gap-1.5" id="quant-selector">
+                        <button data-quant="FP16" class="quant-btn active px-2 py-2 rounded-lg border text-xs text-center transition-all bg-hub-900 text-slate-400 hover:border-cyan-500/50">FP16<br><span class="text-[8px] text-slate-600">16-bit</span></button>
+                        <button data-quant="BF16" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">BF16<br><span class="text-[8px] text-slate-600">16-bit</span></button>
+                        <button data-quant="FP8" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">FP8<br><span class="text-[8px] text-slate-600">8-bit</span></button>
+                        <button data-quant="INT8" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">INT8<br><span class="text-[8px] text-slate-600">8-bit</span></button>
+                        <button data-quant="Q8_0" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Q8_0<br><span class="text-[8px] text-slate-600">8-bit</span></button>
+                        <button data-quant="Q6_K" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Q6_K<br><span class="text-[8px] text-slate-600">6-bit</span></button>
+                        <button data-quant="Q5_K_M" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Q5_K_M<br><span class="text-[8px] text-slate-600">5-bit</span></button>
+                        <button data-quant="Q4_K_M" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Q4_K_M<br><span class="text-[8px] text-slate-600">4-bit</span></button>
+                        <button data-quant="Q3_K_M" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Q3_K_M<br><span class="text-[8px] text-slate-600">3-bit</span></button>
+                        <button data-quant="Q2_K" class="quant-btn px-2 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Q2_K<br><span class="text-[8px] text-slate-600">2-bit</span></button>
+                    </div>
+                </div>
+
+                <!-- Context Length + GPU 配置 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-article text-cyan-400 text-lg"></i> Context Length &amp; GPU 配置
+                    </h3>
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider block mb-2">Context Length</label>
+                        <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 mb-2" id="ctx-selector">
+                            <button data-ctx="2048" class="ctx-btn px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">2K</button>
+                            <button data-ctx="4096" class="ctx-btn px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">4K</button>
+                            <button data-ctx="8192" class="ctx-btn active px-2 py-1.5 rounded-lg border text-xs text-center transition-all">8K</button>
+                            <button data-ctx="16384" class="ctx-btn px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">16K</button>
+                            <button data-ctx="32768" class="ctx-btn px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">32K</button>
+                            <button data-ctx="65536" class="ctx-btn px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">65K</button>
+                            <button data-ctx="custom" class="ctx-btn px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">自訂</button>
+                        </div>
+                        <div id="ctx-custom-area" class="hidden">
+                            <input type="number" id="in-custom-ctx" value="8192" min="1" step="1"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-1.5 text-white font-mono text-sm outline-none focus:border-cyan-400 transition-colors">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider block mb-2">GPU 數量</label>
+                            <div class="flex gap-1.5" id="gpu-count-selector">
+                                <button data-gpucnt="1" class="gpu-cnt-btn active flex-1 px-2 py-1.5 rounded-lg border text-xs text-center transition-all">1</button>
+                                <button data-gpucnt="2" class="gpu-cnt-btn flex-1 px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">2</button>
+                                <button data-gpucnt="4" class="gpu-cnt-btn flex-1 px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">4</button>
+                                <button data-gpucnt="8" class="gpu-cnt-btn flex-1 px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">8</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold tracking-wider block mb-2">推論模式</label>
+                            <div class="flex gap-1.5" id="mode-selector">
+                                <button data-mode="full-gpu" class="mode-btn active flex-1 px-2 py-1.5 rounded-lg border text-xs text-center transition-all">Full GPU</button>
+                                <button data-mode="gpu-offload" class="mode-btn flex-1 px-2 py-1.5 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-400 font-medium text-center hover:border-cyan-500/50 transition-all">Offload</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 常見模型快速選擇 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-3 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-star text-amber-400 text-lg"></i> 常見模型快速選擇
+                    </h3>
+                    <p class="text-[10px] text-slate-500">點擊自動帶入對應模型大小</p>
+                    <div class="grid grid-cols-2 gap-2" id="common-model-selector"></div>
+                </div>
+
+                <!-- GPU 快速選擇（特殊功能） -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-gpu text-cyan-400 text-lg"></i> ⭐ GPU 反向查詢
+                        <span class="text-[8px] text-amber-400 font-normal ml-auto">獨家功能</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-500">選擇你的 GPU，查看可以執行哪些模型</p>
+                    <select id="gpu-select" class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-400 transition-colors cursor-pointer"></select>
+                    <button id="btn-check-gpu"
+                        class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-bold text-sm rounded-lg shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                        <i class="ph-fill ph-magnifying-glass text-lg"></i> 查詢相容模型
+                    </button>
+                    <div id="gpu-compat-results" class="space-y-1.5 max-h-64 overflow-y-auto"></div>
+                </div>
+
+                <button id="btn-calculate"
+                    class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-bold text-lg rounded-xl shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-calculator text-xl"></i> 計算 VRAM 需求
+                </button>
+
+            </div>
+
+            <!-- ======== 右側：結果面板 ======== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+
+                <!-- VRAM 需求結果 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col gap-5">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-chart-bar text-9xl"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 relative z-10 flex items-center gap-2">
+                        <i class="ph-fill ph-cpu text-cyan-400"></i> VRAM 需求估算結果
+                        <span class="text-[10px] text-slate-600 font-normal normal-case ml-auto" id="result-config-label"></span>
+                    </h3>
+
+                    <!-- 主要數據 -->
+                    <div class="relative z-10 grid grid-cols-2 gap-3">
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4 text-center">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">模型權重</span>
+                            <p class="font-mono text-lg font-bold text-cyan-300 mt-1" id="out-weights">-- GB</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4 text-center">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">KV Cache</span>
+                            <p class="font-mono text-lg font-bold text-teal-300 mt-1" id="out-kvcache">-- GB</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4 text-center">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議 VRAM</span>
+                            <p class="font-mono text-2xl font-bold text-white mt-1" id="out-vram">-- GB</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4 text-center">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議系統 RAM</span>
+                            <p class="font-mono text-2xl font-bold text-white mt-1" id="out-ram">-- GB</p>
+                        </div>
+                    </div>
+
+                    <!-- 相容性狀態 -->
+                    <div class="relative z-10 flex items-center justify-center gap-3 p-3 rounded-lg bg-hub-900/50 border border-hub-700" id="compatibility-banner">
+                        <span class="text-sm font-bold" id="compatibility-text">請輸入配置後計算</span>
+                    </div>
+
+                    <!-- VRAM 視覺化條 -->
+                    <div class="relative z-10 space-y-2">
+                        <div class="flex justify-between text-[10px] text-slate-500">
+                            <span>VRAM 使用量</span>
+                            <span id="vram-bar-label">0 / 0 GB</span>
+                        </div>
+                        <div class="w-full h-4 bg-hub-900 rounded-full overflow-hidden border border-hub-700">
+                            <div id="vram-bar" class="h-full rounded-full vram-bar" style="width: 0%; background: linear-gradient(90deg, #0891B2, #22D3EE);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GPU 比較表 -->
+                <div class="glass-panel p-6 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                        <i class="ph-fill ph-list-checks text-cyan-400 text-lg"></i> 常見 GPU 相容性比較
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-hub-700">
+                                    <th class="pb-2 pr-4">GPU</th>
+                                    <th class="pb-2 pr-4">VRAM</th>
+                                    <th class="pb-2 pr-4">可運行</th>
+                                    <th class="pb-2">建議</th>
+                                </tr>
+                            </thead>
+                            <tbody class="font-mono text-xs" id="gpu-compare-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 使用建議 -->
+                <div class="glass-panel p-6 shadow-xl" id="suggestions-area">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                        <i class="ph-fill ph-lightbulb text-amber-400 text-lg"></i> 效能與部署建議
+                    </h3>
+                    <div id="suggestions-content" class="space-y-3">
+                        <div class="text-slate-500 text-sm text-center py-4">計算後將自動生成建議</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ===================== Context Length 影響圖表 ===================== -->
+        <div class="mt-10 glass-panel p-6 shadow-xl">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-5">
+                <i class="ph-fill ph-chart-line text-cyan-400 text-lg"></i> Context Length 對 VRAM 的影響
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">不同 Context Length 下 KV Cache 與總 VRAM 的變化趨勢</p>
+            <div id="ctx-impact-chart" class="w-full h-56 sm:h-64 flex items-end gap-2 sm:gap-4 px-2 border-b border-hub-700 pb-1"></div>
+            <div id="ctx-impact-labels" class="flex justify-around text-[10px] text-slate-500 mt-2"></div>
+        </div>
+
+        <!-- ===================== SEO 知識區 ===================== -->
+        <div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+
+            <div class="border-b border-hub-700 pb-2 mb-6">
+                <h2 class="text-xl font-bold text-white tracking-wide">LLM VRAM 與本地部署完整指南</h2>
+                <p class="text-slate-500 text-sm mt-1">深入了解 VRAM、量化技術與 GPU 選擇</p>
+            </div>
+
+            <!-- VRAM 是什麼 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-question text-cyan-400"></i> 什麼是 VRAM？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    VRAM（Video Random Access Memory，視訊隨機存取記憶體）是顯示卡（GPU）上的專用記憶體，類似於電腦中的系統 RAM。VRAM 用於儲存 GPU 即時運算所需的資料，包括紋理、幀緩衝區（Frame Buffer）、著色器程式，以及近年來最重要的——<strong class="text-white">大型語言模型（LLM）的模型權重和中間計算結果</strong>。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    在本地部署 LLM 時，VRAM 的大小直接決定了可以載入的模型大小和推論速度。如果模型需要的 VRAM 超過了 GPU 的容量，模型將無法在該 GPU 上完整運行，或被迫使用 CPU Offloading 等降速方案。
+                </p>
+            </div>
+
+            <!-- LLM 為什麼需要大量 VRAM -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-database text-cyan-400"></i> LLM 為什麼需要大量 VRAM？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    大型語言模型的 VRAM 消耗主要來自三個方面：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-cyan-300">模型權重（Weights）</strong>：神經網路的所有參數。一個 70B 的模型在 FP16 格式下需要約 70 × 2 = 140 GB 的記憶體。</li>
+                    <li><strong class="text-teal-300">KV Cache</strong>：在生成每個 Token 時，Transformer 模型需要儲存所有先前 Token 的 Key 和 Value 值。隨著上下文長度（Context Length）增加，KV Cache 呈線性增長，在長上下文場景下可能超過權重本身的大小。</li>
+                    <li><strong class="text-sky-300">運算中間值（Activations）</strong>：前向傳播過程中的中間層輸出，大小取決於 batch size 和模型架構。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    舉例來說，使用 FP16 運行一個 70B 模型處理 32K 上下文，約需要 140 GB（權重）+ 10 GB（KV Cache）+ 少量開銷 ≈ 150+ GB VRAM，這遠遠超過了單張 RTX 4090（24 GB）的容量，因此需要量化或多 GPU 配置。
+                </p>
+            </div>
+
+            <!-- 量化 Quantization -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-compress text-cyan-400"></i> 量化（Quantization）是什麼？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    量化是一種模型壓縮技術，透過降低每個參數的位元數來減少模型大小。原始模型通常使用 FP16（16 位元浮點數，每個參數 2 bytes）或 BF16 儲存。量化將這些參數用更少的位元數表示，例如 INT8（8 位元，1 byte）、Q4_K_M（約 4 位元，0.5 bytes）甚至 Q2_K（約 2 位元，0.25 bytes）。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    量化後的模型體積顯著減小，但會帶來一定程度的品質損失。GGUF 格式（由 llama.cpp 推廣）的 Q4_K_M 是目前業界公認的最佳平衡點，在保留大部分模型品質的同時將記憶體需求降低約 75%。
+                </p>
+            </div>
+
+            <!-- Q4 vs Q5 vs Q8 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-sliders text-cyan-400"></i> Q4、Q5、Q8 差異與選擇建議
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed mb-3">
+                    不同量化等級在模型大小、品質與速度之間存在取捨：
+                </p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-hub-700">
+                                <th class="pb-2 pr-4">量化格式</th>
+                                <th class="pb-2 pr-4">位元數</th>
+                                <th class="pb-2 pr-4">每 B 參數大小</th>
+                                <th class="pb-2 pr-4">品質保留</th>
+                                <th class="pb-2">建議場景</th>
+                            </tr>
+                        </thead>
+                        <tbody class="font-mono text-xs">
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">FP16 / BF16</td><td class="py-2 pr-4">16-bit</td><td class="py-2 pr-4 text-cyan-300">~2 GB</td><td class="py-2 pr-4 text-green-400">100%</td><td class="py-2">專業研究、最高品質要求</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">Q8_0</td><td class="py-2 pr-4">8-bit</td><td class="py-2 pr-4 text-cyan-300">~1 GB</td><td class="py-2 pr-4 text-green-400">~99%</td><td class="py-2">高品質、中等 VRAM 場景</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">Q6_K</td><td class="py-2 pr-4">6-bit</td><td class="py-2 pr-4 text-cyan-300">~0.75 GB</td><td class="py-2 pr-4 text-amber-400">~98%</td><td class="py-2">良好品質與大小的平衡</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">Q5_K_M</td><td class="py-2 pr-4">5-bit</td><td class="py-2 pr-4 text-cyan-300">~0.625 GB</td><td class="py-2 pr-4 text-amber-400">~96%</td><td class="py-2">推薦平衡點</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">Q4_K_M</td><td class="py-2 pr-4">4-bit</td><td class="py-2 pr-4 text-cyan-300">~0.5 GB</td><td class="py-2 pr-4 text-amber-400">~93%</td><td class="py-2">⭐ 最佳性價比（業界標準）</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">Q3_K_M</td><td class="py-2 pr-4">3-bit</td><td class="py-2 pr-4 text-cyan-300">~0.375 GB</td><td class="py-2 pr-4 text-red-400">~85%</td><td class="py-2">極度低 VRAM 場景</td></tr>
+                            <tr class="border-b border-hub-700/50"><td class="py-2 pr-4 text-white">Q2_K</td><td class="py-2 pr-4">2-bit</td><td class="py-2 pr-4 text-cyan-300">~0.25 GB</td><td class="py-2 pr-4 text-red-400">~75%</td><td class="py-2">僅在 VRAM 極度不足時使用</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    <strong class="text-white">建議</strong>：對於大多數使用者，Q4_K_M 是黃金標準——將模型縮小約 75% 的同時保留約 93% 的品質。若 VRAM 充足，Q5_K_M 或 Q8_0 可提供更高品質。極低 VRAM 情境下 Q3_K_M 是最後防線。
+                </p>
+            </div>
+
+            <!-- Context Length 對記憶體的影響 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-chart-line text-cyan-400"></i> Context Length 如何影響記憶體？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    KV Cache 的大小與 Context Length 呈<strong class="text-white">線性關係</strong>。當上下文長度加倍時，KV Cache 也隨之加倍。在短上下文（2K~8K）下，KV Cache 佔比較小；但在長上下文（32K~128K+）下，KV Cache 可能成為主要的 VRAM 消耗來源。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    例如，一個 8B 模型在 Q4_K_M 下權重約 4 GB，在 8K 上下文下 KV Cache 約 0.5 GB；但在 128K 上下文下，KV Cache 會膨脹到約 8 GB——超過了權重本身。這正是為什麼長上下文模型需要更多 VRAM 或使用優化技術（如 sliding window attention、context caching）。
+                </p>
+            </div>
+
+            <!-- GPU Offload -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-arrows-down-up text-cyan-400"></i> GPU Offload 是什麼？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    GPU Offload（也稱為 Layer Offloading）是一種混合推論策略，當模型的全部權重無法放入 GPU VRAM 時，將部分神經網路層分配到 CPU 系統記憶體中運算。GPU 負責運算其能容納的層，而 CPU 處理其餘層，兩者之間通過 PCIe 匯流排傳遞中間結果。
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-green-400">優點</strong>：能夠在 VRAM 有限的 GPU 上運行原本無法載入的模型。</li>
+                    <li><strong class="text-red-400">缺點</strong>：速度顯著下降（可能比純 GPU 慢 5~20 倍），因為 PCIe 頻寬遠低於 GPU 記憶體頻寬。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    使用 Ollama 或 llama.cpp 時，可以透過 <code class="text-cyan-300">--num-gpu-layers</code> 參數控制 Offload 的層數。通常建議先讓模型完全放入 VRAM（無 Offload），若 VRAM 不足再逐步增加 CPU 層。
+                </p>
+            </div>
+
+            <!-- FAQ -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+                    <i class="ph-fill ph-question-mark text-cyan-400"></i> LLM VRAM 常見問題 FAQ
+                </h3>
+                <div class="space-y-4" itemscope itemtype="https://schema.org/FAQPage">
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q1: 我的 RTX 4090（24GB）可以跑哪些模型？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                RTX 4090 的 24GB VRAM 可以流暢運行 8B 以下的模型（FP16），或使用 Q4_K_M 量化運行 32B~40B 的模型。例如：Llama 3 8B（FP16，~16 GB）、Qwen3 32B（Q4_K_M，~16.5 GB）、Mistral 7B（FP16，~14 GB）。若使用 Q4_K_M，甚至可以嘗試 70B 模型搭配 CPU Offload。
+                            </p>
+                        </div>
+                    </div>
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q2: FP16 和 Q4_K_M 的品質差異大嗎？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                實測顯示，Q4_K_M 保留了約 93% 的 FP16 品質，在大多數日常任務（聊天、翻譯、摘要、程式碼生成）中差異幾乎無法察覺。但在專業推理、數學計算或需要高度精確性的場景下，FP16 或 Q8_0 仍具優勢。選擇 Q4_K_M 可以將 VRAM 需求降低 75%，是絕大多數使用者的最佳選擇。
+                            </p>
+                        </div>
+                    </div>
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q3: VRAM 不足時有什麼替代方案？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                有四種方案：(1) <strong class="text-cyan-300">降低量化等級</strong>——從 FP16 改用 Q4_K_M 減少 75% 記憶體需求；(2) <strong class="text-cyan-300">縮短 Context Length</strong>——減少 KV Cache 佔用；(3) <strong class="text-cyan-300">啟用 GPU Offload</strong>——將部分層移至 CPU 記憶體（速度會下降）；(4) <strong class="text-cyan-300">使用多 GPU</strong>——將模型分散到多張顯示卡上。實務上通常先嘗試方案 1，再逐步評估其他選項。
+                            </p>
+                        </div>
+                    </div>
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q4: Ollama 和 LM Studio 的 VRAM 需求相同嗎？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                基本需求相同，因為底層都使用 llama.cpp 或類似引擎。但實際 VRAM 佔用可能略有差異：(1) Ollama 在載入模型時會佔用約等於模型大小的 VRAM，支援透過 <code class="text-cyan-300">--num-gpu-layers</code> 控制 Offload；(2) LM Studio 提供更細緻的 GPU Offload 滑桿調節；(3) ollama 在無活動一段時間後會釋放 VRAM，LM Studio 則保持佔用。整體而言，兩者的核心 VRAM 需求一致。
+                            </p>
+                        </div>
+                    </div>
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q5: 為什麼我的 24GB VRAM GPU 無法載入 16GB 的模型？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                這是因為模型載入時不僅需要儲存權重的空間，還需要 KV Cache、運算中間值（Activations）和 CUDA 核心佔用等開銷。這些開銷約為 10~20%。此外，作業系統和其他應用程式也會佔用少量 VRAM。建議預留至少 2~4 GB 的緩衝空間，即 24 GB GPU 實際可用約 20~22 GB。
+                            </p>
+                        </div>
+                    </div>
+                    <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 itemprop="name" class="text-sm font-bold text-white mb-2">Q6: 系統 RAM 需要多大才夠？</h4>
+                        <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                            <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                                這取決於推論模式。純 CPU 推論：系統 RAM 至少需要模型大小的 1.2 倍（一個 70B Q4_K_M 約 35 GB 模型 → 建議 48~64 GB RAM）。Full GPU 推論：RAM 需求較低，16~32 GB 已足夠。GPU Offload 模式：需要介於兩者之間。對於大多數本地 AI 應用，建議至少 32 GB 系統 RAM，64 GB 更佳，尤其是經常進行長上下文或多模型切換的使用者。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">計算完成</span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式                               -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/llm-vram-calculator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => { container.classList.remove('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full'); overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 核心業務邏輯：LLM VRAM 計算引擎              -->
+    <!-- ========================================== -->
+    <script>
+        // ============================================================
+        // 1. 資料庫
+        // ============================================================
+
+        const QUANT = {
+            'FP16': { bits: 16, bytes: 2, rank: 0 },
+            'BF16': { bits: 16, bytes: 2, rank: 1 },
+            'FP8': { bits: 8, bytes: 1, rank: 2 },
+            'INT8': { bits: 8, bytes: 1, rank: 3 },
+            'Q8_0': { bits: 8, bytes: 1, rank: 4 },
+            'Q6_K': { bits: 6, bytes: 0.75, rank: 5 },
+            'Q5_K_M': { bits: 5, bytes: 0.625, rank: 6 },
+            'Q4_K_M': { bits: 4, bytes: 0.5, rank: 7 },
+            'Q3_K_M': { bits: 3, bytes: 0.375, rank: 8 },
+            'Q2_K': { bits: 2, bytes: 0.25, rank: 9 }
+        };
+
+        const MODEL_ARCH = {
+            1: { hidden: 2048, layers: 16, kvRatio: 1, name: 'Tiny' },
+            3: { hidden: 3200, layers: 26, kvRatio: 0.25, name: 'Small' },
+            7: { hidden: 4096, layers: 32, kvRatio: 0.25, name: 'Base' },
+            8: { hidden: 4096, layers: 32, kvRatio: 0.25, name: 'Base' },
+            13: { hidden: 5120, layers: 40, kvRatio: 0.25, name: 'Medium' },
+            14: { hidden: 5120, layers: 40, kvRatio: 0.25, name: 'Medium' },
+            27: { hidden: 6144, layers: 46, kvRatio: 0.25, name: 'Medium-Large' },
+            32: { hidden: 6656, layers: 62, kvRatio: 0.125, name: 'Large' },
+            70: { hidden: 8192, layers: 80, kvRatio: 0.125, name: 'Very Large' },
+            72: { hidden: 8192, layers: 80, kvRatio: 0.125, name: 'Very Large' },
+            123: { hidden: 10240, layers: 96, kvRatio: 0.125, name: 'XL' },
+            405: { hidden: 16384, layers: 126, kvRatio: 0.125, name: 'XXL' },
+            671: { hidden: 20480, layers: 140, kvRatio: 0.1, name: 'Giant-MoE' },
+            685: { hidden: 20480, layers: 144, kvRatio: 0.1, name: 'Giant-MoE' }
+        };
+
+        const KNOWN_GPUS = [
+            { name: 'RTX 3060', vram: 12 },
+            { name: 'RTX 3080', vram: 10 },
+            { name: 'RTX 3090', vram: 24 },
+            { name: 'RTX 4090', vram: 24 },
+            { name: 'RTX 5090', vram: 32 },
+            { name: 'Tesla V100 16GB', vram: 16 },
+            { name: 'Tesla V100 32GB', vram: 32 },
+            { name: 'A100 40GB', vram: 40 },
+            { name: 'A100 80GB', vram: 80 },
+            { name: 'H100 80GB', vram: 80 },
+            { name: 'H200 141GB', vram: 141 }
+        ];
+
+        const COMMON_MODELS = [
+            { name: 'Llama 3 8B', params: 8 },
+            { name: 'Llama 3.3 70B', params: 70 },
+            { name: 'DeepSeek R1', params: 671 },
+            { name: 'DeepSeek V4', params: 685 },
+            { name: 'Qwen3 32B', params: 32 },
+            { name: 'Gemma 3 27B', params: 27 },
+            { name: 'Mistral Large', params: 123 },
+            { name: 'Phi-4 14B', params: 14 }
+        ];
+
+        // ============================================================
+        // 2. DOM 與狀態
+        // ============================================================
+        const $ = id => document.getElementById(id);
+        let state = {
+            params: 8,
+            quant: 'FP16',
+            contextLen: 8192,
+            gpuCount: 1,
+            mode: 'full-gpu',
+            selectedGPU: null
+        };
+
+        // ============================================================
+        // 3. 核心計算
+        // ============================================================
+
+        function getArchitecture(paramsB) {
+            const keys = Object.keys(MODEL_ARCH).map(Number).sort((a, b) => a - b);
+            let closest = keys[0];
+            for (const k of keys) {
+                if (Math.abs(k - paramsB) < Math.abs(closest - paramsB)) closest = k;
+            }
+            const arch = MODEL_ARCH[closest];
+            const scale = paramsB / closest;
+            return {
+                hidden: Math.round(arch.hidden * Math.pow(scale, 0.42)),
+                layers: Math.round(arch.layers * Math.pow(scale, 0.46)),
+                kvRatio: arch.kvRatio,
+                name: arch.name
+            };
+        }
+
+        function calculateVRAM(paramsB, quantKey, contextLen, gpuCount, mode) {
+            const quant = QUANT[quantKey];
+            const arch = getArchitecture(paramsB);
+
+            const weightsGB = paramsB * quant.bytes;
+            const kvCacheGB = 4 * contextLen * arch.hidden * arch.layers * arch.kvRatio / (1024 * 1024 * 1024);
+            const overheadGB = 0.5 + Math.min(paramsB * 0.015, 2);
+
+            const totalVRAM = weightsGB + kvCacheGB + overheadGB;
+
+            let vramPerGPU, ramRequired;
+
+            switch (mode) {
+                case 'cpu':
+                    vramPerGPU = 0;
+                    ramRequired = Math.max(8, weightsGB * 1.2 + kvCacheGB * 0.5 + 2);
+                    break;
+                case 'gpu-offload':
+                    vramPerGPU = totalVRAM;
+                    ramRequired = Math.max(16, weightsGB * 0.5 + 4);
+                    break;
+                case 'full-gpu':
+                    vramPerGPU = totalVRAM;
+                    ramRequired = Math.max(8, 8 + Math.min(weightsGB * 0.08, 4));
+                    break;
+                case 'multi-gpu':
+                    vramPerGPU = (weightsGB / gpuCount) + kvCacheGB + overheadGB * 0.5;
+                    ramRequired = Math.max(8, 8 + Math.min(weightsGB * 0.05, 2));
+                    break;
+                default:
+                    vramPerGPU = totalVRAM;
+                    ramRequired = 16;
+            }
+
+            return { weightsGB, kvCacheGB, overheadGB, totalVRAM, vramPerGPU, ramRequired, arch };
+        }
+
+        function getGPUCompatibility(paramsB, quantKey, contextLen, gpuCount, mode) {
+            const calc = calculateVRAM(paramsB, quantKey, contextLen, gpuCount, mode);
+            const results = KNOWN_GPUS.map(gpu => {
+                const vramNeeded = calc.totalVRAM;
+                const fits = vramNeeded <= gpu.vram * 0.9;
+                const partial = vramNeeded <= gpu.vram * 1.5;
+                return {
+                    gpu: gpu,
+                    vramNeeded: vramNeeded,
+                    status: fits ? 'compatible' : (partial ? 'limited' : 'impossible'),
+                    message: fits ? '✅ 可完整運行' : (partial ? '⚠ 需 Offload' : '❌ VRAM 不足')
+                };
+            });
+            return results;
+        }
+
+        function checkModelsForGPU(gpuVRAM) {
+            const quantOrder = ['Q2_K', 'Q3_K_M', 'Q4_K_M', 'Q5_K_M', 'Q6_K', 'Q8_0', 'FP16'];
+            const results = [];
+
+            COMMON_MODELS.forEach(model => {
+                let bestFit = null;
+                for (const q of quantOrder) {
+                    const calc = calculateVRAM(model.params, q, 4096, 1, 'full-gpu');
+                    if (calc.totalVRAM < gpuVRAM * 0.9) {
+                        bestFit = { quant: q, vram: calc.totalVRAM, status: 'compatible', pct: (calc.totalVRAM / gpuVRAM * 100) };
+                        break;
+                    }
+                }
+                if (bestFit) {
+                    results.push({ model, ...bestFit });
+                } else {
+                    const calc = calculateVRAM(model.params, 'Q4_K_M', 4096, 1, 'full-gpu');
+                    const gpusNeeded = Math.ceil(calc.totalVRAM / (gpuVRAM * 0.9));
+                    if (gpusNeeded <= 8) {
+                        results.push({ model, quant: 'Q4_K_M', vram: calc.totalVRAM, status: 'multi-gpu', gpusNeeded, pct: 100 });
+                    } else {
+                        results.push({ model, vram: calc.totalVRAM, status: 'impossible', pct: 100 });
+                    }
+                }
+            });
+
+            return results;
+        }
+
+        // ============================================================
+        // 4. Toast
+        // ============================================================
+        function showToast(msg, isError = false) {
+            const toast = $('toast');
+            const icon = $('toast-icon');
+            $('toast-msg').textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2000);
+        }
+
+        // ============================================================
+        // 5. 選擇器事件
+        // ============================================================
+
+        // 模型大小
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.size-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                });
+                btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                btn.classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                state.params = parseFloat(btn.dataset.size);
+                $('in-custom-params').value = state.params;
+                updateAll();
+            });
+        });
+
+        $('in-custom-params').addEventListener('input', () => {
+            const val = parseFloat($('in-custom-params').value) || 1;
+            state.params = val;
+            document.querySelectorAll('.size-btn').forEach(b => {
+                b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+            });
+            updateAll();
+        });
+
+        // 量化格式
+        document.querySelectorAll('.quant-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.quant-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                });
+                btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                btn.classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                state.quant = btn.dataset.quant;
+                updateAll();
+            });
+        });
+
+        // Context Length
+        document.querySelectorAll('.ctx-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.ctx-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                });
+                btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                btn.classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                if (btn.dataset.ctx === 'custom') {
+                    $('ctx-custom-area').classList.remove('hidden');
+                    state.contextLen = parseInt($('in-custom-ctx').value) || 8192;
+                } else {
+                    $('ctx-custom-area').classList.add('hidden');
+                    state.contextLen = parseInt(btn.dataset.ctx);
+                    $('in-custom-ctx').value = state.contextLen;
+                }
+                updateAll();
+            });
+        });
+
+        $('in-custom-ctx').addEventListener('input', () => {
+            state.contextLen = parseInt($('in-custom-ctx').value) || 1;
+            updateAll();
+        });
+
+        // GPU 數量
+        document.querySelectorAll('.gpu-cnt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.gpu-cnt-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                });
+                btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                btn.classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                state.gpuCount = parseInt(btn.dataset.gpucnt);
+                updateAll();
+            });
+        });
+
+        // 推論模式
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                    b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                });
+                btn.classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                btn.classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                state.mode = btn.dataset.mode;
+                updateAll();
+            });
+        });
+
+        // ============================================================
+        // 6. 常見模型 + GPU 下拉
+        // ============================================================
+
+        function renderCommonModels() {
+            const container = $('common-model-selector');
+            container.innerHTML = '';
+            COMMON_MODELS.forEach(m => {
+                const btn = document.createElement('button');
+                btn.className = 'common-btn text-left px-3 py-2 rounded-lg border border-hub-700 bg-hub-900 text-xs text-slate-300 hover:border-cyan-500/50 transition-all';
+                btn.innerHTML = `<div class="font-bold text-xs">${m.name}</div><div class="text-[9px] text-cyan-400 mt-0.5">${m.params}B 參數</div>`;
+                btn.addEventListener('click', () => {
+                    state.params = m.params;
+                    $('in-custom-params').value = m.params;
+                    document.querySelectorAll('.size-btn').forEach(b => {
+                        b.classList.remove('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+                        b.classList.add('bg-hub-900', 'text-slate-400', 'border-hub-700');
+                    });
+                    updateAll();
+                    showToast(`已載入 ${m.name}（${m.params}B）`, false);
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        function renderGPUOptions() {
+            const select = $('gpu-select');
+            select.innerHTML = '<option value="">-- 請選擇 GPU --</option>';
+            KNOWN_GPUS.forEach((gpu, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `${gpu.name} (${gpu.vram} GB)`;
+                select.appendChild(opt);
+            });
+        }
+
+        // ============================================================
+        // 7. GPU 反向查詢（特殊功能）
+        // ============================================================
+
+        $('btn-check-gpu').addEventListener('click', () => {
+            const idx = $('gpu-select').value;
+            if (!idx) {
+                showToast('請先選擇一張 GPU', true);
+                return;
+            }
+            const gpu = KNOWN_GPUS[parseInt(idx)];
+            if (!gpu) { showToast('無效的 GPU 選擇', true); return; }
+            const results = checkModelsForGPU(gpu.vram);
+            renderGPUResults(results, gpu);
+        });
+
+        function renderGPUResults(results, gpu) {
+            const container = $('gpu-compat-results');
+            container.innerHTML = `<div class="text-xs text-cyan-400 font-bold mb-2 border-b border-hub-700 pb-1">🖥 ${gpu.name} (${gpu.vram} GB) 可運行模型：</div>`;
+
+            results.forEach(r => {
+                let icon, color, detail;
+                if (r.status === 'compatible') {
+                    const vramStr = r.vram.toFixed(1);
+                    const usage = Math.round(r.pct);
+                    icon = '✅'; color = 'text-green-400';
+                    detail = `${r.quant} · ${vramStr} GB (${usage}%)`;
+                } else if (r.status === 'multi-gpu') {
+                    icon = '⚠️'; color = 'text-amber-400';
+                    detail = `需 ${r.gpusNeeded}× GPU · ${r.vram.toFixed(1)} GB 總計 (Q4_K_M)`;
+                } else {
+                    icon = '❌'; color = 'text-red-400';
+                    detail = `需要 ${r.vram.toFixed(0)}+ GB VRAM`;
+                }
+
+                const div = document.createElement('div');
+                div.className = `flex items-center justify-between py-1.5 px-2 rounded compat-row ${color}`;
+                div.innerHTML = `
+                    <span><span class="mr-1.5">${icon}</span><span class="text-xs text-slate-300">${r.model.name}</span></span>
+                    <span class="text-[10px] font-mono">${detail}</span>
+                `;
+                container.appendChild(div);
+            });
+
+            container.scrollTop = 0;
+            showToast(`已檢查 ${gpu.name} 相容性`, false);
+        }
+
+        // ============================================================
+        // 8. 更新所有結果
+        // ============================================================
+
+        function updateAll() {
+            const modeKey = state.mode === 'full-gpu' ? 'full-gpu' : (state.gpuCount > 1 ? 'multi-gpu' : state.mode);
+            const calc = calculateVRAM(state.params, state.quant, state.contextLen, state.gpuCount, modeKey);
+
+            // 更新結果面板
+            $('out-weights').textContent = calc.weightsGB.toFixed(2) + ' GB';
+            $('out-kvcache').textContent = calc.kvCacheGB.toFixed(2) + ' GB';
+
+            const vramDisplay = calc.mode === 'cpu' ? '0 GB（CPU 模式）' : calc.vramPerGPU.toFixed(2) + ' GB';
+            $('out-vram').textContent = vramDisplay;
+            $('out-ram').textContent = calc.ramRequired.toFixed(1) + ' GB';
+
+            // 配置標籤
+            const arch = calc.arch;
+            $('result-config-label').textContent = `${state.params}B · ${state.quant} · ${(state.contextLen/1000).toFixed(0)}K ctx`;
+
+            // VRAM 條（參考最大值 100GB）
+            const maxRef = Math.max(100, calc.totalVRAM * 1.2);
+            const vramPct = Math.min(100, (calc.totalVRAM / maxRef) * 100);
+            $('vram-bar').style.width = vramPct + '%';
+            $('vram-bar-label').textContent = calc.totalVRAM.toFixed(2) + ' GB 總需求';
+
+            // 相容性橫幅
+            const banner = $('compatibility-banner');
+            const text = $('compatibility-text');
+
+            // 找最適合的 GPU
+            const gpuCompat = getGPUCompatibility(state.params, state.quant, state.contextLen, state.gpuCount, modeKey);
+            const bestGPU = gpuCompat.find(r => r.status === 'compatible');
+            const partialGPU = gpuCompat.find(r => r.status === 'limited');
+
+            if (calc.mode === 'cpu') {
+                text.innerHTML = '🖥️ <span class="text-white">CPU 模式</span> — 不需 VRAM，建議系統 RAM ' + calc.ramRequired.toFixed(0) + '+ GB';
+                banner.className = 'relative z-10 flex items-center justify-center gap-3 p-3 rounded-lg bg-hub-900/50 border border-hub-700';
+            } else if (bestGPU) {
+                text.innerHTML = '✅ <span class="text-green-400">' + bestGPU.gpu.name + '</span> 等 ' + gpuCompat.filter(r => r.status === 'compatible').length + ' 張 GPU 可完整載入此配置';
+                banner.className = 'relative z-10 flex items-center justify-center gap-3 p-3 rounded-lg bg-green-950/30 border border-green-900/50';
+            } else if (partialGPU) {
+                text.innerHTML = '⚠️ <span class="text-amber-400">' + partialGPU.gpu.name + '</span> 等 GPU 需啟用 CPU Offload 或不夠順暢';
+                banner.className = 'relative z-10 flex items-center justify-center gap-3 p-3 rounded-lg bg-amber-950/30 border border-amber-900/50';
+            } else {
+                text.innerHTML = '❌ 此配置需要 ' + calc.totalVRAM.toFixed(0) + ' GB VRAM，目前無消費級 GPU 可完整載入，建議使用多 GPU 或雲端方案';
+                banner.className = 'relative z-10 flex items-center justify-center gap-3 p-3 rounded-lg bg-red-950/30 border border-red-900/50';
+            }
+
+            // GPU 比較表
+            updateGPUCompare(gpuCompat);
+            updateSuggestions(state.params, state.quant, state.contextLen, calc);
+            updateCtxImpactChart(state.params, state.quant);
+
+            // 觸發動畫
+            const el = $('out-vram');
+            el.classList.remove('animate-pop');
+            void el.offsetWidth;
+            el.classList.add('animate-pop');
+        }
+
+        function updateGPUCompare(results) {
+            const tbody = $('gpu-compare-body');
+            tbody.innerHTML = '';
+            results.forEach(r => {
+                const badgeClass = r.status === 'compatible' ? 'badge-compatible' : (r.status === 'limited' ? 'badge-limited' : 'badge-impossible');
+                const pct = Math.round(r.vramNeeded / r.gpu.vram * 100);
+                const barColor = r.status === 'compatible' ? 'bg-green-500' : (r.status === 'limited' ? 'bg-amber-500' : 'bg-red-500');
+                const barWidth = Math.min(100, pct);
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-hub-700/50';
+                tr.innerHTML = `
+                    <td class="py-2 pr-4 text-white">${r.gpu.name}</td>
+                    <td class="py-2 pr-4 text-slate-300">${r.gpu.vram} GB</td>
+                    <td class="py-2 pr-4"><span class="${badgeClass} px-1.5 py-0.5 rounded text-[9px] font-bold border">${r.message}</span></td>
+                    <td class="py-2">
+                        <div class="w-full h-2 bg-hub-900 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full ${barColor}" style="width: ${Math.min(100, barWidth)}%; transition: width 0.5s;"></div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ============================================================
+        // 9. 建議系統
+        // ============================================================
+
+        function updateSuggestions(paramsB, quant, ctxLen, calc) {
+            const container = $('suggestions-content');
+            container.innerHTML = '';
+
+            const addSuggestion = (icon, color, title, desc) => {
+                const div = document.createElement('div');
+                div.className = `suggestion-card ${color} bg-hub-900/50 rounded-lg border border-hub-700 p-4`;
+                div.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <span class="text-xl flex-shrink-0 mt-0.5">${icon}</span>
+                        <div>
+                            <div class="text-sm font-bold text-white mb-1">${title}</div>
+                            <div class="text-xs text-slate-400 leading-relaxed">${desc}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            };
+
+            // 建議 1: 量化建議
+            if (quant !== 'Q4_K_M' && quant !== 'Q5_K_M') {
+                const currentBytes = QUANT[quant].bytes;
+                const q4Bytes = QUANT['Q4_K_M'].bytes;
+                if (currentBytes > q4Bytes) {
+                    const savings = ((currentBytes - q4Bytes) / currentBytes * 100).toFixed(0);
+                    const altVram = paramsB * q4Bytes + calc.kvCacheGB + 0.5;
+                    addSuggestion('💾', 'border-l-cyan-400',
+                        `建議改用 Q4_K_M 量化，VRAM 減少 ${savings}%`,
+                        `使用 Q4_K_M（4-bit）可將權重從 ${calc.weightsGB.toFixed(1)} GB 降至 ${(paramsB * q4Bytes).toFixed(1)} GB，總 VRAM 需求約 ${altVram.toFixed(1)} GB。`
+                    );
+                }
+            }
+
+            // 建議 2: Context Length 建議
+            if (ctxLen > 32768) {
+                addSuggestion('📏', 'border-l-amber-400',
+                    `較長 Context Length (${(ctxLen/1000).toFixed(0)}K) 佔用較多 VRAM`,
+                    `KV Cache 目前佔用 ${calc.kvCacheGB.toFixed(2)} GB（約 ${(calc.kvCacheGB / calc.totalVRAM * 100).toFixed(0)}% 總 VRAM）。若不需要長上下文，建議降低 Context Length。`
+                );
+            } else if (ctxLen <= 4096) {
+                addSuggestion('⚡', 'border-l-green-400',
+                    '短 Context Length 配置良好',
+                    `${(ctxLen/1000).toFixed(0)}K 的上下文在 KV Cache 開銷上非常節省，適合即時聊天和簡單問答。`
+                );
+            }
+
+            // 建議 3: GPU 建議
+            const modeLabel = state.mode === 'full-gpu' ? 'Full GPU' : (state.mode === 'gpu-offload' ? 'GPU Offload' : (state.mode === 'multi-gpu' ? 'Multi GPU' : 'CPU Only'));
+            if (calc.totalVRAM <= 24 && calc.totalVRAM > 16) {
+                addSuggestion('🖥️', 'border-l-cyan-400',
+                    `需要 ${calc.totalVRAM.toFixed(0)} GB VRAM — RTX 3090/4090 可勝任`,
+                    `RTX 3090 或 4090（皆 24 GB）可以良好運行此配置。RTX 5090（32 GB）則游刃有餘。`
+                );
+            } else if (calc.totalVRAM <= 48 && calc.totalVRAM > 24) {
+                addSuggestion('🖥️', 'border-l-amber-400',
+                    `需要 ${calc.totalVRAM.toFixed(0)} GB VRAM — 建議專業 GPU`,
+                    `此配置超出消費級 GPU 上限（24 GB），建議使用 Tesla V100 32GB、A100 40GB，或使用 ${Math.ceil(calc.totalVRAM / 24)} 張 RTX 4090 進行多 GPU 部署。`
+                );
+            } else if (calc.totalVRAM > 48) {
+                addSuggestion('☁️', 'border-l-red-400',
+                    `需要 ${calc.totalVRAM.toFixed(0)} GB VRAM — 建議雲端方案`,
+                    `此配置需要資料中心級 GPU。建議使用 A100 80GB、H100 或雲端服務（AWS、Lambda Labs、RunPod）。亦可用 Q4_K_M 量化降低 VRAM 至 ${(paramsB * 0.5 + calc.kvCacheGB + 0.5).toFixed(0)} GB。`
+                );
+            } else {
+                addSuggestion('✅', 'border-l-green-400',
+                    `此配置在多數中高階 GPU 上可順暢運行`,
+                    `${paramsB}B ${quant} 模型在 ${modeLabel} 模式下需要 ${calc.totalVRAM.toFixed(0)} GB VRAM，適合 RTX 3090/4090 等消費級旗艦 GPU。`
+                );
+            }
+
+            // 建議 4: RAM 建議
+            addSuggestion('🧠', 'border-l-blue-400',
+                `建議系統 RAM：${calc.ramRequired.toFixed(0)}+ GB`,
+                `${state.mode === 'full-gpu' ? 'Full GPU 模式下系統 RAM 需求較低，但' : ''}若需同時運行多個模型或進行模型切換，建議 RAM 至少再增加 50%。`
+            );
+
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 text-sm text-center py-2">當前配置合理，暫無特定建議。</div>';
+            }
+        }
+
+        // ============================================================
+        // 10. Context Length 影響圖表
+        // ============================================================
+
+        function updateCtxImpactChart(paramsB, quant) {
+            const ctxLevels = [2048, 4096, 8192, 16384, 32768, 65536];
+            const container = $('ctx-impact-chart');
+            const labels = $('ctx-impact-labels');
+            container.innerHTML = '';
+            labels.innerHTML = '';
+
+            const dataPoints = ctxLevels.map(ctx => {
+                const calc = calculateVRAM(paramsB, quant, ctx, state.gpuCount, 'full-gpu');
+                return { ctx, total: calc.totalVRAM, kv: calc.kvCacheGB, weights: calc.weightsGB };
+            });
+
+            const maxVal = Math.max(...dataPoints.map(d => d.total));
+            const maxGPU24 = 24;
+
+            dataPoints.forEach(d => {
+                const totalPct = (d.total / maxVal) * 100;
+                const kvPct = (d.kv / maxVal) * 100;
+                const gpuLinePct = (maxGPU24 / maxVal) * 100;
+
+                const bar = document.createElement('div');
+                bar.className = 'flex flex-col items-center justify-end flex-1 relative';
+                bar.style.height = '100%';
+
+                let barHTML = `<div class="w-full rounded-t-lg relative" style="height: ${Math.max(totalPct, 2)}%; min-height: 8px; background: linear-gradient(180deg, #22D3EE, #0891B2); opacity: 0.9;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: ${Math.min(100, (kvPct / totalPct) * 100)}%; background: rgba(255,255,255,0.15); border-radius: 4px 4px 0 0;"></div>
+                </div>`;
+
+                if (gpuLinePct < 100) {
+                    barHTML += `<div class="absolute bottom-0 w-full border-t-2 border-dashed border-red-500/50" style="bottom: ${100 - gpuLinePct}%;"></div>`;
+                }
+
+                bar.innerHTML = barHTML;
+                container.appendChild(bar);
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'text-center';
+                labelDiv.innerHTML = `<div class="text-[9px] font-mono text-slate-400">${(d.ctx/1000).toFixed(0)}K</div><div class="text-[8px] text-cyan-400/70">${d.total.toFixed(1)}G</div>`;
+                labels.appendChild(labelDiv);
+            });
+
+            // 圖例
+            const legend = document.createElement('div');
+            legend.className = 'col-span-full flex items-center gap-4 text-[10px] text-slate-500 mt-1';
+            legend.innerHTML = `
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm" style="background: #0891B2;"></span> 模型權重</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm" style="background: rgba(255,255,255,0.15);"></span> KV Cache</span>
+                <span class="flex items-center gap-1"><span class="w-4 border-t-2 border-dashed border-red-500/50"></span> RTX 4090 上限 (24 GB)</span>
+            `;
+            container.parentNode.appendChild(legend);
+        }
+
+        // ============================================================
+        // 11. 初始化
+        // ============================================================
+
+        function initApp() {
+            renderCommonModels();
+            renderGPUOptions();
+
+            // 設定 FP16 為 active
+            document.querySelector('[data-quant="FP16"]').classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+            document.querySelector('[data-quant="FP16"]').classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+
+            // 設定 8B 為 active
+            document.querySelector('[data-size="8"]').classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+            document.querySelector('[data-size="8"]').classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+
+            // 設定 8K 為 active
+            document.querySelector('[data-ctx="8192"]').classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+            document.querySelector('[data-ctx="8192"]').classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+
+            // GPU count = 1 已 active
+            document.querySelector('[data-gpucnt="1"]').classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+            document.querySelector('[data-gpucnt="1"]').classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+
+            // Full GPU 已 active
+            document.querySelector('[data-mode="full-gpu"]').classList.remove('bg-hub-900', 'text-slate-400', 'border-hub-700');
+            document.querySelector('[data-mode="full-gpu"]').classList.add('active', 'bg-vram-primary/20', 'border-cyan-500', 'text-cyan-300');
+
+            updateAll();
+        }
+
+        // 計算按鈕
+        $('btn-calculate').addEventListener('click', () => {
+            updateAll();
+            showToast('VRAM 需求重新計算完成', false);
+        });
+
+        // initApp 將由系統引導程式呼叫
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

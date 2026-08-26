@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Password Hash Generator | Free Online Tool - ToolHub</title>
+<meta content="Focus on password hash (Password Hash) generation and verification tools. Supports bcrypt, Argon2id, PBKDF2, including Salt generation, Cost settings, verification comparison and performance benchmark testing." name="description"/>
+<meta content="Password Hash, bcrypt, Argon2id, PBKDF2, Salt, 密碼雜湊, Hash, 驗證, 密碼安全, Cost Factor, ToolHub" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+
+<style>
+        body { background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel { background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5); }
+
+        .field-input { background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.625rem 1rem; font-size: 0.875rem;
+            transition: border-color 0.2s; }
+        .field-input:focus { outline: none; border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .field-input::placeholder { color: #475569; }
+        .field-select { background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem; cursor: pointer; }
+        .field-select:focus { outline: none; border-color: #38BDF8; }
+
+        .info-row { display: flex; align-items: flex-start; padding: 0.625rem 0;
+            border-bottom: 1px solid rgba(30,41,59,0.5); gap: 1rem; }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .label { font-size: 0.75rem; color: #64748B; flex-shrink: 0; min-width: 5rem; }
+        .info-row .value { font-size: 0.8125rem; color: #E2E8F0; word-break: break-all; font-family: '"Fira Code"', ui-monospace, monospace; }
+
+        .algo-card { padding: 0.75rem; border-radius: 0.75rem; cursor: pointer;
+            border: 1px solid #1E293B; transition: all 0.2s; }
+        .algo-card:hover { border-color: #334155; }
+        .algo-card.active { border-color: #38BDF8; background: rgba(56,189,248,0.06); }
+
+        .cost-chip { display: inline-flex; align-items: center; justify-content: center;
+            min-width: 2.5rem; height: 2.5rem; border-radius: 0.5rem;
+            border: 1px solid #1E293B; cursor: pointer; font-size: 0.8125rem; font-weight: 500;
+            transition: all 0.15s; color: #94A3B8; }
+        .cost-chip:hover { border-color: #38BDF8; color: #E2E8F0; }
+        .cost-chip.active { border-color: #38BDF8; background: rgba(56,189,248,0.12); color: #38BDF8; }
+
+        .bench-bar { height: 6px; border-radius: 3px; background: #1E293B; overflow: hidden; }
+        .bench-bar .fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .bench-spinner { display: inline-block; width: 1rem; height: 1rem;
+            border: 2px solid rgba(56,189,248,0.2); border-top-color: #38BDF8;
+            border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .faq-item summary { cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #38BDF8; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        .verify-result { padding: 0.75rem 1rem; border-radius: 0.75rem; text-align: center; font-weight: 600; font-size: 1rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .comparison-table { width: 100%; border-collapse: collapse; }
+        .comparison-table th { text-align: left; padding: 0.625rem 0.75rem; font-size: 0.75rem;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+            color: #64748B; border-bottom: 1px solid #1E293B; }
+        .comparison-table td { padding: 0.625rem 0.75rem; font-size: 0.8125rem;
+            color: #CBD5E1; border-bottom: 1px solid rgba(30,41,59,0.5); }
+
+        .toggle-pw { cursor: pointer; padding: 0.375rem; color: #64748B; transition: color 0.2s; }
+        .toggle-pw:hover { color: #E2E8F0; }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Structural Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/password-hash-generator/" property="og:url"/>
+<meta content="Password Hash Generator | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Focus on password hash (Password Hash) generation and verification tools. Supports bcrypt, Argon2id, PBKDF2, including Salt generation, Cost settings, verification comparison and performance benchmark testing." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Password Hash Generator | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Focus on password hash (Password Hash) generation and verification tools. Supports bcrypt, Argon2id, PBKDF2, including Salt generation, Cost settings, verification comparison and performance benchmark testing." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Password Hash Generator & Verifier / Password Hash Generator & Verifier","url":"https://toolhuben.com/en/password-hash-generator/","description":"Focus on password hash (Password Hash) generation and verification tools. Supports bcrypt, Argon2id, PBKDF2, including Salt generation, Cost settings, verification comparison and performance benchmark testing.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"Password Hash Generator & Verifier / Password Hash Generator & Verifier","item":"https://toolhuben.com/en/password-hash-generator/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/password-hash-generator/" rel="canonical"/><link href="https://toolhuben.com/password-hash-generator/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/password-hash-generator/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/password-hash-generator/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","(內建於 Hash)":"(Built into Hash)","Argon2id 無法載入":"Argon2id cannot be loaded","Benchmark 完成":"Benchmark completed","JSON 已下載":"JSON downloaded","N/A (固定)":"N/A (fixed)","SHA-256 ⚠️ (教育用途)":"SHA-256 ⚠️ (educational use)","TXT 已下載":"TXT downloaded","✅ Match — 密碼正確":"✅ Match — Password is correct","✅ 雜湊已產生":"✅ Hash has been generated","❌ Argon2 驗證失敗:":"❌ Argon2 verification failed:","❌ Not Match — 密碼錯誤":"❌ Not Match — Wrong password","❌ PBKDF2 Hash 格式不正確":"❌ PBKDF2 Hash format is incorrect","✅ Match — 密碼正確 (請注意 SHA-256 不建議用於密碼儲存)":"✅ Match — Password is correct (please note that SHA-256 is not recommended for password storage)","✅ 推薦":"✅ Recommended","❌ 無法識別 Hash 格式（支援 bcrypt、Argon2id、PBKDF2）":"❌ Unable to recognize Hash format (supports bcrypt, Argon2id, PBKDF2)","❌ 產生失敗:":"❌ Generate failure:","❌ 驗證失敗:":"❌ Verification failed:","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","密碼不一致":"Passwords are inconsistent","密碼至少 4 個字元":"Password must be at least 4 characters","尚無 Hash 可複製":"There is no Hash to copy yet","尚無資料可下載":"There is no data to download yet","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","建立理念":"Our Founding Idea","建議":"Recommendation","次迭代":"iterations","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","複製失敗":"Copy failed","計算中⋯":"Calculating⋯","請先產生 Salt":"Please generate Salt first","請輸入密碼":"Please enter password","請輸入密碼與 Hash":"Please enter password and Hash","長度:":"Length:","顯示":"Showing","🔒 更安全":"🔒 safer","🔒 最安全":"🔒 Safest","🚀 更快":"🚀 Faster","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","✓ 密碼一致":"Zen, the password is the same.","✗ 密碼不一致":"♪ The passwords don't match ♪","執行中...":"Executing...","執行處理":"Run","本機處理":"processed locally","重新執行 Benchmark":"Re-execut Benchmark","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="glass" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+<!-- Hero -->
+<div class="text-center mb-8 fade-in">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                Password hash generation and verification engine
+            </span>
+<h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                Password Hash Generator &amp; Verifier
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">Password hash generation and verification tools</span>
+</h1>
+<p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Quickly generate and verify password hashes such as bcrypt, Argon2id, PBKDF2, etc. Supports Salt automatic generation, Cost setting, performance benchmark testing and algorithm comparison. Built for developers and security learners.
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<!-- Left: Input & Settings -->
+<div class="lg:col-span-3 space-y-6">
+<!-- Password Input -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-lock-key text-hub-accent"></i> Password input
+                    </h2>
+<div class="space-y-3">
+<div>
+<label class="text-xs text-slate-500 mb-1.5 block">Password</label>
+<div class="relative">
+<input autocomplete="off" class="field-input w-full pr-10 font-mono" id="pw-input" oninput="onInputChange()" placeholder="Enter password..." type="password"/>
+<span class="toggle-pw absolute right-2 top-1/2 -translate-y-1/2" onclick="togglePW('pw-input',this)">
+<i class="ph ph-eye text-lg"></i>
+</span>
+</div>
+</div>
+<div>
+<label class="text-xs text-slate-500 mb-1.5 block">Confirm Password</label>
+<div class="relative">
+<input autocomplete="off" class="field-input w-full pr-10 font-mono" id="pw-confirm" oninput="onInputChange()" placeholder="Enter password again..." type="password"/>
+<span class="toggle-pw absolute right-2 top-1/2 -translate-y-1/2" onclick="togglePW('pw-confirm',this)">
+<i class="ph ph-eye text-lg"></i>
+</span>
+</div>
+</div>
+<div class="text-xs hidden" id="pw-match"></div>
+</div>
+</div>
+<!-- Algorithm Selection -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-flask text-hub-accent"></i> algorithm
+                    </h2>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+<div class="algo-card active" data-algo="bcrypt" onclick="selectAlgo('bcrypt')">
+<p class="font-bold text-sm text-white">bcrypt</p>
+<p class="text-xs text-slate-500 mt-0.5">Recommended</p>
+</div>
+<div class="algo-card" data-algo="argon2" onclick="selectAlgo('argon2')">
+<p class="font-bold text-sm text-white">Argon2id</p>
+<p class="text-xs text-slate-500 mt-0.5">Most recommended</p>
+</div>
+<div class="algo-card" data-algo="pbkdf2" onclick="selectAlgo('pbkdf2')">
+<p class="font-bold text-sm text-white">PBKDF2</p>
+<p class="text-xs text-slate-500 mt-0.5">Available</p>
+</div>
+<div class="algo-card" data-algo="sha256" onclick="selectAlgo('sha256')">
+<p class="font-bold text-sm text-white">SHA-256</p>
+<p class="text-xs text-slate-500 mt-0.5">⚠️ Education</p>
+</div>
+</div>
+<!-- Cost Settings -->
+<div class="mt-4" id="cost-section">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs text-slate-500">Cost Factor/number of iterations</span>
+<span class="text-xs font-mono text-hub-accent" id="cost-label">10 (recommended)</span>
+</div>
+<div class="flex flex-wrap gap-2" id="cost-options">
+<span class="cost-chip" data-cost="4" onclick="setCost(4)">4</span>
+<span class="cost-chip" data-cost="6" onclick="setCost(6)">6</span>
+<span class="cost-chip" data-cost="8" onclick="setCost(8)">8</span>
+<span class="cost-chip active" data-cost="10" onclick="setCost(10)">10</span>
+<span class="cost-chip" data-cost="12" onclick="setCost(12)">12</span>
+<span class="cost-chip" data-cost="14" onclick="setCost(14)">14</span>
+</div>
+<div class="flex justify-between text-xs text-slate-600 mt-1" id="cost-desc">
+<span>🚀 Faster</span>
+<span class="text-hub-accent">✅ Recommended</span>
+<span>🔒 safer</span>
+</div>
+<!-- PBKDF2 iterations slider -->
+<div class="hidden mt-3" id="pbkdf2-iterations">
+<label class="text-xs text-slate-500 mb-1.5 block">Number of iterations: <span class="text-hub-accent font-mono" id="pbkdf2-iter-val">600000</span></label>
+<input class="w-full accent-hub-accent cursor-pointer" id="pbkdf2-iter-slider" max="2000000" min="10000" oninput="document.getElementById('pbkdf2-iter-val').textContent=this.value; onInputChange()" step="10000" type="range" value="600000"/>
+</div>
+<!-- Argon2 memory -->
+<div class="hidden mt-3" id="argon2-memory">
+<label class="text-xs text-slate-500 mb-1.5 block">Memory: <span class="text-hub-accent font-mono" id="argon2-mem-val">64</span> MB</label>
+<input class="w-full accent-hub-accent cursor-pointer" id="argon2-mem-slider" max="512" min="16" oninput="document.getElementById('argon2-mem-val').textContent=this.value; onInputChange()" step="16" type="range" value="64"/>
+</div>
+</div>
+<!-- Salt Section -->
+<div class="mt-4 pt-4 border-t border-hub-700/50">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs text-slate-500">Salt</span>
+<button class="text-xs text-hub-accent hover:text-sky-400 transition-colors" onclick="generateSalt()">⟳ Regenerate</button>
+</div>
+<div class="flex gap-2">
+<input class="field-input flex-1 font-mono text-xs" id="salt-input" oninput="onInputChange()" placeholder="Automatically generated..." readonly="" type="text"/>
+<button class="px-3 py-2 text-xs text-slate-500 border border-hub-700 rounded-lg hover:text-hub-accent transition-colors" onclick="toggleSaltEdit()">
+<i class="ph ph-pencil-simple"></i>
+</button>
+</div>
+<p class="text-xs text-slate-600 mt-1" id="salt-len">Length: 0 bytes</p>
+</div>
+<!-- Generate Button -->
+<button class="w-full mt-4 py-3 bg-hub-accent text-white rounded-xl font-medium hover:bg-sky-400 transition-colors flex items-center justify-center gap-2" onclick="generateHash()">
+<i class="ph ph-lightning"></i> produce hash
+                    </button>
+</div>
+<!-- Verify Section -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-seal-check text-hub-accent"></i> Verify
+                    </h2>
+<div class="space-y-3">
+<div>
+<label class="text-xs text-slate-500 mb-1.5 block">Password</label>
+<input autocomplete="off" class="field-input w-full font-mono" id="verify-pw" placeholder="Enter password..." type="password"/>
+</div>
+<div>
+<label class="text-xs text-slate-500 mb-1.5 block">Hash</label>
+<textarea class="field-input w-full font-mono text-xs" id="verify-hash" placeholder="Paste the Hash to be verified..." rows="2"></textarea>
+</div>
+<button class="px-5 py-2.5 bg-ph-green/10 text-ph-green border border-ph-green/20 rounded-lg font-medium text-sm hover:bg-ph-green/20 transition-colors" onclick="verifyHash()">
+<i class="ph ph-seal-check"></i> Verify
+                        </button>
+<div class="hidden verify-result fade-in" id="verify-result"></div>
+</div>
+</div>
+</div>
+<!-- Right: Output -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Hash Output -->
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-code text-hub-accent"></i> produce results
+                        </h2>
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-hub-accent transition-colors" onclick="copyHash()" title="Copy Hash">
+<i class="ph ph-copy-simple text-lg"></i>
+</button>
+<button class="p-2 text-slate-500 hover:text-blue-400 transition-colors" onclick="downloadTXT()" title="Download TXT">
+<i class="ph ph-download-simple text-lg"></i>
+</button>
+<button class="p-2 text-slate-500 hover:text-emerald-400 transition-colors" onclick="downloadJSON()" title="Download JSON">
+<i class="ph ph-download-simple text-lg"></i>
+</button>
+</div>
+</div>
+<div class="bg-[#0B1120] rounded-xl border border-hub-700 p-3 mb-3" id="hash-output">
+<div class="text-xs text-slate-500 mb-2">Hash</div>
+<div class="text-sm font-mono text-hub-accent break-all min-h-[2rem]" id="hash-value">--</div>
+</div>
+<div class="hidden space-y-1" id="hash-details">
+<div class="info-row"><span class="label">algorithm</span><span class="value" id="det-algo" style="font-family:inherit">--</span></div>
+<div class="info-row"><span class="label">Salt</span><span class="value text-xs" id="det-salt">--</span></div>
+<div class="info-row"><span class="label">Cost</span><span class="value" id="det-cost" style="font-family:inherit">--</span></div>
+<div class="info-row"><span class="label">Time consuming</span><span class="value" id="det-time" style="font-family:inherit">--</span></div>
+</div>
+</div>
+<!-- Benchmark -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+<i class="ph ph-gauge text-hub-accent"></i> Benchmark — browser performance
+                    </h2>
+<div id="bench-content">
+<div class="space-y-2" id="bench-results">
+<div class="flex items-center justify-between py-2"><span class="text-xs text-slate-500">bcrypt Cost 10</span><span class="text-xs text-slate-500" id="bench-bcrypt">--</span></div>
+<div class="flex items-center justify-between py-2 border-t border-hub-700/30"><span class="text-xs text-slate-500">Argon2id (64MB)</span><span class="text-xs text-slate-500" id="bench-argon2">--</span></div>
+<div class="flex items-center justify-between py-2 border-t border-hub-700/30"><span class="text-xs text-slate-500">PBKDF2 (600k)</span><span class="text-xs text-slate-500" id="bench-pbkdf2">--</span></div>
+</div>
+<button class="mt-3 w-full py-2 bg-slate-700/40 border border-hub-700 rounded-lg text-xs text-slate-400 hover:bg-slate-700/60 transition-colors" onclick="runBenchmark()">
+<i class="ph ph-play"></i> Execute Benchmark
+                        </button>
+<p class="text-[10px] text-slate-600 mt-2">⚠️ Browser performance test, the actual server speed will be faster (about 5-20x)</p>
+</div>
+</div>
+<!-- Algorithm Comparison -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+<i class="ph ph-arrows-down-up text-hub-accent"></i> Algorithm comparison
+                    </h2>
+<div class="overflow-x-auto">
+<table class="comparison-table">
+<thead>
+<tr><th>algorithm</th><th>security</th><th>speed</th><th>Recommendation</th></tr>
+</thead>
+<tbody>
+<tr><td class="font-mono text-ph-red">SHA-256</td><td>⭐</td><td>⭐⭐⭐⭐⭐</td><td class="text-ph-red">❌ It is not recommended to save passwords</td></tr>
+<tr><td class="font-mono text-ph-orange">PBKDF2</td><td>⭐⭐⭐</td><td>⭐⭐⭐</td><td class="text-ph-orange">⚠️Available (high iteration recommended)</td></tr>
+<tr><td class="font-mono text-ph-green">bcrypt</td><td>⭐⭐⭐⭐</td><td>⭐⭐</td><td class="text-ph-green">✅ Recommended</td></tr>
+<tr><td class="font-mono text-ph-purple">Argon2id</td><td>⭐⭐⭐⭐⭐</td><td>⭐</td><td class="text-ph-purple">🏆 Most recommended</td></tr>
+</tbody>
+</table>
+</div>
+<p class="text-[10px] text-slate-600 mt-2">Security ratings take into account brute force resistance, ASIC/GPU resistance, and design maturity.</p>
+</div>
+</div>
+</div>
+<!-- FAQ + SEO -->
+<div class="mt-8 space-y-6">
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-question text-hub-accent"></i> Frequently Asked Questions (FAQ)
+                </h2>
+<div class="space-y-2 divide-y divide-hub-700/50">
+<details class="faq-item">
+<summary class="text-slate-200">How is a Password Hash different from a normal Hash?</summary>
+<div class="faq-answer">
+                            General Hash (such as MD5, SHA-256) is designed for data integrity verification and has extremely fast calculation speed. Password Hash (such as bcrypt, Argon2id) is specially designed for password storage and has the following characteristics:<br/><br/>
+                            • <strong>Deliberately slow</strong>: Control the calculation time through Cost Factor and increase the cost of brute force cracking<br/>
+                            • <strong>Automatically add Salt</strong>: Use a different Salt for each password to prevent rainbow table attacks<br/>
+                            • <strong>GPU/ASIC resistant</strong>: Argon2id requires a lot of memory, making parallel acceleration difficult for GPUs<br/><br/>
+                            Conclusion:<strong>Never use MD5 or SHA-256 to store passwords directly</strong>, please use bcrypt, Argon2id, or PBKDF2.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Why do you need Salt?</summary>
+<div class="faq-answer">
+                            Salt (salt value) is a piece of random data that is spliced with the password before calculating the hash. Its functions include:<br/><br/>
+                            • <strong>Anti-rainbow watch</strong>: Pre-calculated Hash comparison table (rainbow table) cannot be used because each Salt is different<br/>
+                            • <strong>Anti-duplication</strong>: Even if two users set the same password, the hash generated will be different.<br/>
+                            • <strong>Increase cracking costs</strong>: The attacker needs to perform brute force cracking on each Salt separately, which cannot be processed in batches.<br/><br/>
+                            The standard practice is to use a different random Salt for each password (at least 16 bytes) and store the Salt together with the Hash (the output of bcrypt already contains the Salt).
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">How to choose between bcrypt, Argon2id and PBKDF2?</summary>
+<div class="faq-answer">
+                            • <strong>Argon2id</strong>(Most Recommended): Winner of the 2015 cryptographic hashing competition, the most advanced design, resistant to both GPUs and ASICs. Memory and iteration parameters need to be adjusted.<br/><br/>
+                            • <strong>bcrypt</strong>(Large recommendation base): Designed in 1999, mature and stable, widely supported. Built-in Salt and Cost controls are the default choice for many frameworks.<br/><br/>
+                            • <strong>PBKDF2</strong>(Available): FIPS certified standard, strength controlled by number of iterations. Weak to GPU/ASIC, requires extremely high number of iterations (hundreds of thousands).<br/><br/>
+                            • <strong>SHA-256</strong>(Educational use only): Not recommended for password storage, no Salt, too fast, and easily vulnerable to GPU brute force cracking.<br/><br/>
+                            Suggestions:<strong>New projects use Argon2id and existing projects maintain bcrypt, both of which are far superior to PBKDF2.</strong>
+</div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">What is Cost Factor?</summary>
+<div class="faq-answer">
+                            Cost Factor controls the computational difficulty of cryptographic hashes. Taking bcrypt as an example, a Cost of 10 means 2¹⁰ = 1024 iterations. Each additional cost of 1 approximately doubles the calculation time.<br/><br/>
+                            • Cost 8 — Faster, affordable for low-end hardware (~50ms)<br/>
+                            • Cost 10 - generally recommended value, balancing security and performance (about 200ms)<br/>
+                            • Cost 12 — Safer, suitable for scenarios with high security requirements (about 800ms)<br/>
+                            • Cost 14 — Very safe, but user experience may be affected (about 3s)<br/><br/>
+                            It is recommended to adjust the Cost according to the server performance to maintain each verification time at 200-500ms. As hardware advances, the Cost value should be gradually increased.
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Why not just use SHA-256 to store passwords?</summary>
+<div class="faq-answer">
+                            The main problems with storing passwords directly in SHA-256 (or MD5):<br/><br/>
+                            • <strong>too fast</strong>: GPU can calculate SHA-256 billions of times per second, brute force cracking is only a matter of time<br/>
+                            • <strong>No Salt</strong>: The same password generates the same hash, and the rainbow table attack is effective<br/>
+                            • <strong>Zero GPU-resistant design</strong>: No memory required, GPU can perform massive parallel computing<br/><br/>
+                            Even with Salt and multiple iterations (as PBKDF2 does), the underlying design of SHA-256 is still less suitable as a cryptographic hash algorithm than bcrypt or Argon2id.<br/><br/>
+                            The simplest way to remember:<strong>Hash is used for files, Password Hash is used for passwords.</strong>
+</div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Can the password be restored after hashing?</summary>
+<div class="faq-answer">
+                            No. Password hashing is a one-way function, and by design it is impossible to reverse the original password from the hash. This is why password hashes are suitable for storing passwords - even if the database is leaked, the attacker cannot directly obtain the clear text passwords.<br/><br/>
+                            When verifying a password, the system recalculates the hash of the password entered by the user, and then compares it with the hash stored in the database to see if it is the same. This is how the "verify" feature of this tool works.<br/><br/>
+<strong>Any service claiming to be able to "decrypt" or "restore" password hashes is a scam.</strong>- They just use rainbow tables or dictionaries of common passwords for comparison.
+                        </div>
+</details>
+</div>
+</div>
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-book-open text-hub-accent"></i> The complete guide to password hashing
+                </h2>
+<div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+<section>
+<h3 class="text-white font-bold text-base mb-2">Why can't passwords be stored in clear text?</h3>
+<p>If the database stores passwords in clear text, once a data leak occurs, all users' passwords will be directly exposed. Since most users reuse passwords on different websites, attackers can use these credentials to log into the user's email, bank and other accounts (Credential Stuffing).</p>
+<p class="mt-2">Password hashing technology solves this problem: even if the database is leaked, the attacker cannot reversely deduce the original password from the hash. As long as your password is strong enough and uses the correct hash algorithm, your account security can be guaranteed.</p>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">Historical evolution of hash algorithm</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs font-bold text-white mb-1">First generation: simple Hash</p>
+<p class="text-[11px] text-slate-500">MD5, SHA-1, SHA-256<br/>❌ No Salt, too fast<br/>1930s~1990s design</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs font-bold text-white mb-1">Second Generation: Private Password Hash</p>
+<p class="text-[11px] text-slate-500">bcrypt (1999), PBKDF2 (2000)<br/>✅ With Salt and adjustable Cost<br/>But can still be accelerated by ASIC</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs font-bold text-white mb-1">Third generation: memory hard binding</p>
+<p class="text-[11px] text-slate-500">scrypt (2009), Argon2 (2015)<br/>✅ Requires a lot of memory<br/>Best GPU/ASIC resistant</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-xs font-bold text-white mb-1">The future: quantum security</p>
+<p class="text-[11px] text-slate-500">research stage<br/>🔬 Resistant to quantum computer attacks</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4" id="toast">
+<span class="text-lg" id="toast-icon">✅</span> <span class="text-sm font-medium text-slate-300" id="toast-message"></span>
+</div>
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(id, path) {
+            try { const r = await fetch(path); if (!r.ok) throw Error('HTTP '+r.status);
+                const html = await r.text(); const c = document.getElementById(id); c.innerHTML = html;
+                Array.from(c.querySelectorAll('script')).forEach(os => { const ns = document.createElement('script');
+                    Array.from(os.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(os.innerHTML)); os.parentNode.replaceChild(ns, os); });
+            } catch(e) { console.error('[System Error]', path, e); }
+        }
+        function setupSidebarActiveState() {
+            const cp = '/password-hash-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(i => {
+                const h = i.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    i.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50');
+                    i.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const ic = i.querySelector('svg'); if (ic) ic.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([loadComponent('component-header','/components/header-en.html'),loadComponent('component-sidebar','/components/sidebar-en.html'),loadComponent('component-footer','/components/footer-en.html')]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) { const t = e.target.closest('#sidebar-trigger-btn'); if (t) window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar')); });
+            setupSidebarActiveState(); initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<script>
+        // ===================== STATE =====================
+        let currentAlgo = 'bcrypt';
+        let currentCost = 10;
+        let currentSalt = '';
+        let currentHash = '';
+        let currentHashTime = 0;
+
+        // ===================== INIT =====================
+        function initApp() {
+            generateSalt();
+        }
+
+        // ===================== UI HELPERS =====================
+        function togglePW(id, el) {
+            const inp = document.getElementById(id);
+            const icon = el.querySelector('i');
+            if (inp.type === 'password') { inp.type = 'text'; icon.className = 'ph ph-eye-slash text-lg'; }
+            else { inp.type = 'password'; icon.className = 'ph ph-eye text-lg'; }
+        }
+
+        function selectAlgo(algo) {
+            currentAlgo = algo;
+            document.querySelectorAll('.algo-card').forEach(c => c.classList.toggle('active', c.dataset.algo === algo));
+            document.getElementById('cost-section').classList.toggle('hidden', algo === 'sha256');
+            document.getElementById('pbkdf2-iterations').classList.toggle('hidden', algo !== 'pbkdf2');
+            document.getElementById('argon2-memory').classList.toggle('hidden', algo !== 'argon2');
+            document.getElementById('cost-options').classList.toggle('hidden', algo === 'pbkdf2');
+            document.getElementById('cost-desc').classList.toggle('hidden', algo === 'pbkdf2');
+            if (algo === 'sha256') { document.getElementById('salt-input').readOnly = false; }
+            else { document.getElementById('salt-input').readOnly = true; }
+        }
+
+        function setCost(val) {
+            currentCost = val;
+            document.querySelectorAll('.cost-chip').forEach(c => c.classList.toggle('active', parseInt(c.dataset.cost) === val));
+            const labels = ['🚀 更快', '', '', '✅ 推薦', '🔒 更安全', '🔒 最安全'];
+            const idx = [4,6,8,10,12,14].indexOf(val);
+            document.getElementById('cost-desc').innerHTML = idx >= 0 ? labels.map((l,i) => {
+                if (i === idx) return `<span class="${i === 3 ? 'text-hub-accent' : i > 3 ? 'text-ph-green' : 'text-slate-400'}">${l}</span>`;
+                return `<span class="text-slate-600">${l}</span>`;
+            }).join('') : '';
+            document.getElementById('cost-label').textContent = `${val} (${val <= 6 ? '較快' : val <= 10 ? '推薦' : val <= 12 ? '更安全' : '最安全'})`;
+        }
+
+        function onInputChange() {
+            const pw = document.getElementById('pw-input').value;
+            const confirm = document.getElementById('pw-confirm').value;
+            const match = document.getElementById('pw-match');
+            if (confirm) {
+                match.classList.remove('hidden');
+                if (pw === confirm) match.innerHTML = '<span class="text-green-400">✓ 密碼一致</span>';
+                else match.innerHTML = '<span class="text-red-400">✗ 密碼不一致</span>';
+            } else {
+                match.classList.add('hidden');
+            }
+        }
+
+        let saltEditing = false;
+
+        function toggleSaltEdit() {
+            const inp = document.getElementById('salt-input');
+            saltEditing = !saltEditing;
+            inp.readOnly = !saltEditing;
+            inp.focus();
+        }
+
+        function generateSalt() {
+            const len = 16;
+            const bytes = new Uint8Array(len);
+            crypto.getRandomValues(bytes);
+            currentSalt = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            document.getElementById('salt-input').value = currentSalt;
+            document.getElementById('salt-len').textContent = `長度: ${len} bytes (${currentSalt.length} hex chars)`;
+        }
+
+        // ===================== HASH GENERATION =====================
+        async function generateHash() {
+            const pw = document.getElementById('pw-input').value;
+            if (!pw) { showToast('請輸入密碼', true); return; }
+            if (pw.length < 4) { showToast('密碼至少 4 個字元', true); return; }
+
+            const confirm = document.getElementById('pw-confirm').value;
+            if (confirm && pw !== confirm) { showToast('密碼不一致', true); return; }
+
+            const algo = currentAlgo;
+            const salt = document.getElementById('salt-input').value || currentSalt;
+
+            const hashEl = document.getElementById('hash-value');
+            const details = document.getElementById('hash-details');
+            hashEl.textContent = '計算中⋯';
+            hashEl.className = 'text-sm font-mono text-slate-400 break-all min-h-[2rem]';
+
+            try {
+                const start = performance.now();
+
+                if (algo === 'bcrypt') {
+                    const cost = currentCost;
+                    if (!salt || salt.length < 8) { showToast('請先產生 Salt', true); return; }
+                    // bcrypt uses first 16 bytes of salt (32 hex chars) typically
+                    const bcryptSalt = bcrypt.genSaltSync(cost);
+                    currentHash = bcrypt.hashSync(pw, bcryptSalt);
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'bcrypt';
+                    document.getElementById('det-salt').textContent = '(內建於 Hash)';
+                    document.getElementById('det-cost').textContent = `${cost} (2^${cost} = ${Math.pow(2,cost).toLocaleString()} rounds)`;
+                }
+                else if (algo === 'argon2') {
+                    if (typeof argon2 === 'undefined') { showToast('Argon2id 無法載入', true); hashEl.textContent = '--'; return; }
+                    const mem = parseInt(document.getElementById('argon2-mem-slider').value);
+                    const result = await argon2.hash({
+                        pass: pw, salt: salt,
+                        time: currentCost,
+                        mem: mem,
+                        type: argon2.ArgonType.Argon2id,
+                        hashLen: 32
+                    });
+                    currentHash = result.encoded;
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'Argon2id';
+                    document.getElementById('det-salt').textContent = salt.substring(0, 16) + '...';
+                    document.getElementById('det-cost').textContent = `Time=${currentCost}, Mem=${mem}MB`;
+                }
+                else if (algo === 'pbkdf2') {
+                    const iterations = parseInt(document.getElementById('pbkdf2-iter-slider').value);
+                    const enc = new TextEncoder();
+                    const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+                    const saltBytes = hexToBytes(salt || currentSalt);
+                    const derivedBits = await crypto.subtle.deriveBits(
+                        { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' },
+                        keyMaterial, 256
+                    );
+                    const hashHex = bytesToHex(new Uint8Array(derivedBits));
+                    // Format: pbkdf2:sha256:iterations:salt:hash
+                    currentHash = `pbkdf2:sha256:${iterations}:${salt}:${hashHex}`;
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'PBKDF2 (SHA-256)';
+                    document.getElementById('det-salt').textContent = salt;
+                    document.getElementById('det-cost').textContent = `${iterations.toLocaleString()} 次迭代`;
+                }
+                else if (algo === 'sha256') {
+                    const enc = new TextEncoder();
+                    const data = enc.encode(pw + salt);
+                    const digest = await crypto.subtle.digest('SHA-256', data);
+                    const hashHex = bytesToHex(new Uint8Array(digest));
+                    currentHash = hashHex;
+                    currentHashTime = performance.now() - start;
+                    document.getElementById('det-algo').textContent = 'SHA-256 ⚠️ (教育用途)';
+                    document.getElementById('det-salt').textContent = salt;
+                    document.getElementById('det-cost').textContent = 'N/A (固定)';
+                }
+
+                hashEl.textContent = currentHash;
+                hashEl.className = 'text-sm font-mono text-hub-accent break-all min-h-[2rem]';
+                details.classList.remove('hidden');
+                document.getElementById('det-time').textContent = `${Math.round(currentHashTime)} ms`;
+                showToast('✅ 雜湊已產生');
+
+                // Auto-fill verify
+                document.getElementById('verify-hash').value = currentHash;
+                document.getElementById('verify-pw').value = pw;
+
+            } catch(e) {
+                hashEl.textContent = '--';
+                hashEl.className = 'text-sm font-mono text-red-400 break-all min-h-[2rem]';
+                showToast('❌ 產生失敗: ' + e.message, true);
+                console.error(e);
+            }
+        }
+
+        // ===================== VERIFY =====================
+        async function verifyHash() {
+            const pw = document.getElementById('verify-pw').value;
+            const hash = document.getElementById('verify-hash').value.trim();
+            const resultEl = document.getElementById('verify-result');
+            resultEl.classList.remove('hidden');
+
+            if (!pw || !hash) {
+                resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                resultEl.textContent = '請輸入密碼與 Hash';
+                return;
+            }
+
+            try {
+                // Detect algorithm from hash format
+                if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
+                    // bcrypt
+                    const match = bcrypt.compareSync(pw, hash);
+                    resultEl.className = `verify-result fade-in ${match ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                    resultEl.textContent = match ? '✅ Match — 密碼正確' : '❌ Not Match — 密碼錯誤';
+                }
+                else if (hash.startsWith('$argon2')) {
+                    // Argon2
+                    try {
+                        const result = await argon2.verify({ pass: pw, encoded: hash });
+                        resultEl.className = `verify-result fade-in ${result ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                        resultEl.textContent = result ? '✅ Match — 密碼正確' : '❌ Not Match — 密碼錯誤';
+                    } catch(e) {
+                        resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                        resultEl.textContent = '❌ Argon2 驗證失敗: ' + e.message;
+                    }
+                }
+                else if (hash.startsWith('pbkdf2:')) {
+                    // PBKDF2
+                    const parts = hash.split(':');
+                    if (parts.length >= 5) {
+                        const iterations = parseInt(parts[2]);
+                        const salt = parts[3];
+                        const storedHash = parts.slice(4).join(':');
+                        const enc = new TextEncoder();
+                        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+                        const saltBytes = hexToBytes(salt);
+                        const derivedBits = await crypto.subtle.deriveBits(
+                            { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' },
+                            keyMaterial, 256
+                        );
+                        const computedHash = bytesToHex(new Uint8Array(derivedBits));
+                        const match = computedHash === storedHash;
+                        resultEl.className = `verify-result fade-in ${match ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                        resultEl.textContent = match ? '✅ Match — 密碼正確' : '❌ Not Match — 密碼錯誤';
+                    } else {
+                        resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                        resultEl.textContent = '❌ PBKDF2 Hash 格式不正確';
+                    }
+                }
+                else if (/^[0-9a-fA-F]{64}$/.test(hash)) {
+                    // SHA-256 (64 hex chars)
+                    const salt = document.getElementById('salt-input').value || '';
+                    const enc = new TextEncoder();
+                    const data = enc.encode(pw + salt);
+                    const digest = await crypto.subtle.digest('SHA-256', data);
+                    const computedHash = bytesToHex(new Uint8Array(digest));
+                    const match = computedHash === hash.toLowerCase();
+                    resultEl.className = `verify-result fade-in ${match ? 'bg-ph-green/10 text-ph-green border border-ph-green/20' : 'bg-ph-red/10 text-ph-red border border-ph-red/20'}`;
+                    resultEl.textContent = match ? '✅ Match — 密碼正確 (請注意 SHA-256 不建議用於密碼儲存)' : '❌ Not Match — 密碼錯誤';
+                }
+                else {
+                    resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                    resultEl.textContent = '❌ 無法識別 Hash 格式（支援 bcrypt、Argon2id、PBKDF2）';
+                }
+            } catch(e) {
+                resultEl.className = 'verify-result fade-in bg-ph-red/10 text-ph-red border border-ph-red/20';
+                resultEl.textContent = '❌ 驗證失敗: ' + e.message;
+            }
+        }
+
+        // ===================== BENCHMARK =====================
+        async function runBenchmark() {
+            const btn = document.querySelector('#bench-content button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="bench-spinner"></span> 執行中...';
+            document.getElementById('bench-bcrypt').innerHTML = '<span class="bench-spinner"></span>';
+            document.getElementById('bench-argon2').innerHTML = '<span class="bench-spinner"></span>';
+            document.getElementById('bench-pbkdf2').innerHTML = '<span class="bench-spinner"></span>';
+
+            const benchPw = 'BenchmarkPassword123!';
+
+            // bcrypt Cost 10
+            try {
+                const start = performance.now();
+                const s = bcrypt.genSaltSync(10);
+                bcrypt.hashSync(benchPw, s);
+                const t = performance.now() - start;
+                document.getElementById('bench-bcrypt').textContent = `${Math.round(t)} ms`;
+            } catch(e) {
+                document.getElementById('bench-bcrypt').textContent = 'N/A';
+            }
+
+            // Argon2id 64MB
+            try {
+                if (typeof argon2 !== 'undefined') {
+                    const start = performance.now();
+                    await argon2.hash({ pass: benchPw, salt: 'benchmarksalt1234', time: 2, mem: 64, type: argon2.ArgonType.Argon2id, hashLen: 32 });
+                    const t = performance.now() - start;
+                    document.getElementById('bench-argon2').textContent = `${Math.round(t)} ms`;
+                } else {
+                    document.getElementById('bench-argon2').textContent = 'N/A';
+                }
+            } catch(e) {
+                document.getElementById('bench-argon2').textContent = 'N/A';
+            }
+
+            // PBKDF2 600k
+            try {
+                const enc = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(benchPw), 'PBKDF2', false, ['deriveBits']);
+                const saltBytes = new Uint8Array(16);
+                crypto.getRandomValues(saltBytes);
+                const start = performance.now();
+                await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: saltBytes, iterations: 600000, hash: 'SHA-256' }, keyMaterial, 256);
+                const t = performance.now() - start;
+                document.getElementById('bench-pbkdf2').textContent = `${Math.round(t)} ms`;
+            } catch(e) {
+                document.getElementById('bench-pbkdf2').textContent = 'N/A';
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-play"></i> 重新執行 Benchmark';
+            showToast('Benchmark 完成');
+        }
+
+        // ===================== EXPORT =====================
+        function copyHash() {
+            if (currentHash) copyToClipboard(currentHash);
+            else showToast('尚無 Hash 可複製', true);
+        }
+
+        function downloadTXT() {
+            if (!currentHash) { showToast('尚無資料可下載', true); return; }
+            const lines = [
+                '═══════════════════════════════════════',
+                '  Password Hash Report',
+                '  ToolHub - Password Hash Generator & Verifier',
+                '═══════════════════════════════════════',
+                '',
+                `Algorithm:  ${document.getElementById('det-algo').textContent}`,
+                `Hash:       ${currentHash}`,
+                `Salt:       ${currentSalt || '(內建於 Hash)'}`,
+                `Cost:       ${document.getElementById('det-cost').textContent}`,
+                `Time:       ${Math.round(currentHashTime)} ms`,
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/password-hash-generator)`,
+                `Timestamp: ${new Date().toISOString()}`,
+                '───────────────────────────────────────'
+            ].join('\n');
+            downloadFile(lines, 'password-hash.txt', 'text/plain');
+            showToast('TXT 已下載');
+        }
+
+        function downloadJSON() {
+            if (!currentHash) { showToast('尚無資料可下載', true); return; }
+            const data = {
+                tool: 'ToolHub Password Hash Generator & Verifier',
+                url: 'https://toolhuben.com/password-hash-generator/',
+                timestamp: new Date().toISOString(),
+                algorithm: document.getElementById('det-algo').textContent,
+                hash: currentHash,
+                salt: currentSalt,
+                cost: document.getElementById('det-cost').textContent,
+                timeMs: Math.round(currentHashTime)
+            };
+            downloadFile(JSON.stringify(data, null, 2), 'password-hash.json', 'application/json');
+            showToast('JSON 已下載');
+        }
+
+        // ===================== UTILITIES =====================
+        function hexToBytes(hex) {
+            const bytes = [];
+            for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substring(i, i+2), 16));
+            return new Uint8Array(bytes);
+        }
+        function bytesToHex(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast'), ic = document.getElementById('toast-icon'), m = document.getElementById('toast-message');
+            ic.textContent = isError ? '❌' : '✅'; m.textContent = msg;
+            t.classList.remove('opacity-0','pointer-events-none','translate-y-4');
+            t.classList.add('opacity-100','pointer-events-auto');
+            clearTimeout(t._timeout);
+            t._timeout = setTimeout(() => { t.classList.remove('opacity-100','pointer-events-auto'); t.classList.add('opacity-0','pointer-events-none','translate-y-4'); }, 2500);
+        }
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => showToast('已複製')).catch(() => fallbackCopy(text));
+            else fallbackCopy(text);
+        }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showToast('已複製'); } catch(e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        window.selectAlgo = selectAlgo; window.setCost = setCost; window.generateSalt = generateSalt;
+        window.onInputChange = onInputChange; window.togglePW = togglePW; window.toggleSaltEdit = toggleSaltEdit;
+        window.generateHash = generateHash; window.verifyHash = verifyHash; window.runBenchmark = runBenchmark;
+        window.copyHash = copyHash; window.downloadTXT = downloadTXT; window.downloadJSON = downloadJSON;
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

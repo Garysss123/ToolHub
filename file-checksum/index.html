@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Checksum Calculator & Verifier — MD5, SHA-1, SHA-256, SHA-384, SHA-512 | ToolHub</title>
+    <meta name="description" content="免費線上檔案雜湊計算與驗證工具。支援 MD5、SHA-1、SHA-256、SHA-384、SHA-512，Drag & Drop 上傳，一鍵比對官方 Checksum，產出 TXT / JSON 報告。適合 Linux ISO、Windows ISO、Android ROM、韌體驗證。">
+    <meta name="keywords" content="Checksum, MD5, SHA-256, SHA-1, 檔案雜湊驗證, 檔案完整性檢查, ISO驗證, File Hash Calculator, Checksum Verifier, 雜湊比對">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        csum: {
+                            primary: '#2DD4BF',
+                            match: '#10b981',
+                            error: '#ef4444',
+                            pending: '#6b7280',
+                            md5: '#F59E0B',
+                            sha1: '#F97316',
+                            sha256: '#10B981',
+                            sha384: '#3B82F6',
+                            sha512: '#A855F7',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+        .glass-panel:hover { border-color: #334155; }
+
+        .drop-zone {
+            border: 2px dashed #1E293B;
+            border-radius: 1rem;
+            transition: all 0.3s;
+            background: rgba(21, 31, 50, 0.4);
+            cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #2DD4BF;
+            background: rgba(45, 211, 191, 0.05);
+        }
+        .drop-zone.drag-over {
+            transform: scale(1.005);
+        }
+
+        .hash-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #1E293B;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .hash-card:hover {
+            border-color: #334155;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .hash-card .hash-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8125rem;
+            word-break: break-all;
+            line-height: 1.6;
+            color: #CBD5E1;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-match { background: rgba(16, 185, 129, 0.12); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.25); }
+        .status-mismatch { background: rgba(239, 68, 68, 0.12); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+        .status-pending { background: rgba(107, 114, 128, 0.12); color: #9CA3AF; border: 1px solid rgba(107, 114, 128, 0.25); }
+
+        .progress-bar {
+            height: 4px;
+            background: #1E293B;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2DD4BF, #38BDF8);
+            border-radius: 99px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .faq-item summary {
+            cursor: pointer;
+            padding: 0.875rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(21, 31, 50, 0.6);
+            border: 1px solid #1E293B;
+            transition: all 0.2s;
+            font-weight: 500;
+            color: #E2E8F0;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::before {
+            content: '+';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #1E293B;
+            color: #2DD4BF;
+            font-size: 0.875rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .faq-item[open] summary::before {
+            content: '−';
+            background: #2DD4BF;
+            color: #0B1120;
+        }
+        .faq-item summary:hover { border-color: #334155; background: rgba(21, 31, 50, 0.8); }
+        .faq-item .faq-answer {
+            padding: 1rem 1rem 1rem 2.75rem;
+            color: #94A3B8;
+            line-height: 1.75;
+            font-size: 0.9rem;
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auto-detect-badge {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/file-checksum/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/file-checksum/">
+    <meta property="og:title" content="File Checksum Calculator &amp; Verifier — MD5, SHA-1, SHA-256, SHA-384, SHA-512">
+    <meta property="og:description" content="免費線上檔案雜湊計算與驗證工具。支援 MD5、SHA-1、SHA-256、SHA-384、SHA-512，Drag &amp; Drop 上傳，一鍵比對官方 Checksum，產出 TXT / JSON 報告。適合 Linux ISO、Windows ISO、Android ROM、韌體驗證。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="File Checksum Calculator &amp; Verifier — MD5, SHA-1, SHA-256, SHA-384, SHA-512">
+    <meta name="twitter:description" content="免費線上檔案雜湊計算與驗證工具。支援 MD5、SHA-1、SHA-256、SHA-384、SHA-512，Drag &amp; Drop 上傳，一鍵比對官方 Checksum，產出 TXT / JSON 報告。適合 Linux ISO、Windows ISO、Android ROM、韌體驗證。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"File Checksum Calculator & Verifier — MD5, SHA-1, SHA-256, SHA-384, SHA-512","url":"https://toolhuben.com/file-checksum/","description":"免費線上檔案雜湊計算與驗證工具。支援 MD5、SHA-1、SHA-256、SHA-384、SHA-512，Drag & Drop 上傳，一鍵比對官方 Checksum，產出 TXT / JSON 報告。適合 Linux ISO、Windows ISO、Android ROM、韌體驗證。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"File Checksum Calculator & Verifier — MD5, SHA-1, SHA-256, SHA-384, SHA-512","item":"https://toolhuben.com/file-checksum/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/file-checksum/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/file-checksum/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/file-checksum/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#2DD4BF;--classic-accent-rgb:45,212,191" data-tool-visual data-classic-tool data-classic-layout="glass">
+
+    <div id="component-header" class="shrink-0"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out] flex flex-col">
+
+        <!-- SEO Header -->
+        <div class="text-center space-y-4 mb-8 mt-2 shrink-0">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-teal-950/30 border border-teal-900/50 text-xs text-teal-400 shadow-inner">
+                <i class="ph-fill ph-shield-check mr-1.5 text-sm animate-pulse"></i>
+                檔案完整性與雜湊驗證引擎
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                File Checksum Calculator <span class="text-transparent bg-clip-text bg-gradient-to-r from-csum-primary to-blue-400">& Verifier</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                計算檔案的 MD5、SHA-1、SHA-256、SHA-384、SHA-512 雜湊值，並與官方 Checksum 一鍵比對。支援 Drag & Drop、多檔案模式、Checksum 格式自動辨識。純前端本地運算，檔案絕不上傳。
+            </p>
+        </div>
+
+        <!-- Drop Zone -->
+        <div class="max-w-4xl mx-auto w-full mb-6">
+            <div id="drop-zone" class="drop-zone p-8 sm:p-12 text-center">
+                <div id="drop-content">
+                    <div class="flex justify-center mb-4">
+                        <div class="w-16 h-16 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                            <i class="ph-fill ph-cloud-arrow-up text-3xl text-teal-400"></i>
+                        </div>
+                    </div>
+                    <p class="text-white font-bold text-lg mb-1">拖曳檔案到此區域</p>
+                    <p class="text-slate-500 text-sm mb-4">或</p>
+                    <label for="file-input" class="inline-flex items-center gap-2 px-6 py-3 bg-csum-primary hover:bg-teal-400 text-hub-900 font-bold rounded-xl text-sm cursor-pointer transition-all shadow-lg hover:shadow-teal-400/20">
+                        <i class="ph-bold ph-folder-open"></i>
+                        選擇檔案
+                    </label>
+                    <input type="file" id="file-input" class="hidden" multiple>
+                    <p class="text-slate-600 text-xs mt-3">支援任何檔案類型，無大小限制（純前端本地運算）</p>
+                </div>
+                <div id="drop-active" class="hidden">
+                    <i class="ph-fill ph-arrows-down text-4xl text-csum-primary mb-3"></i>
+                    <p class="text-csum-primary font-bold text-lg">放開以上傳檔案</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div id="progress-area" class="max-w-4xl mx-auto w-full mb-6 hidden">
+            <div class="glass-panel p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ph-spinner-gap animate-spin text-csum-primary text-sm"></i>
+                        <span id="progress-label" class="text-sm text-slate-300">讀取檔案中...</span>
+                    </div>
+                    <span id="progress-percent" class="text-xs font-mono text-slate-500">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-bar-fill"></div>
+                </div>
+                <div id="hash-status" class="mt-2 text-xs text-slate-500 hidden">
+                    <span id="hash-status-text">計算雜湊中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Info -->
+        <div id="file-info-area" class="max-w-4xl mx-auto w-full mb-6 hidden">
+            <div class="glass-panel p-4 sm:p-5 fade-in">
+                <div class="flex items-center gap-3 mb-3">
+                    <i class="ph-fill ph-file text-csum-primary text-lg"></i>
+                    <h2 class="font-bold text-white">檔案資訊</h2>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div>
+                        <div class="text-xs text-slate-500">檔案名稱</div>
+                        <div id="fi-name" class="text-white font-medium truncate">--</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500">檔案大小</div>
+                        <div id="fi-size" class="text-white font-mono">--</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500">MIME 類型</div>
+                        <div id="fi-mime" class="text-slate-300">--</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500">最後修改</div>
+                        <div id="fi-modified" class="text-slate-300">--</div>
+                    </div>
+                </div>
+                <!-- Multi-file count -->
+                <div id="multi-file-count" class="mt-2 text-xs text-slate-500 hidden">
+                    <i class="ph-bold ph-files mr-1"></i>
+                    共 <span id="file-count-span">0</span> 個檔案，<span id="multi-mode-hint">可展開下方多檔案比對模式</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compare Section -->
+        <div id="compare-area" class="max-w-4xl mx-auto w-full mb-6 hidden">
+            <div class="glass-panel p-4 sm:p-5 fade-in">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-fill ph-seal-check text-csum-primary text-lg"></i>
+                        <h2 class="font-bold text-white">Checksum 比對</h2>
+                    </div>
+                    <div id="compare-result" class="hidden">
+                        <span id="compare-badge" class="status-badge status-pending">
+                            <i class="ph-fill ph-circle"></i>
+                            <span id="compare-text">待比對</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="flex-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph-bold ph-paste text-slate-500"></i>
+                        </div>
+                        <input type="text" id="in-checksum-compare"
+                               class="font-mono w-full bg-hub-900/80 border border-hub-700 focus:border-csum-primary rounded-xl pl-10 pr-4 py-3 text-white text-sm outline-none shadow-xl transition-all placeholder:text-slate-600"
+                               placeholder="貼上官方 Checksum 進行比對（自動識別格式）">
+                    </div>
+                    <button id="btn-compare" class="bg-csum-primary hover:bg-teal-400 text-hub-900 font-bold rounded-xl px-6 py-3 text-sm transition-all shadow-lg hover:shadow-teal-400/20 flex items-center gap-2 whitespace-nowrap">
+                        <i class="ph-bold ph-checks"></i>
+                        Compare
+                    </button>
+                </div>
+                <div id="detected-format" class="mt-2 text-xs text-slate-500 hidden">
+                    <span class="auto-detect-badge bg-slate-800 text-slate-400 border border-slate-700" id="detected-badge"></span>
+                    <span id="detected-text" class="ml-1"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hash Result Cards -->
+        <div id="hash-results-area" class="max-w-4xl mx-auto w-full mb-6 hidden">
+            <div class="glass-panel p-4 sm:p-5 fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-fill ph-fingerprint text-csum-primary text-lg"></i>
+                        <h2 class="font-bold text-white">雜湊值</h2>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="btn-copy-all" class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-csum-primary transition-all bg-hub-800/50 flex items-center gap-1.5">
+                            <i class="ph-bold ph-copy-simple"></i> 全部複製
+                        </button>
+                        <button id="btn-dl-txt" class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-csum-primary transition-all bg-hub-800/50 flex items-center gap-1.5">
+                            <i class="ph-bold ph-file-text"></i> TXT
+                        </button>
+                        <button id="btn-dl-json" class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-csum-primary transition-all bg-hub-800/50 flex items-center gap-1.5">
+                            <i class="ph-bold ph-file-json"></i> JSON
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-3" id="hash-cards">
+                    <!-- Dynamically generated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample Data -->
+        <div id="sample-area" class="max-w-4xl mx-auto w-full mb-6">
+            <div class="glass-panel p-4 sm:p-5 fade-in">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="ph-fill ph-test-tube text-csum-primary text-lg"></i>
+                        <h2 class="font-bold text-white">範例測試</h2>
+                    </div>
+                    <button id="btn-load-sample" class="text-xs px-3 py-1.5 rounded-lg border border-hub-700 text-slate-400 hover:text-white hover:border-csum-primary transition-all bg-hub-800/50 flex items-center gap-1.5">
+                        <i class="ph-bold ph-flask"></i> 載入範例
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500">使用預設的範例 Checksum 驗證工具功能（SHA-256 比對）。</p>
+                <div id="sample-checksums" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
+                    <div class="bg-hub-900/50 rounded-lg p-3 border border-hub-700">
+                        <div class="text-slate-500 mb-1">MD5 (32 chars)</div>
+                        <code class="text-slate-300 break-all">d41d8cd98f00b204e9800998ecf8427e</code>
+                    </div>
+                    <div class="bg-hub-900/50 rounded-lg p-3 border border-hub-700">
+                        <div class="text-slate-500 mb-1">SHA-256 (64 chars)</div>
+                        <code class="text-slate-300 break-all">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-File Comparison -->
+        <div id="multi-file-area" class="max-w-4xl mx-auto w-full mb-6 hidden">
+            <div class="glass-panel p-4 sm:p-5 fade-in">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-table text-csum-primary text-lg"></i>
+                    <h2 class="font-bold text-white">多檔案比對模式</h2>
+                </div>
+                <p class="text-xs text-slate-500 mb-3">一次比對多個檔案的 SHA-256。貼上官方 Checksum 後所有檔案自動比對。</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs text-slate-500 uppercase tracking-wider border-b border-hub-700">
+                                <th class="pb-2 pr-2">檔案</th>
+                                <th class="pb-2 pr-2 font-mono">SHA-256</th>
+                                <th class="pb-2">狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="multi-file-tbody">
+                            <!-- Generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tutorial & FAQ -->
+        <div class="max-w-4xl mx-auto w-full">
+            <div class="glass-panel p-4 sm:p-6 fade-in">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-book-open-text text-csum-primary"></i>
+                    雜湊演算法教學
+                </h2>
+
+                <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-2">MD5 是什麼？</h3>
+                        <p>MD5（Message Digest Algorithm 5）是由 Ronald Rivest 於 1991 年設計的 128 位元雜湊函式，輸出固定 32 字元的十六進位字串。MD5 運算速度快，常用於檔案完整性檢查和非安全性場景的比對。然而 MD5 已被證實存在嚴重的碰撞漏洞（2004 年由中國學者王小雲團隊破解），<strong class="text-csum-error">不應用於密碼儲存或數位簽章等安全場景</strong>。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-2">SHA-1 為什麼已不安全？</h3>
+                        <p>SHA-1（Secure Hash Algorithm 1）輸出 160 位元（40 字元），曾經是業界標準。但 2017 年 Google 與 CWI Amsterdam 成功演示了 SHAttered 攻擊（首例 SHA-1 碰撞），證實其強度已不足以抵禦現代攻擊。NIST 已於 2011 年正式棄用 SHA-1，建議全面遷移至 SHA-256 或更高等級。GitHub 也在 2017 年棄用 SHA-1。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-2">SHA-256 是什麼？</h3>
+                        <p>SHA-256 屬於 SHA-2 家族，輸出 256 位元（64 字元），由美國 NSA 設計、NIST 標準化。目前被廣泛認為是安全的雜湊演算法，用於：<br>
+                        • TLS/SSL 憑證<br>
+                        • 區塊鏈與加密貨幣（Bitcoin 使用雙層 SHA-256）<br>
+                        • Linux ISO 與軟體套件驗證<br>
+                        • 密碼儲存（搭配 Salt）<br>
+                        目前無已知可行碰撞攻擊。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-2">如何驗證 Linux ISO？</h3>
+                        <p>以 Ubuntu 為例：<br>
+                        1. 下載 ISO 檔案及對應的 <code class="text-teal-400 bg-teal-950/30 px-1.5 py-0.5 rounded text-xs font-mono">SHA256SUMS</code> 檔案<br>
+                        2. 將 ISO 拖入本工具，計算 SHA-256<br>
+                        3. 從 <code class="text-teal-400 bg-teal-950/30 px-1.5 py-0.5 rounded text-xs font-mono">SHA256SUMS</code> 中複製官方 Checksum<br>
+                        4. 貼入比對欄位，確認為 🟢 Match<br>
+                        若比對失敗表示 ISO 可能在下載過程中損毀或被篡改，請重新下載。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-2">如何驗證 Android ROM？</h3>
+                        <p>刷機前務必驗證 ROM 的完整性：<br>
+                        1. 從開發者官網下載 ROM 與對應的 MD5/SHA256 雜湊值<br>
+                        2. 使用本工具計算 ROM 檔案的雜湊值<br>
+                        3. 比對是否與官方公布一致<br>
+                        ⚠️ 若雜湊不符，刷入可能導致變磚（brick）或安全性問題，切勿安裝。</p>
+                    </div>
+                </div>
+
+                <h2 class="text-lg font-bold text-white mt-8 mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-question text-csum-primary"></i>
+                    常見問題 (FAQ)
+                </h2>
+
+                <div class="space-y-2">
+                    <details class="faq-item">
+                        <summary>什麼是 Checksum？為什麼要用它？</summary>
+                        <div class="faq-answer">
+                            Checksum（校驗和）是透過雜湊演算法從檔案內容計算出的固定長度字串。只要檔案內容改變一個位元，Checksum 就會完全不同。用途包括：<br>
+                            • 驗證下載檔案是否完整（未因網路問題損毀）<br>
+                            • 確認檔案未被篡改或植入惡意程式碼<br>
+                            • 備份資料的完整性檢查
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary>MD5、SHA-1、SHA-256 該選哪個？</summary>
+                        <div class="faq-answer">
+                            <strong>建議優先使用 SHA-256</strong>。MD5 和 SHA-1 因碰撞攻擊已不推薦用於安全驗證。但以下情況可以繼續使用 MD5：<br>
+                            • 與舊系統相容（某些 NAS、老舊軟體只提供 MD5）<br>
+                            • 非安全性場景（如比對快取檔案）<br>
+                            本工具會同時計算全部五種演算法，方便你根據需求選擇。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary>為什麼兩個檔案的 MD5 相同但 SHA-256 不同？</summary>
+                        <div class="faq-answer">
+                            正常情況下不應該發生。若出現此情況，表示 MD5 發生碰撞（collision），兩個不同的檔案產生了相同的 MD5 值。這是 MD5 的已知弱點，正好說明了為什麼應該使用 SHA-256 來取代 MD5。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary>Checksum 格式自動辨識是怎麼判斷的？</summary>
+                        <div class="faq-answer">
+                            根據十六進位字串的長度自動判斷：<br>
+                            • 32 字元 → MD5<br>
+                            • 40 字元 → SHA-1<br>
+                            • 56 字元 → SHA-224<br>
+                            • 64 字元 → SHA-256<br>
+                            • 96 字元 → SHA-384<br>
+                            • 128 字元 → SHA-512<br>
+                            你無需事先知道是哪種雜湊，直接貼上即可比對對應演算法的結果。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary>檔案上傳到伺服器嗎？隱私安全嗎？</summary>
+                        <div class="faq-answer">
+                            <strong>完全不上傳。</strong>所有計算均在你的瀏覽器中本地進行，使用 Web Crypto API（SubtleCrypto）進行 SHA 計算。檔案不會離開你的電腦，斷網也可以正常使用。這也是為什麼本工具可以處理 GB 級檔案而不受限於上傳頻寬。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary>為什麼計算 SHA-512 比 MD5 慢？</summary>
+                        <div class="faq-answer">
+                            SHA-512 使用 64 位元運算，輸出 512 位元（128 字元），計算複雜度遠高於 MD5（128 位元輸出，32 位元運算）。在現代瀏覽器中，SHA-256/SHA-512 有硬體加速支援（Web Crypto API 使用原生實作），通常仍能在數秒內完成 GB 級檔案的計算。MD5 沒有硬體加速，依賴純 JS 實作，但因其演算法較簡單，速度仍然很快。
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="component-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+
+    <script>
+        // ============================================================
+        //  File Checksum Calculator & Verifier 核心引擎
+        // ============================================================
+
+        const CHUNK_SIZE = 16 * 1024 * 1024; // 16MB chunks
+        const hashAlgorithms = [
+            { id: 'md5', label: 'MD5', color: 'text-csum-md5', border: 'border-amber-500/20', bg: 'bg-amber-950/10' },
+            { id: 'sha1', label: 'SHA-1', color: 'text-csum-sha1', border: 'border-orange-500/20', bg: 'bg-orange-950/10' },
+            { id: 'sha256', label: 'SHA-256', color: 'text-csum-sha256', border: 'border-emerald-500/20', bg: 'bg-emerald-950/10' },
+            { id: 'sha384', label: 'SHA-384', color: 'text-csum-sha384', border: 'border-blue-500/20', bg: 'bg-blue-950/10' },
+            { id: 'sha512', label: 'SHA-512', color: 'text-csum-sha512', border: 'border-purple-500/20', bg: 'bg-purple-950/10' },
+        ];
+
+        let currentFiles = [];
+        let currentHashResults = null;
+        let fileHashResults = new Map(); // file -> { md5, sha1, sha256, sha384, sha512 }
+        let isProcessing = false;
+
+        // --- Utility ---
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+        }
+
+        function formatDate(ts) {
+            if (!ts) return '--';
+            const d = new Date(ts);
+            return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+        }
+
+        function hexFromBuffer(buf) {
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function detectHashType(hash) {
+            const clean = hash.trim().toLowerCase();
+            if (!/^[0-9a-f]+$/.test(clean)) return null;
+            const len = clean.length;
+            if (len === 32) return 'MD5';
+            if (len === 40) return 'SHA-1';
+            if (len === 56) return 'SHA-224';
+            if (len === 64) return 'SHA-256';
+            if (len === 96) return 'SHA-384';
+            if (len === 128) return 'SHA-512';
+            return null;
+        }
+
+        function getHashIdFromType(type) {
+            const map = {
+                'MD5': 'md5',
+                'SHA-1': 'sha1',
+                'SHA-256': 'sha256',
+                'SHA-384': 'sha384',
+                'SHA-512': 'sha512',
+            };
+            return map[type] || null;
+        }
+
+        function getAlgoFromId(id) {
+            return hashAlgorithms.find(a => a.id === id);
+        }
+
+        // --- Core: Compute hashes from ArrayBuffer ---
+        async function computeHashes(buffer) {
+            const results = {};
+
+            // MD5 via SparkMD5
+            const spark = new SparkMD5.ArrayBuffer();
+            spark.append(buffer);
+            results.md5 = spark.end();
+
+            // SHA via SubtleCrypto
+            const shaConfigs = [
+                { id: 'sha1', algo: 'SHA-1' },
+                { id: 'sha256', algo: 'SHA-256' },
+                { id: 'sha384', algo: 'SHA-384' },
+                { id: 'sha512', algo: 'SHA-512' },
+            ];
+
+            for (const cfg of shaConfigs) {
+                const hashBuffer = await crypto.subtle.digest(cfg.algo, buffer);
+                results[cfg.id] = hexFromBuffer(hashBuffer);
+            }
+
+            return results;
+        }
+
+        // --- Process file with progress ---
+        async function processFile(file) {
+            const totalSize = file.size;
+            let offset = 0;
+
+            // Progress setup
+            showProgress(true);
+            updateProgress(0, '讀取檔案中...');
+
+            // For MD5 we use streaming SparkMD5
+            const spark = new SparkMD5.ArrayBuffer();
+            // Accumulate buffer for SHA
+            const chunks = [];
+
+            while (offset < totalSize) {
+                const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, totalSize));
+                const ab = await chunk.arrayBuffer();
+                spark.append(ab);
+                chunks.push(ab);
+
+                offset += ab.byteLength;
+                const pct = Math.min(100, Math.round((offset / totalSize) * 100));
+                updateProgress(pct, `讀取檔案中... ${formatSize(offset)} / ${formatSize(totalSize)}`);
+            }
+
+            updateProgress(100, '計算雜湊中...');
+            showHashStatus('計算 MD5、SHA-1、SHA-256 等五種演算法...');
+
+            // Combine chunks for SHA
+            const totalLen = chunks.reduce((s, c) => s + c.byteLength, 0);
+            const fullBuffer = new Uint8Array(totalLen);
+            let pos = 0;
+            for (const c of chunks) {
+                fullBuffer.set(new Uint8Array(c), pos);
+                pos += c.byteLength;
+            }
+
+            const results = {};
+            results.md5 = spark.end();
+
+            // SHA in parallel
+            const shaTasks = [
+                crypto.subtle.digest('SHA-1', fullBuffer).then(b => results.sha1 = hexFromBuffer(b)),
+                crypto.subtle.digest('SHA-256', fullBuffer).then(b => results.sha256 = hexFromBuffer(b)),
+                crypto.subtle.digest('SHA-384', fullBuffer).then(b => results.sha384 = hexFromBuffer(b)),
+                crypto.subtle.digest('SHA-512', fullBuffer).then(b => results.sha512 = hexFromBuffer(b)),
+            ];
+            await Promise.all(shaTasks);
+
+            showProgress(false);
+            showHashStatus(false);
+            return results;
+        }
+
+        // --- Process all files ---
+        async function processAllFiles(files) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            currentFiles = files;
+            fileHashResults.clear();
+
+            const isMulti = files.length > 1;
+
+            // Show areas
+            document.getElementById('sample-area').classList.remove('hidden');
+            // Hide sample if multi
+            if (isMulti) {
+                document.getElementById('sample-area').classList.add('hidden');
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const results = await processFile(file);
+                fileHashResults.set(file, results);
+
+                // Update UI for this file
+                if (!isMulti) {
+                    // Single file mode
+                    currentHashResults = results;
+                    renderFileInfo(file);
+                    renderHashCards(results, file);
+                    renderCompare(results);
+                    document.getElementById('compare-area').classList.remove('hidden');
+                    document.getElementById('hash-results-area').classList.remove('hidden');
+                    document.getElementById('multi-file-area').classList.add('hidden');
+                    document.getElementById('file-info-area').classList.remove('hidden');
+                    document.getElementById('sample-area').classList.remove('hidden');
+                }
+            }
+
+            if (isMulti) {
+                // Multi-file mode
+                currentHashResults = fileHashResults.get(files[0]);
+                renderFileInfo(files[0]);
+                renderHashCards(currentHashResults, files[0]);
+                renderCompare(currentHashResults);
+                renderMultiFileTable(files);
+                document.getElementById('compare-area').classList.remove('hidden');
+                document.getElementById('hash-results-area').classList.remove('hidden');
+                document.getElementById('multi-file-area').classList.remove('hidden');
+                document.getElementById('file-info-area').classList.remove('hidden');
+
+                // Show file count
+                document.getElementById('multi-file-count').classList.remove('hidden');
+                document.getElementById('file-count-span').textContent = files.length;
+
+                // Show first file in info
+                renderFileInfo(files[0]);
+            }
+
+            isProcessing = false;
+            document.getElementById('empty-state')?.classList.add('hidden');
+        }
+
+        // --- Rendering ---
+        function renderFileInfo(file) {
+            document.getElementById('fi-name').textContent = file.name;
+            document.getElementById('fi-size').textContent = formatSize(file.size);
+            document.getElementById('fi-mime').textContent = file.type || '未知';
+            document.getElementById('fi-modified').textContent = formatDate(file.lastModified);
+        }
+
+        function renderHashCards(results, file) {
+            const container = document.getElementById('hash-cards');
+            container.innerHTML = '';
+
+            for (const algo of hashAlgorithms) {
+                const hash = results[algo.id] || '--';
+                const card = document.createElement('div');
+                card.className = `hash-card ${algo.bg} border-l-4 ${algo.border.replace('border-', 'border-l-')}`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold ${algo.color} text-sm">${algo.label}</span>
+                        <button class="copy-hash-btn text-xs px-2.5 py-1 rounded-md border border-hub-700 text-slate-400 hover:text-white hover:border-${algo.id === 'md5' ? 'amber' : algo.id === 'sha1' ? 'orange' : algo.id === 'sha256' ? 'emerald' : algo.id === 'sha384' ? 'blue' : 'purple'}-500/50 transition-all flex items-center gap-1" data-hash="${hash}">
+                            <i class="ph-bold ph-copy-simple text-xs"></i> Copy
+                        </button>
+                    </div>
+                    <div class="hash-value select-all">${hash}</div>
+                `;
+
+                container.appendChild(card);
+            }
+
+            // Bind copy buttons
+            container.querySelectorAll('.copy-hash-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const hash = this.dataset.hash;
+                    try {
+                        await navigator.clipboard.writeText(hash);
+                        const orig = this.innerHTML;
+                        this.innerHTML = '<i class="ph-bold ph-check text-xs"></i> 已複製';
+                        setTimeout(() => this.innerHTML = orig, 2000);
+                    } catch (e) {
+                        // fallback
+                        const ta = document.createElement('textarea');
+                        ta.value = hash;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        const orig = this.innerHTML;
+                        this.innerHTML = '<i class="ph-bold ph-check text-xs"></i> 已複製';
+                        setTimeout(() => this.innerHTML = orig, 2000);
+                    }
+                });
+            });
+        }
+
+        function renderCompare(results) {
+            const input = document.getElementById('in-checksum-compare');
+            const resultDiv = document.getElementById('compare-result');
+            const badge = document.getElementById('compare-badge');
+            const text = document.getElementById('compare-text');
+            const detectedFormat = document.getElementById('detected-format');
+            const detectedBadge = document.getElementById('detected-badge');
+            const detectedText = document.getElementById('detected-text');
+
+            // Auto-detect on input
+            input.addEventListener('input', function() {
+                const val = this.value.trim();
+                const type = detectHashType(val);
+                if (type) {
+                    detectedFormat.classList.remove('hidden');
+                    detectedBadge.textContent = type;
+                    const algo = getAlgoFromId(getHashIdFromType(type));
+                    detectedBadge.className = `auto-detect-badge ${algo ? algo.color + ' bg-slate-800' : 'text-slate-400 bg-slate-800'}`;
+                    detectedText.textContent = `已自動識別為 ${type} 格式`;
+                } else if (val.length > 0) {
+                    detectedFormat.classList.remove('hidden');
+                    detectedBadge.textContent = '?';
+                    detectedBadge.className = 'auto-detect-badge text-slate-400 bg-slate-800';
+                    detectedText.textContent = '無法識別格式，請確認 Checksum 是否正確';
+                } else {
+                    detectedFormat.classList.add('hidden');
+                }
+            });
+
+            // Compare button
+            document.getElementById('btn-compare').addEventListener('click', function() {
+                const val = input.value.trim();
+                if (!val) {
+                    resultDiv.classList.add('hidden');
+                    return;
+                }
+
+                const type = detectHashType(val);
+                if (!type) {
+                    resultDiv.classList.remove('hidden');
+                    badge.className = 'status-badge status-mismatch';
+                    badge.innerHTML = '<i class="ph-fill ph-warning-circle"></i> <span>格式無效</span>';
+                    text.textContent = '格式無效';
+                    return;
+                }
+
+                const hashId = getHashIdFromType(type);
+                if (!hashId || !results[hashId]) {
+                    resultDiv.classList.remove('hidden');
+                    badge.className = 'status-badge status-mismatch';
+                    badge.innerHTML = '<i class="ph-fill ph-warning-circle"></i> <span>無對應演算法</span>';
+                    text.textContent = `未計算 ${type}`;
+                    return;
+                }
+
+                const computed = results[hashId];
+                const isMatch = val.toLowerCase() === computed.toLowerCase();
+
+                resultDiv.classList.remove('hidden');
+                if (isMatch) {
+                    badge.className = 'status-badge status-match';
+                    badge.innerHTML = '<i class="ph-fill ph-check-circle"></i> <span>Match ✅</span>';
+                    text.textContent = 'Match — 檔案完整無誤';
+                } else {
+                    badge.className = 'status-badge status-mismatch';
+                    badge.innerHTML = '<i class="ph-fill ph-x-circle"></i> <span>Not Match ❌</span>';
+                    text.textContent = 'Not Match — 檔案可能已損毀或被篡改';
+                }
+
+                // Also update multi-file if visible
+                updateMultiFileStatus(val);
+            });
+        }
+
+        function updateMultiFileStatus(compareVal) {
+            const rows = document.querySelectorAll('#multi-file-tbody tr');
+            if (!compareVal) return;
+
+            rows.forEach(row => {
+                const hash = row.dataset.sha256;
+                const statusCell = row.querySelector('.mf-status');
+                if (!hash || !statusCell) return;
+
+                const isMatch = compareVal.toLowerCase() === hash.toLowerCase();
+                if (isMatch) {
+                    statusCell.innerHTML = '<span class="status-badge status-match"><i class="ph-fill ph-check-circle"></i> ✅</span>';
+                } else {
+                    statusCell.innerHTML = '<span class="status-badge status-mismatch"><i class="ph-fill ph-x-circle"></i> ❌</span>';
+                }
+            });
+        }
+
+        function renderMultiFileTable(files) {
+            const tbody = document.getElementById('multi-file-tbody');
+            tbody.innerHTML = '';
+
+            for (const file of files) {
+                const results = fileHashResults.get(file);
+                if (!results) continue;
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-hub-700/50 text-sm';
+                tr.dataset.sha256 = results.sha256 || '';
+
+                tr.innerHTML = `
+                    <td class="py-2.5 pr-2">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-file text-slate-500 text-sm"></i>
+                            <span class="text-white truncate max-w-[120px] sm:max-w-[200px] block" title="${file.name}">${file.name}</span>
+                        </div>
+                    </td>
+                    <td class="py-2.5 pr-2 font-mono text-xs text-slate-400 max-w-[200px] truncate block" title="${results.sha256 || ''}">${results.sha256 || '--'}</td>
+                    <td class="py-2.5 mf-status">
+                        <span class="status-badge status-pending"><i class="ph-fill ph-minus-circle"></i> 待比對</span>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            }
+        }
+
+        // --- Progress UI ---
+        function showProgress(show) {
+            document.getElementById('progress-area').classList.toggle('hidden', !show);
+        }
+
+        function updateProgress(pct, label) {
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-percent').textContent = pct + '%';
+            if (label) document.getElementById('progress-label').textContent = label;
+        }
+
+        function showHashStatus(show) {
+            const el = document.getElementById('hash-status');
+            if (typeof show === 'string') {
+                el.classList.remove('hidden');
+                document.getElementById('hash-status-text').textContent = show;
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        // --- File handler ---
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            processAllFiles(Array.from(files));
+        }
+
+        // --- Copy All ---
+        function getAllHashesText(results, file) {
+            let text = `File Checksum Report\n`;
+            text += `═══════════════════════════\n`;
+            text += `File: ${file ? file.name : 'Unknown'}\n`;
+            text += `Size: ${file ? formatSize(file.size) : '--'}\n`;
+            text += `───────────────────────────\n`;
+            for (const algo of hashAlgorithms) {
+                text += `${algo.label}:  ${results[algo.id] || '--'}\n`;
+            }
+            text += `═══════════════════════════\n`;
+            text += `Generated by ToolHub File Checksum Calculator\n`;
+            return text;
+        }
+
+        function getAllHashesJSON(results, file) {
+            const obj = {
+                fileName: file ? file.name : 'Unknown',
+                fileSize: file ? file.size : 0,
+                fileSizeFormatted: file ? formatSize(file.size) : '--',
+                hashes: {},
+                generatedBy: 'ToolHub File Checksum Calculator'
+            };
+            for (const algo of hashAlgorithms) {
+                obj.hashes[algo.label] = results[algo.id] || '--';
+            }
+            return obj;
+        }
+
+        // --- Init ---
+        function initialize() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const dropContent = document.getElementById('drop-content');
+            const dropActive = document.getElementById('drop-active');
+
+            // Click to select
+            dropZone.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
+                    fileInput.click();
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    handleFiles(fileInput.files);
+                }
+            });
+
+            // Drag & Drop
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('drag-over');
+                    dropContent.classList.add('hidden');
+                    dropActive.classList.remove('hidden');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('drag-over');
+                    dropContent.classList.remove('hidden');
+                    dropActive.classList.add('hidden');
+                });
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFiles(files);
+                }
+            });
+
+            // Copy All
+            document.getElementById('btn-copy-all').addEventListener('click', async function() {
+                if (!currentHashResults || currentFiles.length === 0) return;
+                const text = getAllHashesText(currentHashResults, currentFiles[0]);
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const orig = this.innerHTML;
+                    this.innerHTML = '<i class="ph-bold ph-check"></i> 已複製';
+                    setTimeout(() => this.innerHTML = orig, 2000);
+                } catch (e) {
+                    alert('複製失敗');
+                }
+            });
+
+            // Download TXT
+            document.getElementById('btn-dl-txt').addEventListener('click', () => {
+                if (!currentHashResults || currentFiles.length === 0) return;
+                const text = getAllHashesText(currentHashResults, currentFiles[0]);
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'checksum-report.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            // Download JSON
+            document.getElementById('btn-dl-json').addEventListener('click', () => {
+                if (!currentHashResults || currentFiles.length === 0) return;
+                const json = getAllHashesJSON(currentHashResults, currentFiles[0]);
+                const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'checksum-report.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            // Sample
+            document.getElementById('btn-load-sample').addEventListener('click', function() {
+                const compareInput = document.getElementById('in-checksum-compare');
+                compareInput.value = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+                // Trigger input event for auto-detect
+                compareInput.dispatchEvent(new Event('input'));
+                // If we have results, trigger compare
+                if (currentHashResults) {
+                    document.getElementById('btn-compare').click();
+                }
+            });
+
+            // Apply Compare button to multi-file
+            const origCompare = document.getElementById('btn-compare').click;
+            document.getElementById('btn-compare').addEventListener('click', function() {
+                // Already handled in renderCompare
+            });
+        }
+
+        // ============================================================
+        //  Component loading (ToolHub standard)
+        // ============================================================
+
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (err) {
+                console.warn('Failed to load component:', elementId, err);
+            }
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            initialize();
+        }
+
+        initializeSystem();
+
+        window.addEventListener('popstate', () => {
+            setTimeout(initialize, 100);
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

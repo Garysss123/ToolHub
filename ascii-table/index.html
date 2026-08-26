@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Table ASCII 字元對照表 | ToolHub - 完整 ASCII 查詢與轉換工具</title>
+    <meta name="description" content="免費線上 ASCII Table 字元對照表。涵蓋 0-255 完整 ASCII 碼表，支援 Decimal、Hex、Binary、Unicode 即時查詢、ASCII 文字轉換器、複製、收藏、最近查詢功能。純前端本地運算，保障隱私安全。">
+    <meta name="keywords" content="ASCII Table, ASCII 字元對照表, ASCII 碼, ASCII 查詢, ASCII Converter, 字元編碼, 十進位轉二進位, 十六進位, ASCII 代碼表, 控制字元, UTF-8, 開發者工具">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#00E5FF',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #00E5FF; }
+
+        .search-input {
+            width: 100%;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            outline: none;
+            border-radius: 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 0.9rem;
+        }
+        .search-input:focus {
+            border-color: #00E5FF;
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1);
+        }
+        .search-input::placeholder { color: #475569; }
+
+        .category-tab {
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .category-tab:hover { color: #e2e8f0; background: rgba(0, 229, 255, 0.05); }
+        .category-tab.active { background: rgba(0, 229, 255, 0.12); color: #00E5FF; border-color: rgba(0, 229, 255, 0.25); }
+
+        .ascii-card {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.85rem;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .ascii-card:hover {
+            border-color: rgba(0, 229, 255, 0.3);
+            background: #1E293B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .ascii-card .char-display {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+            min-height: 2rem;
+        }
+
+        .code-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .copy-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .ascii-card:hover .copy-btn,
+        .ascii-card .copy-btn.force-show {
+            opacity: 1;
+        }
+
+        .converter-textarea {
+            width: 100%;
+            min-height: 100px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            outline: none;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .converter-textarea:focus {
+            border-color: #00E5FF;
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1);
+        }
+        .converter-textarea::placeholder { color: #475569; }
+
+        .conv-mode-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .conv-mode-btn:hover { color: #e2e8f0; background: rgba(0, 229, 255, 0.05); }
+        .conv-mode-btn.active { background: rgba(0, 229, 255, 0.12); color: #00E5FF; border-color: rgba(0, 229, 255, 0.25); }
+
+        .fav-btn.active { color: #fbbf24; }
+        .fav-btn.active svg { fill: #fbbf24; }
+
+        .common-char {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .common-char:hover {
+            border-color: rgba(0, 229, 255, 0.3);
+            background: #1E293B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #00E5FF; border-color: #00E5FF; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            cursor: pointer;
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            background: #151F32;
+            border: 1px solid #1e293b;
+            font-weight: 500;
+            color: #e2e8f0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .faq-item summary:hover { border-color: rgba(0, 229, 255, 0.3); }
+        .faq-item[open] summary { border-color: rgba(0, 229, 255, 0.3); border-radius: 0.75rem 0.75rem 0 0; }
+        .faq-item .faq-content { padding: 1rem 1.25rem; background: #151F32; border: 1px solid #1e293b; border-top: none; border-radius: 0 0 0.75rem 0.75rem; color: #94a3b8; font-size: 0.9rem; line-height: 1.7; }
+        .faq-item .chevron-icon { transition: transform 0.3s; }
+        .faq-item[open] .chevron-icon { transform: rotate(180deg); }
+
+        @media (max-width: 640px) {
+            .ascii-card .char-display { font-size: 1.2rem; }
+            .ascii-card { padding: 0.65rem; }
+            .category-tab { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
+            .conv-mode-btn { font-size: 0.7rem; padding: 0.35rem 0.65rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/ascii-table/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/ascii-table/">
+    <meta property="og:title" content="ASCII Table ASCII 字元對照表">
+    <meta property="og:description" content="免費線上 ASCII Table 字元對照表。涵蓋 0-255 完整 ASCII 碼表，支援 Decimal、Hex、Binary、Unicode 即時查詢、ASCII 文字轉換器、複製、收藏、最近查詢功能。純前端本地運算，保障隱私安全。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ASCII Table ASCII 字元對照表">
+    <meta name="twitter:description" content="免費線上 ASCII Table 字元對照表。涵蓋 0-255 完整 ASCII 碼表，支援 Decimal、Hex、Binary、Unicode 即時查詢、ASCII 文字轉換器、複製、收藏、最近查詢功能。純前端本地運算，保障隱私安全。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"ASCII Table ASCII 字元對照表","url":"https://toolhuben.com/ascii-table/","description":"免費線上 ASCII Table 字元對照表。涵蓋 0-255 完整 ASCII 碼表，支援 Decimal、Hex、Binary、Unicode 即時查詢、ASCII 文字轉換器、複製、收藏、最近查詢功能。純前端本地運算，保障隱私安全。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"ASCII Table ASCII 字元對照表","item":"https://toolhuben.com/ascii-table/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/ascii-table/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/ascii-table/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/ascii-table/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#00E5FF;--classic-accent-rgb:0,229,255" data-tool-visual data-classic-tool data-classic-layout="neon">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- Module Title -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                ISO-8859 字元編碼矩陣已就緒
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                ASCII <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-accent to-blue-500">字元對照表</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                完整的 ASCII 字元查詢對照工具。涵蓋 0–255 所有代碼，支援 Decimal、Hex、Binary、Unicode 即時搜尋，內建文字轉換器、收藏與最近查詢功能。
+            </p>
+        </div>
+
+        <!-- ==================== ASCII CONVERTER ==================== -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-8">
+            <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                <i class="ph ph-arrows-left-right text-hub-accent text-lg"></i>
+                <span class="text-sm font-bold text-white">ASCII 轉換器</span>
+                <span class="text-[10px] text-slate-500 ml-auto">支援 Decimal / Hex / Binary / Octal 互轉</span>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4">
+                <!-- Input -->
+                <div>
+                    <label class="text-xs font-medium text-slate-400 mb-1.5 block">輸入文字或數字</label>
+                    <textarea id="converter-input" class="converter-textarea font-mono" placeholder="輸入文字（如 Hello）或數字（如 72 101 108 108 111）..."></textarea>
+                </div>
+                <!-- Mode Selector -->
+                <div class="flex flex-wrap gap-2">
+                    <span class="text-xs text-slate-500 self-center mr-1">輸入格式:</span>
+                    <button class="conv-mode-btn active" data-mode="text">Text</button>
+                    <button class="conv-mode-btn" data-mode="decimal">Decimal</button>
+                    <button class="conv-mode-btn" data-mode="hex">Hex</button>
+                    <button class="conv-mode-btn" data-mode="binary">Binary</button>
+                    <button class="conv-mode-btn" data-mode="octal">Octal</button>
+                </div>
+                <!-- Divider -->
+                <div class="flex items-center gap-3 py-1">
+                    <div class="flex-grow h-px bg-hub-700"></div>
+                    <button id="btn-swap-converter" class="flex items-center gap-1.5 px-3 py-1.5 bg-hub-800 border border-hub-700 rounded-lg text-xs text-slate-400 hover:text-white hover:border-hub-accent transition-all">
+                        <i class="ph ph-arrow-circle-down text-sm"></i> 轉換
+                    </button>
+                    <div class="flex-grow h-px bg-hub-700"></div>
+                </div>
+                <!-- Output -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-medium text-slate-400">轉換結果</label>
+                        <button id="btn-copy-converter" class="text-xs text-slate-500 hover:text-hub-accent transition-colors flex items-center gap-1">
+                            <i class="ph ph-copy"></i> 複製
+                        </button>
+                    </div>
+                    <div id="converter-output" class="converter-textarea font-mono text-sm leading-relaxed cursor-text" style="min-height:60px">
+                        輸入內容後點擊轉換...
+                    </div>
+                </div>
+                <!-- Output Mode -->
+                <div class="flex flex-wrap gap-2">
+                    <span class="text-xs text-slate-500 self-center mr-1">輸出格式:</span>
+                    <button class="conv-mode-btn active" data-out="text">Text</button>
+                    <button class="conv-mode-btn" data-out="decimal">Decimal</button>
+                    <button class="conv-mode-btn" data-out="hex">Hex</button>
+                    <button class="conv-mode-btn" data-out="binary">Binary</button>
+                    <button class="conv-mode-btn" data-out="octal">Octal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== QUICK REFERENCE: COMMON CONTROL CHARS ==================== -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-8">
+            <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                <i class="ph ph-lightning text-hub-accent text-lg"></i>
+                <span class="text-sm font-bold text-white">常用控制字元</span>
+            </div>
+            <div class="p-4 sm:p-6">
+                <div class="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3" id="common-chars-container"></div>
+            </div>
+        </div>
+
+        <!-- ==================== ASCII TABLE ==================== -->
+        <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+            <!-- Toolbar -->
+            <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="ph ph-table text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">ASCII 字元表</span>
+                    <span id="result-count" class="text-[10px] text-slate-500 font-mono">128 筆</span>
+                </div>
+                <div class="flex items-center gap-1.5 ml-auto">
+                    <button id="btn-show-favs" class="text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-amber-500/5">
+                        <i class="ph ph-star"></i> 收藏
+                    </button>
+                    <button id="btn-show-recent" class="text-xs text-slate-500 hover:text-hub-accent transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-hub-accent/5">
+                        <i class="ph ph-clock-counter-clockwise"></i> 最近
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search & Category -->
+            <div class="px-4 sm:px-6 py-4 border-b border-hub-700 space-y-3">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg"></i>
+                    <input type="text" id="search-input" class="search-input font-mono" placeholder="搜尋 ASCII Code (65)、字元 (A)、Hex (0x41)、Binary、Unicode 或關鍵字 (LF, CR, Tab)...">
+                </div>
+                <div class="flex flex-wrap gap-1.5 overflow-x-auto no-scrollbar" id="category-tabs">
+                    <button class="category-tab active" data-category="all">全部</button>
+                    <button class="category-tab" data-category="control">控制字元 (0–31)</button>
+                    <button class="category-tab" data-category="printable">可列印字元 (32–126)</button>
+                    <button class="category-tab" data-category="extended">延伸 ASCII (128–255)</button>
+                </div>
+            </div>
+
+            <!-- Table Grid -->
+            <div class="p-4 sm:p-6">
+                <div id="table-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3"></div>
+                <div id="empty-state" class="hidden text-center py-12">
+                    <i class="ph ph-magnifying-glass text-4xl text-slate-600 mb-3 block"></i>
+                    <p class="text-slate-500">沒有符合的字元</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SEO CONTENT ==================== -->
+        <div class="mt-12 space-y-6">
+
+            <!-- What is ASCII -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-info text-hub-accent"></i> ASCII 是什麼？
+                </h2>
+                <div class="text-slate-400 text-sm leading-relaxed space-y-3">
+                    <p>ASCII（American Standard Code for Information Interchange，美國資訊交換標準代碼）是電腦系統中最基礎的字元編碼標準。它使用 7 位元（bit）表示 128 個字元，包含英文字母（A-Z, a-z）、數字（0-9）、標點符號及控制字元。</p>
+                    <p>ASCII 編碼於 1963 年首次發布，最初是為電報通訊設計的。由於其簡單、通用，至今仍是所有現代文字編碼系統（如 Unicode、UTF-8）的基礎。</p>
+                    <p class="flex items-center gap-2 p-3 bg-hub-900 rounded-lg border border-hub-700 mt-3">
+                        <i class="ph ph-lightbulb text-amber-400 text-lg"></i>
+                        <span><strong class="text-slate-200">重點：</strong> ASCII 只用了 7 位元（0–127），因為早期通訊線路一次只能傳送 7 位元資料，第 8 位元通常被用作奇偶校驗。</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- ASCII vs Unicode -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-git-compare text-hub-accent"></i> ASCII 與 Unicode 的差異
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-slate-400 border-collapse">
+                        <thead>
+                            <tr class="border-b border-hub-700">
+                                <th class="text-left py-2 px-3 text-slate-300 font-medium">比較項目</th>
+                                <th class="text-left py-2 px-3 text-hub-accent font-medium">ASCII</th>
+                                <th class="text-left py-2 px-3 text-purple-400 font-medium">Unicode</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-hub-700">
+                            <tr><td class="py-2 px-3 text-slate-300">位元數</td><td class="py-2 px-3">7 位元</td><td class="py-2 px-3">可變（UTF-8, UTF-16, UTF-32）</td></tr>
+                            <tr><td class="py-2 px-3 text-slate-300">字元數</td><td class="py-2 px-3">128（基本）</td><td class="py-2 px-3">超過 149,000 個</td></tr>
+                            <tr><td class="py-2 px-3 text-slate-300">語言支援</td><td class="py-2 px-3">僅英文</td><td class="py-2 px-3">全球所有語言 + 表情符號</td></tr>
+                            <tr><td class="py-2 px-3 text-slate-300">相容性</td><td class="py-2 px-3">—</td><td class="py-2 px-3">前向相容 ASCII（UTF-8）</td></tr>
+                            <tr><td class="py-2 px-3 text-slate-300">發佈年份</td><td class="py-2 px-3">1963</td><td class="py-2 px-3">1991</td></tr>
+                            <tr><td class="py-2 px-3 text-slate-300">應用場景</td><td class="py-2 px-3">舊系統、嵌入式、純英文</td><td class="py-2 px-3">網頁、現代應用、多語言</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LF CR CRLF -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-text-indent text-hub-accent"></i> LF、CR、CRLF 差異
+                </h2>
+                <div class="space-y-3 text-slate-400 text-sm leading-relaxed">
+                    <p>這三種都是「換行」符號，但不同作業系統使用不同慣例：</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-slate-400 border-collapse">
+                            <thead>
+                                <tr class="border-b border-hub-700">
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">符號</th>
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">數值</th>
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">使用系統</th>
+                                    <th class="text-left py-2 px-3 text-slate-300 font-medium">說明</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-hub-700">
+                                <tr><td class="py-2 px-3 font-mono text-hub-accent">LF</td><td class="py-2 px-3 font-mono">10 (0x0A)</td><td class="py-2 px-3">Linux / macOS</td><td class="py-2 px-3">Line Feed，游標下移一行</td></tr>
+                                <tr><td class="py-2 px-3 font-mono text-hub-accent">CR</td><td class="py-2 px-3 font-mono">13 (0x0D)</td><td class="py-2 px-3">Classic Mac (OS 9)</td><td class="py-2 px-3">Carriage Return，游標回到行首</td></tr>
+                                <tr><td class="py-2 px-3 font-mono text-hub-accent">CRLF</td><td class="py-2 px-3 font-mono">13 10 (0x0D 0x0A)</td><td class="py-2 px-3">Windows</td><td class="py-2 px-3">回車 + 換行，兩者組合</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="p-3 bg-hub-900 rounded-lg border border-hub-700 mt-2">Git 可以在 <code class="text-hub-accent font-mono text-xs">.gitattributes</code> 中設定自動轉換不同平台的換行符號。</p>
+                </div>
+            </div>
+
+            <!-- Why 128 -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-question text-hub-accent"></i> 為什麼 ASCII 只有 128 個字元？
+                </h2>
+                <div class="text-slate-400 text-sm leading-relaxed space-y-3">
+                    <p>ASCII 使用 7 位元編碼，2⁷ = 128，因此最多只能表示 128 個字元。原因如下：</p>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li><strong>歷史限制：</strong>1960 年代的通訊設備使用 7 位元傳輸，第 8 位元保留為奇偶校驗位（parity bit），用於基本的錯誤檢測。</li>
+                        <li><strong>成本考量：</strong>當時記憶體和儲存空間極其昂貴，7 位元已經足夠涵蓋所有英文字母、數字和基本符號。</li>
+                        <li><strong>設計目標：</strong>ASCII 只為英文設計，不需要容納其他語系的字元。</li>
+                    </ul>
+                    <p>後來為了解決 128 個字元不夠用的問題，出現了延伸 ASCII（Extended ASCII, 128–255），以及最終的 Unicode 標準。</p>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <i class="ph ph-question-mark text-hub-accent"></i> ASCII 常見 FAQ
+                </h2>
+                <div class="space-y-3" id="faq-container">
+                    <details class="faq-item group">
+                        <summary><span>什麼是 Extended ASCII（延伸 ASCII）？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">Extended ASCII 是將標準 ASCII（0–127）擴展到 8 位元（128–255）的編碼方式。但由於沒有統一標準，不同系統（如 IBM PC、Apple Mac）使用不同的 Code Page（代碼頁），導致同一個 128–255 的數值在不同系統上可能顯示不同字元。常見的 Code Page 包含 Windows-1252、ISO-8859-1（Latin-1）等。</div>
+                    </details>
+                    <details class="faq-item group">
+                        <summary><span>ASCII 和 UTF-8 有什麼關係？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">UTF-8 是 Unicode 的一種編碼方式，它完全向後相容 ASCII。也就是說，所有 ASCII 字元（0–127）在 UTF-8 中的編碼與 ASCII 完全相同（只需要 1 個位元組）。因此，任何有效的 ASCII 文字同時也是有效的 UTF-8 文字。這就是為什麼 UTF-8 成為網際網路最主流的編碼方式。</div>
+                    </details>
+                    <details class="faq-item group">
+                        <summary><span>如何查詢一個字元的 ASCII 值？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">可以使用多種方法：<br>1. 程式語言：<code class="text-hub-accent font-mono text-xs">'A'.charCodeAt(0)</code>（JavaScript）或 <code class="text-hub-accent font-mono text-xs">ord('A')</code>（Python）<br>2. 在本工具的「ASCII 轉換器」中直接輸入文字即可看到對應的十進位數值<br>3. 在本工具的搜尋框中輸入字元即可找到對應的所有編碼資訊</div>
+                    </details>
+                    <details class="faq-item group">
+                        <summary><span>ASCII 中的控制字元有什麼用途？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">控制字元（0–31）在現代系統中大多已不再直接使用，但它們在歷史上和特定場景中仍然重要：<br>- <strong>NUL (0)</strong>：C 語言的字串終止符<br>- <strong>BEL (7)</strong>：終端機發出嗶聲<br>- <strong>BS (8)</strong>：退格鍵<br>- <strong>TAB (9)</strong>：製表符（縮排）<br>- <strong>LF (10)</strong>：Unix/Linux 換行<br>- <strong>CR (13)</strong>：回車<br>- <strong>ESC (27)</strong>：Escape 鍵，常用於終端機控制序列<br>- <strong>DEL (127)</strong>：刪除鍵<br><br>這些字元在網路協定、序列通訊、印表機控制等領域仍然活躍。</div>
+                    </details>
+                    <details class="faq-item group">
+                        <summary><span>什麼是 Code Page（代碼頁）？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">Code Page 是 IBM 和 Microsoft 定義的字元編碼表，用於指定 128–255 範圍（Extended ASCII）的顯示方式。不同語言使用不同的 Code Page，例如：<br>- <strong>CP437</strong>：IBM PC 原始代碼頁（包含框線繪製字元）<br>- <strong>Windows-1252</strong>：西歐語系（取代 ISO-8859-1）<br>- <strong>CP850</strong>：Latin-1（用於 DOS）<br>在 Unicode 普及之前，Code Page 是處理多國語言的唯一方式。</div>
+                    </details>
+                    <details class="faq-item group">
+                        <summary><span>什麼是 NUL 字元 (0x00)？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">NUL（Null character）是 ASCII 碼 0 的控制字元。它不代表「空白」或「空格」，而是表示「無字元」。在 C 語言中，NUL 被用作字串的結尾標記（null-terminator）。在二進位檔案中，NUL 常被用作填充（padding）或分隔符。注意不要與 C 語言的 NULL（空指標）混淆，兩者完全不同。</div>
+                    </details>
+                    <details class="faq-item group">
+                        <summary><span>為什麼 'A' 是 65？這不是隨便定的嗎？</span> <i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                        <div class="faq-content">ASCII 的編碼順序是有邏輯的：<br>- <strong>數字 (0–9)</strong>：編碼 48–57（0x30–0x39），方便程式可以透過減去 48 快速轉換為數值<br>- <strong>大寫字母 (A–Z)</strong>：編碼 65–90（0x41–0x5A）<br>- <strong>小寫字母 (a–z)</strong>：編碼 97–122（0x61–0x7A）<br><br>大小寫字母之間固定相差 32（0x20），這讓大小寫轉換只需要 bit 運算：小寫 = 大寫 | 0x20，大寫 = 小寫 & ~0x20。這種設計在早期記憶體和 CPU 資源極度有限的時代非常關鍵。</div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- ========== SYSTEM BOOTSTRAP ========== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/ascii-table';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========== TOOL LOGIC ========== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ============================================================
+            // ASCII DATA
+            // ============================================================
+            const controlCharNames = [
+                'NUL (空字元)', 'SOH (標題開始)', 'STX (本文開始)', 'ETX (本文結束)',
+                'EOT (傳輸結束)', 'ENQ (詢問)', 'ACK (確認)', 'BEL (響鈴)',
+                'BS (退格)', 'TAB (水平定位)', 'LF (換行)', 'VT (垂直定位)',
+                'FF (換頁)', 'CR (回車)', 'SO (移出)', 'SI (移入)',
+                'DLE (資料鏈結脫離)', 'DC1 (設備控制1)', 'DC2 (設備控制2)', 'DC3 (設備控制3)',
+                'DC4 (設備控制4)', 'NAK (否定確認)', 'SYN (同步空閒)', 'ETB (區塊傳輸結束)',
+                'CAN (取消)', 'EM (媒介終止)', 'SUB (取代)', 'ESC (逸出)',
+                'FS (檔案分隔)', 'GS (群組分隔)', 'RS (記錄分隔)', 'US (單元分隔)'
+            ];
+
+            function buildAsciiData() {
+                const data = [];
+                // 0-31 Control chars
+                for (let i = 0; i < 32; i++) {
+                    data.push({
+                        dec: i,
+                        hex: '0x' + i.toString(16).toUpperCase().padStart(2, '0'),
+                        bin: i.toString(2).padStart(8, '0'),
+                        oct: i.toString(8).padStart(3, '0'),
+                        char: getControlCharDisplay(i),
+                        unicode: 'U+' + i.toString(16).toUpperCase().padStart(4, '0'),
+                        htmlEntity: '',
+                        desc: controlCharNames[i] || '控制字元',
+                        category: 'control'
+                    });
+                }
+                // 32-126 Printable
+                for (let i = 32; i < 127; i++) {
+                    const ch = String.fromCharCode(i);
+                    let desc = ch;
+                    let htmlEntity = '';
+                    if (i === 32) desc = 'SP (空格)';
+                    else if (i === 127) { /* handled below */ }
+                    else desc = ch;
+                    // HTML entities for special chars
+                    if (i === 34) htmlEntity = '&quot;';
+                    else if (i === 38) htmlEntity = '&amp;';
+                    else if (i === 39) htmlEntity = '&#39;';
+                    else if (i === 60) htmlEntity = '&lt;';
+                    else if (i === 62) htmlEntity = '&gt;';
+                    else if (i === 32) htmlEntity = '&nbsp;';
+                    else if (i >= 33 && i <= 126 && i !== 34 && i !== 38 && i !== 39 && i !== 60 && i !== 62) htmlEntity = '&#' + i + ';';
+                    data.push({
+                        dec: i,
+                        hex: '0x' + i.toString(16).toUpperCase().padStart(2, '0'),
+                        bin: i.toString(2).padStart(8, '0'),
+                        oct: i.toString(8).padStart(3, '0'),
+                        char: ch,
+                        unicode: 'U+' + i.toString(16).toUpperCase().padStart(4, '0'),
+                        htmlEntity: htmlEntity,
+                        desc: desc,
+                        category: 'printable'
+                    });
+                }
+                // 127 DEL
+                data.push({
+                    dec: 127,
+                    hex: '0x7F',
+                    bin: '01111111',
+                    oct: '177',
+                    char: '␡',
+                    unicode: 'U+007F',
+                    htmlEntity: '',
+                    desc: 'DEL (刪除)',
+                    category: 'control'
+                });
+                        // 128-255 Extended ASCII
+                for (let i = 128; i < 256; i++) {
+                    const win1252Chars = {
+                        128:'€',130:'‚',131:'ƒ',132:'„',133:'…',134:'†',135:'‡',136:'ˆ',137:'‰',138:'Š',139:'‹',140:'Œ',142:'Ž',145:'‘',146:'’',147:'“',148:'”',149:'•',150:'–',151:'—',152:'˜',153:'™',154:'š',155:'›',156:'œ',158:'ž',159:'Ÿ'
+                    };
+                    data.push({
+                        dec: i,
+                        hex: '0x' + i.toString(16).toUpperCase().padStart(2, '0'),
+                        bin: i.toString(2).padStart(8, '0'),
+                        oct: i.toString(8).padStart(3, '0'),
+                        char: win1252Chars[i] || String.fromCharCode(i),
+                        unicode: 'U+' + i.toString(16).toUpperCase().padStart(4, '0'),
+                        htmlEntity: '',
+                        desc: getExtendedAsciiDesc(i),
+                        category: 'extended'
+                    });
+                }
+                return data;
+            }
+
+            function getControlCharDisplay(i) {
+                const symbols = ['␀','␁','␂','␃','␄','␅','␆','␇','␈','␉','␊','␋','␌','␍','␎','␏','␐','␑','␒','␓','␔','␕','␖','␗','␘','␙','␚','␛','␜','␝','␞','␟'];
+                return symbols[i] || '␀';
+            }
+
+            function getExtendedAsciiDesc(i) {
+                const descs = {
+                    128: '€ (歐元符號)', 129: '未使用', 130: '‚ (低位單引號)', 131: 'ƒ (弗羅林)',
+                    132: '„ (低位雙引號)', 133: '… (省略號)', 134: '† (劍標)', 135: '‡ (雙劍標)',
+                    136: 'ˆ (修飾符號)', 137: '‰ (千分號)', 138: 'Š (S 抑揚符)', 139: '‹ (左書名號)',
+                    140: 'Œ (OE 連字)', 141: '未使用', 142: 'Ž (Z 抑揚符)', 143: '未使用',
+                    144: '未使用', 145: '‘ (左單引號)', 146: '’ (右單引號)', 147: '“ (左雙引號)',
+                    148: '” (右雙引號)', 149: '• (項目符號)', 150: '– (短破折號)', 151: '— (長破折號)',
+                    152: '˜ (小波浪)', 153: '™ (商標符號)', 154: 'š (s 抑揚符)', 155: '› (右書名號)',
+                    156: 'œ (oe 連字)', 157: '未使用', 158: 'ž (z 抑揚符)', 159: 'Ÿ (Y 分音符)',
+                    160: 'NBSP (不斷行空格)', 161: '¡ (倒感嘆號)', 162: '¢ (分錢符號)', 163: '£ (英鎊符號)',
+                    164: '¤ (通用貨幣符)', 165: '¥ (日圓符號)', 166: '¦ (斷條垂直線)', 167: '§ (章節符號)',
+                    168: '¨ (分音符)', 169: '© (版權符號)', 170: 'ª (陰性序數)', 171: '« (左雙角括號)',
+                    172: '¬ (否定符號)', 173: 'SHY (軟連字符)', 174: '® (註冊商標)', 175: '¯ (長音記號)',
+                    176: '° (度數符號)', 177: '± (正負號)', 178: '² (上標2)', 179: '³ (上標3)',
+                    180: '´ (尖音符)', 181: 'µ (微符號)', 182: '¶ (段落符號)', 183: '· (中間點)',
+                    184: '¸ (軟音符)', 185: '¹ (上標1)', 186: 'º (陽性序數)', 187: '» (右雙角括號)',
+                    188: '¼ (1/4分數)', 189: '½ (1/2分數)', 190: '¾ (3/4分數)', 191: '¿ (倒問號)',
+                    192: 'À (A 重音符)', 193: 'Á (A 尖音符)', 194: 'Â (A 抑揚符)', 195: 'Ã (A 波浪號)',
+                    196: 'Ä (A 分音符)', 197: 'Å (A 上圈)', 198: 'Æ (AE 連字)', 199: 'Ç (C 軟音符)',
+                    200: 'È (E 重音符)', 201: 'É (E 尖音符)', 202: 'Ê (E 抑揚符)', 203: 'Ë (E 分音符)',
+                    204: 'Ì (I 重音符)', 205: 'Í (I 尖音符)', 206: 'Î (I 抑揚符)', 207: 'Ï (I 分音符)',
+                    208: 'Ð (ETH)', 209: 'Ñ (N 波浪號)', 210: 'Ò (O 重音符)', 211: 'Ó (O 尖音符)',
+                    212: 'Ô (O 抑揚符)', 213: 'Õ (O 波浪號)', 214: 'Ö (O 分音符)', 215: '× (乘號)',
+                    216: 'Ø (O 斜線)', 217: 'Ù (U 重音符)', 218: 'Ú (U 尖音符)', 219: 'Û (U 抑揚符)',
+                    220: 'Ü (U 分音符)', 221: 'Ý (Y 尖音符)', 222: 'Þ (Thorn)', 223: 'ß (eszett/sharp s)',
+                    224: 'à (a 重音符)', 225: 'á (a 尖音符)', 226: 'â (a 抑揚符)', 227: 'ã (a 波浪號)',
+                    228: 'ä (a 分音符)', 229: 'å (a 上圈)', 230: 'æ (ae 連字)', 231: 'ç (c 軟音符)',
+                    232: 'è (e 重音符)', 233: 'é (e 尖音符)', 234: 'ê (e 抑揚符)', 235: 'ë (e 分音符)',
+                    236: 'ì (i 重音符)', 237: 'í (i 尖音符)', 238: 'î (i 抑揚符)', 239: 'ï (i 分音符)',
+                    240: 'ð (eth)', 241: 'ñ (n 波浪號)', 242: 'ò (o 重音符)', 243: 'ó (o 尖音符)',
+                    244: 'ô (o 抑揚符)', 245: 'õ (o 波浪號)', 246: 'ö (o 分音符)', 247: '÷ (除號)',
+                    248: 'ø (o 斜線)', 249: 'ù (u 重音符)', 250: 'ú (u 尖音符)', 251: 'û (u 抑揚符)',
+                    252: 'ü (u 分音符)', 253: 'ý (y 尖音符)', 254: 'þ (thorn)', 255: 'ÿ (y 分音符)'
+                };
+                return descs[i] || `延伸字元 ${i}`;
+            }
+
+            // Common control chars
+            const commonChars = [
+                { dec: 0, name: 'NUL', desc: '空字元 (Null)', hex: '0x00' },
+                { dec: 7, name: 'BEL', desc: '響鈴 (Bell)', hex: '0x07' },
+                { dec: 8, name: 'BS',  desc: '退格 (Backspace)', hex: '0x08' },
+                { dec: 9, name: 'TAB', desc: '水平定位 (Tab)', hex: '0x09' },
+                { dec: 10, name: 'LF', desc: '換行 (Line Feed)', hex: '0x0A' },
+                { dec: 13, name: 'CR', desc: '回車 (Carriage Ret.)', hex: '0x0D' },
+                { dec: 27, name: 'ESC', desc: '逸出 (Escape)', hex: '0x1B' },
+                { dec: 127, name: 'DEL', desc: '刪除 (Delete)', hex: '0x7F' }
+            ];
+
+            // ============================================================
+            // STATE
+            // ============================================================
+            const asciiData = buildAsciiData();
+            let currentCategory = 'all';
+            let searchQuery = '';
+            let favorites = JSON.parse(localStorage.getItem('ascii_favorites') || '[]');
+            let recentSearches = JSON.parse(localStorage.getItem('ascii_recent') || '[]');
+            let showingFavorites = false;
+            let showingRecent = false;
+
+            // ============================================================
+            // DOM REFS
+            // ============================================================
+            const tableContainer = document.getElementById('table-container');
+            const emptyState = document.getElementById('empty-state');
+            const searchInput = document.getElementById('search-input');
+            const resultCount = document.getElementById('result-count');
+            const commonContainer = document.getElementById('common-chars-container');
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            // Converter
+            const convInput = document.getElementById('converter-input');
+            const convOutput = document.getElementById('converter-output');
+            const btnSwap = document.getElementById('btn-swap-converter');
+            const btnCopyConv = document.getElementById('btn-copy-converter');
+
+            // ============================================================
+            // TOAST
+            // ============================================================
+            function showToast(msg, isError = false) {
+                toastMsg.textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    toastIcon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    toastIcon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            }
+
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => {
+                    // Fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('已複製到剪貼簿');
+                });
+            }
+
+            // ============================================================
+            // COMMON CHARS
+            // ============================================================
+            function renderCommonChars() {
+                commonContainer.innerHTML = '';
+                commonChars.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'common-char';
+                    div.innerHTML = `
+                        <div class="text-lg sm:text-2xl font-bold font-mono text-hub-accent">${c.name}</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5">${c.hex}</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${c.desc}</div>
+                    `;
+                    div.addEventListener('click', () => {
+                        searchInput.value = c.dec;
+                        searchQuery = String(c.dec);
+                        currentCategory = 'all';
+                        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelector('[data-category="all"]').classList.add('active');
+                        showingFavorites = false;
+                        showingRecent = false;
+                        filterAndRender();
+                    });
+                    commonContainer.appendChild(div);
+                });
+            }
+
+            // ============================================================
+            // FILTER & RENDER
+            // ============================================================
+            function getFilteredData() {
+                let data = [...asciiData];
+                // Category filter
+                if (currentCategory !== 'all') {
+                    data = data.filter(d => d.category === currentCategory);
+                }
+                // Search filter
+                if (searchQuery.trim()) {
+                    const q = searchQuery.trim().toLowerCase();
+                    data = data.filter(d => {
+                        return String(d.dec).includes(q) ||
+                            d.hex.toLowerCase().includes(q) ||
+                            d.bin.includes(q) ||
+                            d.oct.includes(q) ||
+                            d.char.toLowerCase().includes(q) ||
+                            d.unicode.toLowerCase().includes(q) ||
+                            d.desc.toLowerCase().includes(q);
+                    });
+                }
+                return data;
+            }
+
+            function renderAsciiCards(data) {
+                tableContainer.innerHTML = '';
+                if (data.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    resultCount.textContent = '0 筆';
+                    return;
+                }
+                emptyState.classList.add('hidden');
+                resultCount.textContent = `${data.length} 筆`;
+
+                data.forEach(d => {
+                    const isFav = favorites.includes(d.dec);
+                    const isControl = d.category === 'control';
+                    const isExtended = d.category === 'extended';
+                    let catColor = 'border-l-hub-accent';
+                    let catLabel = '可列印';
+                    if (isControl) { catColor = 'border-l-amber-500'; catLabel = '控制'; }
+                    else if (isExtended) { catColor = 'border-l-purple-500'; catLabel = '延伸'; }
+                    if (d.dec === 32) catLabel = '空白';
+                    else if (d.dec === 127) { catColor = 'border-l-amber-500'; catLabel = '控制'; }
+
+                    const card = document.createElement('div');
+                    card.className = `ascii-card border-l-4 ${catColor}`;
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                <div class="char-display text-hub-accent flex-shrink-0">${d.char || '?'}</div>
+                                <div class="min-w-0">
+                                    <div class="text-xs sm:text-sm font-bold text-white font-mono">${d.desc}</div>
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                                        <span class="code-tag bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">${d.dec}</span>
+                                        <span class="code-tag bg-orange-500/10 text-orange-400 border border-orange-500/20">${d.hex}</span>
+                                        <span class="code-tag bg-green-500/10 text-green-400 border border-green-500/20">${d.bin}</span>
+                                        <span class="code-tag bg-purple-500/10 text-purple-400 border border-purple-500/20">${d.unicode}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-0.5 flex-shrink-0">
+                                <button class="fav-btn ${isFav ? 'active' : ''} p-1 rounded hover:bg-amber-500/10 transition-colors" data-dec="${d.dec}" title="收藏">
+                                    <i class="ph ${isFav ? 'ph-fill ph-star' : 'ph-star'} text-sm sm:text-base ${isFav ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1 mt-2 pt-2 border-t border-hub-700/50">
+                            <button class="copy-btn text-[10px] px-2 py-0.5 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" data-copy="${d.dec}" title="複製十進位">Dec</button>
+                            <button class="copy-btn text-[10px] px-2 py-0.5 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" data-copy="${d.hex}" title="複製十六進位">Hex</button>
+                            <button class="copy-btn text-[10px] px-2 py-0.5 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" data-copy="${d.bin}" title="複製二進位">Bin</button>
+                            <button class="copy-btn text-[10px] px-2 py-0.5 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" data-copy="${d.unicode}" title="複製 Unicode">Uni</button>
+                            <button class="copy-btn text-[10px] px-2 py-0.5 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" data-copy="${d.char}" title="複製字元">Char</button>
+                            ${d.htmlEntity ? `<button class="copy-btn text-[10px] px-2 py-0.5 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" data-copy="${d.htmlEntity}" title="複製 HTML Entity">HTML</button>` : ''}
+                        </div>
+                    `;
+                    tableContainer.appendChild(card);
+                });
+
+                // Attach copy events
+                tableContainer.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        copyToClipboard(btn.dataset.copy);
+                    });
+                });
+
+                // Attach fav events
+                tableContainer.querySelectorAll('.fav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const dec = parseInt(btn.dataset.dec);
+                        toggleFavorite(dec);
+                        btn.classList.toggle('active');
+                        const icon = btn.querySelector('i');
+                        if (favorites.includes(dec)) {
+                            icon.className = 'ph-fill ph-star text-sm sm:text-base text-amber-400';
+                        } else {
+                            icon.className = 'ph ph-star text-sm sm:text-base text-slate-600 hover:text-amber-400';
+                        }
+                    });
+                });
+            }
+
+            function filterAndRender() {
+                let data = getFilteredData();
+                if (showingFavorites) {
+                    data = data.filter(d => favorites.includes(d.dec));
+                }
+                if (showingRecent && recentSearches.length > 0) {
+                    data = recentSearches.map(dec => asciiData.find(d => d.dec === dec)).filter(Boolean);
+                }
+                renderAsciiCards(data);
+            }
+
+            // ============================================================
+            // FAVORITES
+            // ============================================================
+            function toggleFavorite(dec) {
+                const idx = favorites.indexOf(dec);
+                if (idx > -1) {
+                    favorites.splice(idx, 1);
+                    showToast('已取消收藏');
+                } else {
+                    favorites.push(dec);
+                    showToast('已加入收藏');
+                }
+                localStorage.setItem('ascii_favorites', JSON.stringify(favorites));
+            }
+
+            // ============================================================
+            // RECENT SEARCHES
+            // ============================================================
+            function addRecentSearch(dec) {
+                const idx = recentSearches.indexOf(dec);
+                if (idx > -1) recentSearches.splice(idx, 1);
+                recentSearches.unshift(dec);
+                if (recentSearches.length > 20) recentSearches = recentSearches.slice(0, 20);
+                localStorage.setItem('ascii_recent', JSON.stringify(recentSearches));
+            }
+
+            // ============================================================
+            // CONVERTER
+            // ============================================================
+            let inputMode = 'text';
+            let outputMode = 'text';
+
+            document.querySelectorAll('[data-mode]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    inputMode = btn.dataset.mode;
+                    runConverter();
+                });
+            });
+            document.querySelectorAll('[data-out]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-out]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    outputMode = btn.dataset.out;
+                    runConverter();
+                });
+            });
+
+            function parseInput(text, mode) {
+                if (mode === 'text') return { success: true, codes: text.split('').map(c => c.charCodeAt(0)) };
+                const parts = text.trim().split(/\s+/).filter(Boolean);
+                const codes = parts.map(p => {
+                    if (mode === 'decimal') return parseInt(p, 10);
+                    if (mode === 'hex') return parseInt(p.replace(/^0x/i, ''), 16);
+                    if (mode === 'binary') return parseInt(p, 2);
+                    if (mode === 'octal') return parseInt(p, 8);
+                    return NaN;
+                });
+                if (codes.some(isNaN)) return { success: false, codes: [] };
+                return { success: true, codes };
+            }
+
+            function formatOutput(codes, mode) {
+                return codes.map(c => {
+                    if (c < 0 || c > 255) return '?';
+                    if (mode === 'text') return c >= 32 && c <= 126 ? String.fromCharCode(c) : '.';
+                    if (mode === 'decimal') return String(c);
+                    if (mode === 'hex') return '0x' + c.toString(16).toUpperCase().padStart(2, '0');
+                    if (mode === 'binary') return c.toString(2).padStart(8, '0');
+                    if (mode === 'octal') return c.toString(8).padStart(3, '0');
+                    return '?';
+                }).join(' ');
+            }
+
+            function runConverter() {
+                const text = convInput.value;
+                if (!text.trim()) {
+                    convOutput.textContent = '請輸入內容';
+                    return;
+                }
+                const parsed = parseInput(text, inputMode);
+                if (!parsed.success) {
+                    convOutput.textContent = '⚠️ 輸入格式無效，請檢查內容';
+                    return;
+                }
+                const result = formatOutput(parsed.codes, outputMode);
+                convOutput.textContent = result;
+            }
+
+            convInput.addEventListener('input', runConverter);
+            convInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    runConverter();
+                }
+            });
+
+            btnCopyConv.addEventListener('click', () => {
+                const text = convOutput.textContent;
+                if (text && text !== '請輸入內容' && !text.startsWith('⚠️')) {
+                    copyToClipboard(text);
+                }
+            });
+
+            // Swap direction: move output to input
+            document.querySelectorAll('.conv-mode-btn').forEach(btn => {
+                if (btn.dataset.mode) {
+                    btn.addEventListener('dblclick', () => {
+                        const val = convOutput.textContent;
+                        if (val && !val.startsWith('⚠') && val !== '請輸入內容') {
+                            convInput.value = val;
+                            document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+                            document.querySelector(`[data-mode="${outputMode}"]`)?.classList.add('active');
+                            inputMode = outputMode;
+                            runConverter();
+                        }
+                    });
+                }
+            });
+
+            // ============================================================
+            // EVENTS
+            // ============================================================
+            // Category tabs
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentCategory = tab.dataset.category;
+                    showingFavorites = false;
+                    showingRecent = false;
+                    filterAndRender();
+                });
+            });
+
+            // Search
+            searchInput.addEventListener('input', () => {
+                searchQuery = searchInput.value;
+                showingFavorites = false;
+                showingRecent = false;
+                filterAndRender();
+                // Track recent search if a decimal match
+                const match = asciiData.find(d => String(d.dec) === searchQuery.trim());
+                if (match && searchQuery.trim()) {
+                    addRecentSearch(match.dec);
+                }
+            });
+
+            // Show favorites
+            document.getElementById('btn-show-favs').addEventListener('click', () => {
+                showingFavorites = !showingFavorites;
+                showingRecent = false;
+                document.getElementById('btn-show-favs').classList.toggle('text-amber-400', showingFavorites);
+                document.getElementById('btn-show-favs').classList.toggle('bg-amber-500/10', showingFavorites);
+                filterAndRender();
+                if (showingFavorites) showToast(`顯示 ${favorites.length} 個收藏`);
+            });
+
+            // Show recent
+            document.getElementById('btn-show-recent').addEventListener('click', () => {
+                showingRecent = !showingRecent;
+                showingFavorites = false;
+                document.getElementById('btn-show-recent').classList.toggle('text-hub-accent', showingRecent);
+                document.getElementById('btn-show-recent').classList.toggle('bg-hub-accent/5', showingRecent);
+                document.getElementById('btn-show-favs').classList.remove('text-amber-400', 'bg-amber-500/10');
+                filterAndRender();
+                if (showingRecent) showToast(`顯示最近 ${recentSearches.length} 筆查詢`);
+            });
+
+            // ============================================================
+            // INIT
+            // ============================================================
+            renderCommonChars();
+            filterAndRender();
+
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

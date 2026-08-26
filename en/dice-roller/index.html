@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dice Roller | Free Online Tool - ToolHub</title>
+<meta content="Free 3D online dice rolling, supporting D4, D6, D8, D10, D12, D20 and other TRPG multi-sided dice, bonuses and historical results." name="description"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #ec4899; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px; }
+
+        input[type="color"] { -webkit-appearance: none; border: none; width: 32px; height: 32px; border-radius: 0.5rem; overflow: hidden; cursor: pointer; padding: 0; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.5rem; }
+
+        /* ========================================= */
+        /* 3D Dice Geometry & Polyhedrons            */
+        /* ========================================= */
+        
+        :root {
+            --dice-size: 64px;
+            --dice-half: 32px;
+            --dice-bg: #1e293b;
+            --dice-dot: #ec4899;
+        }
+
+        .dice-arena { perspective: 800px; }
+
+        .dice-scene {
+            width: var(--dice-size);
+            height: var(--dice-size);
+            margin: 10px;
+            display: inline-block;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* 凍結狀態 (Hold) 護盾特效 */
+        .dice-scene.held::after {
+            content: '';
+            position: absolute;
+            top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border: 2px dashed var(--dice-dot);
+            border-radius: 12px;
+            animation: shield-rotate 4s linear infinite;
+            pointer-events: none;
+            box-shadow: 0 0 15px var(--dice-dot) inset, 0 0 15px var(--dice-dot);
+            z-index: 20;
+        }
+        @keyframes shield-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- D6 (真 3D 立體骰子) --- */
+        .dice-cube {
+            width: 100%; height: 100%; position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+            transform: translateZ(calc(var(--dice-half) * -1));
+        }
+        .dice-face {
+            position: absolute; width: var(--dice-size); height: var(--dice-size);
+            background-color: var(--dice-bg);
+            border: 2px solid rgba(255,255,255,0.1); border-radius: 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5), inset 0 0 5px rgba(255,255,255,0.2);
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; gap: 2px;
+        }
+        .face-1 { transform: rotateY(0deg) translateZ(var(--dice-half)); }
+        .face-2 { transform: rotateY(90deg) translateZ(var(--dice-half)); }
+        .face-3 { transform: rotateX(90deg) translateZ(var(--dice-half)); }
+        .face-4 { transform: rotateX(-90deg) translateZ(var(--dice-half)); }
+        .face-5 { transform: rotateY(-90deg) translateZ(var(--dice-half)); }
+        .face-6 { transform: rotateY(180deg) translateZ(var(--dice-half)); }
+
+        .dot { background-color: var(--dice-dot); border-radius: 50%; width: 100%; height: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 5px var(--dice-dot); }
+        .face-1 .dot { grid-area: 2 / 2; }
+        .face-2 .dot:nth-child(1) { grid-area: 1 / 3; } .face-2 .dot:nth-child(2) { grid-area: 3 / 1; }
+        .face-3 .dot:nth-child(1) { grid-area: 1 / 3; } .face-3 .dot:nth-child(2) { grid-area: 2 / 2; } .face-3 .dot:nth-child(3) { grid-area: 3 / 1; }
+        .face-4 .dot:nth-child(1) { grid-area: 1 / 1; } .face-4 .dot:nth-child(2) { grid-area: 1 / 3; } .face-4 .dot:nth-child(3) { grid-area: 3 / 1; } .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+        .face-5 .dot:nth-child(1) { grid-area: 1 / 1; } .face-5 .dot:nth-child(2) { grid-area: 1 / 3; } .face-5 .dot:nth-child(3) { grid-area: 2 / 2; } .face-5 .dot:nth-child(4) { grid-area: 3 / 1; } .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+        .face-6 .dot:nth-child(1) { grid-area: 1 / 1; } .face-6 .dot:nth-child(2) { grid-area: 2 / 1; } .face-6 .dot:nth-child(3) { grid-area: 3 / 1; } .face-6 .dot:nth-child(4) { grid-area: 1 / 3; } .face-6 .dot:nth-child(5) { grid-area: 2 / 3; } .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+
+        /* --- TRPG 多面體 (全息 2.5D 投影) --- */
+        .dice-poly {
+            width: 100%; height: 100%;
+            background-color: var(--dice-bg);
+            color: var(--dice-dot);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 26px; font-weight: 900;
+            text-shadow: 0 0 10px var(--dice-dot);
+            transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+        
+        .poly-wrapper {
+            width: 100%; height: 100%;
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 2px var(--dice-dot));
+        }
+
+        .shape-d4 { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); padding-top: 15px; }
+        .shape-d8 { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+        .shape-d10 { clip-path: polygon(50% 0%, 100% 35%, 50% 100%, 0% 35%); padding-top: 10px;}
+        .shape-d12 { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
+        .shape-d20 { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+
+        .dice-poly::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(0,0,0,0.5) 100%);
+            pointer-events: none; z-index: 1;
+        }
+        .poly-num { position: relative; z-index: 5; }
+
+        @keyframes pop { 0% { transform: scale(0.95); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<!-- SEO Upgrade 2026 -->
+
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/en/dice-roller/" property="og:url"/>
+<meta content="Dice Roller | Free Online Tool - ToolHub" property="og:title"/>
+<meta content="Free 3D online dice rolling, supporting D4, D6, D8, D10, D12, D20 and other TRPG multi-sided dice, bonuses and historical results." property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Dice Roller | Free Online Tool - ToolHub" name="twitter:title"/>
+<meta content="Free 3D online dice rolling, supporting D4, D6, D8, D10, D12, D20 and other TRPG multi-sided dice, bonuses and historical results." name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"3D Online Dice Tool","url":"https://toolhuben.com/en/dice-roller/","description":"Free 3D online dice rolling, supporting D4, D6, D8, D10, D12, D20 and other TRPG multi-sided dice, bonuses and historical results.","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"author":{"@type":"Organization","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://toolhuben.com/en/"},{"@type":"ListItem","position":2,"name":"3D Online Dice Tool","item":"https://toolhuben.com/en/dice-roller/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is the 3D online craps tool suitable for?","acceptedAnswer":{"@type":"Answer","text":"Online dice rolling provides common multi-sided dice and visual results, suitable for tabletop role-playing, classroom activities and general games. When calculating the bonus and the sum of multiple dice, you should first confirm that the game rules are adding, taking the highest, taking the lowest, or the number of successes."}},{"@type":"Question","name":"How to use 3D online craps tool?","acceptedAnswer":{"@type":"Answer","text":"Select the number of dice faces, quantity and required modifiers; check the result and total of each die after rolling; keep historical records and interpret the advantage or re-roll according to the rules of the game."}},{"@type":"Question","name":"What should you pay attention to when using 3D online craps tools?","acceptedAnswer":{"@type":"Answer","text":"General games attach great importance to convenience and fairness; if the lottery involves money, competition, or requires subsequent verification, a special mechanism with public seeds or audit records should be used."}},{"@type":"Question","name":"Will the 3D online dice tool upload data?","acceptedAnswer":{"@type":"Answer","text":"Roll settings and historical results are only saved in the current browser session."}},{"@type":"Question","name":"Do I need to install software or register an account?","acceptedAnswer":{"@type":"Answer","text":"No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed."}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+
+
+
+<!-- TOOLHUB I18N END -->
+<link href="https://toolhuben.com/en/dice-roller/" rel="canonical"/><link href="https://toolhuben.com/dice-roller/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/dice-roller/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/en/dice-roller/" hreflang="x-default" rel="alternate"/><script>window.ToolHubI18nDictionary={"首頁":"Home","首頁工具":"Home Tools","儀表板首頁":"Dashboard Home","關於本站":"About","關於我們":"About","聯絡我們":"Contact Us","隱私權政策":"Privacy Policy","服務條款":"Terms of Service","搜尋工具":"Search Tools","搜尋 ToolHub 工具":"Search ToolHub Tools","搜尋工具名稱、分類或網址關鍵字…":"Search by tool name, category, or URL…","正在建立工具索引…":"Building the tool index…","工具索引載入中":"Loading tool index","搜尋全程在瀏覽器本機完成":"Search runs entirely in your browser","↑ ↓ 選擇・Enter 開啟":"↑ ↓ Select · Enter to open","關閉搜尋":"Close search","切換網站語言":"Switch website language","切換主題顏色":"Change theme color","主題":"Theme","選擇全站主題":"Choose site theme","午夜黑":"Midnight","海洋藍":"Ocean","紫羅蘭":"Violet","森林綠":"Forest","晨曦淺色":"Daylight","開啟或關閉側邊欄":"Open or close the sidebar","系統導航 (ToolHub v5.1)":"Tool Navigation (ToolHub v5.1)","編碼與轉換":"Encoding & Conversion","開發者工具":"Developer Tools","文字與資料":"Text & Data","影像與設計":"Image & Design","網路與安全":"Network & Security","硬體與效能":"Hardware & Performance","數學與計算":"Math & Calculation","生活與實用":"Everyday Utilities","內容與創作":"Content & Creation","時間與日期":"Time & Date","產生器":"Generators","分析工具":"Analysis Tools","全部工具":"All Tools","立即使用":"Use Tool","開始使用":"Get Started","免費使用":"Use for Free","常見問題":"Frequently Asked Questions","使用說明":"How to Use","功能特色":"Features","計算結果":"Result","結果":"Result","輸入":"Input","清除":"Clear","重設":"Reset","複製":"Copy","下載":"Download","上傳檔案":"Upload File","選擇檔案":"Choose File","拖放檔案至此":"Drop a file here","執行":"Run","轉換":"Convert","產生":"Generate","分析":"Analyze","新增":"Add","移除":"Remove","範例":"Example","錯誤":"Error","請輸入內容":"Enter content","處理完成":"Complete","已複製":"Copied","無需上傳":"No upload required","純前端運算":"Runs entirely in your browser","資料不離開您的裝置":"Your data never leaves your device","所有處理都在瀏覽器本機完成":"All processing happens locally in your browser","台灣與香港":"Taiwan and Hong Kong","繁體中文":"Traditional Chinese","閏年":"Leap year","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ Leap year (divisible by 4, but not by 100)","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Complete workflow: validate JSON, pretty-print it, convert it, copy the result, and download the XML.","完整的工作流程：":"Complete workflow:","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"Validate JSON, pretty-print it, convert it, copy the result, and download the XML.","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"Drag across the waveform to select a range, then use Trim, Delete, or Copy. You can also enter exact start and end times in the Trim fields.","選擇要檢視的檔案":"Choose a file to inspect","最多讀取位元組":"Maximum bytes to read","處理檔案":"Process File","所有資料只在目前瀏覽器分頁中處理。":"All data is processed only in this browser tab.","原始字元":"Original characters","網址字元":"URL characters","部署參數與規則":"Deployment Parameters and Rules","書籤名稱":"Bookmark Name","解析與轉換結果":"Parsed and Converted Result","純前端本地運算 · 保障您的資料隱私":"Private, browser-based tools · Your data stays on your device","專為開發與創作者打造的":"Built for developers and creators","全能線上工具箱":"All-in-one Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"No installation, no sign-up. Explore tools for networking, security, coding, design, data, and more. Your files stay on your device for a fast, private workflow.","免費本機工具":"Free Local Tool","資料不上傳":"No uploads","支援手機操作":"Mobile-friendly","支援主題切換":"Theme support","Binary Viewer ・ 免費本機工具":"Binary Viewer · Free Local Tool","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"Inspect a local file in Offset, Hex Bytes, and ASCII columns with a configurable preview limit.","不足":"Incomplete","個項目":"items","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"A complete URL string toolkit with an advanced query-string parser. It can decode","全部":"All","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine Ready","建立理念":"Our Founding Idea","建議":"Recommendation","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","目前模式: D":"Current mode: D","等待":"wait","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"and other nested structures, with two-way editing as a flat table or JSON tree.","缺少":"Missing","部分":"part","顯示":"Showing","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"A complete URL string toolkit with an advanced query-string parser. Decode nested keys such as filter[name], then edit data as either a flat table or a JSON tree.","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 Best practice: Balance brevity with clarity. Remove unnecessary stop words such as “the”, “a”, and “of”, keeping only the core keywords.","廣告 Cookie：":"Advertising cookies:","必要 Cookie：":"Essential cookies:","您主動提供的資訊：":"Information you provide:","您的權利":"Your Rights","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"We use cookies to improve your browsing experience, analyze site traffic, and display personalized advertising. See the cookie section below for details.","我們收集的資訊":"Information We Collect","政策更新":"Policy Updates","本機運算與資料安全":"Local Processing and Data Security","法律條款":"Legal Information","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"When you visit this site, we may automatically collect basic information such as your browser type, operating system, IP address, access time, and pages viewed.","第三方服務":"Third-Party Services","自動收集的資訊：":"Information collected automatically:","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"If you contact us through a contact form or email, we collect the name, email address, and message content that you provide.","資料保存政策":"Data Retention","Cookie 使用說明":"How We Use Cookies","Cookie 及類似技術：":"Cookies and similar technologies:","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookies are small text files stored on your device when you visit a website. ToolHub uses the following types of cookies:","分析 Cookie：":"Analytics cookies:","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"When you use ToolHub, we may collect the following types of information:","等待選擇檔案":"Waiting for a file","產生設定":"Generate Configuration","可用設定檔":"Ready-to-Use Configuration","Bookmarklet 已產生":"Bookmarklet Generated","⭐ 常用":"⭐ Popular","SEO 相關":"SEO-related","查看詳細":"View details","📋 官方說明":"📋 Official reference","📝 詳細說明":"📝 Details","❌ 未加密":"❌ Unencrypted","尚無查詢記錄":"No search history","🔤 副檔名":"🔤 Extension","🔤 其他副檔名":"🔤 Other extensions","📂 類別":"📂 Category","必填":"Required","Google 搜尋結果預覽":"Google Search Result Preview","Schema 標題":"Schema Title","Schema 描述將顯示於此":"The schema description will appear here","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"The most versatile choice for both anime and photorealistic images. Put quality terms first and keep negative hand tags.","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"Most versatile for anime and photorealistic images. Put quality terms first and keep negative","手部標籤。":"hand tags.","🔍 常見原因":"🔍 Common causes","🔧 修復建議":"🔧 Suggested fixes","💾 快取策略":"💾 Cache strategy","不可快取":"Not cacheable","✅ 加密傳輸":"✅ Encrypted","📝 說明":"📝 Description","💡 常見用途":"💡 Common uses","白色上箭头（Upwards White Arrow / Shift Key）":"Upwards White Arrow / Shift Key","（無特定副檔名）":"(No specific extension)","執行處理":"Run","已清空，等待擲骰...":"Cleared, waiting for the roll...","本機處理":"processed locally","總和:":"Total:","所有資料都在瀏覽器":"All data stays in the browser","分享到":"Share on","決定項不是 Superkey，右側也不是 Prime Attribute":"The determinant is not a superkey, and the right side is not a prime attribute","總時長":"Total duration","完成度":"Completeness","個推薦欄位":"recommended fields","Google 建議加入以下欄位":"Google recommends adding these fields","決定項不是":"The determinant is not a","右側也不是":"and the right side is not a","完成度偏低":"Completeness is low","建議補充更多欄位以獲得更好的搜尋呈現效果":"Consider adding more fields for better search presentation"};</script><script src="/components/i18n-runtime.js?v=20260821-10"></script></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="terminal" data-classic-tool="" data-locale="en" data-tool-visual="" style="--classic-accent:#ec4899;--classic-accent-rgb:236,72,153">
+<!-- 1. 系統組件：Header & Sidebar -->
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：Kinetic Dice Matrix -->
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="bread crumbs" class="seo-upgrade-breadcrumb"><a href="/en/">Home</a><span>›</span><span>3D Online Dice Tool</span></nav>
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-pink-950/30 border border-pink-900/50 text-xs text-pink-400 shadow-inner">
+<i class="ph-fill ph-cube mr-1.5 text-sm"></i>
+                Online 3D physics simulation dice rolling tool
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                3D Dice Roller <span class="text-transparent bg-clip-text bg-gradient-to-r from-dice-primary to-dice-secondary">Online craps</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                Professional grade pure front-end 3D dice rolling tool. Perfectly supports D4, D6, D8, D10, D12, D20 and other TRPG running group specifications. It has real physical rolling effects, independent dice lock (Hold), custom colors, and real-time probability statistics.
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ========================================== -->
+<!-- 左側：參數控制台 (Configuration Console)      -->
+<!-- ========================================== -->
+<div class="lg:col-span-4 flex flex-col gap-5">
+<!-- 骰子配置 (Dice Config) -->
+<div class="glass-panel p-5 sm:p-6 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+<i class="ph-fill ph-sliders-horizontal text-dice-primary text-lg"></i> Dice Settings
+                    </h3>
+<!-- 骰子類型 (Type) -->
+<div class="space-y-2">
+<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dice Type</label>
+<select class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:border-dice-primary outline-none transition-colors cursor-pointer" id="in-dice-type">
+<option value="4">D4 (four-sided die)</option>
+<option selected="" value="6">D6 (six-sided die - standard)</option>
+<option value="8">D8 (eight-sided die)</option>
+<option value="10">D10 (ten-sided die)</option>
+<option value="12">D12 (twelve-sided die)</option>
+<option value="20">D20 (Twenty-Sided Dice - TRPG)</option>
+</select>
+</div>
+<!-- 數量控制 -->
+<div class="space-y-3">
+<div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
+<span>Quantity (Count)</span>
+<span class="text-dice-primary font-mono text-sm" id="val-dice-count">5</span>
+</div>
+<input id="in-dice-count" max="15" min="1" step="1" type="range" value="5"/>
+<p class="text-[9px] text-slate-500 font-mono text-right">Supports 1 ~ 15 dice</p>
+</div>
+<!-- 動作按鈕 -->
+<div class="flex flex-col gap-3 pt-2 border-t border-hub-700">
+<button class="w-full px-5 py-3.5 bg-gradient-to-r from-dice-primary to-pink-600 hover:from-pink-500 hover:to-pink-400 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(236,72,153,0.3)] flex items-center justify-center gap-2 active:scale-[0.98]" id="btn-roll-all">
+<i class="ph-bold ph-arrows-clockwise text-xl"></i> Roll All
+                        </button>
+<div class="grid grid-cols-2 gap-3">
+<button class="px-3 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs opacity-50 cursor-not-allowed" disabled="" id="btn-roll-unheld">
+<i class="ph-bold ph-arrow-u-up-right text-base"></i> Only throws are not locked
+                            </button>
+<button class="px-3 py-2.5 bg-hub-900 hover:bg-hub-800 border border-hub-700 text-slate-400 hover:text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs" id="btn-clear-holds">
+<i class="ph-bold ph-lock-key-open"></i> Unlock
+                            </button>
+</div>
+</div>
+</div>
+<!-- 材質與光學設定 (Material & Optics) -->
+<div class="glass-panel p-5 flex flex-col gap-4 shadow-xl">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+<i class="ph-fill ph-palette text-dice-secondary text-lg"></i> Appearance
+                    </h3>
+<div class="flex gap-4">
+<div class="flex-1 bg-hub-900/50 p-3 rounded-lg border border-hub-700/50 flex flex-col gap-2">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dice Color (Body)</span>
+<div class="flex items-center justify-between">
+<span class="text-[10px] font-mono text-slate-500" id="val-color-bg">#1e293b</span>
+<input id="in-color-bg" type="color" value="#1e293b"/>
+</div>
+</div>
+<div class="flex-1 bg-hub-900/50 p-3 rounded-lg border border-hub-700/50 flex flex-col gap-2">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dot Color (Dot)</span>
+<div class="flex items-center justify-between">
+<span class="text-[10px] font-mono text-slate-500" id="val-color-dot">#ec4899</span>
+<input id="in-color-dot" type="color" value="#ec4899"/>
+</div>
+</div>
+</div>
+<div class="flex gap-2 mt-1">
+<button class="preset-theme flex-1 py-1.5 rounded bg-hub-900 border border-hub-700 text-[10px] text-slate-400 hover:text-white transition-colors" data-bg="#1e293b" data-dot="#ec4899">Cyber</button>
+<button class="preset-theme flex-1 py-1.5 rounded bg-hub-900 border border-hub-700 text-[10px] text-slate-400 hover:text-white transition-colors" data-bg="#78350f" data-dot="#fbbf24">Tavern</button>
+<button class="preset-theme flex-1 py-1.5 rounded bg-hub-900 border border-hub-700 text-[10px] text-slate-400 hover:text-white transition-colors" data-bg="#10b981" data-dot="#ffffff">Emerald</button>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：物理引擎競技場 (Kinetic Arena)            -->
+<!-- ========================================== -->
+<div class="lg:col-span-8 flex flex-col gap-5 h-full">
+<!-- 3D 競技場與結果總和 -->
+<div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col min-h-[350px]">
+<div class="flex justify-between items-start z-10 mb-4">
+<div>
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-1">
+<i class="ph-fill ph-sigma"></i> Total Sum
+                            </h3>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl sm:text-6xl font-mono font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] tracking-tight" id="out-total-sum">0</span>
+</div>
+</div>
+<div class="text-right flex flex-col items-end gap-1">
+<span class="text-[10px] font-mono text-slate-500 border border-hub-700 bg-hub-900 px-2 py-1 rounded">Click the dice to lock Hold</span>
+<span class="text-[10px] font-bold text-dice-primary bg-dice-primary/10 border border-dice-primary/30 px-2 py-1 rounded mt-1" id="current-type-badge">Current mode: D6</span>
+</div>
+</div>
+<!-- 骰子物理容器 -->
+<div class="dice-arena flex-grow w-full bg-[#0a0f18]/50 border border-hub-700/50 rounded-xl p-6 sm:p-10 flex flex-wrap justify-center items-center gap-6 sm:gap-10 shadow-inner z-10 relative" id="dice-container">
+<!-- 骰子由 JS 動態注入 -->
+</div>
+</div>
+<!-- 機率與歷史拓撲圖 (Analytics Matrix) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+<!-- 機率動態熱力圖 -->
+<div class="glass-panel p-5 shadow-xl flex flex-col border border-hub-700/50 h-full">
+<div class="flex justify-between items-center border-b border-hub-700 pb-2 mb-4">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-chart-bar text-dice-success text-lg"></i> Statistics
+                            </h3>
+<button class="text-[10px] text-slate-500 hover:text-red-400 transition-colors" id="btn-reset-stats"><i class="ph ph-trash"></i> reset</button>
+</div>
+<!-- 動態 Grid -->
+<div class="flex-grow overflow-y-auto pr-1" id="stats-scroll-area">
+<div class="grid gap-x-3 gap-y-1.5" id="stats-chart">
+<!-- 長條圖動態產生 -->
+</div>
+</div>
+</div>
+<!-- 歷史軌跡 -->
+<div class="glass-panel p-5 shadow-xl flex flex-col border border-hub-700/50 h-full max-h-[220px]">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2 mb-3">
+<i class="ph-fill ph-clock-counter-clockwise text-dice-secondary text-lg"></i> History
+                        </h3>
+<div class="flex-grow overflow-y-auto pr-2 space-y-2 font-mono text-xs" id="history-container">
+<div class="text-center text-slate-600 mt-6">Waiting for the dice to roll...</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="3D Online Dice Tool Tutorial and Frequently Asked Questions" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>Complete Guide to Using 3D Online Dice Tool</h2>
+<p>Online dice rolling provides common multi-sided dice and visual results, suitable for tabletop role-playing, classroom activities and general games. When calculating the bonus and the sum of multiple dice, you should first confirm that the game rules are adding, taking the highest, taking the lowest, or the number of successes.</p>
+<h3>Operation steps</h3>
+<ol><li>Select the number of dice faces, quantity and required correction value</li><li>After rolling the dice, check each result and the total.</li><li>Keep historical records and interpret advantages or rerolls according to game rules</li></ol>
+<h3>Practical suggestions and limitations</h3>
+<p>General games attach great importance to convenience and fairness; if the lottery involves money, competition, or requires subsequent verification, a special mechanism with public seeds or audit records should be used.</p>
+<h3>Privacy and native processing</h3>
+<p>Roll settings and historical results are only saved in the current browser session.</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>3D Online Dice Tool FAQ</h2>
+<details><summary>What is the 3D online craps tool suitable for?</summary><div class="seo-upgrade-answer">Online dice rolling provides common multi-sided dice and visual results, suitable for tabletop role-playing, classroom activities and general games. When calculating the bonus and the sum of multiple dice, you should first confirm that the game rules are adding, taking the highest, taking the lowest, or the number of successes.</div></details>
+<details><summary>How to use 3D online craps tool?</summary><div class="seo-upgrade-answer">Select the number of dice faces, quantity and required modifiers; check the result and total of each die after rolling; keep historical records and interpret the advantage or re-roll according to the rules of the game.</div></details>
+<details><summary>What should you pay attention to when using 3D online craps tools?</summary><div class="seo-upgrade-answer">General games attach great importance to convenience and fairness; if the lottery involves money, competition, or requires subsequent verification, a special mechanism with public seeds or audit records should be used.</div></details>
+<details><summary>Will the 3D online dice tool upload data?</summary><div class="seo-upgrade-answer">Roll settings and historical results are only saved in the current browser session.</div></details>
+<details><summary>Do I need to install software or register an account?</summary><div class="seo-upgrade-answer">No need. ToolHub provides pure front-end web tools, which can be used immediately after opening the page; if the browser blocks necessary JavaScript or file permissions, some functions may not be executed.</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">Operation successful</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/dice-roller'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-en.html'),
+                loadComponent('component-sidebar', '/components/sidebar-en.html'),
+                loadComponent('component-footer', '/components/footer-en.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：3D 幾何引擎與機率統計矩陣     -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- DOM Elements ---
+            const inDiceType = document.getElementById('in-dice-type');
+            const inDiceCount = document.getElementById('in-dice-count');
+            const valDiceCount = document.getElementById('val-dice-count');
+            const currentTypeBadge = document.getElementById('current-type-badge');
+            
+            const inColorBg = document.getElementById('in-color-bg');
+            const inColorDot = document.getElementById('in-color-dot');
+            const valColorBg = document.getElementById('val-color-bg');
+            const valColorDot = document.getElementById('val-color-dot');
+            
+            const btnRollAll = document.getElementById('btn-roll-all');
+            const btnRollUnheld = document.getElementById('btn-roll-unheld');
+            const btnClearHolds = document.getElementById('btn-clear-holds');
+            
+            const diceContainer = document.getElementById('dice-container');
+            const outTotalSum = document.getElementById('out-total-sum');
+            const historyContainer = document.getElementById('history-container');
+            const statsChart = document.getElementById('stats-chart');
+            const btnResetStats = document.getElementById('btn-reset-stats');
+
+            // --- State Matrix ---
+            let diceArray = []; 
+            let isRolling = false;
+            let stats = { totalRolls: 0 };
+            
+            // D6 的面朝向矩陣
+            const targetRotationsD6 = {
+                1: { x: 0, y: 0 },
+                2: { x: 0, y: -90 },
+                3: { x: -90, y: 0 },
+                4: { x: 90, y: 0 },
+                5: { x: 0, y: 90 },
+                6: { x: 180, y: 0 }
+            };
+
+            // --- 重置統計 ---
+            const resetStats = (maxVal) => {
+                stats = { totalRolls: 0 };
+                for (let i = 1; i <= maxVal; i++) stats[i] = 0;
+                
+                statsChart.innerHTML = '';
+                statsChart.className = maxVal > 12 ? 'grid grid-cols-2 gap-x-4 gap-y-1.5' : 'grid grid-cols-1 gap-y-1.5';
+                
+                for (let i = 1; i <= maxVal; i++) {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center gap-2 text-xs font-mono text-slate-400';
+                    row.innerHTML = `
+                        <span class="w-4 text-right">${i}</span>
+                        <div class="flex-grow bg-hub-900 h-2 rounded-full overflow-hidden">
+                            <div class="bg-dice-success h-full w-[0%] transition-all" id="bar-${i}"></div>
+                        </div>
+                        <span class="w-6 text-right" id="count-${i}">0</span>
+                    `;
+                    statsChart.appendChild(row);
+                }
+            };
+
+            // --- 核心構建：生成 3D 幾何結構 ---
+            const createD6DOM = () => {
+                const scene = document.createElement('div');
+                scene.className = 'dice-scene';
+                
+                const cube = document.createElement('div');
+                cube.className = 'dice-cube';
+                
+                for (let i = 1; i <= 6; i++) {
+                    const face = document.createElement('div');
+                    face.className = `dice-face face-${i}`;
+                    for(let d = 0; d < i; d++) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        face.appendChild(dot);
+                    }
+                    cube.appendChild(face);
+                }
+                
+                scene.appendChild(cube);
+                return { scene, cube, textNode: null };
+            };
+
+            const createPolyhedronDOM = (maxVal) => {
+                const scene = document.createElement('div');
+                scene.className = 'dice-scene';
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'poly-wrapper';
+
+                const poly = document.createElement('div');
+                poly.className = `dice-poly shape-d${maxVal}`;
+                
+                const text = document.createElement('span');
+                text.className = 'poly-num';
+                text.textContent = maxVal;
+                
+                poly.appendChild(text);
+                wrapper.appendChild(poly);
+                scene.appendChild(wrapper);
+                
+                return { scene, cube: poly, textNode: text };
+            };
+
+            const initArena = () => {
+                const count = parseInt(inDiceCount.value);
+                const maxVal = parseInt(inDiceType.value);
+                
+                valDiceCount.textContent = count;
+                currentTypeBadge.textContent = `目前模式: D${maxVal}`;
+                diceContainer.innerHTML = '';
+                diceArray = [];
+
+                if (Object.keys(stats).length - 1 !== maxVal) {
+                    resetStats(maxVal);
+                }
+
+                let initSum = 0;
+
+                for (let i = 0; i < count; i++) {
+                    let domObj;
+                    if (maxVal === 6) {
+                        domObj = createD6DOM();
+                        domObj.cube.style.transform = `translateZ(calc(var(--dice-half) * -1)) rotateX(0deg) rotateY(0deg)`;
+                        initSum += 1; 
+                    } else {
+                        domObj = createPolyhedronDOM(maxVal);
+                        domObj.cube.style.transform = `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
+                        initSum += maxVal;
+                    }
+                    
+                    const diceData = { 
+                        sceneObj: domObj.scene, 
+                        cubeObj: domObj.cube,
+                        textNode: domObj.textNode,
+                        value: maxVal === 6 ? 1 : maxVal, 
+                        isHeld: false,
+                        type: maxVal
+                    };
+
+                    domObj.scene.addEventListener('click', () => {
+                        if (isRolling) return;
+                        diceData.isHeld = !diceData.isHeld;
+                        if (diceData.isHeld) domObj.scene.classList.add('held');
+                        else domObj.scene.classList.remove('held');
+                        updateControlButtons();
+                    });
+
+                    diceContainer.appendChild(domObj.scene);
+                    diceArray.push(diceData);
+                }
+                
+                outTotalSum.textContent = initSum;
+                updateControlButtons();
+            };
+
+            // --- 物理翻滾與投影引擎 ---
+            const rollLogic = (rollAll = true) => {
+                if (isRolling) return;
+                isRolling = true;
+                btnRollAll.disabled = true;
+                btnRollUnheld.disabled = true;
+                btnRollAll.classList.add('opacity-50', 'cursor-not-allowed');
+
+                let currentSum = 0;
+                let activeRollValues = [];
+                const maxVal = parseInt(inDiceType.value);
+
+                let flashInterval;
+                if (maxVal !== 6) {
+                    flashInterval = setInterval(() => {
+                        diceArray.forEach(d => {
+                            if (!d.isHeld && d.textNode) {
+                                d.textNode.textContent = Math.floor(Math.random() * maxVal) + 1;
+                            }
+                        });
+                    }, 100);
+                }
+
+                diceArray.forEach((dice) => {
+                    if (rollAll || !dice.isHeld) {
+                        const newValue = Math.floor(Math.random() * maxVal) + 1;
+                        dice.value = newValue;
+                        activeRollValues.push(newValue);
+                        stats[newValue]++;
+                        stats.totalRolls++;
+
+                        if (maxVal === 6) {
+                            const extraSpinsX = (Math.floor(Math.random() * 3) + 2) * 360; 
+                            const extraSpinsY = (Math.floor(Math.random() * 3) + 2) * 360;
+                            const extraSpinsZ = (Math.floor(Math.random() * 2)) * 360; 
+                            const targetX = targetRotationsD6[newValue].x + extraSpinsX;
+                            const targetY = targetRotationsD6[newValue].y + extraSpinsY;
+                            dice.cubeObj.style.transform = `translateZ(calc(var(--dice-half) * -1)) rotateX(${targetX}deg) rotateY(${targetY}deg) rotateZ(${extraSpinsZ}deg)`;
+                        } else {
+                            const spinX = (Math.floor(Math.random() * 4) + 2) * 360;
+                            const spinY = (Math.floor(Math.random() * 4) + 2) * 360;
+                            const spinZ = (Math.floor(Math.random() * 2)) * 360;
+                            
+                            dice.cubeObj.style.transition = 'transform 1.0s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                            dice.cubeObj.style.transform = `rotateX(${spinX}deg) rotateY(${spinY}deg) rotateZ(${spinZ}deg)`;
+                            
+                            setTimeout(() => {
+                                dice.cubeObj.style.transition = 'transform 0.2s ease-out';
+                                dice.cubeObj.style.transform = `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
+                            }, 1000);
+                        }
+                    }
+                    currentSum += dice.value;
+                });
+
+                updateStatsUI(maxVal);
+
+                setTimeout(() => {
+                    if (flashInterval) clearInterval(flashInterval);
+                    
+                    diceArray.forEach(d => {
+                        if (d.textNode) d.textNode.textContent = d.value;
+                    });
+
+                    outTotalSum.textContent = currentSum;
+                    
+                    const outEl = document.getElementById('out-total-sum');
+                    outEl.classList.remove('animate-pop');
+                    void outEl.offsetWidth;
+                    outEl.classList.add('animate-pop');
+                    outEl.classList.replace('text-white', 'text-dice-primary');
+                    setTimeout(() => outEl.classList.replace('text-dice-primary', 'text-white'), 400);
+
+                    addHistory(activeRollValues, currentSum, rollAll, maxVal);
+                    
+                    isRolling = false;
+                    btnRollAll.disabled = false;
+                    btnRollAll.classList.remove('opacity-50', 'cursor-not-allowed');
+                    updateControlButtons();
+                }, 1200);
+            };
+
+            // --- 狀態更新與 UI 連動 ---
+            const updateControlButtons = () => {
+                const hasHeld = diceArray.some(d => d.isHeld);
+                if (hasHeld && !isRolling) {
+                    btnRollUnheld.disabled = false;
+                    btnRollUnheld.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btnRollUnheld.classList.replace('bg-hub-800', 'bg-dice-secondary');
+                    btnRollUnheld.classList.replace('text-slate-300', 'text-white');
+                    btnRollUnheld.classList.add('shadow-[0_0_10px_rgba(139,92,246,0.5)]');
+                } else {
+                    btnRollUnheld.disabled = true;
+                    btnRollUnheld.classList.add('opacity-50', 'cursor-not-allowed');
+                    btnRollUnheld.classList.replace('bg-dice-secondary', 'bg-hub-800');
+                    btnRollUnheld.classList.replace('text-white', 'text-slate-300');
+                    btnRollUnheld.classList.remove('shadow-[0_0_10px_rgba(139,92,246,0.5)]');
+                }
+            };
+
+            const clearHolds = () => {
+                if(isRolling) return;
+                diceArray.forEach(d => {
+                    d.isHeld = false;
+                    d.sceneObj.classList.remove('held');
+                });
+                updateControlButtons();
+            };
+
+            const addHistory = (values, sum, wasRollAll, type) => {
+                if(values.length === 0) return; 
+                
+                const time = new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: 'numeric', minute:'numeric', second:'numeric' });
+                const typeStr = wasRollAll ? `D${type} 全部` : `D${type} 部分`;
+                
+                const entry = document.createElement('div');
+                entry.className = 'flex justify-between items-center bg-hub-900/50 p-2 rounded border border-hub-700/50 hover:border-hub-700 transition-colors animate-[fadeIn_0.3s_ease-out]';
+                entry.innerHTML = `
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[10px] text-slate-500">${time}</span>
+                        <span class="text-[10px] px-1.5 rounded bg-hub-800 text-slate-400 font-bold">${typeStr}</span>
+                        <span class="text-slate-300 tracking-wider">[${values.join(', ')}]</span>
+                    </div>
+                    <span class="text-dice-primary font-bold">總和: ${sum}</span>
+                `;
+                
+                if (historyContainer.children[0] && historyContainer.children[0].textContent.includes('等待')) {
+                    historyContainer.innerHTML = '';
+                }
+                historyContainer.insertBefore(entry, historyContainer.firstChild);
+                
+                if (historyContainer.children.length > 20) {
+                    historyContainer.removeChild(historyContainer.lastChild);
+                }
+            };
+
+            const updateStatsUI = (maxVal) => {
+                if (stats.totalRolls === 0) return;
+                
+                let counts = [];
+                for (let i = 1; i <= maxVal; i++) counts.push(stats[i]);
+                let maxCount = Math.max(...counts);
+
+                for (let i = 1; i <= maxVal; i++) {
+                    const countEl = document.getElementById(`count-${i}`);
+                    const barEl = document.getElementById(`bar-${i}`);
+                    if(countEl && barEl) {
+                        countEl.textContent = stats[i];
+                        let percentage = maxCount === 0 ? 0 : (stats[i] / maxCount) * 100;
+                        barEl.style.width = `${percentage}%`;
+                    }
+                }
+            };
+
+            // --- 材質色彩引擎 ---
+            const updateColors = () => {
+                const bg = inColorBg.value;
+                const dot = inColorDot.value;
+                valColorBg.textContent = bg.toUpperCase();
+                valColorDot.textContent = dot.toUpperCase();
+                
+                document.documentElement.style.setProperty('--dice-bg', bg);
+                document.documentElement.style.setProperty('--dice-dot', dot);
+            };
+
+            // --- 事件綁定 ---
+            inDiceType.addEventListener('change', () => {
+                if(isRolling) return;
+                initArena();
+            });
+
+            inDiceCount.addEventListener('input', () => {
+                if(isRolling) return;
+                initArena();
+            });
+
+            btnRollAll.addEventListener('click', () => rollLogic(true));
+            btnRollUnheld.addEventListener('click', () => rollLogic(false));
+            btnClearHolds.addEventListener('click', clearHolds);
+
+            inColorBg.addEventListener('input', updateColors);
+            inColorDot.addEventListener('input', updateColors);
+
+            document.querySelectorAll('.preset-theme').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    inColorBg.value = e.currentTarget.dataset.bg;
+                    inColorDot.value = e.currentTarget.dataset.dot;
+                    updateColors();
+                });
+            });
+
+            btnResetStats.addEventListener('click', () => {
+                const maxVal = parseInt(inDiceType.value);
+                resetStats(maxVal);
+                historyContainer.innerHTML = '<div class="text-center text-slate-600 mt-6">已清空，等待擲骰...</div>';
+            });
+
+            // 初始化
+            updateColors();
+            initArena();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

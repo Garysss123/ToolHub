@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Encoder & Decoder 文字編碼解碼工具 | Base64/URL/HTML/Unicode | ToolHub</title>
+    <meta name="description" content="免費線上文字編碼解碼工具。支援 Base64、URL Encode、HTML Entity、Unicode Escape、JavaScript/JSON/XML Escape 七種格式。自動偵測編碼類型，批次轉換，內建 Encoding Inspector 分析。">
+    <meta name="keywords" content="Text Encoder, Decoder, Base64, URL Encode, HTML Entity, Unicode Escape, 文字編碼, 解碼工具, Auto Detect, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' },
+                        enc: { DEFAULT: '#A855F7', light: '#C084FC', dark: '#7C3AED' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #A855F7; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.85); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .format-tab {
+            padding: 0.375rem 0.75rem; border-radius: 0.5rem; cursor: pointer;
+            font-size: 0.75rem; font-weight: 500; transition: all 0.2s;
+            border: 1px solid transparent; white-space: nowrap; color: #94A3B8;
+        }
+        .format-tab:hover { background: rgba(168,85,247,0.05); color: #E2E8F0; }
+        .format-tab.active {
+            background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3);
+            color: #C084FC;
+        }
+
+        .mode-btn {
+            padding: 0.375rem 1rem; border-radius: 999px; cursor: pointer;
+            font-size: 0.75rem; font-weight: 600; transition: all 0.2s;
+            border: 1px solid #1E293B; color: #94A3B8; background: rgba(15,23,42,0.4);
+        }
+        .mode-btn:hover { border-color: rgba(168,85,247,0.3); color: #E2E8F0; }
+        .mode-btn.active { background: #A855F7; color: #fff; border-color: #A855F7; }
+
+        .io-area {
+            width: 100%; min-height: 200px; background: #0f172a;
+            color: #e2e8f0; border: 1px solid #1E293B; border-radius: 0.75rem;
+            padding: 1rem; outline: none; font-family: "Fira Code", monospace;
+            font-size: 0.85rem; resize: vertical; line-height: 1.6;
+        }
+        .io-area:focus { border-color: #A855F7; }
+        .io-area::placeholder { color: #475569; }
+
+        .inspector-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.5rem 0; border-bottom: 1px solid rgba(30,41,59,0.5);
+        }
+        .inspector-item:last-child { border-bottom: none; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #A855F7; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        .btn-primary {
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #A855F7, #7C3AED);
+            color: white; font-weight: 600; font-size: 0.8125rem;
+            transition: all 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(168,85,247,0.25); }
+        .btn-secondary {
+            padding: 0.375rem 0.875rem; border-radius: 0.5rem;
+            background: rgba(30,41,59,0.5); border: 1px solid #1E293B;
+            color: #94A3B8; font-size: 0.75rem; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-secondary:hover { background: rgba(30,41,59,0.8); color: #E2E8F0; border-color: #334155; }
+
+        @media (max-width: 640px) {
+            .io-grid { grid-template-columns: 1fr !important; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/text-encoder-decoder/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/text-encoder-decoder/">
+    <meta property="og:title" content="Text Encoder &amp; Decoder 文字編碼解碼工具">
+    <meta property="og:description" content="免費線上文字編碼解碼工具。支援 Base64、URL Encode、HTML Entity、Unicode Escape、JavaScript/JSON/XML Escape 七種格式。自動偵測編碼類型，批次轉換，內建 Encoding Inspector 分析。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Text Encoder &amp; Decoder 文字編碼解碼工具">
+    <meta name="twitter:description" content="免費線上文字編碼解碼工具。支援 Base64、URL Encode、HTML Entity、Unicode Escape、JavaScript/JSON/XML Escape 七種格式。自動偵測編碼類型，批次轉換，內建 Encoding Inspector 分析。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Text Encoder & Decoder 文字編碼解碼工具","url":"https://toolhuben.com/text-encoder-decoder/","description":"免費線上文字編碼解碼工具。支援 Base64、URL Encode、HTML Entity、Unicode Escape、JavaScript/JSON/XML Escape 七種格式。自動偵測編碼類型，批次轉換，內建 Encoding Inspector 分析。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Text Encoder & Decoder 文字編碼解碼工具","item":"https://toolhuben.com/text-encoder-decoder/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/text-encoder-decoder/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/text-encoder-decoder/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/text-encoder-decoder/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen font-sans" style="--classic-accent:#A855F7;--classic-accent-rgb:168,85,247" data-tool-visual data-classic-tool data-classic-layout="split">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+
+        <!-- Hero -->
+        <div class="text-center space-y-3 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 rounded-full bg-hub-800 border border-hub-700 text-xs text-enc">
+                <span class="flex w-2 h-2 bg-enc rounded-full animate-pulse mr-2"></span>
+                支援 7 種編碼格式 · 自動偵測 · 批次轉換
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Text Encoder & Decoder
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-enc to-fuchsia-400"> 文字編碼解碼工具</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                多功能文字編碼與解碼工具。支援 Base64、URL Encode、HTML Entity、Unicode Escape、
+                JavaScript Escape、JSON Escape、XML Escape 七種格式。內建自動偵測與 Encoding Inspector。
+            </p>
+        </div>
+
+        <!-- Main Controls -->
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+            <div class="flex flex-wrap gap-1.5" id="format-tabs">
+                <button class="format-tab active" data-format="base64">Base64</button>
+                <button class="format-tab" data-format="url">URL Encode</button>
+                <button class="format-tab" data-format="html">HTML Entity</button>
+                <button class="format-tab" data-format="unicode">Unicode Escape</button>
+                <button class="format-tab" data-format="jsescape">JavaScript Escape</button>
+                <button class="format-tab" data-format="jsonescape">JSON Escape</button>
+                <button class="format-tab" data-format="xmlescape">XML Escape</button>
+            </div>
+            <div class="flex gap-1.5 ml-auto" id="mode-btns">
+                <button class="mode-btn active" data-mode="encode">Encode</button>
+                <button class="mode-btn" data-mode="decode">Decode</button>
+            </div>
+        </div>
+
+        <!-- IO Panel -->
+        <div class="grid md:grid-cols-2 gap-4 io-grid">
+            <!-- Input -->
+            <div class="glass-panel p-4 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-bold text-enc uppercase tracking-widest">Input</label>
+                    <span class="text-[10px] text-slate-600" id="input-stats">0 chars</span>
+                </div>
+                <textarea id="input-area" class="io-area flex-1" placeholder="在此輸入要編碼/解碼的文字，或貼上內容讓系統自動偵測⋯" spellcheck="false"></textarea>
+            </div>
+            <!-- Output -->
+            <div class="glass-panel p-4 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-bold text-enc uppercase tracking-widest">Output</label>
+                    <div class="flex gap-1">
+                        <button id="btn-copy" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="copy" class="w-3 h-3"></i> 複製</button>
+                        <button id="btn-swap" class="btn-secondary text-[10px] px-2 py-1" title="交換編碼/解碼模式"><i data-lucide="arrow-left-right" class="w-3 h-3"></i></button>
+                        <button id="btn-clear" class="btn-secondary text-[10px] px-2 py-1"><i data-lucide="trash-2" class="w-3 h-3"></i> 清除</button>
+                    </div>
+                </div>
+                <textarea id="output-area" class="io-area flex-1" readonly placeholder="轉換結果將顯示在此⋯" spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <!-- Batch Mode Toggle + Download -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
+            <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+                <input type="checkbox" id="batch-mode" class="accent-enc"> 批次模式（每行獨立轉換）
+            </label>
+            <div class="flex gap-1.5">
+                <button id="btn-download" class="btn-secondary text-[11px]"><i data-lucide="download" class="w-3 h-3"></i> 下載 TXT</button>
+                <button id="btn-auto-detect" class="btn-secondary text-[11px]"><i data-lucide="search" class="w-3 h-3"></i> 自動偵測</button>
+            </div>
+        </div>
+
+        <!-- Encoding Inspector -->
+        <div class="mt-6 glass-panel p-5">
+            <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-1.5">
+                <i data-lucide="search" class="w-4 h-4 text-enc"></i> Encoding Inspector
+            </h2>
+            <div id="inspector-content" class="text-slate-600 text-xs">等待分析⋯</div>
+        </div>
+
+        <!-- FAQ -->
+        <section class="mt-12 glass-panel p-6 md:p-8" itemscope itemtype="https://schema.org/FAQPage">
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <i data-lucide="help-circle" class="w-5 h-5 text-enc"></i> 常見問題
+            </h2>
+            <div class="space-y-2 divide-y divide-hub-700/50">
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Base64 和 URL Encode 有什麼差別？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            <strong>Base64</strong> 是一種將二進位資料編碼為 ASCII 字串的方法，常用於在文字協定（如 HTTP、Email）中傳輸圖片、檔案等二進位內容。它使用 A-Z、a-z、0-9、+、/ 及 =（填充）共 65 個字元。<br><br>
+                            <strong>URL Encode（又稱 Percent-encoding）</strong> 則是用於將 URL 中的特殊字元（如中文、空格、#、& 等）轉換為 %XX 格式，使其能在 URL 中安全傳輸。<br><br>
+                            核心差異：Base64 是將二進位 → 文字編碼，URL Encode 是將文字 → URL 安全格式。兩者的用途完全不同。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">HTML Entity 什麼時候使用？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            HTML Entity 用於在 HTML 文件中顯示保留字元（如 <code class="text-enc font-mono text-xs px-1">&lt;</code>、<code class="text-enc font-mono text-xs px-1">&gt;</code>、<code class="text-enc font-mono text-xs px-1">&amp;</code>）或無法直接輸入的字元（如版權符號 <code class="text-enc font-mono text-xs px-1">&copy;</code>）。<br><br>
+                            <strong>常見使用時機：</strong><br>
+                            • 在 HTML 中展示程式碼片段（避免被瀏覽器誤解為 HTML 標籤）<br>
+                            • 顯示特殊符號（©、®、™、€ 等）<br>
+                            • XSS 防禦——轉義使用者輸入中的 HTML 特殊字元<br>
+                            • 在網頁中嵌入第三方內容（如 RSS Feed、使用者評論）
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">Unicode Escape（\\uXXXX）是什麼？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            Unicode Escape 是將字元以 <code class="text-enc font-mono text-xs px-1">\\uXXXX</code> 的形式表示，其中 XXXX 是該字元的 Unicode 碼點（Code Point）的十六進位值。<br><br>
+                            例如：<br>
+                            • <code class="text-enc font-mono text-xs px-1">A</code> → <code class="text-enc font-mono text-xs px-1">\\u0041</code><br>
+                            • <code class="text-enc font-mono text-xs px-1">世</code> → <code class="text-enc font-mono text-xs px-1">\\u4E16</code><br>
+                            • <code class="text-enc font-mono text-xs px-1">界</code> → <code class="text-enc font-mono text-xs px-1">\\u754C</code><br><br>
+                            這種表示法常見於：JSON 資料中的非 ASCII 字元、JavaScript 原始碼中需要確保編碼一致性的場景、以及某些僅支援 ASCII 的舊系統中。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">JSON Escape 的用途是什麼？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            JSON Escape 將字串中的特殊字元轉義，使其符合 JSON 格式規範。JSON 規範（RFC 7159）要求以下字元必須被轉義：<br><br>
+                            • <code class="text-enc font-mono text-xs px-1">"</code> → <code class="text-enc font-mono text-xs px-1">\\"</code>（雙引號）<br>
+                            • <code class="text-enc font-mono text-xs px-1">\\</code> → <code class="text-enc font-mono text-xs px-1">\\\\</code>（反斜線）<br>
+                            • <code class="text-enc font-mono text-xs px-1">/</code> → <code class="text-enc font-mono text-xs px-1">\\/</code>（斜線，可選）<br>
+                            • <code class="text-enc font-mono text-xs px-1">\\b</code>（退格）、<code class="text-enc font-mono text-xs px-1">\\f</code>（換頁）、<code class="text-enc font-mono text-xs px-1">\\n</code>（換行）、<code class="text-enc font-mono text-xs px-1">\\r</code>（回車）、<code class="text-enc font-mono text-xs px-1">\\t</code>（製表）<br><br>
+                            未正確轉義的 JSON 會導致 <code class="text-enc font-mono text-xs px-1">JSON.parse()</code> 失敗。這在 API 開發、資料序列化、以及處理使用者輸入時非常重要。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">JavaScript Escape 和 JSON Escape 有什麼不同？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            雖然兩者看起來相似，但它們適用的規範有所不同：<br><br>
+                            <strong>JSON Escape</strong> 遵循 JSON 規範（RFC 7159）。嚴格來說，JSON 字串中只需要轉義雙引號、反斜線和控制字元（U+0000~U+001F）。<br><br>
+                            <strong>JavaScript Escape</strong> 則涵蓋更廣泛的 JavaScript 字串語法，包括轉義單引號（在單引號字串中）、以及使用 <code class="text-enc font-mono text-xs px-1">\\xHH</code>（十六進位）和 <code class="text-enc font-mono text-xs px-1">\\uHHHH</code>（Unicode）表示法。<br><br>
+                            實務上，如果你要產生 JSON 資料，請使用 JSON Escape；如果你要產生 JavaScript 程式碼字串，請使用 JavaScript Escape。
+                        </div>
+                    </div>
+                </details>
+
+                <details class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                    <summary itemprop="name">自動偵測（Auto Detect）的判斷邏輯是什麼？</summary>
+                    <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+                        <div itemprop="text">
+                            當你點擊「自動偵測」按鈕或貼上內容時，系統會依序嘗試以下判斷：<br><br>
+                            <strong>1. Base64：</strong> 檢查是否符合 Base64 字元集（A-Za-z0-9+/=），且長度為 4 的倍數。嘗試解碼後確認是否為可讀文字。<br>
+                            <strong>2. URL Encode：</strong> 檢查是否包含 %XX 格式，且解碼後為有效 UTF-8。<br>
+                            <strong>3. HTML Entity：</strong> 檢查是否包含 &amp;、&lt;、&gt;、&#XXXX; 等格式。<br>
+                            <strong>4. Unicode Escape：</strong> 檢查是否包含 \\uXXXX 格式。<br>
+                            <strong>5. JSON Escape：</strong> 檢查是否包含 \\n、\\t、\\" 等 JSON 跳脫序列。<br><br>
+                            如果匹配到多種格式，系統會優先選擇最可信的結果。如果都無法匹配，則視為一般文字。
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- SEO Article -->
+        <section class="mt-12 glass-panel p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-enc"></i> 文字編碼的世界：從 ASCII 到 Unicode
+            </h2>
+            <article class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+                <p>在電腦科學中，「文字編碼」是將字元轉換為電腦可以處理的二進位格式的過程。從最早期的 ASCII（僅 128 個字元），到現在的 Unicode（涵蓋超過 14 萬個字元），文字編碼的演進反映了全球資訊交流的需求增長。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">為什麼需要這麼多種編碼方式？</h3>
+                <p>不同的編碼方式服務於不同的場景。Base64 解決的是「二進位資料在文字協定中傳輸」的問題；URL Encode 解決的是「特殊字元在網址中安全傳遞」的問題；HTML Entity 解決的是「保留字元在 HTML 中正確顯示」的問題；Unicode Escape 解決的是「非 ASCII 字元在純 ASCII 環境中表示」的問題。</p>
+                <p>每種編碼方式都有其獨特的適用場景，這也是為什麼開發者需要熟悉多種編碼格式的原因。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">自動偵測的實用價值</h3>
+                <p>在實際開發中，我們常常會遇到無法確認編碼格式的資料——可能是來自第三方 API 的回應、從資料庫匯出的欄位、或是其他系統傳送的訊息。這時，自動偵測功能可以幫助你快速辨識資料的編碼方式，省去手動嘗試不同解碼方式的時間。</p>
+                <p>然而需要注意的是，自動偵測並非 100% 準確。某些編碼格式（如 Base64 與一般文字）在某些情況下可能難以區分。如果偵測結果不正確，建議手動切換到對應的格式進行編解碼。</p>
+
+                <h3 class="text-white font-bold text-lg mt-6">安全性考量</h3>
+                <p>在處理使用者輸入或第三方資料時，正確的編碼/轉義是防止安全漏洞的重要環節。例如：</p>
+                <p><strong>XSS 防禦：</strong>在網頁中顯示使用者輸入時，應使用 HTML Entity Escape 來避免惡意指令碼注入。</p>
+                <p><strong>JSON 注入：</strong>在構建 JSON 資料時，確保字串值經過 JSON Escape，避免破壞 JSON 結構。</p>
+                <p><strong>Command Injection：</strong>在拼接系統命令時，應確保特殊字元被正確轉義或使用參數化查詢。</p>
+                <p>本工具的所有運算都在瀏覽器端完成，你的資料不會被傳送到任何伺服器，確保資料安全。</p>
+            </article>
+        </section>
+
+    
+        <!-- SEO Completeness Upgrade 2026 -->
+        <article class="seo-upgrade" aria-label="Text Encoder &amp; Decoder 文字編碼解碼工具補充指南">
+          <section class="seo-upgrade-card"><h2>Text Encoder &amp; Decoder 文字編碼解碼工具使用說明</h2><p>免費線上文字編碼解碼工具。支援 Base64、URL Encode、HTML Entity、Unicode Escape、JavaScript/JSON/XML Escape 七種格式。自動偵測編碼類型，批次轉換，內建 Encoding Inspector 分析。</p><h3>建議操作流程</h3><ol><li>先確認輸入格式、單位與必要欄位，避免讓錯誤資料一路傳到結果。</li><li>調整工具選項並閱讀即時提示，使用代表性的邊界值交叉檢查。</li><li>複製或下載前再次核對結果；若要用於正式流程，請在目標環境完成驗證。</li></ol><h3>品質與隱私</h3><p>此工具在瀏覽器本機執行，不依賴後端處理。結果會受到輸入品質、瀏覽器支援與相關技術規格影響，重要資料請保留原始版本與備份。</p></section>
+          
+        </article>
+    </main>
+
+    <div id="component-footer"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i data-lucide="check-circle" class="w-4 h-4 text-enc" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- System Init                                 -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elId, path) {
+            try {
+                const r = await fetch(path); if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const html = await r.text();
+                const c = document.getElementById(elId); c.innerHTML = html;
+                c.querySelectorAll('script').forEach(s => {
+                    const ns = document.createElement('script');
+                    Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(s.innerHTML));
+                    s.parentNode.replaceChild(ns, s);
+                });
+            } catch(e) { console.error(`[System Error] ${path}:`, e); }
+        }
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const t = e.target.closest('#sidebar-trigger-btn'), cl = e.target.closest('#sidebar-close-btn'), ol = e.target.closest('#sidebar-overlay');
+                if (t || cl || ol) {
+                    const c = document.getElementById('sidebar-container'), o = document.getElementById('sidebar-overlay');
+                    if (c && o) {
+                        const isClosed = c.classList.contains('translate-x-full');
+                        if (isClosed && t) { o.classList.remove('pointer-events-none'); requestAnimationFrame(() => { c.classList.remove('translate-x-full'); o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); }
+                        else if (!isClosed && (cl || ol || t)) { c.classList.add('translate-x-full'); o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => o.classList.add('pointer-events-none'), 300); }
+                    }
+                }
+            });
+        }
+        function setupSidebarActiveState() {
+            const cp = '/text-encoder-decoder';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const h = item.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg'); if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation(); setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Encoder/Decoder Engine                      -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Shared ---
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+
+            function showToast(msg, isErr = false) {
+                const icon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                if (isErr) { toast.classList.replace('bg-slate-800', 'bg-red-950'); toast.classList.replace('border-slate-700', 'border-red-900'); icon.className = 'w-4 h-4 text-red-500'; }
+                else { toast.classList.replace('bg-red-950', 'bg-slate-800'); toast.classList.replace('border-red-900', 'border-slate-700'); icon.className = 'w-4 h-4 text-enc'; }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => { toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); }, 2000);
+            }
+
+            // --- DOM Refs ---
+            const formatTabs = document.querySelectorAll('#format-tabs .format-tab');
+            const modeBtns = document.querySelectorAll('#mode-btns .mode-btn');
+            const inputArea = document.getElementById('input-area');
+            const outputArea = document.getElementById('output-area');
+            const inputStats = document.getElementById('input-stats');
+            const batchMode = document.getElementById('batch-mode');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnSwap = document.getElementById('btn-swap');
+            const btnClear = document.getElementById('btn-clear');
+            const btnDownload = document.getElementById('btn-download');
+            const btnAutoDetect = document.getElementById('btn-auto-detect');
+            const inspectorContent = document.getElementById('inspector-content');
+
+            let currentFormat = 'base64';
+            let currentMode = 'encode'; // or 'decode'
+
+            // --- Tab switching ---
+            formatTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    formatTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFormat = tab.dataset.format;
+                    convert();
+                });
+            });
+
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modeBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentMode = btn.dataset.mode;
+                    convert();
+                });
+            });
+
+            // --- Live convert ---
+            function convert() {
+                const input = inputArea.value;
+                if (!input) { outputArea.value = ''; updateInspector(''); updateStats(); return; }
+                try {
+                    let result;
+                    if (currentMode === 'encode') {
+                        result = encodeText(input, currentFormat);
+                    } else {
+                        result = decodeText(input, currentFormat);
+                    }
+                    outputArea.value = result;
+                } catch(e) {
+                    outputArea.value = `❌ 錯誤：${e.message}`;
+                }
+                updateInspector(input);
+                updateStats();
+            }
+
+            function encodeText(text, format) {
+                const batch = batchMode.checked;
+                const lines = batch ? text.split('\n') : [text];
+                const results = lines.map(line => {
+                    try {
+                        return doEncode(line, format);
+                    } catch(e) {
+                        return `[ERROR: ${e.message}]`;
+                    }
+                });
+                return results.join('\n');
+            }
+
+            function decodeText(text, format) {
+                const batch = batchMode.checked;
+                const lines = batch ? text.split('\n') : [text];
+                const results = lines.map(line => {
+                    try {
+                        return doDecode(line, format);
+                    } catch(e) {
+                        return `[ERROR: ${e.message}]`;
+                    }
+                });
+                return results.join('\n');
+            }
+
+            function doEncode(text, format) {
+                switch(format) {
+                    case 'base64':
+                        return btoa(unescape(encodeURIComponent(text)));
+                    case 'url':
+                        return encodeURIComponent(text);
+                    case 'html':
+                        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    case 'unicode':
+                        return text.split('').map(c => {
+                            const code = c.charCodeAt(0);
+                            return code > 127 ? '\\u' + code.toString(16).padStart(4, '0') : c;
+                        }).join('');
+                    case 'jsescape':
+                        return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+                    case 'jsonescape':
+                        return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t').replace(/\f/g, '\\f').replace(/\b/g, '\\b');
+                    case 'xmlescape':
+                        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+                    default:
+                        return text;
+                }
+            }
+
+            function doDecode(text, format) {
+                switch(format) {
+                    case 'base64':
+                        try {
+                            return decodeURIComponent(escape(atob(text.replace(/\s/g, ''))));
+                        } catch(e) {
+                            // Try raw atob for non-UTF8
+                            try { return atob(text.replace(/\s/g, '')); } catch(e2) { throw new Error('Base64 解碼失敗：' + e2.message); }
+                        }
+                    case 'url':
+                        return decodeURIComponent(text);
+                    case 'html':
+                        const txt = document.createElement('textarea');
+                        txt.innerHTML = text;
+                        return txt.value;
+                    case 'unicode':
+                        return text.replace(/\\u([0-9a-fA-F]{4})/g, (m, hex) => String.fromCharCode(parseInt(hex, 16)));
+                    case 'jsescape':
+                        try { return new Function("'" + text.replace(/'/g, "\\'").replace(/\\'/g, "'") + "'")(); } catch(e) { return text; }
+                    case 'jsonescape':
+                        try { return JSON.parse('"' + text + '"'); } catch(e) { throw new Error('JSON 解碼失敗：' + e.message); }
+                    case 'xmlescape':
+                        return text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, n) => String.fromCharCode(n));
+                    default:
+                        return text;
+                }
+            }
+
+            // --- Auto Detect ---
+            btnAutoDetect.addEventListener('click', () => {
+                const input = inputArea.value.trim();
+                if (!input) { showToast('請先輸入內容', true); return; }
+                const result = autoDetect(input);
+                if (result.format) {
+                    // Switch to the detected format and decode mode
+                    formatTabs.forEach(t => { t.classList.toggle('active', t.dataset.format === result.format); });
+                    currentFormat = result.format;
+                    modeBtns.forEach(b => { b.classList.toggle('active', b.dataset.mode === 'decode'); });
+                    currentMode = 'decode';
+                    outputArea.value = result.decoded;
+                    showToast(`偵測為 ${result.label}，已自動解碼`);
+                } else {
+                    showToast('無法辨識編碼格式，請手動選擇', true);
+                }
+                updateInspector(input);
+            });
+
+            function autoDetect(text) {
+                // Try Base64
+                if (/^[A-Za-z0-9+/]*={0,2}$/.test(text) && text.length % 4 === 0 && text.length > 4) {
+                    try {
+                        const decoded = doDecode(text, 'base64');
+                        if (decoded && /[\x20-\x7E一-鿿]/.test(decoded)) {
+                            return { format: 'base64', label: 'Base64', decoded };
+                        }
+                    } catch(e) {}
+                }
+                // Try URL Encode
+                if (/%[0-9a-fA-F]{2}/.test(text)) {
+                    try {
+                        const decoded = doDecode(text, 'url');
+                        if (decoded && decoded !== text) return { format: 'url', label: 'URL Encode', decoded };
+                    } catch(e) {}
+                }
+                // Try HTML Entity
+                if (/&[#a-zA-Z0-9]{2,8};/.test(text)) {
+                    try {
+                        const decoded = doDecode(text, 'html');
+                        if (decoded !== text) return { format: 'html', label: 'HTML Entity', decoded };
+                    } catch(e) {}
+                }
+                // Try Unicode Escape
+                if (/\\u[0-9a-fA-F]{4}/.test(text)) {
+                    try {
+                        const decoded = doDecode(text, 'unicode');
+                        if (decoded !== text) return { format: 'unicode', label: 'Unicode Escape', decoded };
+                    } catch(e) {}
+                }
+                // Try JSON Escape
+                if (/\\[nrt"\\]/.test(text)) {
+                    try {
+                        const decoded = doDecode(text, 'jsonescape');
+                        if (decoded !== text) return { format: 'jsonescape', label: 'JSON Escape', decoded };
+                    } catch(e) {}
+                }
+                return { format: null };
+            }
+
+            // --- Encoding Inspector ---
+            function updateInspector(input) {
+                if (!input) { inspectorContent.innerHTML = '等待分析⋯'; return; }
+
+                const result = autoDetect(input);
+                let html = '';
+
+                // Detected encoding
+                const formatLabels = {
+                    base64: 'Base64', url: 'URL Encode', html: 'HTML Entity',
+                    unicode: 'Unicode Escape', jsescape: 'JS Escape', jsonescape: 'JSON Escape', xmlescape: 'XML Escape'
+                };
+
+                html += `<div class="inspector-item"><span class="text-slate-500">Detected Encoding</span><span class="text-enc font-mono text-sm font-bold">${result.format ? formatLabels[result.format] || result.format : '一般文字 / 未知'}</span></div>`;
+
+                if (result.format && result.decoded) {
+                    const preview = result.decoded.length > 80 ? result.decoded.slice(0, 80) + '⋯' : result.decoded;
+                    html += `<div class="inspector-item"><span class="text-slate-500">解碼預覽</span><span class="text-white font-mono text-xs truncate max-w-[250px]">${escapeHtml(preview)}</span></div>`;
+                    html += `<div class="inspector-item"><span class="text-slate-500">字元數</span><span class="text-white font-mono">${result.decoded.length.toLocaleString()}</span></div>`;
+                } else {
+                    html += `<div class="inspector-item"><span class="text-slate-500">字元數</span><span class="text-white font-mono">${input.length.toLocaleString()}</span></div>`;
+                    html += `<div class="inspector-item"><span class="text-slate-500">字組數</span><span class="text-white font-mono">${input.replace(/\s/g, '').length.toLocaleString()}</span></div>`;
+                }
+
+                inspectorContent.innerHTML = html;
+            }
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function updateStats() {
+                const len = inputArea.value.length;
+                inputStats.textContent = `${len.toLocaleString()} char${len !== 1 ? 's' : ''}`;
+            }
+
+            // --- Events ---
+            inputArea.addEventListener('input', convert);
+            batchMode.addEventListener('change', convert);
+
+            // --- Copy ---
+            btnCopy.addEventListener('click', () => {
+                if (!outputArea.value) { showToast('沒有內容可複製', true); return; }
+                navigator.clipboard.writeText(outputArea.value).then(() => showToast('已複製'));
+            });
+
+            // --- Swap encode/decode ---
+            btnSwap.addEventListener('click', () => {
+                const other = currentMode === 'encode' ? 'decode' : 'encode';
+                modeBtns.forEach(b => { b.classList.toggle('active', b.dataset.mode === other); });
+                currentMode = other;
+                convert();
+            });
+
+            // --- Clear ---
+            btnClear.addEventListener('click', () => {
+                inputArea.value = '';
+                outputArea.value = '';
+                updateInspector('');
+                updateStats();
+                showToast('已清除');
+            });
+
+            // --- Download ---
+            btnDownload.addEventListener('click', () => {
+                if (!outputArea.value) { showToast('沒有內容可下載', true); return; }
+                const blob = new Blob([outputArea.value], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `encoded_output.txt`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast('已下載');
+            });
+
+            // --- Initial placeholder ---
+            inputArea.value = 'Hello 世界！\nBase64, URL Encode, HTML Entity 測試';
+            convert();
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

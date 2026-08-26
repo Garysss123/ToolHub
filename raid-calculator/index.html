@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAID 容量計算器 | ToolHub - 磁碟陣列容量與容錯規劃</title>
+    <meta name="description" content="專業 RAID 0/1/5/6/10 磁碟陣列容量計算工具。輸入硬碟數量和容量，精準計算可用容量、容錯能力與利用率，內建視覺化區塊圖與 RAID 比較表。">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        raid: {
+                            primary: '#A78BFA',
+                            data: '#8B5CF6',
+                            parity: '#F59E0B',
+                            mirror: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* RAID 類型選擇器 */
+        .raid-radio:checked + .raid-label {
+            background-color: rgba(139, 92, 246, 0.15);
+            border-color: #8B5CF6;
+            color: #A78BFA;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(139, 92, 246, 0.1);
+        }
+
+        /* 單位切換開關 */
+        .unit-radio:checked + .unit-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        /* 視覺化區塊 */
+        .viz-data { background-color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .viz-parity { background-color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .viz-mirror { background-color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* 比較表高亮 */
+        .comparison-highlight {
+            background-color: rgba(139, 92, 246, 0.1);
+            border-left: 2px solid #8B5CF6;
+        }
+
+        /* 建議框 */
+        .suggestion-box {
+            background-color: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+        }
+
+        .suggestion-box.info {
+            background-color: rgba(56, 189, 248, 0.08);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+        .suggestion-box.warn {
+            background-color: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+        .suggestion-box.error {
+            background-color: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/raid-calculator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/raid-calculator/">
+    <meta property="og:title" content="RAID 容量計算器">
+    <meta property="og:description" content="專業 RAID 0/1/5/6/10 磁碟陣列容量計算工具。輸入硬碟數量和容量，精準計算可用容量、容錯能力與利用率，內建視覺化區塊圖與 RAID 比較表。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="RAID 容量計算器">
+    <meta name="twitter:description" content="專業 RAID 0/1/5/6/10 磁碟陣列容量計算工具。輸入硬碟數量和容量，精準計算可用容量、容錯能力與利用率，內建視覺化區塊圖與 RAID 比較表。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"RAID 容量計算器","url":"https://toolhuben.com/raid-calculator/","description":"專業 RAID 0/1/5/6/10 磁碟陣列容量計算工具。輸入硬碟數量和容量，精準計算可用容量、容錯能力與利用率，內建視覺化區塊圖與 RAID 比較表。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"RAID 容量計算器","item":"https://toolhuben.com/raid-calculator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/raid-calculator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/raid-calculator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/raid-calculator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#A78BFA;--classic-accent-rgb:167,139,250" data-tool-visual data-classic-tool data-classic-layout="compact">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ===================== 標題區 ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-violet-950/30 border border-violet-900/50 text-xs text-violet-400 shadow-inner">
+                <i class="ph-fill ph-stack mr-1.5 text-sm"></i>
+                磁碟陣列容量規劃引擎已載入
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                RAID 容量<span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-500">計算器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                精準計算 RAID 0/1/5/6/10 磁碟陣列的可用容量、容錯能力與使用率。直覺化配置多顆硬碟，快速比較不同 RAID 類型的儲存效益與保護等級。
+            </p>
+        </div>
+
+        <!-- ===================== 主網格：輸入(左) + 結果(右) ===================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ======== 左側：輸入面板 (lg:col-span-5) ======== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+
+                <!-- RAID 類型選擇 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-3 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-stack text-violet-400 text-lg"></i> RAID 類型
+                    </h3>
+                    <div class="grid grid-cols-1 gap-2">
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="raid-type" value="raid0" class="sr-only raid-radio">
+                            <div class="raid-label flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-slate-400 border border-hub-700 transition-all bg-hub-900/50">
+                                <span class="font-mono font-bold text-base w-14">RAID 0</span>
+                                <span class="text-slate-500 text-xs flex-1">條帶化，無冗餘</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="raid-type" value="raid1" class="sr-only raid-radio">
+                            <div class="raid-label flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-slate-400 border border-hub-700 transition-all bg-hub-900/50">
+                                <span class="font-mono font-bold text-base w-14">RAID 1</span>
+                                <span class="text-slate-500 text-xs flex-1">鏡像，完整備援</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="raid-type" value="raid5" class="sr-only raid-radio" checked>
+                            <div class="raid-label flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-slate-400 border border-hub-700 transition-all bg-hub-900/50">
+                                <span class="font-mono font-bold text-base w-14">RAID 5</span>
+                                <span class="text-slate-500 text-xs flex-1">分散式奇偶校驗</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="raid-type" value="raid6" class="sr-only raid-radio">
+                            <div class="raid-label flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-slate-400 border border-hub-700 transition-all bg-hub-900/50">
+                                <span class="font-mono font-bold text-base w-14">RAID 6</span>
+                                <span class="text-slate-500 text-xs flex-1">雙重奇偶校驗</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="raid-type" value="raid10" class="sr-only raid-radio">
+                            <div class="raid-label flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-slate-400 border border-hub-700 transition-all bg-hub-900/50">
+                                <span class="font-mono font-bold text-base w-14">RAID 10</span>
+                                <span class="text-slate-500 text-xs flex-1">條帶化 + 鏡像</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 硬碟配置 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-5 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-hard-drives text-violet-400 text-lg"></i> 硬碟配置
+                    </h3>
+
+                    <!-- 硬碟數量 -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">硬碟數量</label>
+                        <input type="number" id="in-drives" value="4" min="2" max="24" step="1"
+                            class="w-full bg-hub-900 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-lg outline-none focus:border-violet-400 transition-colors">
+                        <div id="drives-validation" class="text-xs text-red-400 hidden space-y-1"></div>
+                    </div>
+
+                    <!-- 單顆硬碟容量 -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">單顆硬碟容量</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="in-capacity" value="4" min="0.1" step="0.1"
+                                class="flex-1 bg-hub-900 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-lg outline-none focus:border-violet-400 transition-colors">
+
+                            <!-- GB / TB 切換 -->
+                            <div class="flex rounded-lg overflow-hidden border border-hub-700 flex-shrink-0">
+                                <label>
+                                    <input type="radio" name="capacity-unit" value="gb" class="sr-only unit-radio">
+                                    <span class="unit-label px-3 py-2 bg-hub-900 text-xs text-slate-400 cursor-pointer transition-all inline-block">GB</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="capacity-unit" value="tb" class="sr-only unit-radio" checked>
+                                    <span class="unit-label px-3 py-2 bg-hub-900 text-xs text-slate-400 cursor-pointer transition-all inline-block">TB</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 計算按鈕 -->
+                <button id="btn-calculate"
+                    class="w-full py-3.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-calculator text-xl"></i> 開始計算
+                </button>
+
+                <!-- 智慧建議 -->
+                <div id="suggestion-area" class="hidden suggestion-box text-sm leading-relaxed"></div>
+
+            </div>
+
+            <!-- ======== 右側：結果面板 (lg:col-span-7) ======== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+
+                <!-- 容量計算結果 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col gap-5">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-stack text-9xl"></i>
+                    </div>
+
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 relative z-10">
+                        容量計算結果
+                    </h3>
+
+                    <!-- 主要結果：可用容量 -->
+                    <div class="relative z-10 text-center py-4" id="result-capacity-wrap">
+                        <div class="text-5xl sm:text-6xl font-mono font-bold text-violet-400 drop-shadow-lg tracking-tight" id="out-usable">--</div>
+                        <div class="text-slate-500 text-sm mt-1">可用容量 (Usable Capacity)</div>
+                    </div>
+
+                    <!-- 2x3 數據網格 -->
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 relative z-10">
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">原始容量</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-raw">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">保留容量 (Parity)</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-reserved">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">容量利用率</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-utilization">--%</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">可容忍故障數</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-fault-tolerance">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">RAID 類型</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-raid-type">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議用途</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-usage">--</p>
+                        </div>
+                    </div>
+
+                    <!-- 計算公式 -->
+                    <div class="relative z-10 bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider block mb-1">計算公式</span>
+                        <p class="font-mono text-xs text-slate-300 leading-relaxed" id="out-formula">
+                            <span class="text-violet-400">可用容量</span> = (硬碟數量 - 容錯用) × 單顆容量
+                            <br>
+                            <span class="text-violet-400">容量利用率</span> = 可用容量 ÷ 原始容量 × 100%
+                        </p>
+                    </div>
+                </div>
+
+                <!-- RAID 特性 -->
+                <div class="glass-panel p-5 shadow-xl">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 mb-3 flex items-center gap-2">
+                        <i class="ph-fill ph-check-circle text-violet-400"></i> RAID 特性
+                    </h3>
+                    <ul id="raid-features" class="space-y-1.5 text-sm text-slate-300">
+                        <li class="flex items-start gap-2"><i class="ph-fill ph-check text-violet-400 mt-0.5"></i> 選擇 RAID 類型後將顯示特性</li>
+                    </ul>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ===================== RAID 視覺化示意圖 ===================== -->
+        <div class="mt-8 glass-panel p-5 sm:p-6 shadow-xl">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                <i class="ph ph-squares-four text-violet-400 text-lg"></i> RAID 視覺化示意圖
+            </h3>
+            <div class="flex flex-wrap gap-6 items-start" id="viz-legend">
+                <span class="flex items-center gap-2 text-xs text-slate-400"><span class="w-4 h-4 rounded viz-data inline-block"></span> 資料 (Data)</span>
+                <span class="flex items-center gap-2 text-xs text-slate-400"><span class="w-4 h-4 rounded viz-parity inline-block"></span> Parity</span>
+                <span class="flex items-center gap-2 text-xs text-slate-400"><span class="w-4 h-4 rounded viz-mirror inline-block"></span> 鏡像 (Mirror)</span>
+            </div>
+            <div id="viz-container" class="mt-4 flex flex-wrap gap-2 items-center justify-center min-h-[60px]">
+                <!-- 由 JS 動態產生 -->
+                <span class="text-slate-500 text-sm">選擇 RAID 類型後將顯示示意圖</span>
+            </div>
+        </div>
+
+        <!-- ===================== RAID 比較表 ===================== -->
+        <div class="mt-8 glass-panel p-5 sm:p-6 shadow-xl overflow-hidden">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                <i class="ph ph-table text-violet-400 text-lg"></i> RAID 比較表
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="raid-comparison-table">
+                    <thead>
+                        <tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-hub-700">
+                            <th class="pb-2 pr-3 font-mono">RAID</th>
+                            <th class="pb-2 pr-3">容量效率</th>
+                            <th class="pb-2 pr-3">容錯能力</th>
+                            <th class="pb-2 pr-3">讀寫效能</th>
+                            <th class="pb-2 pr-3">最少硬碟</th>
+                            <th class="pb-2">推薦用途</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-xs" id="comparison-tbody">
+                        <!-- 由 JS 動態產生，靜態內容請見下方 fallback -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===================== SEO 知識區 ===================== -->
+        <div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+
+            <div class="border-b border-hub-700 pb-2 mb-6">
+                <h2 class="text-xl font-bold text-white tracking-wide">RAID 磁碟陣列知識百科</h2>
+                <p class="text-slate-500 text-sm mt-1">深入了解 RAID 技術原理、各類型差異與應用場景</p>
+            </div>
+
+            <!-- 1. RAID 是什麼？ -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-question text-violet-400"></i> RAID 是什麼？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    RAID（Redundant Array of Independent Disks，獨立磁碟冗餘陣列）是一種將多顆實體硬碟組合成一個或多個邏輯儲存單元的技術。透過資料分散（Striping）、鏡像（Mirroring）與奇偶校驗（Parity）等機制，RAID 可以在提升效能、增加容量或提供容錯保護之間取得平衡。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    RAID 技術最早於 1987 年由加州大學柏克萊分校的 Patterson、Gibson 和 Katz 三位學者提出，最初定義了 RAID 0 到 RAID 5 共六個等級。時至今日，RAID 已廣泛應用於伺服器、NAS 網路儲存設備、工作站和企業資料中心，是現代儲存架構中不可或缺的基礎技術。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    RAID 的核心目標包括：<strong class="text-slate-300">提升資料存取速度</strong>（透過平行讀寫）、<strong class="text-slate-300">提供容錯保護</strong>（避免因單顆硬碟故障導致資料遺失），以及<strong class="text-slate-300">增加儲存容量</strong>（整合多顆硬碟空間）。不同的 RAID 等級在這三個目標之間有不同的取捨。
+                </p>
+            </div>
+
+            <!-- 2. RAID 0、1、5、6、10 差異 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-info text-violet-400"></i> RAID 0、1、5、6、10 差異
+                </h3>
+
+                <h4 class="text-sm font-bold text-slate-300 mt-4 mb-2">RAID 0 — 條帶化 (Striping)</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    將資料分散寫入所有硬碟，獲得最佳的讀寫效能和 100% 容量利用率。但沒有任何容錯能力——只要一顆硬碟故障，所有資料就會完全遺失。適合暫存資料、影音剪輯工作區等可承受遺失的場景。
+                </p>
+
+                <h4 class="text-sm font-bold text-slate-300 mt-4 mb-2">RAID 1 — 鏡像 (Mirroring)</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    將資料完全複製到另一顆硬碟，提供完整的資料備援。寫入速度較慢（需同時寫入兩份），但讀取速度可提升（可同時從兩顆硬碟讀取）。容量利用率僅 50%，但容錯能力極佳。適合系統碟、重要文件儲存。
+                </p>
+
+                <h4 class="text-sm font-bold text-slate-300 mt-4 mb-2">RAID 5 — 分散式奇偶校驗</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    將資料與奇偶校驗資訊分散儲存在所有硬碟中，犧牲一顆硬碟的容量來換取容錯保護。讀取速度佳、寫入速度需計算 parity 而略降。最少需要 3 顆硬碟，是目前家用 NAS 和中小企業最廣泛使用的 RAID 等級。容量利用率為 (N-1)/N。
+                </p>
+
+                <h4 class="text-sm font-bold text-slate-300 mt-4 mb-2">RAID 6 — 雙重奇偶校驗</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    在 RAID 5 的基礎上增加第二份奇偶校驗，可容忍最多兩顆硬碟同時故障。犧牲兩顆硬碟容量換取更高的資料安全性，寫入效能比 RAID 5 更低，但對於大容量硬碟（4TB 以上）的陣列尤其重要。適合企業 NAS、長期資料歸檔。
+                </p>
+
+                <h4 class="text-sm font-bold text-slate-300 mt-4 mb-2">RAID 10 — 條帶化 + 鏡像 (Striping of Mirrors)</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    結合 RAID 0 和 RAID 1 的優點：先將硬碟兩兩鏡像，再對鏡像對進行條帶化。兼具出色的讀寫效能與完善的容錯保護，但容量利用率僅 50%。最少需要 4 顆硬碟（且須為偶數），重建速度極快。適合資料庫、虛擬機、高效能應用。
+                </p>
+            </div>
+
+            <!-- 3. RAID 可以取代備份嗎？ -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-shield-warning text-violet-400"></i> RAID 可以取代備份嗎？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    <strong class="text-red-400">不行。RAID 絕對不能取代備份。</strong> 這是一個常見但危險的誤解。RAID 提供的是「高可用性」（High Availability），讓系統在單顆（或多顆）硬碟故障時仍能繼續運作；而備份（Backup）提供的是「資料復原」（Data Recovery），讓使用者在資料遺失後能夠找回歷史版本。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">RAID 無法保護您免於以下情況：</p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-1 list-disc list-inside">
+                    <li><strong class="text-slate-300">誤刪檔案</strong> — RAID 鏡像會立即同步刪除操作</li>
+                    <li><strong class="text-slate-300">勒索病毒 / 惡意軟體攻擊</strong> — 所有硬碟上的資料會同時被加密</li>
+                    <li><strong class="text-slate-300">邏輯錯誤 / 軟體 Bug</strong> — 資料損毀會即時複寫到所有鏡像</li>
+                    <li><strong class="text-slate-300">自然災害 / 火災 / 水損</strong> — RAID 陣列在同一地點</li>
+                    <li><strong class="text-slate-300">多重硬碟故障</strong> — RAID 5 僅能容忍一顆故障，重建期間第二顆故障即全損</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    正確的做法是：<strong class="text-slate-300">RAID + 備份 = 完整資料保護</strong>。使用 RAID 確保服務不中斷，並搭配 3-2-1 備份策略（3 份資料、2 種媒體、1 份異地）確保資料安全。
+                </p>
+            </div>
+
+            <!-- 4. 哪種 RAID 最適合 NAS？ -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-navigation-arrow text-violet-400"></i> 哪種 RAID 最適合 NAS？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    NAS 的 RAID 選擇取決於硬碟數量、效能需求和資料重要性。以下是常見的建議配置：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">2 顆硬碟的 NAS</strong>：建議 RAID 1（鏡像）。雖然容量只有一半，但能確保硬碟故障時資料不遺失。</li>
+                    <li><strong class="text-slate-300">3~4 顆硬碟的家用 NAS</strong>：建議 RAID 5。在容量、效能和保護之間取得最佳平衡，適合家庭照片、影片和多媒體檔案儲存。</li>
+                    <li><strong class="text-slate-300">4~6 顆硬碟的中小企業 NAS</strong>：建議 RAID 6 或 RAID 10。RAID 6 適合大容量儲存需求，RAID 10 適合需要高效能資料庫應用的場景。</li>
+                    <li><strong class="text-slate-300">8 顆以上硬碟的企業 NAS</strong>：建議 RAID 6 搭配熱備援（Hot Spare），或考慮更進階的 RAID 50/60 等巢狀 RAID 配置。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    特別注意：若使用 4TB 以上的大容量硬碟，強烈建議選擇 RAID 6 而非 RAID 5。大容量硬碟的 RAID 5 重建時間可能長達數天甚至數週，在此期間若發生第二顆硬碟故障（UBER 錯誤），將導致整個陣列的資料遺失。
+                </p>
+            </div>
+
+            <!-- 5. RAID 重建需要多久？ -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-clock text-violet-400"></i> RAID 重建需要多久？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    RAID 重建時間沒有固定答案，受多種因素影響。在一般情況下，以下是粗略的估算：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">硬碟容量</strong>：越大越慢。重建 1TB 硬碟約需 2~4 小時，4TB 硬碟可能需要 12~24 小時，而 12TB 以上的硬碟可能耗費數天。</li>
+                    <li><strong class="text-slate-300">RAID 類型</strong>：RAID 1 重建最快（只需複製資料），RAID 5 次之（需重新計算 parity），RAID 6 最慢（需計算雙重 parity）。RAID 10 重建速度極快，因為只需從鏡像對複製。</li>
+                    <li><strong class="text-slate-300">控制器效能</strong>：硬體 RAID 卡通常比軟體 RAID 重建更快，且具備專用處理器與快取記憶體。</li>
+                    <li><strong class="text-slate-300">重建期間負載</strong>：若 RAID 陣列在重建期間仍持續提供服務（讀寫操作），重建速度會顯著下降。</li>
+                    <li><strong class="text-slate-300">硬碟介面與轉速</strong>：SAS 硬碟通常快於 SATA 硬碟，企業級 SSD 重建速度遠超傳統 HDD。</li>
+                </ul>
+            </div>
+
+            <!-- FAQ 常見問題 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-4">
+                    <i class="ph-fill ph-chat-circle text-violet-400"></i> RAID 常見問題 FAQ
+                </h3>
+
+                <div class="space-y-4">
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">RAID 5 安全嗎？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">RAID 5 對小容量硬碟（2TB 以下）來說相對安全，但隨著硬碟容量越來越大，RAID 5 的風險也隨之增加。原因在於 URE（Unrecoverable Read Error，不可恢復讀取錯誤）的發生機率與讀取資料量成正比。一顆 8TB 硬碟在重建時需要讀取 8TB 資料，發生 URE 的機率顯著提高。建議 4TB 以上的硬碟使用 RAID 6。</p>
+                    </div>
+
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">RAID 6 值得嗎？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">值得，尤其是在硬碟數量較多或單顆容量較大（4TB 以上）的場景。RAID 6 犧牲兩顆硬碟的容量，換取可容忍兩顆硬碟同時故障的保護力。考慮到大容量硬碟重建時間漫長（可能數天），期間隨時可能發生第二顆故障，RAID 6 的額外保護至關重要。</p>
+                    </div>
+
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">RAID 10 為什麼容量只有一半？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">RAID 10（也稱 RAID 1+0）先將硬碟兩兩組合成 RAID 1 鏡像對，再將這些鏡像對以 RAID 0 方式條帶化。因為每對鏡像都儲存完全相同的資料，所以每一對鏡像中只有一顆硬碟的容量可用。若有 4 顆硬碟，可用容量為 4 × 容量 ÷ 2 = 2 顆硬碟的容量。雖然容量利用率僅 50%，但結合了 RAID 0 的高速與 RAID 1 的保護。</p>
+                    </div>
+
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">RAID 會提升讀寫速度嗎？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">視 RAID 類型而定。RAID 0 和 RAID 10 可顯著提升讀寫速度（因為多顆硬碟平行存取），RAID 5 的讀取速度不錯但寫入較慢（需計算 parity），RAID 1 的讀取速度可提升但寫入速度較慢（需同時寫入兩份），RAID 6 的寫入速度最慢（需計算雙重 parity）。無論哪種 RAID，實際效能提升還取決於 RAID 控制器、硬碟介面（SATA/SAS/NVMe）和系統瓶頸。</p>
+                    </div>
+
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">家用 NAS 建議 RAID 幾？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">一般家用 NAS 建議使用 RAID 5（3~4 顆硬碟）或 RAID 1（2 顆硬碟）。若只有 2 顆硬碟，RAID 1 是唯一合理的選擇。若有 4 顆硬碟且資料非常重要（如家庭照片、重要文件），可以考慮 RAID 6 或 RAID 10。若預算充足且重視效能，RAID 10 是不錯的選擇。</p>
+                    </div>
+
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">RAID 硬碟可以混用不同容量嗎？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">可以，但效率不高。在 RAID 陣列中混用不同容量的硬碟時，陣列會以最小容量硬碟為基準進行配置。例如，將 4TB、4TB、6TB 三顆硬碟組成 RAID 5，實際可用的總容量會以 4TB 為基準計算：4TB × (3-1) = 8TB，多出的 2TB 空間將被浪費。建議盡量使用相同容量與型號的硬碟建置 RAID，以獲得最佳容量利用率和穩定性。</p>
+                    </div>
+
+                    <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <h4 class="text-sm font-bold text-white mb-1">RAID 重建期間可以繼續使用嗎？</h4>
+                        <p class="text-slate-400 text-xs leading-relaxed">可以，大多數 RAID 控制器和 NAS 系統支援在重建期間繼續提供服務（在線重建）。但需注意：重建期間的讀寫效能會顯著下降，且重建時間會因持續的 I/O 負載而延長。建議盡量在系統負載較低的時段（如夜間）進行重建，並避免在重建期間進行大量資料搬移或高強度存取。</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    
+        <!-- SEO Completeness Upgrade 2026 -->
+        <article class="seo-upgrade" aria-label="RAID 容量計算器補充指南">
+          <section class="seo-upgrade-card"><h2>RAID 容量計算器使用說明</h2><p>專業 RAID 0/1/5/6/10 磁碟陣列容量計算工具。輸入硬碟數量和容量，精準計算可用容量、容錯能力與利用率，內建視覺化區塊圖與 RAID 比較表。</p><h3>建議操作流程</h3><ol><li>先確認輸入格式、單位與必要欄位，避免讓錯誤資料一路傳到結果。</li><li>調整工具選項並閱讀即時提示，使用代表性的邊界值交叉檢查。</li><li>複製或下載前再次核對結果；若要用於正式流程，請在目標環境完成驗證。</li></ol><h3>品質與隱私</h3><p>此工具在瀏覽器本機執行，不依賴後端處理。結果會受到輸入品質、瀏覽器支援與相關技術規格影響，重要資料請保留原始版本與備份。</p></section>
+          
+        </article>
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 頁尾 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式 (System Bootstrap)              -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/raid-calculator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：RAID 容量計算引擎            -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Toast ---
+            window.showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- RAID 定義 ---
+            const RAID_INFO = {
+                raid0: {
+                    name: 'RAID 0',
+                    fullName: 'RAID 0 — 條帶化',
+                    minDrives: 2,
+                    parityDisks: 0,
+                    mirrored: false,
+                    usage: '影音剪輯暫存',
+                    features: [
+                        '容量利用率 100%，無浪費空間',
+                        '讀寫速度最佳（平行存取所有硬碟）',
+                        '無容錯能力，一顆故障即全損',
+                        '適合暫存空間、遊戲碟、非重要資料',
+                    ],
+                    formula: '可用容量 = N × C（100% 利用率）'
+                },
+                raid1: {
+                    name: 'RAID 1',
+                    fullName: 'RAID 1 — 鏡像',
+                    minDrives: 2,
+                    parityDisks: 0,
+                    mirrored: true,
+                    usage: '系統碟、重要資料',
+                    features: [
+                        '完整資料鏡像，容錯能力極佳',
+                        '讀取速度可提升，寫入速度較慢',
+                        '容量利用率僅 50%',
+                        '適合系統碟、重要文件儲存',
+                    ],
+                    formula: '可用容量 = C（鏡像，利用率 50%）'
+                },
+                raid5: {
+                    name: 'RAID 5',
+                    fullName: 'RAID 5 — 分散式奇偶校驗',
+                    minDrives: 3,
+                    parityDisks: 1,
+                    mirrored: false,
+                    usage: '家用 NAS、檔案伺服器',
+                    features: [
+                        '容量利用率高（(N-1)/N），僅犧牲一顆',
+                        '讀取速度佳，寫入需計算 parity',
+                        '可容忍 1 顆硬碟故障',
+                        'NAS 與中小企業最常用的 RAID 等級',
+                    ],
+                    formula: '可用容量 = (N-1) × C（犧牲 1 顆做 parity）'
+                },
+                raid6: {
+                    name: 'RAID 6',
+                    fullName: 'RAID 6 — 雙重奇偶校驗',
+                    minDrives: 4,
+                    parityDisks: 2,
+                    mirrored: false,
+                    usage: '企業 NAS、長期歸檔',
+                    features: [
+                        '雙重容錯保護，可容忍 2 顆硬碟故障',
+                        '適合大容量硬碟（4TB 以上）',
+                        '寫入效能較低（需計算雙重 parity）',
+                        '企業與大容量儲存首選',
+                    ],
+                    formula: '可用容量 = (N-2) × C（犧牲 2 顆做 parity）'
+                },
+                raid10: {
+                    name: 'RAID 10',
+                    fullName: 'RAID 10 — 條帶化 + 鏡像',
+                    minDrives: 4,
+                    parityDisks: 0,
+                    mirrored: true,
+                    mirroredStripe: true,
+                    usage: '資料庫、虛擬化',
+                    features: [
+                        '結合 RAID 0 效能 + RAID 1 保護',
+                        '重建速度極快（只需複製鏡像資料）',
+                        '容量利用率僅 50%',
+                        '適合資料庫、虛擬機、高效能應用',
+                    ],
+                    formula: '可用容量 = N/2 × C（鏡像對，利用率 50%）'
+                }
+            };
+
+            // --- 比較表資料 ---
+            const COMPARISON_DATA = [
+                { id: 'raid0', capacity: '⭐⭐⭐⭐⭐', fault: '⭐ (無)', perf: '⭐⭐⭐⭐⭐', minDrives: '2', usage: '影音剪輯暫存' },
+                { id: 'raid1', capacity: '⭐⭐', fault: '⭐⭐⭐⭐⭐', perf: '⭐⭐⭐', minDrives: '2', usage: '系統碟、重要資料' },
+                { id: 'raid5', capacity: '⭐⭐⭐⭐', fault: '⭐⭐⭐⭐', perf: '⭐⭐⭐⭐', minDrives: '3', usage: '家用 NAS、檔案伺服器' },
+                { id: 'raid6', capacity: '⭐⭐⭐', fault: '⭐⭐⭐⭐⭐', perf: '⭐⭐⭐', minDrives: '4', usage: '企業 NAS、長期歸檔' },
+                { id: 'raid10', capacity: '⭐⭐', fault: '⭐⭐⭐⭐⭐', perf: '⭐⭐⭐⭐⭐', minDrives: '4', usage: '資料庫、虛擬化' },
+            ];
+
+            // --- DOM 元素參照 ---
+            const inDrives = document.getElementById('in-drives');
+            const inCapacity = document.getElementById('in-capacity');
+            const drivesValidation = document.getElementById('drives-validation');
+            const outUsable = document.getElementById('out-usable');
+            const outRaw = document.getElementById('out-raw');
+            const outReserved = document.getElementById('out-reserved');
+            const outUtilization = document.getElementById('out-utilization');
+            const outFaultTolerance = document.getElementById('out-fault-tolerance');
+            const outRaidType = document.getElementById('out-raid-type');
+            const outUsage = document.getElementById('out-usage');
+            const outFormula = document.getElementById('out-formula');
+            const raidFeatures = document.getElementById('raid-features');
+            const vizContainer = document.getElementById('viz-container');
+            const suggestionArea = document.getElementById('suggestion-area');
+            const btnCalculate = document.getElementById('btn-calculate');
+            const comparisonTbody = document.getElementById('comparison-tbody');
+
+            // --- 輔助：格式化容量 ---
+            const formatTB = (tb) => {
+                if (tb >= 1000) return (tb / 1000).toFixed(2) + ' PB';
+                return tb.toFixed(2) + ' TB';
+            };
+
+            // --- Pop 動畫 ---
+            const triggerPop = (el) => {
+                el.classList.remove('animate-pop');
+                void el.offsetWidth;
+                el.classList.add('animate-pop');
+            };
+
+            // --- 取得當前 RAID 類型 ---
+            const getRaidType = () => document.querySelector('input[name="raid-type"]:checked').value;
+
+            // --- 推薦 RAID 類型 ---
+            const getRecommendedRaid = (drives) => {
+                if (drives < 2) return null;
+                if (drives === 2) return 'raid1';
+                if (drives === 3) return 'raid5';
+                if (drives >= 4 && drives <= 6) return 'raid5';  // suggest raid5 for 4-6, raid10 is also good
+                return 'raid6';
+            };
+
+            // --- 智慧建議 ---
+            const getSuggestion = (raidType, drives, capacityTB) => {
+                const info = RAID_INFO[raidType];
+
+                // == Validation (errors) ==
+                if (raidType === 'raid10' && drives < 4) {
+                    return { level: 'error', msg: '⚠️ RAID 10 至少需要 4 顆硬碟（需為偶數），目前只有 ' + drives + ' 顆。建議增加硬碟數量。' };
+                }
+                if (raidType === 'raid6' && drives < 4) {
+                    return { level: 'error', msg: '⚠️ RAID 6 至少需要 4 顆硬碟，目前只有 ' + drives + ' 顆。建議改用 RAID 1 或 RAID 5。' };
+                }
+                if (raidType === 'raid5' && drives < 3) {
+                    return { level: 'error', msg: '⚠️ RAID 5 至少需要 3 顆硬碟，目前只有 ' + drives + ' 顆。建議改用 RAID 1。' };
+                }
+                if (raidType === 'raid1' && drives < 2) {
+                    return { level: 'error', msg: '⚠️ RAID 1 至少需要 2 顆硬碟。' };
+                }
+                if (raidType === 'raid0' && drives < 2) {
+                    return { level: 'error', msg: '⚠️ RAID 0 至少需要 2 顆硬碟。' };
+                }
+                if (raidType === 'raid10' && drives % 2 !== 0) {
+                    return { level: 'warn', msg: '⚠️ RAID 10 需要偶數顆硬碟，目前為 ' + drives + ' 顆（奇數）。建議調整為 ' + (drives + 1) + ' 或 ' + (drives - 1) + ' 顆。' };
+                }
+
+                // == Recommendations (info) ==
+                const recommended = getRecommendedRaid(drives);
+                if (recommended && raidType !== recommended) {
+                    const recInfo = RAID_INFO[recommended];
+                    if (drives === 2 && raidType === 'raid0') {
+                        return { level: 'info', msg: '💡 建議：只有 2 顆硬碟時，建議使用 <strong>RAID 1（鏡像）</strong> 以獲得資料保護。RAID 0 無容錯能力。' };
+                    }
+                    if (raidType === 'raid1' && drives > 2) {
+                        return { level: 'info', msg: '💡 建議：RAID 1 僅需 2 顆硬碟，多餘的硬碟可以考慮 <strong>RAID 10</strong> 或 <strong>RAID 5</strong> 以獲得更多可用容量。' };
+                    }
+                    if (raidType === 'raid6' && drives < 4) {
+                        // Already caught above, but fallback
+                    }
+                }
+
+                // Capacity warnings
+                if (capacityTB > 4 && raidType === 'raid5') {
+                    return { level: 'warn', msg: '⚡ 注意：大容量硬碟（' + capacityTB + 'TB）搭配 RAID 5 有重建風險。重建讀取時間長，期間發生第二顆故障的機率較高。建議考慮 <strong>RAID 6</strong>。' };
+                }
+
+                if (raidType === 'raid0' && drives >= 4) {
+                    return { level: 'warn', msg: '⚡ 注意：' + drives + ' 顆硬碟的 RAID 0 無任何容錯保護。建議考慮 <strong>RAID 5</strong> 或 <strong>RAID 10</strong> 以平衡效能與資料安全。' };
+                }
+
+                // Positive suggestion
+                const totalTB = drives * capacityTB;
+                if (raidType === 'raid5' && drives >= 3) {
+                    return { level: 'info', msg: '✅ 良好配置！RAID 5 在 ' + drives + ' 顆硬碟配置下提供了容量與保護的良好平衡。可用容量約 ' + formatTB((drives - 1) * capacityTB) + '。' };
+                }
+                if (raidType === 'raid6' && drives >= 4) {
+                    return { level: 'info', msg: '✅ 穩健配置！RAID 6 提供雙重容錯保護，適合 ' + drives + ' 顆硬碟的企業級儲存環境。可用容量約 ' + formatTB((drives - 2) * capacityTB) + '。' };
+                }
+                if (raidType === 'raid10' && drives >= 4 && drives % 2 === 0) {
+                    return { level: 'info', msg: '✅ 高效能配置！RAID 10 結合了高速與容錯，' + drives + ' 顆硬碟配置下可用容量約 ' + formatTB((drives / 2) * capacityTB) + '。' };
+                }
+
+                return null;
+            };
+
+            // --- 取得容錯能力 ---
+            const getFaultTolerance = (raidType, drives) => {
+                switch (raidType) {
+                    case 'raid0': return 0;
+                    case 'raid1': return drives - 1;
+                    case 'raid5': return 1;
+                    case 'raid6': return 2;
+                    case 'raid10': return Math.floor(drives / 2);
+                    default: return 0;
+                }
+            };
+
+            // --- 繪製視覺化 ---
+            const renderVisualization = (raidType, drives) => {
+                const info = RAID_INFO[raidType];
+                if (!info || drives < info.minDrives) {
+                    vizContainer.innerHTML = '<span class="text-slate-500 text-sm">硬碟數量不足，無法繪製示意圖</span>';
+                    return;
+                }
+
+                let html = '<div class="flex flex-wrap gap-2 items-center justify-center">';
+
+                switch (raidType) {
+                    case 'raid0': {
+                        for (let i = 0; i < drives; i++) {
+                            html += `<div class="viz-data w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="D${i + 1} - 資料">D${i + 1}</div>`;
+                        }
+                        break;
+                    }
+                    case 'raid1': {
+                        html += '<div class="flex flex-col gap-2 items-center">';
+                        html += '<div class="flex gap-2">';
+                        html += `<div class="viz-data w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="主要 - 資料">D</div>`;
+                        html += '</div>';
+                        html += '<div class="text-xs text-slate-500">↓ 鏡像</div>';
+                        html += '<div class="flex gap-2">';
+                        for (let i = 0; i < drives - 1; i++) {
+                            html += `<div class="viz-mirror w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="M${i + 1} - 鏡像">M${i + 1}</div>`;
+                        }
+                        html += '</div>';
+                        html += '</div>';
+                        break;
+                    }
+                    case 'raid5': {
+                        // Distribute parity across drives
+                        for (let i = 0; i < drives; i++) {
+                            const isParity = i === drives - 1;
+                            if (isParity) {
+                                html += `<div class="viz-parity w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="P - Parity">P</div>`;
+                            } else {
+                                html += `<div class="viz-data w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="D${i + 1} - 資料">D${i + 1}</div>`;
+                            }
+                        }
+                        html += '</div>';
+                        // Add explanation
+                        html += '<div class="text-xs text-slate-500 mt-2 text-center">Parity 分佈於所有硬碟（示意簡化）</div>';
+                        break;
+                    }
+                    case 'raid6': {
+                        for (let i = 0; i < drives; i++) {
+                            const isParity = i >= drives - 2;
+                            if (isParity) {
+                                const pNum = i - (drives - 2) + 1;
+                                html += `<div class="viz-parity w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="P${pNum} - Parity">P${pNum}</div>`;
+                            } else {
+                                html += `<div class="viz-data w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="D${i + 1} - 資料">D${i + 1}</div>`;
+                            }
+                        }
+                        html += '</div>';
+                        html += '<div class="text-xs text-slate-500 mt-2 text-center">雙重 Parity 分佈於所有硬碟（示意簡化）</div>';
+                        break;
+                    }
+                    case 'raid10': {
+                        const pairs = Math.floor(drives / 2);
+                        html += '<div class="flex flex-col gap-3 items-center">';
+                        for (let p = 0; p < pairs; p++) {
+                            html += '<div class="flex gap-2 items-center">';
+                            html += `<div class="viz-data w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="D${p * 2 + 1} - 資料">D${p * 2 + 1}</div>`;
+                            html += `<div class="viz-mirror w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center text-white font-mono text-xs font-bold shadow-lg" title="M${p + 1} - 鏡像">M${p + 1}</div>`;
+                            if (p < pairs - 1) {
+                                // add stripe arrow between pairs
+                            }
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                        html += '<div class="text-xs text-slate-500 mt-2 text-center">每對鏡像再進行條帶化 (Stripe of Mirrors)</div>';
+                        break;
+                    }
+                }
+
+                vizContainer.innerHTML = html;
+            };
+
+            // --- 更新比較表 ---
+            const renderComparisonTable = (currentRaid) => {
+                let html = '';
+                COMPARISON_DATA.forEach(row => {
+                    const isActive = row.id === currentRaid;
+                    html += `<tr class="border-b border-hub-700/50 ${isActive ? 'comparison-highlight' : ''}">`;
+                    html += `<td class="py-2.5 pr-3 font-mono font-bold ${isActive ? 'text-violet-400' : 'text-white'}">${row.id === 'raid0' ? 'RAID 0' : row.id === 'raid1' ? 'RAID 1' : row.id === 'raid5' ? 'RAID 5' : row.id === 'raid6' ? 'RAID 6' : 'RAID 10'}</td>`;
+                    html += `<td class="py-2.5 pr-3">${row.capacity}</td>`;
+                    html += `<td class="py-2.5 pr-3">${row.fault}</td>`;
+                    html += `<td class="py-2.5 pr-3">${row.perf}</td>`;
+                    html += `<td class="py-2.5 pr-3 font-mono text-slate-300">${row.minDrives}</td>`;
+                    html += `<td class="py-2.5 text-slate-300">${row.usage}</td>`;
+                    html += `</tr>`;
+                });
+                comparisonTbody.innerHTML = html;
+            };
+
+            // --- 核心計算 ---
+            const calculate = () => {
+                const raidType = getRaidType();
+                const info = RAID_INFO[raidType];
+                const drives = parseInt(inDrives.value) || 0;
+
+                // Get capacity in TB
+                const capInput = parseFloat(inCapacity.value) || 0;
+                const capUnit = document.querySelector('input[name="capacity-unit"]:checked').value;
+                const capacityTB = capUnit === 'gb' ? capInput / 1024 : capInput;
+
+                // ===== 驗證 =====
+                let hasError = false;
+                drivesValidation.classList.add('hidden');
+                drivesValidation.innerHTML = '';
+
+                // Check minimum drives
+                if (drives < info.minDrives) {
+                    let minMsg = `${info.name} 至少需要 ${info.minDrives} 顆硬碟`;
+                    if (raidType === 'raid10') minMsg = 'RAID 10 至少需要 4 顆硬碟（需為偶數）';
+                    if (raidType === 'raid6') minMsg = 'RAID 6 至少需要 4 顆硬碟';
+                    showToast(minMsg + '，目前只有 ' + drives + ' 顆', true);
+                    hasError = true;
+                }
+
+                if (raidType === 'raid10' && drives >= 4 && drives % 2 !== 0) {
+                    drivesValidation.classList.remove('hidden');
+                    drivesValidation.innerHTML = '<span class="text-amber-400">⚠ RAID 10 建議使用偶數顆硬碟</span>';
+                    // Continue despite warning
+                }
+
+                // ===== 顯示建議 =====
+                const suggestion = getSuggestion(raidType, drives, capacityTB);
+                if (suggestion) {
+                    suggestionArea.classList.remove('hidden');
+                    suggestionArea.className = 'suggestion-box text-sm leading-relaxed ' + suggestion.level;
+                    suggestionArea.innerHTML = suggestion.msg;
+                } else {
+                    suggestionArea.classList.add('hidden');
+                }
+
+                // ===== 計算 =====
+                const rawTB = drives * capacityTB;
+                let usableTB = 0;
+
+                switch (raidType) {
+                    case 'raid0': usableTB = rawTB; break;
+                    case 'raid1': usableTB = capacityTB; break;
+                    case 'raid5': usableTB = (drives - 1) * capacityTB; break;
+                    case 'raid6': usableTB = (drives - 2) * capacityTB; break;
+                    case 'raid10': usableTB = Math.floor(drives / 2) * capacityTB; break;
+                }
+
+                if (hasError || drives < info.minDrives) {
+                    outUsable.textContent = '--';
+                    outRaw.textContent = '--';
+                    outReserved.textContent = '--';
+                    outUtilization.textContent = '--%';
+                    outFaultTolerance.textContent = '--';
+                    outRaidType.textContent = '--';
+                    outUsage.textContent = '--';
+                    outFormula.innerHTML = '<span class="text-slate-500">請調整硬碟數量後重新計算</span>';
+                    raidFeatures.innerHTML = '<li class="flex items-start gap-2 text-slate-500"><i class="ph-fill ph-x-circle mt-0.5"></i> 配置不符 RAID 最低要求</li>';
+                    vizContainer.innerHTML = '<span class="text-slate-500 text-sm">硬碟數量不足，無法繪製示意圖</span>';
+                    return;
+                }
+
+                const reservedTB = rawTB - usableTB;
+                const utilization = (usableTB / rawTB) * 100;
+                const faultTolerance = getFaultTolerance(raidType, drives);
+
+                // 主要結果
+                outUsable.textContent = formatTB(usableTB);
+                triggerPop(outUsable);
+                outRaw.textContent = formatTB(rawTB);
+                outReserved.textContent = formatTB(reservedTB);
+                outUtilization.textContent = utilization.toFixed(1) + '%';
+                outFaultTolerance.textContent = faultTolerance + ' 顆';
+                outRaidType.textContent = info.name;
+                outUsage.textContent = info.usage;
+
+                // 公式
+                let formulaLines = '';
+                switch (raidType) {
+                    case 'raid0':
+                        formulaLines = `<span class="text-violet-400">可用容量</span> = ${drives} × ${capacityTB}TB = <span class="text-white font-bold">${formatTB(usableTB)}</span>`;
+                        break;
+                    case 'raid1':
+                        formulaLines = `<span class="text-violet-400">可用容量</span> = ${capacityTB}TB（鏡像，利用率 50%）<br>`;
+                        formulaLines += `<span class="text-violet-400">備註</span>：${drives} 顆硬碟互為鏡像，最多容忍 ${faultTolerance} 顆故障`;
+                        break;
+                    case 'raid5':
+                        formulaLines = `<span class="text-violet-400">可用容量</span> = (${drives} - 1) × ${capacityTB}TB = <span class="text-white font-bold">${formatTB(usableTB)}</span><br>`;
+                        formulaLines += `<span class="text-violet-400">容量利用率</span> = ${utilization.toFixed(1)}%（犧牲 1 顆硬碟做 Parity）`;
+                        break;
+                    case 'raid6':
+                        formulaLines = `<span class="text-violet-400">可用容量</span> = (${drives} - 2) × ${capacityTB}TB = <span class="text-white font-bold">${formatTB(usableTB)}</span><br>`;
+                        formulaLines += `<span class="text-violet-400">容量利用率</span> = ${utilization.toFixed(1)}%（犧牲 2 顆硬碟做 Parity）`;
+                        break;
+                    case 'raid10':
+                        formulaLines = `<span class="text-violet-400">可用容量</span> = (${drives} ÷ 2) × ${capacityTB}TB = <span class="text-white font-bold">${formatTB(usableTB)}</span><br>`;
+                        formulaLines += `<span class="text-violet-400">容量利用率</span> = ${utilization.toFixed(1)}%（每對鏡像僅用一顆容量，共 ${Math.floor(drives / 2)} 對）`;
+                        break;
+                }
+                formulaLines += `<br><span class="text-violet-400">原始容量</span> = ${drives} × ${capacityTB}TB = ${formatTB(rawTB)}`;
+                outFormula.innerHTML = formulaLines;
+
+                // RAID 特性
+                let featuresHtml = '';
+                info.features.forEach(f => {
+                    featuresHtml += `<li class="flex items-start gap-2"><i class="ph-fill ph-check text-violet-400 mt-0.5 shrink-0"></i> <span>${f}</span></li>`;
+                });
+                raidFeatures.innerHTML = featuresHtml;
+
+                // 視覺化
+                renderVisualization(raidType, drives);
+
+                // 比較表
+                renderComparisonTable(raidType);
+            };
+
+            // --- 事件綁定 ---
+            btnCalculate.addEventListener('click', calculate);
+
+            // RAID 類型切換
+            document.querySelectorAll('input[name="raid-type"]').forEach(r => {
+                r.addEventListener('change', calculate);
+            });
+
+            // 即時計算
+            inDrives.addEventListener('input', calculate);
+            inCapacity.addEventListener('input', calculate);
+
+            // 單位切換 (GB ↔ TB)
+            document.querySelectorAll('input[name="capacity-unit"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    const currentVal = parseFloat(inCapacity.value);
+                    if (!currentVal || isNaN(currentVal)) return;
+                    const unit = document.querySelector('input[name="capacity-unit"]:checked').value;
+                    if (unit === 'gb') {
+                        inCapacity.value = currentVal * 1024;
+                    } else {
+                        inCapacity.value = currentVal / 1024;
+                    }
+                    calculate();
+                });
+            });
+
+            // 初始化計算
+            calculate();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

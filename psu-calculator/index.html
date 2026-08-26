@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSU 電源供應器瓦數計算器 | ToolHub - 電腦配備功耗估算與電源建議</title>
+    <meta name="description" content="精準計算電腦主機各零件功耗，自動推薦合適的 PSU 電源供應器瓦數。支援 Intel / AMD 最新 CPU、NVIDIA / AMD 顯示卡資料庫，內建 80 PLUS 等級分析與 ATX 3.1 建議。">
+
+    <!-- 系統核心依賴 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        psu: {
+                            primary: '#FF6B6B',
+                            red: '#EF4444',
+                            orange: '#F97316',
+                            coral: '#FF6B6B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #FF6B6B; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        /* 安全餘量滑桿樣式 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #1E293B;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #FF6B6B;
+            cursor: pointer;
+            border: 2px solid #FF6B6B;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #FF6B6B;
+            cursor: pointer;
+            border: 2px solid #FF6B6B;
+        }
+
+        /* 功耗條動畫 */
+        .bar-animate { transition: width 0.6s ease-out; }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/psu-calculator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/psu-calculator/">
+    <meta property="og:title" content="PSU 電源供應器瓦數計算器">
+    <meta property="og:description" content="精準計算電腦主機各零件功耗，自動推薦合適的 PSU 電源供應器瓦數。支援 Intel / AMD 最新 CPU、NVIDIA / AMD 顯示卡資料庫，內建 80 PLUS 等級分析與 ATX 3.1 建議。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="PSU 電源供應器瓦數計算器">
+    <meta name="twitter:description" content="精準計算電腦主機各零件功耗，自動推薦合適的 PSU 電源供應器瓦數。支援 Intel / AMD 最新 CPU、NVIDIA / AMD 顯示卡資料庫，內建 80 PLUS 等級分析與 ATX 3.1 建議。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"PSU 電源供應器瓦數計算器","url":"https://toolhuben.com/psu-calculator/","description":"精準計算電腦主機各零件功耗，自動推薦合適的 PSU 電源供應器瓦數。支援 Intel / AMD 最新 CPU、NVIDIA / AMD 顯示卡資料庫，內建 80 PLUS 等級分析與 ATX 3.1 建議。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"PSU 電源供應器瓦數計算器","item":"https://toolhuben.com/psu-calculator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/psu-calculator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/psu-calculator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/psu-calculator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#FF6B6B;--classic-accent-rgb:255,107,107" data-tool-visual data-classic-tool data-classic-layout="aurora">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ===================== 標題區 ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-red-950/30 border border-red-900/50 text-xs text-red-400 shadow-inner">
+                <i class="ph-fill ph-lightning mr-1.5 text-sm"></i>
+                電源供應器瓦數計算已就緒
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                PSU 電源供應器<span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500">瓦數計算器</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                根據您的 CPU、GPU 及周邊配備，精準估算整機功耗並推薦最合適的電源供應器瓦數。內建熱門硬體資料庫，支援 Intel Core Ultra、AMD Ryzen 9000 與 NVIDIA RTX 50 系列。
+            </p>
+        </div>
+
+        <!-- ===================== 主網格 ===================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ======== 左側：輸入面板 (lg:col-span-5) ======== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+
+                <!-- CPU -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-cpu text-blue-400 text-lg"></i> CPU 處理器
+                    </h3>
+                    <div class="space-y-3">
+                        <select id="cpu-select"
+                            class="w-full bg-hub-900 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                            <option value="">-- 選擇 CPU 型號 --</option>
+                            <optgroup label="Intel Core (LGA1700)">
+                                <option value="i5-13600K">Core i5-13600K / 14600K (125W)</option>
+                                <option value="i5-13500">Core i5-13500 / 14500 (65W)</option>
+                                <option value="i7-13700K">Core i7-13700K / 14700K (125W)</option>
+                                <option value="i7-13700">Core i7-13700 / 14700 (65W)</option>
+                                <option value="i9-13900K">Core i9-13900K / 14900K (125W)</option>
+                                <option value="i9-13900">Core i9-13900 / 14900 (65W)</option>
+                            </optgroup>
+                            <optgroup label="Intel Core Ultra (Arrow Lake)">
+                                <option value="ultra5-225H">Core Ultra 5 225H (65W)</option>
+                                <option value="ultra7-265H">Core Ultra 7 265H (65W)</option>
+                                <option value="ultra9-285K">Core Ultra 9 285K (125W)</option>
+                                <option value="ultra9-285HX">Core Ultra 9 285HX (125W)</option>
+                            </optgroup>
+                            <optgroup label="AMD Ryzen (AM5)">
+                                <option value="r5-7600X">Ryzen 5 7600X / 9600X (105W)</option>
+                                <option value="r7-7700X">Ryzen 7 7700X / 9700X (105W)</option>
+                                <option value="r7-7800X3D">Ryzen 7 7800X3D (120W)</option>
+                                <option value="r7-9800X3D">Ryzen 7 9800X3D (120W)</option>
+                                <option value="r9-7900X">Ryzen 9 7900X / 9900X (120W)</option>
+                                <option value="r9-7950X">Ryzen 9 7950X / 9950X (170W)</option>
+                            </optgroup>
+                        </select>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500 font-medium flex-shrink-0">或自訂功耗</span>
+                            <div class="relative flex-1">
+                                <input type="number" id="cpu-watt" value="65" min="0" max="500" step="5"
+                                    class="w-full bg-hub-900 border border-hub-700 rounded-lg px-4 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">W</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GPU -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-video text-red-400 text-lg"></i> GPU 顯示卡
+                    </h3>
+                    <div class="space-y-3">
+                        <select id="gpu-select"
+                            class="w-full bg-hub-900 border border-hub-700 rounded-lg px-4 py-2.5 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                            <option value="">-- 選擇 GPU 型號 --</option>
+                            <optgroup label="NVIDIA GeForce RTX 30 系列">
+                                <option value="rtx3060">RTX 3060 (170W)</option>
+                                <option value="rtx3060ti">RTX 3060 Ti (200W)</option>
+                                <option value="rtx3070">RTX 3070 (220W)</option>
+                                <option value="rtx3080">RTX 3080 (320W)</option>
+                                <option value="rtx3090">RTX 3090 (350W)</option>
+                            </optgroup>
+                            <optgroup label="NVIDIA GeForce RTX 40 系列">
+                                <option value="rtx4060">RTX 4060 (115W)</option>
+                                <option value="rtx4060ti">RTX 4060 Ti (160W)</option>
+                                <option value="rtx4070">RTX 4070 (200W)</option>
+                                <option value="rtx4070s">RTX 4070 SUPER (220W)</option>
+                                <option value="rtx4070ti">RTX 4070 Ti (285W)</option>
+                                <option value="rtx4080">RTX 4080 (320W)</option>
+                                <option value="rtx4080s">RTX 4080 SUPER (320W)</option>
+                                <option value="rtx4090">RTX 4090 (450W)</option>
+                            </optgroup>
+                            <optgroup label="NVIDIA GeForce RTX 50 系列">
+                                <option value="rtx5070">RTX 5070 (250W)</option>
+                                <option value="rtx5080">RTX 5080 (360W)</option>
+                                <option value="rtx5090">RTX 5090 (575W)</option>
+                            </optgroup>
+                            <optgroup label="AMD Radeon RX">
+                                <option value="rx7700xt">RX 7700 XT (245W)</option>
+                                <option value="rx7800xt">RX 7800 XT (263W)</option>
+                                <option value="rx7900gre">RX 7900 GRE (260W)</option>
+                                <option value="rx7900xt">RX 7900 XT (300W)</option>
+                                <option value="rx7900xtx">RX 7900 XTX (355W)</option>
+                                <option value="rx9070xt">RX 9070 XT (300W)</option>
+                            </optgroup>
+                        </select>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500 font-medium flex-shrink-0">或自訂功耗</span>
+                            <div class="relative flex-1">
+                                <input type="number" id="gpu-watt" value="200" min="0" max="1000" step="5"
+                                    class="w-full bg-hub-900 border border-hub-700 rounded-lg px-4 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">W</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 記憶體與儲存 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-5 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-database text-emerald-400 text-lg"></i> 記憶體與儲存裝置
+                    </h3>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">記憶體</label>
+                            <select id="ram-count"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                                <option value="2">2 條</option>
+                                <option value="4" selected>4 條</option>
+                                <option value="8">8 條</option>
+                            </select>
+                            <p class="text-[9px] text-slate-500">每條 ~5W</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SSD</label>
+                            <select id="ssd-count"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                                <option value="1">1 顆</option>
+                                <option value="2" selected>2 顆</option>
+                                <option value="3">3 顆</option>
+                                <option value="4">4 顆</option>
+                                <option value="5">5 顆</option>
+                            </select>
+                            <p class="text-[9px] text-slate-500">每顆 ~5W</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">HDD</label>
+                            <select id="hdd-count"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                                <option value="0">0 顆</option>
+                                <option value="1">1 顆</option>
+                                <option value="2" selected>2 顆</option>
+                                <option value="3">3 顆</option>
+                                <option value="4">4 顆</option>
+                            </select>
+                            <p class="text-[9px] text-slate-500">每顆 ~10W</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 散熱與 RGB -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-5 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-fan text-cyan-400 text-lg"></i> 散熱與 RGB
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">機殼風扇</label>
+                            <select id="fan-count"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                                <option value="0">0 顆</option>
+                                <option value="1">1 顆</option>
+                                <option value="2">2 顆</option>
+                                <option value="3" selected>3 顆</option>
+                                <option value="4">4 顆</option>
+                                <option value="6">6 顆</option>
+                                <option value="8">8 顆</option>
+                            </select>
+                            <p class="text-[9px] text-slate-500">每顆 ~3W</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">水冷散熱</label>
+                            <select id="cooling-select"
+                                class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm outline-none focus:border-red-400 transition-colors cursor-pointer">
+                                <option value="0">無水冷 (空冷)</option>
+                                <option value="15">120mm 一體式水冷 (+15W)</option>
+                                <option value="25">240mm 一體式水冷 (+25W)</option>
+                                <option value="35" selected>360mm 一體式水冷 (+35W)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-palette text-pink-400 text-lg"></i>
+                            <span class="text-sm text-white font-medium">RGB 燈效</span>
+                            <span class="text-[10px] text-slate-500">(+10W)</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="rgb-toggle" class="sr-only peer" checked>
+                            <div class="w-10 h-5 bg-hub-700 rounded-full peer peer-checked:bg-red-500/60 peer-checked:shadow-[0_0_10px_rgba(255,107,107,0.3)] transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 安全餘量 -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-shield-check text-amber-400 text-lg"></i> 安全餘量
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-400">預留安全空間</span>
+                            <span class="text-sm font-bold font-mono text-amber-400" id="margin-label">30%</span>
+                        </div>
+                        <input type="range" id="margin-slider" min="10" max="40" step="5" value="30"
+                            class="w-full">
+                        <div class="flex justify-between text-[9px] text-slate-600 font-mono">
+                            <span>10%</span>
+                            <span>20%</span>
+                            <span>30%</span>
+                            <span>40%</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">
+                            安全餘量確保電源供應器不會滿載運轉，延長使用壽命並降低噪音。一般建議保留 30% 餘量。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 計算按鈕 -->
+                <button id="btn-calculate"
+                    class="w-full py-3.5 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-400 hover:to-orange-400 text-white font-bold text-lg rounded-xl shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="ph-fill ph-calculator text-xl"></i> 計算電源瓦數
+                </button>
+
+            </div>
+
+            <!-- ======== 右側：結果面板 (lg:col-span-7) ======== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+
+                <!-- 主要結果 -->
+                <div class="glass-panel p-6 shadow-2xl relative overflow-hidden border border-hub-700 flex flex-col gap-5">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <i class="ph-fill ph-lightning text-9xl"></i>
+                    </div>
+
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-hub-700 pb-2 relative z-10">
+                        電源計算結果
+                    </h3>
+
+                    <!-- 主要瓦數 -->
+                    <div class="relative z-10 text-center py-3">
+                        <div class="text-5xl sm:text-6xl font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400 drop-shadow-lg tracking-tight" id="out-total-watt">-- W</div>
+                        <div class="text-slate-500 text-sm mt-1">預估總功耗（含安全餘量）</div>
+                    </div>
+
+                    <!-- 數據網格 2x3 -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 relative z-10">
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議 PSU 瓦數</span>
+                            <p class="font-mono text-base font-bold text-white mt-1" id="out-psu-watt">-- W</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議等級</span>
+                            <p class="font-mono text-sm font-bold text-amber-400 mt-1" id="out-tier">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">功耗來源占比</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-load-pct">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3 col-span-2 sm:col-span-1">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">ATX 3.1</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-atx31">--</p>
+                        </div>
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3 col-span-2 sm:col-span-1">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議接頭</span>
+                            <p class="font-mono text-sm text-white mt-1" id="out-connectors">--</p>
+                        </div>
+                    </div>
+
+                    <!-- 建議說明 -->
+                    <div class="relative z-10 bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                        <div class="flex items-start gap-2">
+                            <i class="ph-fill ph-lightbulb text-amber-400 text-lg mt-0.5 flex-shrink-0"></i>
+                            <p class="text-xs text-slate-300 leading-relaxed" id="out-suggestion">請點擊「計算電源瓦數」以取得建議。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功耗分布圖 -->
+                <div class="glass-panel p-6 shadow-2xl border border-hub-700 flex flex-col gap-4">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3">
+                        <i class="ph ph-chart-bar text-red-400 text-lg"></i> 功耗分布圖
+                    </h3>
+                    <div id="power-chart" class="space-y-3">
+                        <p class="text-xs text-slate-500 text-center py-4">請先進行計算</p>
+                    </div>
+                </div>
+
+                <!-- 常見用途建議 -->
+                <div class="glass-panel p-6 shadow-2xl border border-hub-700 flex flex-col gap-4">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3">
+                        <i class="ph ph-suitcase text-red-400 text-lg"></i> 常見用途對應 PSU 建議
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-hub-700">
+                                    <th class="pb-2 pr-3">使用場景</th>
+                                    <th class="pb-2 pr-3">建議瓦數</th>
+                                    <th class="pb-2 pr-3">建議等級</th>
+                                    <th class="pb-2">適合配置</th>
+                                </tr>
+                            </thead>
+                            <tbody class="font-mono text-xs">
+                                <tr class="border-b border-hub-700/50"><td class="py-2 pr-3 text-white">文書處理 / 上網</td><td class="py-2 pr-3 text-slate-300">450W~550W</td><td class="py-2 pr-3 text-slate-400">Bronze</td><td class="py-2 text-slate-400">內顯 / 入門顯卡</td></tr>
+                                <tr class="border-b border-hub-700/50"><td class="py-2 pr-3 text-white">主流遊戲</td><td class="py-2 pr-3 text-slate-300">650W~750W</td><td class="py-2 pr-3 text-amber-400">Gold</td><td class="py-2 text-slate-400">RTX 4070 / RX 7800 XT</td></tr>
+                                <tr class="border-b border-hub-700/50"><td class="py-2 pr-3 text-white">遊戲實況 / 剪輯</td><td class="py-2 pr-3 text-slate-300">750W~850W</td><td class="py-2 pr-3 text-amber-400">Gold</td><td class="py-2 text-slate-400">RTX 4080 / Ryzen 9</td></tr>
+                                <tr class="border-b border-hub-700/50"><td class="py-2 pr-3 text-white">AI 工作站 / 深度學習</td><td class="py-2 pr-3 text-slate-300">1000W~1200W</td><td class="py-2 pr-3 text-emerald-400">Platinum</td><td class="py-2 text-slate-400">RTX 5090 多卡</td></tr>
+                                <tr><td class="py-2 pr-3 text-white">NAS / 伺服器</td><td class="py-2 pr-3 text-slate-300">550W~650W</td><td class="py-2 pr-3 text-slate-400">Gold</td><td class="py-2 text-slate-400">多硬碟 + ECC</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 🔥 PSU 選購指南橫幅 -->
+                <div class="glass-panel p-6 border border-hub-700 bg-gradient-to-br from-red-950/20 to-orange-950/20">
+                    <div class="flex items-start gap-3">
+                        <i class="ph-fill ph-seal-check text-red-400 text-2xl mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-white mb-1">💡 挑選 PSU 的黃金法則</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                <span class="text-red-400">①</span> 總功耗 × 1.3（安全餘量）= 建議 PSU 瓦數<br>
+                                <span class="text-red-400">②</span> 80 PLUS Gold 為性價比甜蜜點<br>
+                                <span class="text-red-400">③</span> RTX 40/50 系列建議選購 ATX 3.1 原生支援<br>
+                                <span class="text-red-400">④</span> 模組化電源讓整線更輕鬆，散熱更好
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ===================== SEO 知識區 ===================== -->
+        <div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+
+            <div class="border-b border-hub-700 pb-2 mb-6">
+                <h2 class="text-xl font-bold text-white tracking-wide">電源供應器知識百科</h2>
+                <p class="text-slate-500 text-sm mt-1">深入瞭解 PSU 電源供應器的技術規格與選購要點</p>
+            </div>
+
+            <!-- 1. PSU 是什麼 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-question text-red-400"></i> 什麼是 PSU 電源供應器？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    PSU（Power Supply Unit，電源供應器）是電腦的心臟，負責將交流電（AC）轉換為電腦各元件所需的穩定直流電（DC）。電源供應器的品質與瓦數直接影響整台電腦的穩定性、壽命與安全性。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    一個好的電源供應器具備多重保護機制：過電壓保護（OVP）、過電流保護（OCP）、短路保護（SCP）、過功率保護（OPP）及過溫度保護（OTP），能在異常發生時即時切斷輸出，保護昂貴的硬體設備。
+                </p>
+            </div>
+
+            <!-- 2. 如何挑選電源供應器 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-info text-red-400"></i> 如何挑選電源供應器？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    挑選電源供應器應從以下四個面向評估：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">瓦數（Wattage）</strong>：計算所有配備的滿載功耗後，預留 20%~30% 安全餘量。瓦數不足會導致系統不穩定、重開機甚至硬體損壞。</li>
+                    <li><strong class="text-slate-300">80 PLUS 認證</strong>：代表電源在不同負載下的轉換效率。金牌（Gold）以上為主流選擇，效率越高越省電也越涼爽。</li>
+                    <li><strong class="text-slate-300">模組化程度</strong>：全模組化（Fully Modular）可自由插拔線材，整線更簡潔、散熱更好；半模組化次之；非模組化線材固定，適合預算型裝機。</li>
+                    <li><strong class="text-slate-300">品牌與保固</strong>：建議選擇有口碑的品牌（如 Seasonic、Corsair、EVGA、be quiet!、FSP 等），並注意保固年限（一般 5~12 年）。</li>
+                </ul>
+            </div>
+
+            <!-- 3. 80 PLUS 等級差異 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-shield-check text-red-400"></i> 80 PLUS 等級差異：Gold、Platinum 值得嗎？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    80 PLUS 認證代表電源供應器在 20%、50% 及 100% 負載下，轉換效率皆達到 80% 以上。等級越高，浪費的電能越少，發熱也越低：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">白牌（Standard）</strong>：80% 效率 — 入門款，適合文書機</li>
+                    <li><strong class="text-slate-300">銅牌（Bronze）</strong>：82~85% 效率 — 性價比入門選擇</li>
+                    <li><strong class="text-slate-300">金牌（Gold）</strong>：87~90% 效率 — <span class="text-amber-400">市場主流甜蜜點</span>，兼顧價格與效率</li>
+                    <li><strong class="text-slate-300">白金（Platinum）</strong>：89~92% 效率 — 高階裝機，長期運轉更省電</li>
+                    <li><strong class="text-slate-300">鈦金（Titanium）</strong>：90~94% 效率 — 旗艦級，24/7 不停機首選</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    <strong class="text-slate-300">值得嗎？</strong> 對一般使用者而言，金牌（Gold）是 CP 值最高的選擇。白金與鈦金的差價較大，適合追求極致效率、長時間滿載運轉（如挖礦、AI 運算）的使用者。
+                </p>
+            </div>
+
+            <!-- 4. ATX 3.1 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-microchip text-red-400"></i> ATX 3.1 是什麼？為什麼重要？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    ATX 3.1 是 Intel 制定的最新電源供應器標準，專為現代高功耗顯示卡設計。它引入了兩項關鍵變革：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">12V-2x6 接頭</strong>：取代舊版 12VHPWR，改良了端子接觸設計，降低過熱熔毀風險。提供最高 600W 的單一接頭供電能力。</li>
+                    <li><strong class="text-slate-300">動態負載規範</strong>：須能承受最高 200% 的瞬間峰值功耗（如 RTX 4090/5090 的瞬間電流尖波），確保系統不因瞬間高載而觸發保護重開機。</li>
+                </ul>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    若您使用 RTX 40 系列（尤其 4070 Ti 以上）或 RTX 50 系列顯示卡，<strong class="text-slate-300">強烈建議選購 ATX 3.1 認證電源供應器</strong>，以獲得最佳的相容性與安全性。
+                </p>
+            </div>
+
+            <!-- 5. 12V-2x6 接頭 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-plug text-red-400"></i> 12V-2x6 接頭介紹
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    12V-2x6（也稱 12+4 pin）是 NVIDIA 與 Intel 共同開發的新一代顯卡供電介面，取代舊有的 6+2 pin PCIe 接頭。它將 12 條電源線與 4 條訊號線整合在一個小型接頭中，提供高達 600W 的供電能力。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-3">
+                    相比舊版 12VHPWR，12V-2x6 改進了端子內部的接觸彈片設計，增加了插入深度偵測的可靠度，大幅降低因接觸不良導致的過熱風險。目前 RTX 4070 Ti 以上型號已全面採用此接頭。
+                </p>
+            </div>
+
+            <!-- 6. 電源需要留多少餘量 -->
+            <div class="glass-panel p-6 shadow-xl">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-gauge text-red-400"></i> 電源需要留多少餘量？
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    一般建議預留 20%~30% 的安全餘量，原因如下：
+                </p>
+                <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-2 list-disc list-inside">
+                    <li><strong class="text-slate-300">轉換效率最佳化</strong>：電源供應器在 50%~80% 負載時轉換效率最高。若滿載使用，效率下降、發熱增加。</li>
+                    <li><strong class="text-slate-300">瞬間峰值功耗</strong>：CPU 與 GPU 在瞬間加速或啟動時可能產生比 TDP 高出 1.5~2 倍的功耗尖波，足夠的餘量可避免觸發 OPP 保護。</li>
+                    <li><strong class="text-slate-300">未來升級空間</strong>：預留餘量讓您未來升級顯卡或增加硬碟時無需更換電源。</li>
+                    <li><strong class="text-slate-300">風扇噪音控制</strong>：低負載時風扇轉速較低，甚至支援智慧停轉（0 RPM Mode），運作更安靜。</li>
+                </ul>
+            </div>
+
+            <!-- FAQ -->
+            <div class="border-b border-hub-700 pb-2 mb-6 mt-10">
+                <h2 class="text-xl font-bold text-white tracking-wide">常見問題 FAQ</h2>
+                <p class="text-slate-500 text-sm mt-1">電源供應器選購與使用的常見疑問</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> 電源瓦數越大越耗電嗎？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        <strong class="text-slate-300">不會。</strong> 電源供應器的瓦數是「最大供電能力」，不是「固定消耗功率」。電腦實際耗電由各零件決定，PSU 只提供所需的電量。使用較大瓦數的 PSU 反而因為負載率較低，轉換效率可能更好。就像開大貨車去載小包裹，車子不會因此更耗油。
+                    </p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> 750W 能推 RTX 5090 嗎？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        <strong class="text-slate-300">不建議。</strong> RTX 5090 的 TDP 高達 575W，加上 Ryzen 9 等高端 CPU（約 170W）與其他周邊，整機功耗輕鬆突破 800W。建議至少使用 1000W 以上、ATX 3.1 認證的電源供應器，並確認具備 12V-2x6 原生接頭以確保安全。
+                    </p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> 金牌電源值得多花錢嗎？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        <strong class="text-slate-300">值得。</strong> 金牌（80 PLUS Gold）是目前的市場甜蜜點，比銅牌高出約 5% 的轉換效率。以 700W 中等效能電腦、每天使用 8 小時計算，金牌電源每年約可節省 100~200 元電費，且發熱更低、風扇更安靜。若預算充足，直接選擇金牌是明智之舉。
+                    </p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> 模組化電源真的好嗎？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        <strong class="text-slate-300">視需求而定。</strong> 全模組化電源可自由插拔線材，不需使用的線纜可以卸下，讓機殼內部更整潔、氣流更順暢。但價格較高且接頭有插拔壽命限制。對於一般使用者，半模組化（主機板線固定，其他可插拔）是很好的折衷方案。
+                    </p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> 電源供應器有壽命嗎？多久該換？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        電源供應器的壽命主要取決於內部電容的品質與使用環境。一般來說：
+                    </p>
+                    <ul class="text-slate-400 text-sm leading-relaxed mt-2 space-y-1 list-disc list-inside">
+                        <li>入門級電源：約 3~5 年</li>
+                        <li>中高階電源（日系電容）：約 7~10 年</li>
+                        <li>旗艦級電源：可達 10~12 年以上（取決於保固期）</li>
+                    </ul>
+                    <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                        若發現電腦頻繁重開機、電源風扇異音、或聞到燒焦味，應立即檢查並考慮更換。
+                    </p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> 雙路 vs 單路 +12V 有什麼差別？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        單路 +12V 將所有 +12V 電流匯集在一條軌道上，能將全部功率集中供應給 GPU 和 CPU，適合高階顯卡。雙路 +12V 將電流分為兩條或多條軌道，各有獨立的過電流保護，安全性更高但可能因分配不均而觸發保護。一般來說，<strong class="text-slate-300">單路設計更適合高功耗遊戲主機</strong>，而雙路設計在入門到中階配置中提供更好的保護。
+                    </p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                        <i class="ph-fill ph-question text-red-400 text-sm"></i> PSU 瓦數越大，電腦跑越快嗎？
+                    </h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        <strong class="text-slate-300">絕對不會。</strong> 這是電腦 DIY 領域最常見的迷思之一！電源供應器的瓦數僅代表「最大供電能力」，不影響 CPU 或 GPU 的運算速度。如果您的電腦目前使用 650W 電源運作穩定，更換為 1200W 電源後，開機速度和遊戲幀數完全不會有任何提升。只要電源瓦數足夠且品質穩定，更換更高瓦數的 PSU 不會帶來效能增益。
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 全域 Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- 頁尾 -->
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式 (System Bootstrap)             -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/psu-calculator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 工具級業務邏輯：PSU 計算引擎                -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // =====================================================
+            // CPU / GPU 功耗資料庫
+            // =====================================================
+            const CPU_DB = {
+                'i5-13600K': 125, 'i5-13500': 65,
+                'i7-13700K': 125, 'i7-13700': 65,
+                'i9-13900K': 125, 'i9-13900': 65,
+                'ultra5-225H': 65, 'ultra7-265H': 65, 'ultra9-285K': 125, 'ultra9-285HX': 125,
+                'r5-7600X': 105, 'r7-7700X': 105, 'r7-7800X3D': 120, 'r7-9800X3D': 120,
+                'r9-7900X': 120, 'r9-7950X': 170
+            };
+
+            const GPU_DB = {
+                'rtx3060': 170, 'rtx3060ti': 200, 'rtx3070': 220, 'rtx3080': 320, 'rtx3090': 350,
+                'rtx4060': 115, 'rtx4060ti': 160, 'rtx4070': 200, 'rtx4070s': 220, 'rtx4070ti': 285,
+                'rtx4080': 320, 'rtx4080s': 320, 'rtx4090': 450,
+                'rtx5070': 250, 'rtx5080': 360, 'rtx5090': 575,
+                'rx7700xt': 245, 'rx7800xt': 263, 'rx7900gre': 260, 'rx7900xt': 300, 'rx7900xtx': 355, 'rx9070xt': 300
+            };
+
+            // 標準 PSU 瓦數級距
+            const PSU_TIERS = [450, 550, 650, 750, 850, 1000, 1200, 1500, 1600];
+
+            // =====================================================
+            // DOM 參照
+            // =====================================================
+            const cpuSelect = document.getElementById('cpu-select');
+            const cpuWattInput = document.getElementById('cpu-watt');
+            const gpuSelect = document.getElementById('gpu-select');
+            const gpuWattInput = document.getElementById('gpu-watt');
+            const ramCount = document.getElementById('ram-count');
+            const ssdCount = document.getElementById('ssd-count');
+            const hddCount = document.getElementById('hdd-count');
+            const fanCount = document.getElementById('fan-count');
+            const coolingSelect = document.getElementById('cooling-select');
+            const rgbToggle = document.getElementById('rgb-toggle');
+            const marginSlider = document.getElementById('margin-slider');
+            const marginLabel = document.getElementById('margin-label');
+            const btnCalculate = document.getElementById('btn-calculate');
+
+            const outTotalWatt = document.getElementById('out-total-watt');
+            const outPsuWatt = document.getElementById('out-psu-watt');
+            const outTier = document.getElementById('out-tier');
+            const outLoadPct = document.getElementById('out-load-pct');
+            const outAtx31 = document.getElementById('out-atx31');
+            const outConnectors = document.getElementById('out-connectors');
+            const outSuggestion = document.getElementById('out-suggestion');
+            const powerChart = document.getElementById('power-chart');
+
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-msg');
+
+            // =====================================================
+            // Toast 系統
+            // =====================================================
+            window.showToast = (msg, isError = false) => {
+                toastMsg.textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    toastIcon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    toastIcon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // =====================================================
+            // Pop 動畫
+            // =====================================================
+            const triggerPop = (el) => {
+                el.classList.remove('animate-pop');
+                void el.offsetWidth;
+                el.classList.add('animate-pop');
+            };
+
+            // =====================================================
+            // CPU / GPU 選單聯動
+            // =====================================================
+            cpuSelect.addEventListener('change', () => {
+                const val = cpuSelect.value;
+                if (val && CPU_DB[val]) {
+                    cpuWattInput.value = CPU_DB[val];
+                }
+            });
+
+            gpuSelect.addEventListener('change', () => {
+                const val = gpuSelect.value;
+                if (val && GPU_DB[val]) {
+                    gpuWattInput.value = GPU_DB[val];
+                }
+            });
+
+            // 安全餘量滑桿
+            marginSlider.addEventListener('input', () => {
+                marginLabel.textContent = marginSlider.value + '%';
+            });
+
+            // =====================================================
+            // 核心計算
+            // =====================================================
+            const getRecommendedPSU = (totalWatt) => {
+                for (const tier of PSU_TIERS) {
+                    if (tier >= totalWatt) return tier;
+                }
+                return 1600;
+            };
+
+            const get80PLUSTier = (totalWatt, hasHighEndGPU) => {
+                if (totalWatt >= 1200) return hasHighEndGPU ? '80 PLUS Titanium' : '80 PLUS Platinum';
+                if (totalWatt >= 850) return '80 PLUS Platinum';
+                if (totalWatt >= 600) return '80 PLUS Gold';
+                if (totalWatt >= 400) return '80 PLUS Bronze';
+                return '80 PLUS Standard';
+            };
+
+            const getSuggestion = (totalWatt, gpuW, cpuW, isRtx40or50) => {
+                const texts = [];
+                if (totalWatt < 100) {
+                    return '此配置功耗極低，可使用內建電源或入門級 PSU。';
+                }
+                if (isRtx40or50 && totalWatt >= 750) {
+                    texts.push('✅ 此配置建議選購 ATX 3.1 認證電源，確保相容性與安全性。');
+                }
+                if (gpuW >= 350) {
+                    texts.push('⚠️ 高階顯卡建議使用單路 +12V 設計的電源供應器。');
+                }
+                if (totalWatt >= 1000) {
+                    texts.push('💡 建議考慮鈦金牌或白金級電源，長期使用更省電。');
+                }
+                if (totalWatt >= 600 && totalWatt < 850) {
+                    texts.push('💡 金牌（Gold）認證為此瓦數區間的性價比甜蜜點。');
+                }
+                if (texts.length === 0) {
+                    texts.push('✅ 您的配置用電合理，選擇信譽良好的品牌即可。');
+                }
+                return texts.join(' ');
+            };
+
+            const getConnectorSuggestion = (gpuId) => {
+                if (gpuId === 'rtx5090' || gpuId === 'rtx5080' || gpuId === 'rtx4090') {
+                    return '12V-2x6 (12+4 pin)';
+                }
+                if (gpuId === 'rtx4080' || gpuId === 'rtx4080s' || gpuId === 'rtx4070ti' || gpuId === 'rtx5070') {
+                    return '12V-2x6 / 12VHPWR';
+                }
+                return 'PCIe 8-pin (6+2)';
+            };
+
+            const getATX31 = (gpuId, totalWatt) => {
+                const highEnd = ['rtx4090', 'rtx4080', 'rtx4080s', 'rtx4070ti',
+                                'rtx5070', 'rtx5080', 'rtx5090',
+                                'rx7900xtx', 'rx7900xt', 'rx9070xt'];
+                if (highEnd.includes(gpuId) || totalWatt >= 750) {
+                    return '✅ 建議選購 ATX 3.1';
+                }
+                if (totalWatt >= 550) {
+                    return '🔸 ATX 3.1 相容最佳';
+                }
+                return '🔹 ATX 3.1 非必要';
+            };
+
+            // =====================================================
+            // 功耗分布圖渲染
+            // =====================================================
+            const CHART_COLORS = {
+                cpu: { bg: 'bg-blue-500', label: 'CPU', color: '#3B82F6' },
+                gpu: { bg: 'bg-red-500', label: 'GPU', color: '#EF4444' },
+                ram: { bg: 'bg-emerald-500', label: '記憶體', color: '#10B981' },
+                ssd: { bg: 'bg-purple-500', label: 'SSD', color: '#8B5CF6' },
+                hdd: { bg: 'bg-amber-500', label: 'HDD', color: '#F59E0B' },
+                fan: { bg: 'bg-cyan-500', label: '風扇', color: '#06B6D4' },
+                pump: { bg: 'bg-orange-500', label: '水冷', color: '#F97316' },
+                rgb: { bg: 'bg-pink-500', label: 'RGB', color: '#EC4899' }
+            };
+
+            const renderChart = (items) => {
+                const total = items.reduce((s, i) => s + i.watt, 0);
+                if (total === 0) {
+                    powerChart.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">請先進行計算</p>';
+                    return;
+                }
+
+                // 過濾掉 0W 的項目
+                const active = items.filter(i => i.watt > 0);
+                const maxPercent = 100;
+
+                let html = '<div class="space-y-2">';
+
+                // 頂部長條
+                html += '<div class="w-full h-6 bg-hub-900 rounded-full overflow-hidden flex">';
+                for (const item of active) {
+                    const pct = (item.watt / total) * 100;
+                    if (pct < 1) continue;
+                    html += `<div class="${CHART_COLORS[item.key].bg} h-full bar-animate" style="width:${pct}%" title="${item.label}: ${item.watt}W (${pct.toFixed(1)}%)"></div>`;
+                }
+                html += '</div>';
+
+                // 圖例 + 數值
+                html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">';
+                for (const item of active) {
+                    const pct = (item.watt / total) * 100;
+                    const c = CHART_COLORS[item.key];
+                    html += `
+                        <div class="flex items-center gap-2 bg-hub-900/50 rounded-lg px-2.5 py-1.5 border border-hub-700/50">
+                            <span class="w-2.5 h-2.5 rounded-full ${c.bg} flex-shrink-0"></span>
+                            <div class="min-w-0">
+                                <p class="text-[10px] text-slate-400 leading-tight truncate">${c.label}</p>
+                                <p class="font-mono text-xs text-white font-medium">${item.watt}W <span class="text-slate-500">(${pct.toFixed(1)}%)</span></p>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                html += '</div>';
+
+                powerChart.innerHTML = html;
+            };
+
+            // =====================================================
+            // 主要計算函數
+            // =====================================================
+            const calculate = () => {
+                // 讀取輸入
+                const cpuW = parseFloat(cpuWattInput.value) || 0;
+                const gpuW = parseFloat(gpuWattInput.value) || 0;
+                const ramW = (parseInt(ramCount.value) || 0) * 5;
+                const ssdW = (parseInt(ssdCount.value) || 0) * 5;
+                const hddW = (parseInt(hddCount.value) || 0) * 10;
+                const fanW = (parseInt(fanCount.value) || 0) * 3;
+                const pumpW = parseInt(coolingSelect.value) || 0;
+                const rgbW = rgbToggle.checked ? 10 : 0;
+                const marginPct = parseInt(marginSlider.value) || 30;
+
+                // 計算基礎功耗
+                const baseTotal = cpuW + gpuW + ramW + ssdW + hddW + fanW + pumpW + rgbW;
+                const withMargin = Math.ceil(baseTotal * (1 + marginPct / 100));
+
+                // 驗證
+                if (baseTotal === 0) {
+                    showToast('請輸入至少一項配備的功耗', true);
+                    return;
+                }
+
+                // 取得推薦 PSU
+                const recommendedPSU = getRecommendedPSU(withMargin);
+                const gpuId = gpuSelect.value;
+                const isRtx40or50 = gpuId && (gpuId.startsWith('rtx4') || gpuId.startsWith('rtx5'));
+                const tier = get80PLUSTier(withMargin, isRtx40or50);
+                const atx31 = getATX31(gpuId, withMargin);
+                const connectors = getConnectorSuggestion(gpuId);
+                const suggestion = getSuggestion(withMargin, gpuW, cpuW, isRtx40or50);
+
+                // 更新結果
+                outTotalWatt.textContent = baseTotal + ' W';
+                triggerPop(outTotalWatt);
+                outPsuWatt.textContent = recommendedPSU + ' W';
+
+                // 80 PLUS 等級顏色
+                let tierColor = 'text-amber-400';
+                if (tier.includes('Titanium')) tierColor = 'text-purple-400';
+                else if (tier.includes('Platinum')) tierColor = 'text-emerald-400';
+                else if (tier.includes('Gold')) tierColor = 'text-amber-400';
+                else if (tier.includes('Bronze')) tierColor = 'text-orange-400';
+                outTier.className = `font-mono text-sm font-bold ${tierColor} mt-1`;
+                outTier.textContent = tier;
+
+                outLoadPct.textContent = Math.round((baseTotal / recommendedPSU) * 100) + '% 負載';
+                outAtx31.textContent = atx31;
+                outConnectors.textContent = connectors;
+                outSuggestion.textContent = suggestion;
+
+                // 渲染功耗分布圖
+                renderChart([
+                    { key: 'cpu', watt: cpuW },
+                    { key: 'gpu', watt: gpuW },
+                    { key: 'ram', watt: ramW },
+                    { key: 'ssd', watt: ssdW },
+                    { key: 'hdd', watt: hddW },
+                    { key: 'fan', watt: fanW },
+                    { key: 'pump', watt: pumpW },
+                    { key: 'rgb', watt: rgbW }
+                ]);
+
+                showToast(`預估功耗 ${baseTotal}W → 建議 ${recommendedPSU}W PSU`);
+            };
+
+            // =====================================================
+            // 事件綁定
+            // =====================================================
+            btnCalculate.addEventListener('click', calculate);
+
+            // 即時計算（輸入變更時自動更新）
+            const autoInputs = [
+                cpuWattInput, gpuWattInput,
+                ramCount, ssdCount, hddCount,
+                fanCount, coolingSelect,
+                rgbToggle, marginSlider
+            ];
+            autoInputs.forEach(el => {
+                el.addEventListener('input', calculate);
+                el.addEventListener('change', calculate);
+            });
+
+            // 安全餘量滑桿連動
+            marginSlider.addEventListener('input', () => {
+                marginLabel.textContent = marginSlider.value + '%';
+            });
+
+            // CPU/GPU 選單變更時更新瓦數並自動計算
+            cpuSelect.addEventListener('change', () => {
+                const val = cpuSelect.value;
+                if (val && CPU_DB[val]) cpuWattInput.value = CPU_DB[val];
+                calculate();
+            });
+
+            gpuSelect.addEventListener('change', () => {
+                const val = gpuSelect.value;
+                if (val && GPU_DB[val]) gpuWattInput.value = GPU_DB[val];
+                calculate();
+            });
+
+            // =====================================================
+            // 初始化
+            // =====================================================
+            // 預設選中一組常用配置
+            cpuSelect.value = 'r7-7800X3D';
+            cpuWattInput.value = 120;
+            gpuSelect.value = 'rtx4070';
+            gpuWattInput.value = 200;
+            calculate();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

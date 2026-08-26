@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron Expression Builder / Cron 排程產生器 | ToolHub</title>
+    <meta name="description" content="圖形化 Cron 排程產生器，透過下拉選單與視覺化介面快速建立 Cron Expression。支援 Reverse Parse、Next Run 預覽、常用 Presets 與驗證功能。適用於 Linux Crontab、Kubernetes CronJob、GitHub Actions。">
+    <meta name="keywords" content="Cron, Cron Expression, Cron Builder, 排程, Linux Crontab, Kubernetes CronJob, GitHub Actions, 定時任務, ToolHub">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: { 900: '#0B1120', 800: '#151F32', 700: '#1E293B', accent: '#38BDF8' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+        .glass-panel-solid {
+            background: rgba(15, 20, 42, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+        }
+
+        .field-group {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(30, 41, 59, 0.5);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            transition: border-color 0.2s;
+        }
+        .field-group:hover { border-color: #334155; }
+        .field-group.focused { border-color: #38BDF8; box-shadow: 0 0 0 2px rgba(56,189,248,0.08); }
+
+        .cron-display {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: #38BDF8;
+        }
+        @media (max-width: 640px) {
+            .cron-display { font-size: 1.125rem; letter-spacing: 0.05em; }
+        }
+
+        .field-input {
+            background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+            transition: border-color 0.2s; width: 100%;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .field-input:focus { outline: none; border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .field-input::placeholder { color: #475569; }
+
+        .field-select {
+            background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem;
+            transition: border-color 0.2s; cursor: pointer;
+        }
+        .field-select:focus { outline: none; border-color: #38BDF8; }
+
+        .preset-chip {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1rem; border-radius: 9999px;
+            font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+            border: 1px solid #1E293B; color: #94A3B8;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .preset-chip:hover { border-color: #38BDF8; color: #E2E8F0; background: rgba(56,189,248,0.05); }
+        .preset-chip.active { background: rgba(56,189,248,0.12); border-color: #38BDF8; color: #38BDF8; }
+
+        .next-run-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            border-bottom: 1px solid rgba(30,41,59,0.5);
+            font-size: 0.875rem;
+        }
+        .next-run-item:last-child { border-bottom: none; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #38BDF8; transition: transform 0.2s; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .checkbox-grid {
+            display: flex; flex-wrap: wrap; gap: 0.375rem;
+        }
+        .checkbox-grid label {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2rem; height: 2rem; border-radius: 0.375rem;
+            border: 1px solid #1E293B; cursor: pointer;
+            font-size: 0.75rem; color: #94A3B8; transition: all 0.15s;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .checkbox-grid label:hover { border-color: #38BDF8; color: #E2E8F0; }
+        .checkbox-grid input:checked + label {
+            background: rgba(56,189,248,0.15); border-color: #38BDF8; color: #38BDF8;
+        }
+        .checkbox-grid input { display: none; }
+
+        .error-text { color: #EF4444; font-size: 0.75rem; margin-top: 0.25rem; }
+        .valid-text { color: #10B981; font-size: 0.75rem; margin-top: 0.25rem; }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/cron-builder/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/cron-builder/">
+    <meta property="og:title" content="Cron Expression Builder / Cron 排程產生器">
+    <meta property="og:description" content="圖形化 Cron 排程產生器，透過下拉選單與視覺化介面快速建立 Cron Expression。支援 Reverse Parse、Next Run 預覽、常用 Presets 與驗證功能。適用於 Linux Crontab、Kubernetes CronJob、GitHub Actions。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Cron Expression Builder / Cron 排程產生器">
+    <meta name="twitter:description" content="圖形化 Cron 排程產生器，透過下拉選單與視覺化介面快速建立 Cron Expression。支援 Reverse Parse、Next Run 預覽、常用 Presets 與驗證功能。適用於 Linux Crontab、Kubernetes CronJob、GitHub Actions。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Cron Expression Builder / Cron 排程產生器","url":"https://toolhuben.com/cron-builder/","description":"圖形化 Cron 排程產生器，透過下拉選單與視覺化介面快速建立 Cron Expression。支援 Reverse Parse、Next Run 預覽、常用 Presets 與驗證功能。適用於 Linux Crontab、Kubernetes CronJob、GitHub Actions。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Cron Expression Builder / Cron 排程產生器","item":"https://toolhuben.com/cron-builder/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/cron-builder/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/cron-builder/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/cron-builder/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248" data-tool-visual data-classic-tool data-classic-layout="editorial">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+
+        <!-- Hero -->
+        <div class="text-center mb-8 fade-in">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                Cron 排程視覺化產生器
+            </span>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                Cron Expression Builder
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">Cron 排程產生器</span>
+            </h1>
+            <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                透過圖形化介面快速建立 Cron 排程，支援視覺化設定、Reverse Parse、
+                Next Run 預覽與常用 Presets。無需手動撰寫複雜的 Cron Expression。
+            </p>
+        </div>
+
+        <!-- Presets -->
+        <div class="glass-panel p-4 sm:p-6 mb-6">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="ph ph-lightning text-hub-accent text-lg"></i>
+                <h2 class="text-sm font-semibold text-white">常用 Presets</h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <span class="preset-chip" data-cron="* * * * *">每分鐘</span>
+                <span class="preset-chip" data-cron="0 * * * *">每小時</span>
+                <span class="preset-chip" data-cron="*/5 * * * *">每 5 分鐘</span>
+                <span class="preset-chip" data-cron="0 */6 * * *">每 6 小時</span>
+                <span class="preset-chip" data-cron="0 3 * * *">每天凌晨 3 點</span>
+                <span class="preset-chip" data-cron="30 18 * * 1-5">平日 18:30</span>
+                <span class="preset-chip" data-cron="0 0 * * 0">每週日</span>
+                <span class="preset-chip" data-cron="0 0 1 * *">每月 1 號</span>
+                <span class="preset-chip" data-cron="0 0 1 1 *">每年 1/1</span>
+                <span class="preset-chip" data-cron="*/10 * * * 1-5">平日每 10 分鐘</span>
+                <span class="preset-chip" data-cron="0 */2 * * *">每 2 小時</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <!-- Left: Visual Builder -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glass-panel p-4 sm:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-sliders text-hub-accent"></i>
+                            視覺化排程設定
+                        </h2>
+                        <button onclick="resetAll()" class="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1">
+                            <i class="ph ph-arrow-counter-clockwise"></i> 重置
+                        </button>
+                    </div>
+
+                    <div class="space-y-3" id="builder-fields">
+                        <!-- Minute -->
+                        <div class="field-group" data-field="minute">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Minute (分鐘) 0–59</label>
+                                <span id="minute-preview" class="text-xs font-mono text-hub-accent">*</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <select class="field-select text-xs" data-field="minute" data-part="mode" onchange="onFieldModeChange('minute')">
+                                    <option value="every">每分鐘 *</option>
+                                    <option value="step">每隔 N 分鐘 */N</option>
+                                    <option value="specific">指定分鐘</option>
+                                    <option value="range">範圍 N-M</option>
+                                </select>
+                                <div id="minute-controls" class="flex-1 min-w-[120px]"></div>
+                            </div>
+                            <div id="minute-error" class="error-text hidden"></div>
+                        </div>
+
+                        <!-- Hour -->
+                        <div class="field-group" data-field="hour">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Hour (小時) 0–23</label>
+                                <span id="hour-preview" class="text-xs font-mono text-hub-accent">*</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <select class="field-select text-xs" data-field="hour" data-part="mode" onchange="onFieldModeChange('hour')">
+                                    <option value="every">每小時 *</option>
+                                    <option value="step">每隔 N 小時 */N</option>
+                                    <option value="specific">指定小時</option>
+                                    <option value="range">範圍 N-M</option>
+                                </select>
+                                <div id="hour-controls" class="flex-1 min-w-[120px]"></div>
+                            </div>
+                            <div id="hour-error" class="error-text hidden"></div>
+                        </div>
+
+                        <!-- Day of Month -->
+                        <div class="field-group" data-field="dom">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Day of Month (日期) 1–31</label>
+                                <span id="dom-preview" class="text-xs font-mono text-hub-accent">*</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <select class="field-select text-xs" data-field="dom" data-part="mode" onchange="onFieldModeChange('dom')">
+                                    <option value="every">每天 *</option>
+                                    <option value="step">每隔 N 天 */N</option>
+                                    <option value="specific">指定日期</option>
+                                    <option value="range">範圍 N-M</option>
+                                </select>
+                                <div id="dom-controls" class="flex-1 min-w-[120px]"></div>
+                            </div>
+                            <div id="dom-error" class="error-text hidden"></div>
+                        </div>
+
+                        <!-- Month -->
+                        <div class="field-group" data-field="month">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Month (月份) 1–12</label>
+                                <span id="month-preview" class="text-xs font-mono text-hub-accent">*</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <select class="field-select text-xs" data-field="month" data-part="mode" onchange="onFieldModeChange('month')">
+                                    <option value="every">每月 *</option>
+                                    <option value="step">每隔 N 月 */N</option>
+                                    <option value="specific">指定月份</option>
+                                    <option value="range">範圍 N-M</option>
+                                </select>
+                                <div id="month-controls" class="flex-1 min-w-[120px]"></div>
+                            </div>
+                            <div id="month-error" class="error-text hidden"></div>
+                        </div>
+
+                        <!-- Day of Week -->
+                        <div class="field-group" data-field="dow">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Day of Week (星期) 0=Sun</label>
+                                <span id="dow-preview" class="text-xs font-mono text-hub-accent">*</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <select class="field-select text-xs" data-field="dow" data-part="mode" onchange="onFieldModeChange('dow')">
+                                    <option value="every">每天 *</option>
+                                    <option value="step">每隔 N 天 */N</option>
+                                    <option value="specific">指定星期</option>
+                                    <option value="range">範圍 N-M</option>
+                                </select>
+                                <div id="dow-controls" class="flex-1 min-w-[120px]"></div>
+                            </div>
+                            <div id="dow-error" class="error-text hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Result -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Cron Expression -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <h2 class="text-sm font-semibold text-white mb-3">Cron Expression</h2>
+                    <div id="cron-expression" class="cron-display text-center py-4 px-2 bg-[#0B1120] rounded-lg border border-hub-700 mb-3 select-all">* * * * *</div>
+
+                    <!-- Human Readable -->
+                    <div id="human-readable" class="text-sm text-slate-300 text-center mb-3 px-3 py-2 bg-slate-800/30 rounded-lg">每分鐘執行</div>
+
+                    <!-- Validation Status -->
+                    <div id="validation-status" class="text-xs flex items-center gap-2 mb-4">
+                        <span class="text-green-400">✓ 格式正確</span>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="copyCron()" class="flex-1 min-w-[80px] inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 rounded-lg hover:bg-hub-accent/20 transition-colors">
+                            <i class="ph ph-copy-simple"></i> 複製
+                        </button>
+                        <button onclick="downloadTXT()" class="flex-1 min-w-[80px] inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors">
+                            <i class="ph ph-download-simple"></i> TXT
+                        </button>
+                        <button onclick="downloadJSON()" class="flex-1 min-w-[80px] inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors">
+                            <i class="ph ph-download-simple"></i> JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Next Run Preview -->
+                <div class="glass-panel p-4 sm:p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-clock-counter-clockwise text-hub-accent"></i>
+                        <h2 class="text-sm font-semibold text-white">Next Run 預覽</h2>
+                        <span class="text-[10px] text-slate-500 ml-auto">以當前時間計算</span>
+                    </div>
+                    <div id="next-runs-container">
+                        <div class="text-center text-slate-500 text-sm py-4">設定排程後將顯示接下來 5 次執行時間</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reverse Parse -->
+        <div class="glass-panel p-4 sm:p-6 mt-6">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="ph ph-arrow-u-up-left text-hub-accent text-lg"></i>
+                <h2 class="text-base font-bold text-white">Reverse Parse — 貼上 Cron 解析</h2>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="reverse-input" class="field-input flex-1 font-mono"
+                    placeholder="貼上 Cron Expression，例如：30 18 * * 1-5"
+                    onkeydown="if(event.key==='Enter')reverseParse()">
+                <button onclick="reverseParse()" class="px-5 py-2.5 bg-hub-accent text-white rounded-lg font-medium text-sm hover:bg-sky-400 transition-colors whitespace-nowrap">
+                    解析
+                </button>
+                <button onclick="document.getElementById('reverse-input').value=''; document.getElementById('reverse-result').classList.add('hidden');" class="px-3 py-2.5 text-xs text-slate-500 hover:text-red-400 border border-hub-700 rounded-lg transition-colors">
+                    清除
+                </button>
+            </div>
+            <div id="reverse-result" class="hidden mt-3 p-3 bg-slate-800/50 rounded-lg border border-hub-700 text-sm text-slate-300"></div>
+        </div>
+
+        <!-- FAQ & SEO Content -->
+        <div class="mt-8 space-y-6">
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-question text-hub-accent"></i>
+                    常見問題 (FAQ)
+                </h2>
+                <div class="space-y-2 divide-y divide-hub-700/50">
+                    <details class="faq-item">
+                        <summary class="text-slate-200">Cron Expression 是什麼？</summary>
+                        <div class="faq-answer">
+                            Cron Expression（Cron 表達式）是一種用於描述定時任務執行時間的字串格式，廣泛用於 Linux Crontab、Kubernetes CronJob、GitHub Actions 等系統。標準的 5 欄位格式為：<br><br>
+                            <code class="text-hub-accent font-mono text-xs">分 時 日 月 星期</code><br><br>
+                            每個欄位可以是數字、<code class="text-slate-400 font-mono text-xs">*</code>（任意）、<code class="text-slate-400 font-mono text-xs">,</code>（列表）、<code class="text-slate-400 font-mono text-xs">-</code>（範圍）、<code class="text-slate-400 font-mono text-xs">/</code>（步進）。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">五欄位與六欄位 Cron 有什麼差異？</summary>
+                        <div class="faq-answer">
+                            標準 Linux Crontab 使用 5 欄位：<code class="text-slate-400 font-mono text-xs">分 時 日 月 星期</code>。部分應用（如某些 Java Quartz Scheduler）支援 6 欄位，在開頭增加 <code class="text-slate-400 font-mono text-xs">秒</code>：<code class="text-slate-400 font-mono text-xs">秒 分 時 日 月 星期</code>。本工具使用標準 5 欄位格式，這是 Linux Crontab 與 Kubernetes CronJob 通用的格式。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">特殊符號 * , - / 分別代表什麼？</summary>
+                        <div class="faq-answer">
+                            • <code class="text-hub-accent font-mono text-xs">*</code> (星號)：表示「每個」，如每天、每小時<br>
+                            • <code class="text-hub-accent font-mono text-xs">,</code> (逗號)：列表，如 <code class="text-slate-400 font-mono text-xs">1,3,5</code> 表示第 1、3、5 個<br>
+                            • <code class="text-hub-accent font-mono text-xs">-</code> (減號)：範圍，如 <code class="text-slate-400 font-mono text-xs">1-5</code> 表示 1 到 5<br>
+                            • <code class="text-hub-accent font-mono text-xs">/</code> (斜線)：步進，如 <code class="text-slate-400 font-mono text-xs">*/5</code> 表示每 5 個單位<br>
+                            這些符號可以組合使用，例如 <code class="text-slate-400 font-mono text-xs">*/15 9-17 * * 1-5</code> 表示週一到週五的 9 點到 17 點之間每 15 分鐘執行一次。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">如何在 Linux 中使用 Crontab？</summary>
+                        <div class="faq-answer">
+                            使用 <code class="text-slate-400 font-mono text-xs">crontab -e</code> 編輯當前使用者的 Crontab 檔案。每行一個任務，格式為：<br><br>
+                            <code class="text-slate-400 font-mono text-xs">0 3 * * * /usr/bin/backup.sh</code><br><br>
+                            使用 <code class="text-slate-400 font-mono text-xs">crontab -l</code> 列出當前任務，<code class="text-slate-400 font-mono text-xs">crontab -r</code> 刪除所有任務。Crontab 中的 <code class="text-slate-400 font-mono text-xs">%</code> 需要跳脫，建議將腳本寫入 .sh 檔案後再執行。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">Kubernetes CronJob 的 Cron 格式和 Linux 一樣嗎？</summary>
+                        <div class="faq-answer">
+                            基本一致。Kubernetes CronJob 使用相同的 5 欄位格式，但有一個重要差異：Kubernetes 使用 UTC 時間（而非系統 Localtime），且要求欄位不能使用非標準的別名（如 <code class="text-slate-400 font-mono text-xs">@yearly</code>）。此外，Kubernetes CronJob 支援 <code class="text-slate-400 font-mono text-xs">timeZone</code> 欄位指定時區（需啟用 <code class="text-slate-400 font-mono text-xs">CronJobTimeZone</code> 功能閘門）。<br><br>
+                            範例 Kubernetes CronJob YAML：<br>
+                            <code class="text-slate-400 font-mono text-xs">spec:<br>&nbsp;&nbsp;schedule: "0 3 * * *"<br>&nbsp;&nbsp;timeZone: "Asia/Taipei"<br>&nbsp;&nbsp;jobTemplate:<br>&nbsp;&nbsp;&nbsp;&nbsp;spec:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;template:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;spec:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;containers:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name: hello</code>
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">Cron 中的星期天是 0 還是 7？</summary>
+                        <div class="faq-answer">
+                            兩者都可以。在標準 Cron 中，Day of Week 欄位接受 <code class="text-slate-400 font-mono text-xs">0</code> 或 <code class="text-slate-400 font-mono text-xs">7</code> 表示星期日。部分實作（如 Quartz Scheduler）使用 <code class="text-slate-400 font-mono text-xs">1</code>（星期一）到 <code class="text-slate-400 font-mono text-xs">7</code>（星期日）。本工具使用標準 Linux Crontab 慣例：<code class="text-slate-400 font-mono text-xs">0</code> 為星期日，<code class="text-slate-400 font-mono text-xs">1-6</code> 為週一到週六。
+                        </div>
+                    </details>
+                    <details class="faq-item">
+                        <summary class="text-slate-200">如何驗證我的 Cron 排程是否正確？</summary>
+                        <div class="faq-answer">
+                            本工具提供三種驗證方式：<br>
+                            • <strong>即時 Human Readable</strong>：產生後立即顯示人類可讀的描述文字<br>
+                            • <strong>Next Run 預覽</strong>：顯示接下來 5 次實際執行時間，幫助確認排程是否符合預期<br>
+                            • <strong>格式驗證</strong>：自動檢查欄位值是否超出範圍、特殊符號使用是否正確<br>
+                            建議建立排程後先檢查 Next Run 預覽，確保執行時間正確無誤再部署。
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 sm:p-6">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="ph ph-book-open text-hub-accent"></i>
+                    Cron 排程完整教學
+                </h2>
+                <div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">Cron 是什麼？</h3>
+                        <p>Cron 是 Linux/Unix 系統中的定時任務排程工具，名稱源自希臘文 Chronos（時間）。Cron 以後台服務（daemon）的形式運行，根據設定檔（Crontab）中的時間規則自動執行指定的命令或腳本。</p>
+                        <p class="mt-2">Cron 的應用範圍遠超 Linux 系統管理：</p>
+                        <ul class="list-disc list-inside space-y-1 mt-1">
+                            <li><strong>Linux Crontab</strong> — 系統備份、日誌輪替、系統更新</li>
+                            <li><strong>Kubernetes CronJob</strong> — 容器化環境中的定時任務</li>
+                            <li><strong>GitHub Actions</strong> — CI/CD 管線的排程觸發</li>
+                            <li><strong>NAS 系統</strong> — 資料同步、快照排程</li>
+                            <li><strong>資料庫維護</strong> — 定期備份、索引重建</li>
+                            <li><strong>監控告警</strong> — 定期健康檢查、指標收集</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">Cron Expression 欄位說明</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs border-collapse">
+                                <thead><tr class="border-b border-hub-700"><th class="text-left p-2 text-slate-500">欄位</th><th class="text-left p-2 text-slate-500">範圍</th><th class="text-left p-2 text-slate-500">說明</th></tr></thead>
+                                <tbody>
+                                    <tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">Minute</td><td class="p-2">0–59</td><td class="p-2 text-slate-400">小時內的分鐘數</td></tr>
+                                    <tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">Hour</td><td class="p-2">0–23</td><td class="p-2 text-slate-400">一天內的小時數</td></tr>
+                                    <tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">Day of Month</td><td class="p-2">1–31</td><td class="p-2 text-slate-400">月份中的日期</td></tr>
+                                    <tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">Month</td><td class="p-2">1–12</td><td class="p-2 text-slate-400">年份中的月份</td></tr>
+                                    <tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">Day of Week</td><td class="p-2">0–7</td><td class="p-2 text-slate-400">星期 (0,7=日, 1=一 … 6=六)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section>
+                        <h3 class="text-white font-bold text-base mb-2">實際應用範例</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-hub-accent font-mono text-xs mb-1">0 3 * * *</p>
+                                <p class="text-xs text-slate-400">每天凌晨 3 點執行資料庫備份</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-hub-accent font-mono text-xs mb-1">*/5 * * * *</p>
+                                <p class="text-xs text-slate-400">每 5 分鐘執行網站健康檢查</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-hub-accent font-mono text-xs mb-1">0 */6 * * *</p>
+                                <p class="text-xs text-slate-400">每 6 小時同步資料至備援站點</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-hub-accent font-mono text-xs mb-1">30 4 1 * *</p>
+                                <p class="text-xs text-slate-400">每月 1 日 4:30 產生月度報表</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-hub-accent font-mono text-xs mb-1">0 22 * * 5</p>
+                                <p class="text-xs text-slate-400">每週五晚上 10 點部署版本</p>
+                            </div>
+                            <div class="bg-slate-800/30 rounded-lg p-3">
+                                <p class="text-hub-accent font-mono text-xs mb-1">0 0 1 1 *</p>
+                                <p class="text-xs text-slate-400">每年 1 月 1 日歸零年度統計</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
+        <span id="toast-icon" class="text-lg">✅</span>
+        <span id="toast-message" class="text-sm font-medium text-slate-300"></span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- System Bootstrap -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) { console.error(`[System Error] ${filePath}:`, error); }
+        }
+        function setupSidebarActiveState() {
+            const currentPath = '/cron-builder';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) {
+                const trigger = e.target.closest('#sidebar-trigger-btn');
+                if (trigger) window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar'));
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- Business Logic -->
+    <script>
+        // ===================== STATE =====================
+        const FIELDS = ['minute', 'hour', 'dom', 'month', 'dow'];
+        const FIELD_NAMES = { minute: '分鐘', hour: '小時', dom: '日期', month: '月份', dow: '星期' };
+        const FIELD_LABELS = { minute: 'Minute', hour: 'Hour', dom: 'Day of Month', month: 'Month', dow: 'Day of Week' };
+        const FIELD_RANGES = { minute: [0,59], hour: [0,23], dom: [1,31], month: [1,12], dow: [0,7] };
+
+        let state = {
+            minute: { mode: 'every', value: 0, step: 5, rangeStart: 0, rangeEnd: 10 },
+            hour: { mode: 'every', value: 0, step: 6, rangeStart: 0, rangeEnd: 12 },
+            dom: { mode: 'every', value: 1, step: 2, rangeStart: 1, rangeEnd: 15 },
+            month: { mode: 'every', value: 1, step: 2, rangeStart: 1, rangeEnd: 6 },
+            dow: { mode: 'every', value: 0, step: 2, rangeStart: 0, rangeEnd: 5 },
+        };
+
+        let selectedValues = {
+            minute: new Set(),
+            hour: new Set(),
+            dom: new Set(),
+            month: new Set(),
+            dow: new Set()
+        };
+
+        const MONTH_NAMES = {1:'一月',2:'二月',3:'三月',4:'四月',5:'五月',6:'六月',7:'七月',8:'八月',9:'九月',10:'十月',11:'十一月',12:'十二月'};
+        const DOW_NAMES = {0:'日',1:'一',2:'二',3:'三',4:'四',5:'五',6:'六',7:'日'};
+
+        // ===================== FIELD RENDERING =====================
+        function onFieldModeChange(field) {
+            const mode = document.querySelector(`[data-field="${field}"][data-part="mode"]`).value;
+            state[field].mode = mode;
+            renderFieldControls(field);
+            updateCron();
+        }
+
+        function renderFieldControls(field) {
+            const container = document.getElementById(`${field}-controls`);
+            const mode = state[field].mode;
+            const range = FIELD_RANGES[field];
+
+            switch (mode) {
+                case 'every':
+                    container.innerHTML = `<span class="text-xs text-slate-500">* (所有${FIELD_NAMES[field]})</span>`;
+                    break;
+                case 'step':
+                    container.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500">*/</span>
+                            <input type="number" class="field-input text-xs w-16" min="1" max="${range[1]}" value="${state[field].step}"
+                                onchange="state['${field}'].step=Number(this.value);updateCron()">
+                            <span class="text-xs text-slate-500">${FIELD_NAMES[field]}</span>
+                        </div>`;
+                    break;
+                case 'specific':
+                    const labels = field === 'month' ? MONTH_NAMES : field === 'dow' ? DOW_NAMES : null;
+                    let html = '<div class="checkbox-grid">';
+                    for (let v = range[0]; v <= range[1]; v++) {
+                        const checked = selectedValues[field].has(v) ? 'checked' : '';
+                        const label = labels ? labels[v] : v;
+                        html += `<div><input type="checkbox" id="${field}-cb-${v}" value="${v}" ${checked}
+                            onchange="toggleCheckbox('${field}',${v})"><label for="${field}-cb-${v}">${label}</label></div>`;
+                    }
+                    html += '</div>';
+                    container.innerHTML = html;
+                    break;
+                case 'range':
+                    container.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <input type="number" class="field-input text-xs w-16" min="${range[0]}" max="${range[1]}" value="${state[field].rangeStart}"
+                                onchange="state['${field}'].rangeStart=Number(this.value);updateCron()">
+                            <span class="text-xs text-slate-500">—</span>
+                            <input type="number" class="field-input text-xs w-16" min="${range[0]}" max="${range[1]}" value="${state[field].rangeEnd}"
+                                onchange="state['${field}'].rangeEnd=Number(this.value);updateCron()">
+                        </div>`;
+                    break;
+            }
+        }
+
+        function toggleCheckbox(field, value) {
+            const cb = document.getElementById(`${field}-cb-${value}`);
+            if (cb.checked) selectedValues[field].add(value);
+            else selectedValues[field].delete(value);
+            updateCron();
+        }
+
+        // ===================== CRON GENERATION =====================
+        function getFieldExpression(field) {
+            const s = state[field];
+            const range = FIELD_RANGES[field];
+
+            switch (s.mode) {
+                case 'every': return '*';
+                case 'step': return `*/${Math.max(1, s.step)}`;
+                case 'specific': {
+                    const vals = [...selectedValues[field]].filter(v => v >= range[0] && v <= range[1]).sort((a,b) => a-b);
+                    if (vals.length === 0) return '*';
+                    if (vals.length === range[1] - range[0] + 1) return '*';
+                    return vals.join(',');
+                }
+                case 'range': {
+                    const a = Math.min(s.rangeStart, s.rangeEnd);
+                    const b = Math.max(s.rangeStart, s.rangeEnd);
+                    if (a === range[0] && b === range[1]) return '*';
+                    return `${a}-${b}`;
+                }
+                default: return '*';
+            }
+        }
+
+        function buildCronString() {
+            return FIELDS.map(f => getFieldExpression(f)).join(' ');
+        }
+
+        // ===================== CRON PARSER =====================
+        function parseCronField(value, rangeStart, rangeEnd) {
+            if (value === '*' || value === '') {
+                return { type: 'all', values: Array.from({length: rangeEnd - rangeStart + 1}, (_,i) => i + rangeStart) };
+            }
+            if (value.includes(',')) {
+                const nums = value.split(',').map(Number).filter(n => !isNaN(n) && n >= rangeStart && n <= rangeEnd);
+                return { type: 'list', values: nums };
+            }
+            if (value.includes('/')) {
+                const [base, step] = value.split('/');
+                const stepNum = parseInt(step);
+                const baseVals = base === '*' ? Array.from({length: rangeEnd - rangeStart + 1}, (_,i) => i + rangeStart) : [parseInt(base)];
+                const filtered = baseVals.filter(v => (v - rangeStart) % stepNum === 0);
+                return { type: 'step', values: filtered, step: stepNum };
+            }
+            if (value.includes('-')) {
+                const [a, b] = value.split('-').map(Number);
+                const start = Math.max(rangeStart, Math.min(a, b));
+                const end = Math.min(rangeEnd, Math.max(a, b));
+                const values = [];
+                for (let i = start; i <= end; i++) values.push(i);
+                return { type: 'range', values };
+            }
+            const n = parseInt(value);
+            if (!isNaN(n) && n >= rangeStart && n <= rangeEnd) {
+                return { type: 'single', values: [n] };
+            }
+            return { type: 'none', values: [] };
+        }
+
+        function parseCron(str) {
+            const parts = str.trim().split(/\s+/);
+            if (parts.length !== 5) return null;
+
+            const fields = ['minute', 'hour', 'dom', 'month', 'dow'];
+            const ranges = [[0,59],[0,23],[1,31],[1,12],[0,7]];
+            const result = {};
+
+            for (let i = 0; i < 5; i++) {
+                const parsed = parseCronField(parts[i], ranges[i][0], ranges[i][1]);
+                if (parsed.values.length === 0) return null;
+                result[fields[i]] = { raw: parts[i], ...parsed };
+            }
+            return result;
+        }
+
+        function getHumanReadable(cronStr) {
+            const parts = cronStr.trim().split(/\s+/);
+            if (parts.length !== 5) return '無效的 Cron Expression';
+
+            const p = parts;
+            const labels = [];
+
+            // Minute
+            if (p[0] === '*') labels.push('每分鐘');
+            else if (p[0].includes('/')) {
+                const step = p[0].split('/')[1];
+                labels.push(`每隔 ${step} 分鐘`);
+            }
+            else if (p[0].includes('-')) {
+                const [a, b] = p[0].split('-');
+                labels.push(`第 ${a}-${b} 分鐘`);
+            }
+            else if (p[0].includes(',')) labels.push(`於第 ${p[0]} 分鐘`);
+            else labels.push(`於第 ${p[0]} 分鐘`);
+
+            // Hour
+            if (p[1] === '*') labels.push('每小時');
+            else if (p[1].includes('/')) {
+                const step = p[1].split('/')[1];
+                labels.push(`每隔 ${step} 小時`);
+            }
+            else if (p[1].includes('-')) labels.push(`${p[1]} 點`);
+            else if (p[1].includes(',')) labels.push(`${p[1]} 點`);
+            else labels.push(`${p[1]} 點`);
+
+            // Day of Month
+            if (p[2] === '*') { /* skip */ }
+            else if (p[2].includes('/')) labels.push(`每隔 ${p[2].split('/')[1]} 天`);
+            else if (p[2].includes('-')) labels.push(`第 ${p[2]} 日`);
+            else if (p[2].includes(',')) labels.push(`第 ${p[2]} 日`);
+            else labels.push(`第 ${p[2]} 日`);
+
+            // Month
+            if (p[3] === '*') { /* skip */ }
+            else if (p[3].includes('/')) labels.push(`每隔 ${p[3].split('/')[1]} 月`);
+            else if (p[3].includes('-')) labels.push(`${p[3]} 月`);
+            else if (p[3].includes(',')) labels.push(`${p[3]} 月`);
+            else labels.push(`${p[3]} 月`);
+
+            // Day of Week
+            if (p[4] === '*') { if (p[2] === '*') {} }
+            else if (p[4].includes('/')) labels.push(`每隔 ${p[4].split('/')[1]} 天`);
+            else if (p[4].includes('-')) {
+                const ds = p[4].split('-').map(n => DOW_NAMES[n] || n);
+                labels.push(`週${ds[0]}到週${ds[1]}`);
+            }
+            else if (p[4].includes(',')) {
+                const ds = p[4].split(',').map(n => DOW_NAMES[n] || n);
+                labels.push(`週${ds.join('、')}`);
+            }
+            else labels.push(`週${DOW_NAMES[p[4]] || p[4]}`);
+
+            // Build sentence
+            let desc = '';
+            if (p[0] === '*' && p[1] === '*' && p[2] === '*' && p[3] === '*' && p[4] === '*') {
+                return '每分鐘執行';
+            }
+
+            // Special combos
+            if (p[0] === '0' && p[1] === '*' && p[2] === '*' && p[3] === '*' && p[4] === '*') return '每小時整點執行';
+            if (p[0] === '0' && p[1] === '0' && p[2] === '*' && p[3] === '*' && p[4] === '*') return '每天午夜執行';
+            if (p[0] === '0' && p[1] === '0' && p[2] === '1' && p[3] === '*' && p[4] === '*') return '每月 1 日午夜執行';
+            if (p[0] === '0' && p[1] === '0' && p[2] === '1' && p[3] === '1' && p[4] === '*') return '每年 1 月 1 日午夜執行';
+
+            let timeStr = '';
+            if (p[0] !== '*' && p[0] !== '0') {
+                timeStr = `${p[0]}分`;
+            }
+            if (p[0] === '0') timeStr = '';
+            if (p[1] !== '*') {
+                if (p[1].includes('-') || p[1].includes(',')) timeStr = `${p[1]}時${timeStr}`;
+                else timeStr = `${p[1]}時${timeStr}`;
+            }
+            if (timeStr) timeStr += ' ';
+
+            let dowStr = '';
+            if (p[4] !== '*') {
+                if (p[4].includes('-')) {
+                    const ds = p[4].split('-').map(n => DOW_NAMES[n] || n);
+                    dowStr = `（週${ds[0]}至週${ds[1]}）`;
+                } else if (p[4].includes(',')) {
+                    const ds = p[4].split(',').map(n => DOW_NAMES[n] || n);
+                    dowStr = `（週${ds.join('、')}）`;
+                } else {
+                    dowStr = `（週${DOW_NAMES[p[4]] || p[4]}）`;
+                }
+            }
+
+            let domStr = '';
+            if (p[2] !== '*') {
+                if (p[2].includes('/')) domStr = `每隔 ${p[2].split('/')[1]} 天`;
+                else domStr = `第 ${p[2]} 日`;
+            }
+
+            let monthStr = '';
+            if (p[3] !== '*') {
+                if (p[3].includes('/')) monthStr = `每隔 ${p[3].split('/')[1]} 月`;
+                else monthStr = `${p[3]} 月`;
+            }
+
+            const parts_desc = [];
+            if (timeStr) parts_desc.push(timeStr);
+            if (domStr) parts_desc.push(domStr);
+            if (monthStr) parts_desc.push(monthStr);
+            if (dowStr) parts_desc.push(dowStr);
+
+            if (parts_desc.length === 0) {
+                if (p[0] === '*') return '每分鐘執行';
+                return `${p[0]}分執行`;
+            }
+
+            return parts_desc.join('') + '執行';
+        }
+
+        // ===================== VALIDATION =====================
+        function validateCron(str) {
+            const parts = str.trim().split(/\s+/);
+            if (parts.length !== 5) return { valid: false, message: 'Cron 必須包含 5 個欄位' };
+
+            const ranges = [[0,59],[0,23],[1,31],[1,12],[0,7]];
+            const names = ['Minute', 'Hour', 'Day of Month', 'Month', 'Day of Week'];
+            const errors = [];
+
+            for (let i = 0; i < 5; i++) {
+                const val = parts[i];
+                const [min, max] = ranges[i];
+
+                if (/^(\d+|\*)(\/(\d+))?$/.test(val)) {
+                    const nums = val.split('/')[0];
+                    const step = val.split('/')[1];
+                    if (step && (parseInt(step) < 1 || parseInt(step) > max)) {
+                        errors.push(`${names[i]}：步進值超出範圍 (1-${max})`);
+                    }
+                    if (nums !== '*' && (parseInt(nums) < min || parseInt(nums) > max)) {
+                        errors.push(`${names[i]}：${nums} 超出範圍 (${min}-${max})`);
+                    }
+                } else if (/^\d+-\d+(\/\d+)?$/.test(val)) {
+                    const [a, b] = val.split('-')[0].split('-').map(Number);
+                    const step = val.includes('/') ? parseInt(val.split('/')[1]) : null;
+                    if (a < min || a > max || b < min || b > max) {
+                        errors.push(`${names[i]}：範圍值超出 (${min}-${max})`);
+                    }
+                    if (step && (step < 1 || step > max)) {
+                        errors.push(`${names[i]}：步進值超出範圍`);
+                    }
+                } else if (/^[\d,\*\/-]+$/.test(val)) {
+                    // list or complex expression
+                    const nums = val.split(',').map(x => parseInt(x)).filter(n => !isNaN(n));
+                    if (nums.some(n => n < min || n > max)) {
+                        errors.push(`${names[i]}：列表中包含超出範圍的值 (${min}-${max})`);
+                    }
+                } else {
+                    errors.push(`${names[i]}：含有無效字元`);
+                }
+            }
+
+            return { valid: errors.length === 0, message: errors.length > 0 ? errors.join('；') : '格式正確' };
+        }
+
+        // ===================== NEXT RUN PREVIEW =====================
+        function getNextCronRuns(cronStr, count = 5) {
+            const parsed = parseCron(cronStr);
+            if (!parsed) return [];
+
+            const runs = [];
+            const now = new Date();
+            now.setSeconds(0, 0);
+
+            let current = new Date(now);
+            // Start from the next minute
+            current.setMinutes(current.getMinutes() + 1, 0, 0);
+
+            let attempts = 0;
+            const maxAttempts = 365 * 24 * 60; // 1 year worth of minutes
+
+            while (runs.length < count && attempts < maxAttempts) {
+                attempts++;
+
+                if (matchesCronDate(current, parsed)) {
+                    runs.push(new Date(current));
+                }
+
+                current.setMinutes(current.getMinutes() + 1);
+            }
+
+            return runs;
+        }
+
+        function matchesCronDate(date, parsed) {
+            const minute = date.getMinutes();
+            const hour = date.getHours();
+            const dom = date.getDate();
+            const month = date.getMonth() + 1;
+            const dow = date.getDay();
+
+            // Check all 5 fields
+            if (!parsed.minute.values.includes(minute)) return false;
+            if (!parsed.hour.values.includes(hour)) return false;
+            if (!parsed.dom.values.includes(dom)) return false;
+            if (!parsed.month.values.includes(month)) return false;
+            if (!parsed.dow.values.includes(dow)) return false;
+
+            return true;
+        }
+
+        // ===================== UPDATE =====================
+        function updateCron() {
+            const cronStr = buildCronString();
+            document.getElementById('cron-expression').textContent = cronStr;
+
+            // Human readable
+            const human = getHumanReadable(cronStr);
+            document.getElementById('human-readable').textContent = human;
+
+            // Validation
+            const validation = validateCron(cronStr);
+            const statusEl = document.getElementById('validation-status');
+            if (validation.valid) {
+                statusEl.innerHTML = `<span class="text-green-400 flex items-center gap-1">✓ ${validation.message}</span>`;
+            } else {
+                statusEl.innerHTML = `<span class="text-red-400 flex items-center gap-1">✗ ${validation.message}</span>`;
+            }
+
+            // Next runs
+            const runs = getNextCronRuns(cronStr);
+            const container = document.getElementById('next-runs-container');
+            if (runs.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 text-sm py-4">無法計算 Next Run，請檢查 Cron 格式</div>`;
+            } else {
+                let html = '';
+                runs.forEach((r, i) => {
+                    const dateStr = r.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                    const timeStr = r.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    html += `<div class="next-run-item">
+                        <span class="text-slate-400">#${i + 1}</span>
+                        <span class="text-white font-mono text-sm">${dateStr} ${timeStr}</span>
+                        <span class="text-xs text-slate-500">${getRelativeTime(r)}</span>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            // Update field previews
+            FIELDS.forEach(f => {
+                const el = document.getElementById(`${f}-preview`);
+                if (el) {
+                    const parts = cronStr.split(' ');
+                    const idx = FIELDS.indexOf(f);
+                    el.textContent = parts[idx] || '*';
+                }
+            });
+
+            // Clear reverse result if active
+            const reverseResult = document.getElementById('reverse-result');
+            if (!reverseResult.classList.contains('hidden')) {
+                reverseResult.classList.add('hidden');
+            }
+        }
+
+        function getRelativeTime(date) {
+            const now = new Date();
+            const diffMs = date - now;
+            const diffMin = Math.round(diffMs / 60000);
+            const diffHr = Math.round(diffMs / 3600000);
+            const diffDay = Math.round(diffMs / 86400000);
+
+            if (diffMin < 1) return '即將執行';
+            if (diffMin < 60) return `${diffMin} 分鐘後`;
+            if (diffHr < 24) return `${diffHr} 小時後`;
+            return `${diffDay} 天後`;
+        }
+
+        // ===================== PRESETS =====================
+        function applyPreset(cronStr) {
+            const parts = cronStr.split(' ');
+            if (parts.length !== 5) return;
+
+            FIELDS.forEach((f, i) => {
+                const val = parts[i];
+                const range = FIELD_RANGES[f];
+
+                // Reset selections
+                selectedValues[f] = new Set();
+
+                if (val === '*') {
+                    state[f].mode = 'every';
+                } else if (val.includes('/')) {
+                    state[f].mode = 'step';
+                    state[f].step = parseInt(val.split('/')[1]) || 5;
+                } else if (val.includes('-')) {
+                    state[f].mode = 'range';
+                    const [a, b] = val.split('-').map(Number);
+                    state[f].rangeStart = a;
+                    state[f].rangeEnd = b;
+                } else if (val.includes(',')) {
+                    state[f].mode = 'specific';
+                    val.split(',').forEach(v => selectedValues[f].add(parseInt(v)));
+                } else {
+                    state[f].mode = 'specific';
+                    selectedValues[f].add(parseInt(val));
+                }
+
+                // Update mode dropdown
+                const modeSelect = document.querySelector(`[data-field="${f}"][data-part="mode"]`);
+                if (modeSelect) modeSelect.value = state[f].mode;
+
+                renderFieldControls(f);
+            });
+
+            updateCron();
+        }
+
+        // ===================== REVERSE PARSE =====================
+        function reverseParse() {
+            const input = document.getElementById('reverse-input').value.trim();
+            if (!input) { showToast('請輸入 Cron Expression', true); return; }
+
+            const result = document.getElementById('reverse-result');
+            const parsed = parseCron(input);
+
+            if (!parsed) {
+                result.classList.remove('hidden');
+                result.innerHTML = `<span class="text-red-400">❌ 無效的 Cron Expression：格式不正確或數值超出範圍</span>`;
+                return;
+            }
+
+            const cronStr = input;
+            const human = getHumanReadable(cronStr);
+            const validation = validateCron(cronStr);
+            const runs = getNextCronRuns(cronStr, 3);
+
+            let runsHtml = '';
+            if (runs.length > 0) {
+                runsHtml = runs.map((r, i) => {
+                    const dateStr = r.toLocaleDateString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit' });
+                    const timeStr = r.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12: false });
+                    return `#${i+1}: ${dateStr} ${timeStr}`;
+                }).join('<br>');
+            }
+
+            result.classList.remove('hidden');
+            result.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">Cron:</span>
+                        <span class="font-mono text-hub-accent font-bold">${cronStr}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">解讀:</span>
+                        <span class="text-white">${human}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">驗證:</span>
+                        ${validation.valid ? '<span class="text-green-400">✓ ' + validation.message + '</span>' : '<span class="text-red-400">✗ ' + validation.message + '</span>'}
+                    </div>
+                    ${runs.length > 0 ? `<div><span class="text-xs text-slate-500">Next Runs:</span><div class="text-sm text-slate-300 mt-1">${runsHtml}</div></div>` : ''}
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="applyReverseResult('${cronStr}')" class="text-xs px-3 py-1.5 bg-hub-accent/10 text-hub-accent border border-hub-accent/20 rounded-lg hover:bg-hub-accent/20 transition-colors">
+                            ← 套用到 Builder
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function applyReverseResult(cronStr) {
+            applyPreset(cronStr);
+            showToast('已套用到視覺化 Builder');
+        }
+
+        // ===================== EXPORT =====================
+        function copyCron() {
+            const cron = document.getElementById('cron-expression').textContent;
+            copyToClipboard(cron);
+        }
+
+        function downloadTXT() {
+            const cron = document.getElementById('cron-expression').textContent;
+            const human = document.getElementById('human-readable').textContent;
+            const now = new Date().toISOString();
+            const lines = [
+                '═══════════════════════════════════════',
+                '  Cron Expression Report',
+                '  ToolHub - Cron Expression Builder',
+                '═══════════════════════════════════════',
+                '',
+                `Cron Expression: ${cron}`,
+                `解讀:            ${human}`,
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/cron-builder)`,
+                `Timestamp: ${now}`,
+                '───────────────────────────────────────'
+            ].join('\n');
+            downloadFile(lines, 'cron-expression.txt', 'text/plain');
+            showToast('TXT 已下載');
+        }
+
+        function downloadJSON() {
+            const cron = document.getElementById('cron-expression').textContent;
+            const human = document.getElementById('human-readable').textContent;
+            const runs = getNextCronRuns(cron, 5);
+            const data = {
+                tool: 'ToolHub Cron Expression Builder',
+                url: 'https://toolhuben.com/cron-builder/',
+                timestamp: new Date().toISOString(),
+                cronExpression: cron,
+                humanReadable: human,
+                nextRuns: runs.map(r => r.toISOString()),
+                fields: {
+                    minute: getFieldExpression('minute'),
+                    hour: getFieldExpression('hour'),
+                    dayOfMonth: getFieldExpression('dom'),
+                    month: getFieldExpression('month'),
+                    dayOfWeek: getFieldExpression('dow')
+                }
+            };
+            downloadFile(JSON.stringify(data, null, 2), 'cron-expression.json', 'application/json');
+            showToast('JSON 已下載');
+        }
+
+        function resetAll() {
+            FIELDS.forEach(f => {
+                state[f].mode = 'every';
+                state[f].step = 5;
+                selectedValues[f] = new Set();
+                const modeSelect = document.querySelector(`[data-field="${f}"][data-part="mode"]`);
+                if (modeSelect) modeSelect.value = 'every';
+                renderFieldControls(f);
+            });
+            updateCron();
+            showToast('已重置');
+        }
+
+        // ===================== UTILITIES =====================
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const message = document.getElementById('toast-message');
+            icon.textContent = isError ? '❌' : '✅';
+            message.textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'pointer-events-auto');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'pointer-events-auto');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2500);
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => fallbackCopy(text));
+            } else { fallbackCopy(text); }
+        }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showToast('已複製到剪貼簿'); } catch (e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ===================== INIT =====================
+        function initApp() {
+            // Render all field controls
+            FIELDS.forEach(f => {
+                renderFieldControls(f);
+                // Init mode dropdown value
+                const modeSelect = document.querySelector(`[data-field="${f}"][data-part="mode"]`);
+                if (modeSelect) modeSelect.value = 'every';
+            });
+
+            // Preset click handlers
+            document.querySelectorAll('.preset-chip').forEach(chip => {
+                chip.addEventListener('click', function() {
+                    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    applyPreset(this.dataset.cron);
+                });
+            });
+
+            // Initial update
+            updateCron();
+        }
+
+        // Global exports
+        window.onFieldModeChange = onFieldModeChange;
+        window.toggleCheckbox = toggleCheckbox;
+        window.copyCron = copyCron;
+        window.downloadTXT = downloadTXT;
+        window.downloadJSON = downloadJSON;
+        window.resetAll = resetAll;
+        window.reverseParse = reverseParse;
+        window.applyReverseResult = applyReverseResult;
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

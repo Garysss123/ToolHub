@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>檔案傳輸時間計算器 | ToolHub - Network Transfer Time Calculator</title>
+    <meta name="description" content="精準估算檔案傳輸所需時間，支援 MB/GB/TB 檔案大小與 Mbps/Gbps/MB/s/GB/s 速度單位自動換算。內建 USB/SATA/NVMe/乙太網路/Wi-Fi 常見速度快速選擇，提供傳輸效率模擬與 A/B 比較分析。">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        network: {
+                            primary: '#2563EB',
+                            accent: '#1D4ED8',
+                            dark: '#1E3A8A',
+                            a: '#2563EB',
+                            b: '#F472B6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #2563EB; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+        .bar-animate { transition: width 0.6s ease-out; }
+
+        .pill-option { transition: all 0.2s ease; }
+        .segmented-control label { cursor: pointer; }
+        .segmented-control input:checked + span {
+            background-color: #2563EB;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+        }
+
+        .preset-chip {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .preset-chip:hover { transform: translateY(-1px); }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.25s ease;
+            opacity: 0;
+        }
+        .faq-answer.open {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        /* Efficiency slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #1E293B;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563EB;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+            border: 2px solid #0B1120;
+            transition: 0.15s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 2px 14px rgba(37, 99, 235, 0.6);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563EB;
+            cursor: pointer;
+            border: 2px solid #0B1120;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 12px 24px;
+            color: #E2E8F0;
+            font-size: 14px;
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/network-transfer-calculator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/network-transfer-calculator/">
+    <meta property="og:title" content="檔案傳輸時間計算器">
+    <meta property="og:description" content="精準估算檔案傳輸所需時間，支援 MB/GB/TB 檔案大小與 Mbps/Gbps/MB/s/GB/s 速度單位自動換算。內建 USB/SATA/NVMe/乙太網路/Wi-Fi 常見速度快速選擇，提供傳輸效率模擬與 A/B 比較分析。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="檔案傳輸時間計算器">
+    <meta name="twitter:description" content="精準估算檔案傳輸所需時間，支援 MB/GB/TB 檔案大小與 Mbps/Gbps/MB/s/GB/s 速度單位自動換算。內建 USB/SATA/NVMe/乙太網路/Wi-Fi 常見速度快速選擇，提供傳輸效率模擬與 A/B 比較分析。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"檔案傳輸時間計算器","url":"https://toolhuben.com/network-transfer-calculator/","description":"精準估算檔案傳輸所需時間，支援 MB/GB/TB 檔案大小與 Mbps/Gbps/MB/s/GB/s 速度單位自動換算。內建 USB/SATA/NVMe/乙太網路/Wi-Fi 常見速度快速選擇，提供傳輸效率模擬與 A/B 比較分析。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"檔案傳輸時間計算器","item":"https://toolhuben.com/network-transfer-calculator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/network-transfer-calculator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/network-transfer-calculator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/network-transfer-calculator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body style="--classic-accent:#2563EB;--classic-accent-rgb:37,99,235" data-tool-visual data-classic-tool data-classic-layout="terminal">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="flex-grow pt-16 sm:pt-20 pb-16 px-3 sm:px-6 relative z-10">
+        <div class="max-w-6xl mx-auto">
+
+            <!-- ===== 標題區 ===== -->
+            <div class="mb-6 sm:mb-8">
+                <div class="flex items-center gap-2 sm:gap-3 mb-3">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-medium rounded-full border bg-blue-500/10 text-blue-400 border-blue-500/20">
+                        <i class="ph-fill ph-clock"></i> 硬體工具
+                    </span>
+                    <span class="text-xs text-slate-500 font-mono">network-transfer-calculator</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-2">
+                    Network Transfer Time
+                    <span class="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">檔案傳輸時間計算器</span>
+                </h1>
+                <p class="text-sm sm:text-base text-slate-400 max-w-3xl leading-relaxed">
+                    輸入檔案大小與傳輸速度，精準估算傳輸所需時間。支援多種單位自動換算，
+                    模擬實際網路效率 (50%~100%)，A/B 雙配置比較，一鍵帶入常見速度規格。
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-4 sm:gap-6">
+
+                <!-- ========== 左側面板 ========== -->
+                <div class="lg:col-span-5 space-y-4 sm:space-y-5">
+
+                    <!-- === 共用檔案大小 === -->
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <i data-lucide="file" class="w-4 h-4 text-network-primary"></i>
+                            檔案大小 (共用)
+                        </h2>
+                        <div class="flex gap-3">
+                            <div class="flex-1">
+                                <input id="file-size" type="number" value="10" min="0.001" step="any" oninput="calculate()"
+                                    class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-network-primary/50 transition-colors">
+                            </div>
+                            <div class="flex shrink-0 bg-hub-800 rounded-lg p-0.5 border border-hub-700" id="file-unit-group">
+                                <label class="segmented-control">
+                                    <input type="radio" name="fileUnit" value="MB" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-3 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">MB</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="fileUnit" value="GB" class="hidden" onchange="calculate()" checked>
+                                    <span class="pill-option inline-block px-3 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">GB</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="fileUnit" value="TB" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-3 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">TB</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- === 傳輸效率滑桿 === -->
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i data-lucide="gauge" class="w-4 h-4 text-network-primary"></i>
+                                傳輸效率
+                            </h2>
+                            <span id="efficiency-label" class="text-sm font-mono font-bold text-network-primary">90%</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-600 mb-1 px-1">
+                            <span>50%</span><span>60%</span><span>70%</span><span>80%</span><span>90%</span><span>100%</span>
+                        </div>
+                        <input type="range" id="efficiency" min="50" max="100" value="90" step="5"
+                            oninput="updateEfficiency(); calculate();" class="w-full">
+                        <p class="text-[11px] text-slate-500 mt-1.5">模擬網路協定開銷與實際傳輸損耗</p>
+                    </div>
+
+                    <!-- === 配置 A === -->
+                    <div class="glass-panel p-4 sm:p-5 border-blue-500/20">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-network-a"></span>
+                            <h2 class="text-sm sm:text-base font-bold text-white">配置 A — 傳輸速度</h2>
+                        </div>
+                        <div class="flex gap-3 mb-3">
+                            <div class="flex-1">
+                                <input id="speed-a" type="number" value="100" min="0.1" step="any" oninput="calculate()"
+                                    class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-network-primary/50 transition-colors">
+                            </div>
+                            <div class="flex shrink-0 bg-hub-800 rounded-lg p-0.5 border border-hub-700" id="speed-unit-group-a">
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitA" value="Mbps" class="hidden" onchange="calculate()" checked>
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">Mbps</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitA" value="Gbps" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">Gbps</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitA" value="MBs" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">MB/s</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitA" value="GBs" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-blue-500/30">GB/s</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-500">
+                            理論速度：<span id="theoretical-a" class="font-mono text-blue-300">12.50 MB/s</span>
+                            &middot; 實際速度：<span id="actual-a" class="font-mono text-blue-300">11.25 MB/s</span>
+                        </div>
+                    </div>
+
+                    <!-- === 配置 B === -->
+                    <div class="glass-panel p-4 sm:p-5 border-pink-500/20">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-network-b"></span>
+                            <h2 class="text-sm sm:text-base font-bold text-white">配置 B — 傳輸速度</h2>
+                        </div>
+                        <div class="flex gap-3 mb-3">
+                            <div class="flex-1">
+                                <input id="speed-b" type="number" value="1000" min="0.1" step="any" oninput="calculate()"
+                                    class="w-full bg-hub-800 border border-hub-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-pink-500/50 transition-colors">
+                            </div>
+                            <div class="flex shrink-0 bg-hub-800 rounded-lg p-0.5 border border-hub-700" id="speed-unit-group-b">
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitB" value="Mbps" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">Mbps</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitB" value="Gbps" class="hidden" onchange="calculate()" checked>
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">Gbps</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitB" value="MBs" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">MB/s</span>
+                                </label>
+                                <label class="segmented-control">
+                                    <input type="radio" name="speedUnitB" value="GBs" class="hidden" onchange="calculate()">
+                                    <span class="pill-option inline-block px-2.5 py-1.5 text-xs rounded-md bg-hub-800 text-slate-400 border border-hub-700 hover:border-pink-500/30">GB/s</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-500">
+                            理論速度：<span id="theoretical-b" class="font-mono text-pink-300">125.00 MB/s</span>
+                            &middot; 實際速度：<span id="actual-b" class="font-mono text-pink-300">112.50 MB/s</span>
+                        </div>
+                    </div>
+
+                    <!-- === 常見速度快速選擇 === -->
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i data-lucide="zap" class="w-4 h-4 text-network-primary"></i>
+                                常見速度
+                            </h3>
+                            <div class="flex bg-hub-800 rounded-lg p-0.5 border border-hub-700">
+                                <button id="target-a-btn" class="px-3 py-1 text-xs rounded-md font-medium transition-all bg-network-primary text-white shadow-sm" onclick="setTarget('A')">A</button>
+                                <button id="target-b-btn" class="px-3 py-1 text-xs rounded-md font-medium transition-all text-slate-400 hover:text-white" onclick="setTarget('B')">B</button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5" id="preset-container"></div>
+                    </div>
+
+                    <!-- === 常見情境 === -->
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <i data-lucide="folder-open" class="w-4 h-4 text-network-primary"></i>
+                            常見傳輸情境
+                        </h3>
+                        <div class="flex flex-wrap gap-2" id="scenario-container"></div>
+                    </div>
+
+                </div>
+
+                <!-- ========== 右側面板 (結果) ========== -->
+                <div class="lg:col-span-7 space-y-4 sm:space-y-5">
+
+                    <!-- === 計算結果 === -->
+                    <div class="glass-panel p-4 sm:p-6" id="result-panel">
+                        <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="clock" class="w-5 h-5 text-network-primary"></i>
+                            傳輸時間估算結果
+                        </h2>
+
+                        <!-- 結果卡片 -->
+                        <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+                            <div class="bg-hub-800/60 rounded-xl p-4 border border-blue-500/10">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-network-a"></span>
+                                    <span class="text-xs font-medium text-slate-400">配置 A</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-bold font-mono text-blue-400" id="time-a">7 分 18 秒</div>
+                                <div class="text-[11px] text-slate-500 mt-0.5">
+                                    理論 <span id="theo-time-a" class="font-mono text-slate-400">6 分 34 秒</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500">
+                                    檔案大小 <span id="result-size-a" class="font-mono text-slate-400">10 GB</span>
+                                    &middot; <span id="result-speed-a" class="font-mono text-slate-400">100 Mbps</span>
+                                </div>
+                            </div>
+                            <div class="bg-hub-800/60 rounded-xl p-4 border border-pink-500/10">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-network-b"></span>
+                                    <span class="text-xs font-medium text-slate-400">配置 B</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-bold font-mono text-pink-400" id="time-b">43.7 秒</div>
+                                <div class="text-[11px] text-slate-500 mt-0.5">
+                                    理論 <span id="theo-time-b" class="font-mono text-slate-400">39.3 秒</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500">
+                                    檔案大小 <span id="result-size-b" class="font-mono text-slate-400">10 GB</span>
+                                    &middot; <span id="result-speed-b" class="font-mono text-slate-400">1 Gbps</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 比較結論 -->
+                        <div id="comparison-text" class="bg-hub-800/40 rounded-xl p-4 mb-4 text-sm leading-relaxed border border-slate-700/30 text-slate-300">計算中...</div>
+
+                        <!-- 視覺化長條圖 (時間比較) -->
+                        <div class="space-y-3 mb-4">
+                            <div class="text-xs text-slate-500 mb-1">⏱ 傳輸時間比較（越短越好）</div>
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-network-a"></span> 配置 A</span>
+                                    <span class="font-mono" id="bar-value-a">7 分 18 秒</span>
+                                </div>
+                                <div class="h-4 bg-hub-700/50 rounded-full overflow-hidden">
+                                    <div id="bar-a" class="h-full rounded-full bar-animate bg-gradient-to-r from-blue-600 to-blue-400" style="width:100%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-network-b"></span> 配置 B</span>
+                                    <span class="font-mono" id="bar-value-b">43.7 秒</span>
+                                </div>
+                                <div class="h-4 bg-hub-700/50 rounded-full overflow-hidden">
+                                    <div id="bar-b" class="h-full rounded-full bar-animate bg-gradient-to-r from-pink-600 to-pink-400" style="width:10%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 瓶頸分析 -->
+                        <div id="bottleneck-container" class="bg-hub-800/40 rounded-xl p-4 border border-slate-700/30">
+                            <h4 class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">📊 傳輸分析建議</h4>
+                            <div id="bottleneck-content" class="text-sm text-slate-300 leading-relaxed"></div>
+                        </div>
+                    </div>
+
+                    <!-- === 常見速度對照表 === -->
+                    <div class="glass-panel p-4 sm:p-6 overflow-x-auto">
+                        <h2 class="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="table" class="w-5 h-5 text-network-primary"></i>
+                            常見介面速度對照表
+                        </h2>
+                        <table class="w-full text-xs sm:text-sm text-left">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700/50">
+                                    <th class="py-2 pr-3 font-medium">介面</th>
+                                    <th class="py-2 px-3 font-medium">理論速度</th>
+                                    <th class="py-2 px-3 font-medium">實際速度 (90%)</th>
+                                    <th class="py-2 px-3 font-medium">1GB 傳輸時間</th>
+                                    <th class="py-2 px-3 font-medium">用途</th>
+                                </tr>
+                            </thead>
+                            <tbody id="speed-table-body"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== 知識 & FAQ 全寬 ===== -->
+            <div class="mt-6 sm:mt-8 grid lg:grid-cols-2 gap-4 sm:gap-6">
+
+                <!-- 知識卡 -->
+                <div class="space-y-4">
+                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-5 h-5 text-network-primary"></i>
+                        傳輸速度知識百科
+                    </h2>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">🔀 Mbps 和 MB/s 有什麼不同？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            Mbps（Megabits per second）和 MB/s（Megabytes per second）是兩種不同的單位，
+                            <strong class="text-blue-300">1 Byte = 8 bits</strong>，因此 <strong class="text-blue-300">1 MB/s = 8 Mbps</strong>。
+                            這是網路速度最常見的誤解 — 當你申辦 100 Mbps 網路時，理論最大下載速度約為 12.5 MB/s。
+                            換算時只需將 Mbps 除以 8 即可得到 MB/s。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">📐 Gbps 如何換算？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            1 Gbps = 1,000 Mbps = 125 MB/s。換算很簡單：Gbps → Mbps 乘以 1000，
+                            Gbps → MB/s 乘以 125（因為 1 Gbps = 1,000,000,000 bps ÷ 8 = 125,000,000 bytes/s = 125 MB/s）。
+                            同理，10 Gbps = 10,000 Mbps = 1,250 MB/s ≈ 1.25 GB/s。下一個世代 25 GbE、40 GbE 甚至 100 GbE
+                            常用於資料中心與企業核心網路。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">❓ 為什麼 1 Gbps 不等於 1 GB/s？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            兩個原因：<strong class="text-blue-300">1. 位元 vs 位元組</strong> — 網路速度用 bit 表示，檔案大小用 Byte 表示，
+                            1 Byte = 8 bits，所以 1 Gbps = 125 MB/s，遠小於 1 GB/s。<strong class="text-blue-300">2. 網路協定開銷</strong> —
+                            TCP/IP、Ethernet 等協定會加入標頭、檢查碼等額外資料，使實際可用頻寬減少約 5~10%。
+                            這也是為什麼本工具提供「傳輸效率」滑桿來模擬真實情境。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">🏠 NAS 傳輸速度如何提升？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            NAS 傳輸瓶頸通常來自三個環節：<strong class="text-blue-300">網路</strong>（建議至少 1GbE，進階可升級 2.5GbE 或 10GbE）、
+                            <strong class="text-blue-300">硬碟</strong>（傳統 HDD 約 150~200 MB/s，SSD 可達 500 MB/s 以上）、
+                            <strong class="text-blue-300">協定</strong>（SMB 多通道、NFS、iSCSI 等協定最佳化）。
+                            Link Aggregation（鏈路聚合）可將多條網路線合併頻寬，但需交換器與 NAS 雙邊支援。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">⚡ 10GbE 值得升級嗎？</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            10GbE 提供 1,250 MB/s 的頻寬，是 1GbE 的 10 倍。適合：大量影片剪輯、AI 資料集傳輸、
+                            資料庫備份、多用戶同時存取 NAS 等場景。但需考量成本：10GbE 網卡、交換器、Cat6a/Cat7 線材
+                            以及 NVMe SSD 儲存陣列（HDD 無法跑滿 10GbE）。若只是家庭檔案分享，1GbE 或 2.5GbE 已足夠。
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <h3 class="text-sm sm:text-base font-bold text-white mb-2">📡 網路效率的影響因素</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            實際傳輸效率永遠低於理論值，主要原因包括：TCP/IP 協定開銷（約 5~10%）、
+                            網路延遲與封包遺失（長距離傳輸更明顯）、Wi-Fi 訊號干擾與頻道競爭、
+                            硬碟讀寫速度瓶頸（尤其傳統 HDD）、以及 CPU 或 VPN 加密處理能力。
+                            有線連接通常可達 90~95% 效率，Wi-Fi 則依環境可能在 50~80% 之間。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ -->
+                <div class="space-y-4">
+                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-network-primary"></i>
+                        常見問題 FAQ
+                    </h2>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">為什麼實際傳輸速度總是比理論慢？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">網路協定本身有固定開銷（TCP/IP 標頭、Ethernet 訊框），約佔 5~10% 頻寬。此外還有硬碟讀寫速度、網路延遲、封包遺失重傳、Wi-Fi 干擾、以及 ISP 實際提供的頻寬是否達標等因素。建議使用有線連接，並關閉背景佔用頻寬的應用程式。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">USB 3.0 的實際傳輸速度可以到多少？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">USB 3.0（現稱 USB 3.2 Gen 1）理論頻寬 5 Gbps（約 625 MB/s），實際傳輸大型檔案可達 350~450 MB/s（取決於隨身碟控制器與快閃記憶體品質）。USB 3.2 Gen 2（10 Gbps）實際約 700~1000 MB/s。注意 USB 隨身碟的循序讀寫速度通常遠低於介面上限，瓶頸多在儲存晶片而非 USB 協定。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">Wi-Fi 速度為什麼不穩定？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">Wi-Fi 是共享半雙工媒介，受環境因素影響大：牆壁與障礙物衰減訊號、鄰近 Wi-Fi 頻道干擾、藍牙與微波爐等 2.4GHz 裝置干擾、連接設備過多競爭頻寬、以及用戶端裝置的天線數量與發射功率。建議使用 5GHz 頻段（干擾較少），並將路由器放置於開放位置。Wi-Fi 6/6E 與 Wi-Fi 7 在密集環境下有明顯改善。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">1 Gbps 網路到底夠不夠用？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">對大多數家庭用戶，1 Gbps（約 125 MB/s）已十分充裕 — 4K 串流約需 25 Mbps、線上遊戲約需 50 Mbps、Zoom 視訊約需 10 Mbps。1 Gbps 可輕鬆支援 20+ 個設備同時使用。但若需大量檔案傳輸（如 NAS 備份、影音剪輯協作），或有多人同時進行高頻寬應用，2.5 Gbps 或 10 Gbps 會更有餘裕。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">10 GbE 需要什麼線材？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">10 GbE 可使用 Cat6a（建議）或 Cat7 銅絞線，最長支援 100 公尺。Cat5e 在短距離（< 30 公尺）可能勉強可用，但不建議。若距離較長或需佈線簡潔，也可使用光纖（SFP+ 模組）或 DAC 直連銅纜（適合機房內短距離）。10 GbE 網卡目前價格已大幅降低，消費級主機板也開始內建 10 GbE 連接埠。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">如何測試真實網路速度？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">可使用 iperf3 進行區域網路測速（最準確），或用 Speedtest、Fast.com 等網站測試網際網路速度。測試時建議：使用有線連接、關閉其他網路應用、選擇就近的伺服器節點、多次測試取平均值。區域網路內可用 iperf3 指令：在一台電腦啟動 <code class="text-blue-300 bg-hub-900 px-1 rounded text-xs">iperf3 -s</code>，另一台執行 <code class="text-blue-300 bg-hub-900 px-1 rounded text-xs">iperf3 -c <IP></code>。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-4 sm:p-5">
+                        <div class="faq-item">
+                            <button onclick="toggleFaq(this)" class="w-full flex items-center justify-between text-left gap-3">
+                                <span class="text-sm sm:text-base font-medium text-white">NAS 區域網路傳輸慢怎麼辦？</span>
+                                <svg class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <div class="faq-answer mt-2">
+                                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">依序檢查：(1) 確認所有裝置皆支援並連線在 1 Gbps 或以上速度（在路由器/交換器管理介面查看連線狀態）；(2) 使用 Cat5e 以上線材；(3) 檢查 NAS 硬碟是否為瓶頸（HDD RAID 5 約 200~500 MB/s）；(4) 啟用 SMB 多通道（NAS 與電腦皆需支援）；(5) 直接使用 iperf3 測試排除硬碟干擾；(6) 考慮升級交換器與網卡至 2.5 GbE 或 10 GbE。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    
+        <!-- SEO Completeness Upgrade 2026 -->
+        <article class="seo-upgrade" aria-label="檔案傳輸時間計算器補充指南">
+          <section class="seo-upgrade-card"><h2>檔案傳輸時間計算器使用說明</h2><p>精準估算檔案傳輸所需時間，支援 MB/GB/TB 檔案大小與 Mbps/Gbps/MB/s/GB/s 速度單位自動換算。內建 USB/SATA/NVMe/乙太網路/Wi-Fi 常見速度快速選擇，提供傳輸效率模擬與 A/B 比較分析。</p><h3>建議操作流程</h3><ol><li>先確認輸入格式、單位與必要欄位，避免讓錯誤資料一路傳到結果。</li><li>調整工具選項並閱讀即時提示，使用代表性的邊界值交叉檢查。</li><li>複製或下載前再次核對結果；若要用於正式流程，請在目標環境完成驗證。</li></ol><h3>品質與隱私</h3><p>此工具在瀏覽器本機執行，不依賴後端處理。結果會受到輸入品質、瀏覽器支援與相關技術規格影響，重要資料請保留原始版本與備份。</p></section>
+          
+        </article>
+    </main>
+
+    <div id="component-footer"></div>
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ===== 元件載入 =====
+        function loadComponent(id, path) {
+            fetch(path)
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById(id).innerHTML = html;
+                    document.querySelectorAll('#' + id + ' script').forEach(s => {
+                        const ns = document.createElement('script');
+                        Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                        ns.textContent = s.textContent;
+                        s.parentNode.replaceChild(ns, s);
+                    });
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+        }
+        loadComponent('component-header', '/components/header.html');
+        loadComponent('component-sidebar', '/components/sidebar.html');
+        loadComponent('component-footer', '/components/footer.html');
+
+        function setupSidebarActiveState() {
+            const currentPath = '/network-transfer-calculator';
+            document.querySelectorAll('.nav-item').forEach(el => {
+                const href = el.getAttribute('href');
+                if (href && (href === currentPath || href === currentPath + '/')) {
+                    el.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    el.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = el.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                    const pg = el.closest('.nav-group');
+                    if (pg) {
+                        const c = pg.querySelector('.group-content');
+                        const v = pg.querySelector('.chevron');
+                        if (c) c.style.maxHeight = c.scrollHeight + 'px';
+                        if (v) v.classList.add('rotate-180');
+                    }
+                }
+            });
+        }
+        setTimeout(setupSidebarActiveState, 500);
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._hide);
+            t._hide = setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        // ===== State =====
+        let target = 'A';
+
+        // ===== Presets =====
+        const SPEED_PRESETS = [
+            { n: 'USB 2.0', v: 480, u: 'Mbps' },
+            { n: 'USB 3.0', v: 5, u: 'Gbps' },
+            { n: 'USB 3.2', v: 20, u: 'Gbps' },
+            { n: 'SATA SSD', v: 550, u: 'MB/s' },
+            { n: 'NVMe SSD', v: 3500, u: 'MB/s' },
+            { n: 'Fast Eth', v: 100, u: 'Mbps' },
+            { n: '1GbE', v: 1, u: 'Gbps' },
+            { n: '2.5GbE', v: 2.5, u: 'Gbps' },
+            { n: '5GbE', v: 5, u: 'Gbps' },
+            { n: '10GbE', v: 10, u: 'Gbps' },
+            { n: 'Wi-Fi 5', v: 3.5, u: 'Gbps' },
+            { n: 'Wi-Fi 6', v: 9.6, u: 'Gbps' },
+            { n: 'Wi-Fi 7', v: 46, u: 'Gbps' },
+        ];
+
+        const SCENARIOS = [
+            { label: '📦 1TB NAS 備份', size: 1, unit: 'TB', speed: 1, su: 'Gbps' },
+            { label: '🎬 500GB 影片傳輸', size: 500, unit: 'GB', speed: 10, su: 'Gbps' },
+            { label: '🧠 2TB AI Dataset', size: 2, unit: 'TB', speed: 10, su: 'Gbps' },
+            { label: '💾 100GB 遊戲安裝', size: 100, unit: 'GB', speed: 1000, su: 'Mbps' },
+        ];
+
+        const SPEED_TABLE = [
+            { name: 'USB 2.0',    theo: 480,   unit: 'Mbps', usage: '隨身碟、慢速外接裝置' },
+            { name: 'USB 3.0',    theo: 5,     unit: 'Gbps', usage: '外接硬碟、SSD' },
+            { name: 'USB 3.2',    theo: 20,    unit: 'Gbps', usage: '高速外接 SSD' },
+            { name: 'SATA SSD',   theo: 550,   unit: 'MB/s', usage: '2.5" / M.2 SATA 固態硬碟' },
+            { name: 'NVMe Gen3',  theo: 3500,  unit: 'MB/s', usage: '主流 NVMe SSD' },
+            { name: 'NVMe Gen4',  theo: 7000,  unit: 'MB/s', usage: '高效能 NVMe SSD' },
+            { name: 'Fast Eth',   theo: 100,   unit: 'Mbps', usage: '舊型網路' },
+            { name: '1GbE',       theo: 1000,  unit: 'Mbps', usage: '家用標準網路' },
+            { name: '2.5GbE',     theo: 2.5,   unit: 'Gbps', usage: '進階家用/商用' },
+            { name: '10GbE',      theo: 10,    unit: 'Gbps', usage: '企業/工作室' },
+        ];
+
+        // ===== Utils =====
+        function toBps(val, unit) {
+            if (unit === 'Mbps') return val * 1_000_000;
+            if (unit === 'Gbps') return val * 1_000_000_000;
+            if (unit === 'MBs')  return val * 8_000_000;   // MB/s → bps
+            if (unit === 'GBs')  return val * 8_000_000_000;
+            return val;
+        }
+
+        function fileToBits(val, unit) {
+            if (unit === 'MB') return val * 1024 * 1024 * 8;
+            if (unit === 'GB') return val * 1024 * 1024 * 1024 * 8;
+            if (unit === 'TB') return val * 1024 * 1024 * 1024 * 1024 * 8;
+            return val;
+        }
+
+        function toTheoreticalSpeedMBs(speedVal, speedUnit) {
+            // Return in MB/s (1 MB = 1,000,000 bytes)
+            const bps = toBps(speedVal, speedUnit);
+            return bps / 8_000_000;
+        }
+
+        function formatTime(sec) {
+            if (sec < 0) return '—';
+            if (sec < 1) return (sec * 1000).toFixed(0) + ' 毫秒';
+            if (sec < 60) return sec.toFixed(1) + ' 秒';
+            if (sec < 3600) return Math.floor(sec / 60) + ' 分 ' + Math.round(sec % 60) + ' 秒';
+            if (sec < 86400) return Math.floor(sec / 3600) + ' 小時 ' + Math.round((sec % 3600) / 60) + ' 分';
+            const d = Math.floor(sec / 86400);
+            const h = Math.round((sec % 86400) / 3600);
+            return d + ' 天 ' + h + ' 小時';
+        }
+
+        function getSpeedLabel(val, unit) {
+            return val + ' ' + unit;
+        }
+
+        // ===== Target toggle =====
+        function setTarget(t) {
+            target = t;
+            document.querySelectorAll('#target-a-btn, #target-b-btn').forEach(b => {
+                b.classList.remove('bg-network-primary', 'text-white', 'shadow-sm');
+                b.classList.add('text-slate-400');
+            });
+            const btn = document.getElementById('target-' + t.toLowerCase() + '-btn');
+            if (btn) {
+                btn.classList.remove('text-slate-400');
+                btn.classList.add('bg-network-primary', 'text-white', 'shadow-sm');
+            }
+        }
+
+        // ===== Fill preset =====
+        function fillPreset(val, unit) {
+            const side = target;
+            const valInput = document.getElementById('speed-' + side.toLowerCase());
+            if (valInput) valInput.value = val;
+            const unitRadios = document.querySelectorAll('input[name="speedUnit' + side + '"]');
+            for (const r of unitRadios) {
+                r.checked = (r.value === unit);
+            }
+            showToast('已填入配置 ' + side + '：' + val + ' ' + unit);
+            calculate();
+        }
+
+        function fillScenario(s) {
+            document.getElementById('file-size').value = s.size;
+            const fileRadios = document.querySelectorAll('input[name="fileUnit"]');
+            for (const r of fileRadios) r.checked = (r.value === s.unit);
+            // Fill A with the scenario speed
+            const valA = document.getElementById('speed-a');
+            if (valA) valA.value = s.speed;
+            const uRadiosA = document.querySelectorAll('input[name="speedUnitA"]');
+            for (const r of uRadiosA) r.checked = (r.value === s.su);
+            showToast('已載入情境：' + s.label);
+            calculate();
+        }
+
+        // ===== Efficiency =====
+        function updateEfficiency() {
+            const eff = parseInt(document.getElementById('efficiency').value);
+            document.getElementById('efficiency-label').textContent = eff + '%';
+        }
+
+        // ===== Main Calculate =====
+        function calculate() {
+            const fileVal = parseFloat(document.getElementById('file-size').value) || 1;
+            const fileUnit = document.querySelector('input[name="fileUnit"]:checked').value;
+            const eff = parseInt(document.getElementById('efficiency').value) / 100;
+
+            const speedAVal = parseFloat(document.getElementById('speed-a').value) || 1;
+            const speedAUnit = document.querySelector('input[name="speedUnitA"]:checked').value;
+            const speedBVal = parseFloat(document.getElementById('speed-b').value) || 1;
+            const speedBUnit = document.querySelector('input[name="speedUnitB"]:checked').value;
+
+            const fileBits = fileToBits(fileVal, fileUnit);
+            const bpsA = toBps(speedAVal, speedAUnit);
+            const bpsB = toBps(speedBVal, speedBUnit);
+
+            const timeSecIdealA = bpsA > 0 ? fileBits / bpsA : Infinity;
+            const timeSecIdealB = bpsB > 0 ? fileBits / bpsB : Infinity;
+            const timeSecRealA = bpsA > 0 ? fileBits / (bpsA * eff) : Infinity;
+            const timeSecRealB = bpsB > 0 ? fileBits / (bpsB * eff) : Infinity;
+
+            const theoreticMbsA = toTheoreticalSpeedMBs(speedAVal, speedAUnit);
+            const theoreticMbsB = toTheoreticalSpeedMBs(speedBVal, speedBUnit);
+            const actualMbsA = theoreticMbsA * eff;
+            const actualMbsB = theoreticMbsB * eff;
+
+            // --- Update displays ---
+            // Theoretical & actual speeds
+            document.getElementById('theoretical-a').textContent = theoreticMbsA.toFixed(2) + ' MB/s';
+            document.getElementById('theoretical-b').textContent = theoreticMbsB.toFixed(2) + ' MB/s';
+            document.getElementById('actual-a').textContent = actualMbsA.toFixed(2) + ' MB/s';
+            document.getElementById('actual-b').textContent = actualMbsB.toFixed(2) + ' MB/s';
+
+            // Times
+            document.getElementById('time-a').textContent = formatTime(timeSecRealA);
+            document.getElementById('time-b').textContent = formatTime(timeSecRealB);
+            document.getElementById('theo-time-a').textContent = formatTime(timeSecIdealA);
+            document.getElementById('theo-time-b').textContent = formatTime(timeSecIdealB);
+
+            // Result info
+            const fileLabel = fileVal + ' ' + fileUnit;
+            document.getElementById('result-size-a').textContent = fileLabel;
+            document.getElementById('result-size-b').textContent = fileLabel;
+            document.getElementById('result-speed-a').textContent = speedAVal + ' ' + speedAUnit;
+            document.getElementById('result-speed-b').textContent = speedBVal + ' ' + speedBUnit;
+
+            // Bar values
+            document.getElementById('bar-value-a').textContent = formatTime(timeSecRealA);
+            document.getElementById('bar-value-b').textContent = formatTime(timeSecRealB);
+
+            // Bars (lower time = 100% width; longer time = proportionally shorter)
+            const maxTime = Math.max(timeSecRealA, timeSecRealB);
+            if (maxTime > 0 && maxTime !== Infinity) {
+                document.getElementById('bar-a').style.width = (timeSecRealA / maxTime * 100) + '%';
+                document.getElementById('bar-b').style.width = (timeSecRealB / maxTime * 100) + '%';
+            } else {
+                document.getElementById('bar-a').style.width = '50%';
+                document.getElementById('bar-b').style.width = '50%';
+            }
+
+            // Comparison text
+            compare(speedAVal, speedAUnit, timeSecRealA, timeSecIdealA, speedBVal, speedBUnit, timeSecRealB, timeSecIdealB, eff, fileLabel);
+
+            // Bottleneck
+            analyzeBottleneck(theoreticMbsA, actualMbsA);
+
+            // Animate
+            document.getElementById('result-panel').classList.remove('animate-pop');
+            void document.getElementById('result-panel').offsetWidth;
+            document.getElementById('result-panel').classList.add('animate-pop');
+        }
+
+        function compare(sa, sua, ta, tiA, sb, sub, tb, tiB, eff, fileLabel) {
+            const el = document.getElementById('comparison-text');
+            if (!isFinite(ta) || !isFinite(tb)) {
+                el.innerHTML = '⚠️ 請輸入有效的速度值';
+                return;
+            }
+            const pct = ta > tb
+                ? ((ta - tb) / tb * 100)
+                : ((tb - ta) / ta * 100);
+
+            if (Math.abs(ta - tb) < 0.5) {
+                el.innerHTML = `🔄 <strong>兩者傳輸時間接近</strong>（差異 ${pct.toFixed(1)}%）<br>
+                    <span class="text-slate-400 text-xs">${sa} ${sua} vs ${sb} ${sub} · ${fileLabel}</span>`;
+            } else if (ta < tb) {
+                el.innerHTML = `✅ <strong>配置 A 更快</strong>，比 B 快約 <strong class="text-blue-400">${pct.toFixed(1)}%</strong><br>
+                    <span class="text-slate-400 text-xs">${formatTime(ta)} vs ${formatTime(tb)} · 效率 ${Math.round(eff*100)}%</span>
+                    <span class="block mt-1 text-xs text-slate-500">${getSuggestion(sa, sua, tb)}</span>`;
+            } else {
+                el.innerHTML = `✅ <strong>配置 B 更快</strong>，比 A 快約 <strong class="text-pink-400">${pct.toFixed(1)}%</strong><br>
+                    <span class="text-slate-400 text-xs">${formatTime(tb)} vs ${formatTime(ta)} · 效率 ${Math.round(eff*100)}%</span>
+                    <span class="block mt-1 text-xs text-slate-500">${getSuggestion(sb, sub, ta)}</span>`;
+            }
+        }
+
+        function getSuggestion(speed, unit, timeSec) {
+            const bps = toBps(speed, unit);
+            if (bps >= 10_000_000_000) return '🚀 極高速連接，即使大型檔案也能在數分鐘內完成，適合企業級應用';
+            if (bps >= 1_000_000_000) return '⚡ 高速連接，日常檔案傳輸僅需數秒至數分鐘，適合 HD 影片與大型專案';
+            if (bps >= 500_000_000) return '💨 中高速連接，多數檔案傳輸能在可接受時間內完成';
+            if (bps >= 100_000_000) return '📶 標準家用網路速度，適合串流與一般檔案傳輸';
+            if (timeSec > 3600) return '⏳ 傳輸時間較長，建議升級網路或壓縮檔案';
+            return '🔌 適合小檔案傳輸或備份用途';
+        }
+
+        function analyzeBottleneck(theoMbs, actualMbs) {
+            const el = document.getElementById('bottleneck-content');
+            const parts = [];
+
+            // Compare with typical device speeds
+            if (theoMbs > 3000) {
+                parts.push('✅ 頻寬極高，目前瓶頸可能在來源/目標設備的讀寫速度');
+            } else if (theoMbs > 500) {
+                parts.push('⚡ 速度充裕，適合多數傳輸場景');
+            } else if (theoMbs > 100) {
+                parts.push('📶 速度尚可，大型檔案傳輸需耐心等待');
+            } else {
+                parts.push('⚠️ 網路速度可能是主要瓶頸，建議升級網路方案');
+            }
+
+            // Check if drive speed could be a bottleneck
+            if (theoMbs > 500) {
+                parts.push('⚠️ 注意：傳統 HDD 讀寫約 150~200 MB/s，可能成為接收端瓶頸，建議使用 SSD');
+            } else if (theoMbs > 200) {
+                parts.push('💡 一般 HDD 可負荷此速度，但多工讀取可能影響效能');
+            }
+
+            // USB check
+            if (theoMbs > 60 && theoMbs <= 625) {
+                parts.push('💡 此速度接近 USB 3.0 上限，確認裝置支援 USB 3.0 以上');
+            }
+
+            // Wi-Fi note
+            if (theoMbs < 1000 && theoMbs > 50) {
+                parts.push('📡 若使用 Wi-Fi，實際效率可能因干擾降至 50~70%');
+            }
+
+            if (parts.length === 0) {
+                parts.push('✅ 速度充足，無明顯瓶頸');
+            }
+
+            el.innerHTML = parts.map(p => '<div class="mb-1">' + p + '</div>').join('');
+        }
+
+        // ===== Render =====
+        function renderPresets() {
+            const c = document.getElementById('preset-container');
+            c.innerHTML = SPEED_PRESETS.map(p =>
+                `<button onclick="fillPreset(${p.v}, '${p.u}')" class="preset-chip px-2.5 py-1.5 text-xs rounded-lg bg-hub-800 border border-hub-700 text-slate-300 hover:border-blue-500/30 hover:bg-hub-700/80 whitespace-nowrap">${p.n}</button>`
+            ).join('');
+        }
+
+        function renderScenarios() {
+            const c = document.getElementById('scenario-container');
+            c.innerHTML = SCENARIOS.map(s =>
+                `<button onclick='fillScenario(${JSON.stringify(s)})' class="preset-chip px-2.5 py-1.5 text-xs rounded-lg bg-hub-800 border border-hub-700 text-slate-300 hover:border-blue-500/30 hover:bg-hub-700/80 whitespace-nowrap">${s.label}</button>`
+            ).join('');
+        }
+
+        function renderSpeedTable() {
+            const tbody = document.getElementById('speed-table-body');
+            tbody.innerHTML = SPEED_TABLE.map(s => {
+                // Calculate theoretical MB/s
+                let theoMBs;
+                if (s.unit === 'Mbps') theoMBs = s.theo / 8;
+                else if (s.unit === 'Gbps') theoMBs = s.theo * 1000 / 8;
+                else if (s.unit === 'MB/s') theoMBs = s.theo;
+                else theoMBs = s.theo * 1000;
+                const actual = theoMBs * 0.9;
+                const timeSec = (1024 / actual); // 1 GB in MB / MB/s
+                const timeStr = timeSec < 60 ? timeSec.toFixed(1) + ' 秒' :
+                    timeSec < 3600 ? Math.floor(timeSec / 60) + ' 分 ' + Math.round(timeSec % 60) + ' 秒' :
+                    (timeSec / 3600).toFixed(1) + ' 小時';
+
+                let label = s.theo + ' ' + s.unit;
+                if (s.unit === 'Mbps' && s.theo >= 1000) label = (s.theo / 1000) + ' Gbps';
+                if (s.unit === 'MB/s' && s.theo >= 1000) label = (s.theo / 1000) + ' GB/s';
+                if (s.unit === 'GB/s') label = s.theo + ' GB/s';
+
+                return `<tr class="border-b border-slate-700/30">
+                    <td class="py-2 pr-3 font-medium text-white">${s.name}</td>
+                    <td class="py-2 px-3 font-mono text-xs text-slate-300">${label}</td>
+                    <td class="py-2 px-3 font-mono text-xs text-slate-400">${actual.toFixed(0)} MB/s</td>
+                    <td class="py-2 px-3 font-mono text-xs text-blue-300">${timeStr}</td>
+                    <td class="py-2 px-3 text-xs text-slate-500">${s.usage}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ===== FAQ =====
+        window.toggleFaq = function(btn) {
+            const answer = btn.parentElement.querySelector('.faq-answer');
+            const chevron = btn.querySelector('svg');
+            if (!answer) return;
+            const isOpen = answer.classList.contains('open');
+            document.querySelectorAll('.faq-answer.open').forEach(a => {
+                a.classList.remove('open');
+                const c = a.parentElement.querySelector('button svg');
+                if (c) c.style.transform = 'rotate(0deg)';
+            });
+            if (!isOpen) {
+                answer.classList.add('open');
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            }
+        };
+
+        // ===== Init =====
+        renderPresets();
+        renderScenarios();
+        renderSpeedTable();
+        calculate();
+
+        // Re-init icons periodically in case DOM updates
+        setInterval(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 1000);
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

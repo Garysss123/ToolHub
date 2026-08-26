@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Parser 網址解析工具 | ToolHub - URL 結構分析、Query 解析、網域檢測</title>
+    <meta name="description" content="免費線上 URL Parser 網址解析工具。貼上網址即時解析 Protocol、Host、Port、Path、Query String、Hash 等完整組成。支援 Query Parameters 表格解析、網域分析（Subdomain/TLD）、URL 結構圖、健康檢查。純前端運算。">
+    <meta name="keywords" content="URL Parser, URL 解析, 網址分析, Query String 解析, Domain Parser, TLD 查詢, URL 結構, 網址驗證, URI 解析, Web 開發工具">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#818CF8',
+                        },
+                        urlp: {
+                            proto: '#F97316',
+                            auth: '#34D399',
+                            host: '#38BDF8',
+                            port: '#F59E0B',
+                            path: '#A855F7',
+                            query: '#06B6D4',
+                            hash: '#EC4899',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #818CF8; }
+
+        .glass-panel { background-color: rgba(21,31,50,0.8); backdrop-filter: blur(8px); border: 1px solid #1E293B; border-radius: 1rem; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pop { 0%{transform:scale(0.95);opacity:0.8} 50%{transform:scale(1.05);opacity:1} 100%{transform:scale(1);opacity:1} }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        .url-input {
+            width: 100%;
+            min-height: 80px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            outline: none;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            word-break: break-all;
+        }
+        .url-input:focus { border-color: #818CF8; box-shadow: 0 0 0 3px rgba(129,140,248,0.1); }
+        .url-input::placeholder { color: #475569; }
+
+        .action-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.55rem 1rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 500;
+            border: 1px solid #1e293b; background: transparent; color: #94a3b8;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .action-btn:hover { color: #e2e8f0; background: rgba(129,140,248,0.1); border-color: rgba(129,140,248,0.3); }
+        .action-btn.primary { background: rgba(129,140,248,0.15); color: #818CF8; border-color: rgba(129,140,248,0.3); }
+        .action-btn.primary:hover { background: rgba(129,140,248,0.25); }
+        .action-btn svg { width: 1rem; height: 1rem; }
+
+        .field-row {
+            display: flex; align-items: stretch;
+            background: #0f172a; border: 1px solid #1e293b; border-radius: 0.5rem;
+            transition: border-color 0.2s;
+        }
+        .field-row:hover { border-color: rgba(129,140,248,0.2); }
+        .field-row .field-label {
+            flex-shrink: 0; width: 7rem; padding: 0.55rem 0.75rem;
+            font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+            display: flex; align-items: center; gap: 0.35rem;
+            border-right: 1px solid #1e293b;
+            color: #64748b;
+            background: rgba(11,17,32,0.3);
+            border-radius: 0.5rem 0 0 0.5rem;
+        }
+        .field-row .field-val {
+            flex: 1; padding: 0.55rem 0.75rem; font-family: 'Fira Code', monospace;
+            font-size: 0.82rem; color: #e2e8f0; word-break: break-all;
+            display: flex; align-items: center;
+        }
+        .field-row .field-copy {
+            flex-shrink: 0; padding: 0.55rem 0.65rem; display: flex; align-items: center;
+            color: #475569; cursor: pointer; transition: color 0.2s;
+            border-left: 1px solid #1e293b;
+        }
+        .field-row .field-copy:hover { color: #818CF8; }
+
+        .diagram-container {
+            background: #0f172a; border: 1px solid #1e293b; border-radius: 0.75rem;
+            padding: 1rem; overflow-x: auto;
+        }
+        .diagram-line {
+            font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.8;
+            white-space: nowrap;
+        }
+        .diagram-label-line {
+            font-family: 'Fira Code', monospace; font-size: 0.65rem; line-height: 1.2;
+            white-space: nowrap; color: #64748b;
+        }
+        .d-segment { display: inline-block; position: relative; text-align: center; }
+        .d-segment .text { font-weight: 600; }
+        .d-segment .pointer { font-size: 0.55rem; display: block; line-height: 1; }
+
+        .query-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .query-table th { text-align: left; padding: 0.5rem 0.75rem; background: rgba(11,17,32,0.5); color: #818CF8; font-weight: 600; border-bottom: 1px solid #1e293b; }
+        .query-table td { padding: 0.4rem 0.75rem; border-bottom: 1px solid rgba(30,41,59,0.5); font-family: 'Fira Code', monospace; color: #e2e8f0; word-break: break-all; }
+        .query-table tr:hover td { background: rgba(129,140,248,0.03); }
+
+        .health-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.3rem 0.6rem; border-radius: 0.375rem; font-size: 0.7rem; font-weight: 600;
+        }
+        .health-badge.ok { background: rgba(16,185,129,0.15); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.25); }
+        .health-badge.warn { background: rgba(245,158,11,0.15); color: #FCD34D; border: 1px solid rgba(245,158,11,0.25); }
+        .health-badge.bad { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.25); }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            cursor: pointer; padding: 1rem 1.25rem; border-radius: 0.75rem;
+            background: #151F32; border: 1px solid #1e293b; font-weight: 500; color: #e2e8f0;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: space-between;
+        }
+        .faq-item summary:hover { border-color: rgba(129,140,248,0.3); }
+        .faq-item[open] summary { border-color: rgba(129,140,248,0.3); border-radius: 0.75rem 0.75rem 0 0; }
+        .faq-item .faq-content { padding: 1rem 1.25rem; background: #151F32; border: 1px solid #1e293b; border-top: none; border-radius: 0 0 0.75rem 0.75rem; color: #94a3b8; font-size: 0.9rem; line-height: 1.7; }
+        .faq-item .chevron-icon { transition: transform 0.3s; }
+        .faq-item[open] .chevron-icon { transform: rotate(180deg); }
+
+        @media (max-width: 640px) {
+            .url-input { font-size: 0.78rem; min-height: 65px; }
+            .field-row .field-label { width: 5.5rem; font-size: 0.65rem; padding: 0.45rem 0.55rem; }
+            .field-row .field-val { font-size: 0.75rem; padding: 0.45rem 0.55rem; }
+            .diagram-line { font-size: 0.65rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/url-parser/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/url-parser/">
+    <meta property="og:title" content="URL Parser 網址解析工具">
+    <meta property="og:description" content="免費線上 URL Parser 網址解析工具。貼上網址即時解析 Protocol、Host、Port、Path、Query String、Hash 等完整組成。支援 Query Parameters 表格解析、網域分析（Subdomain/TLD）、URL 結構圖、健康檢查。純前端運算。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="URL Parser 網址解析工具">
+    <meta name="twitter:description" content="免費線上 URL Parser 網址解析工具。貼上網址即時解析 Protocol、Host、Port、Path、Query String、Hash 等完整組成。支援 Query Parameters 表格解析、網域分析（Subdomain/TLD）、URL 結構圖、健康檢查。純前端運算。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"URL Parser 網址解析工具","url":"https://toolhuben.com/url-parser/","description":"免費線上 URL Parser 網址解析工具。貼上網址即時解析 Protocol、Host、Port、Path、Query String、Hash 等完整組成。支援 Query Parameters 表格解析、網域分析（Subdomain/TLD）、URL 結構圖、健康檢查。純前端運算。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"URL Parser 網址解析工具","item":"https://toolhuben.com/url-parser/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/url-parser/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/url-parser/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/url-parser/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#818CF8;--classic-accent-rgb:129,140,248" data-tool-visual data-classic-tool data-classic-layout="terminal">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ==================== HERO ==================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+                <span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                純前端本地運算 · 您的網址絕不離開設備
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                URL <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Parser</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                貼上網址即時解析 Protocol、Host、Port、Path、Query String、Hash 等完整組成。<br class="hidden sm:block">
+                支援 Query Parameters 表格解析、網域分析、URL 結構圖、健康檢查。
+            </p>
+        </div>
+
+        <!-- ==================== MAIN TOOL ==================== -->
+        <div class="glass-panel shadow-2xl shadow-black/50 overflow-hidden mb-8">
+            <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                <i class="ph ph-link text-hub-accent text-lg"></i>
+                <span class="text-sm font-bold text-white">URL 解析器</span>
+                <span class="text-[10px] text-slate-500 ml-auto">貼上即分析</span>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4">
+                <div>
+                    <label class="text-xs font-medium text-slate-400 mb-2 block">輸入 URL</label>
+                    <textarea id="url-input" class="url-input" placeholder="貼上網址，例如：&#10;https://user:pass@blog.example.com:8080/path/to/page.html?name=gary&id=123&lang=en#section-1" spellcheck="false"></textarea>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button id="btn-parse" class="action-btn primary"><i class="ph ph-play"></i> 解析</button>
+                    <button id="btn-sample" class="action-btn"><i class="ph ph-magic-wand"></i> Sample URL</button>
+                    <button id="btn-clear" class="action-btn"><i class="ph ph-trash"></i> Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== RESULTS ==================== -->
+        <div id="results-container" style="display:none">
+
+            <!-- URL Validation -->
+            <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+                <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                    <i class="ph ph-shield-check text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">URL 驗證</span>
+                </div>
+                <div class="p-4 sm:p-6" id="validation-content"><div class="text-slate-500 text-sm">載入中...</div></div>
+            </div>
+
+            <!-- URL Structure Diagram -->
+            <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+                <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                    <i class="ph ph-tree-structure text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">URL Structure Diagram</span>
+                </div>
+                <div class="p-4 sm:p-6" id="diagram-content"><div class="text-slate-500 text-sm">載入中...</div></div>
+            </div>
+
+            <!-- Parsed Fields -->
+            <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+                <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                    <i class="ph ph-list-checks text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">URL 組成解析</span>
+                </div>
+                <div class="p-4 sm:p-6 space-y-2" id="parsed-fields"></div>
+            </div>
+
+            <!-- Query Parameters Table -->
+            <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6" id="query-panel" style="display:none">
+                <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                    <i class="ph ph-table text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">Query Parameters</span>
+                </div>
+                <div class="p-4 sm:p-6 overflow-x-auto" id="query-content"></div>
+            </div>
+
+            <!-- Domain Analysis -->
+            <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+                <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                    <i class="ph ph-globe text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">網域分析</span>
+                </div>
+                <div class="p-4 sm:p-6" id="domain-content"><div class="text-slate-500 text-sm">載入中...</div></div>
+            </div>
+
+            <!-- URL Health Check (⭐ Bonus) -->
+            <div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+                <div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+                    <i class="ph ph-heartbeat text-hub-accent text-lg"></i>
+                    <span class="text-sm font-bold text-white">URL Health Check</span>
+                    <span class="text-[10px] text-hub-accent bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">特色功能</span>
+                </div>
+                <div class="p-4 sm:p-6" id="health-content"><div class="text-slate-500 text-sm">載入中...</div></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button id="btn-copy" class="action-btn"><i class="ph ph-copy"></i> Copy All</button>
+                <button id="btn-download-json" class="action-btn"><i class="ph ph-file-js"></i> Download JSON</button>
+                <button id="btn-download-txt" class="action-btn"><i class="ph ph-file-text"></i> Download TXT</button>
+            </div>
+        </div>
+
+        <!-- ==================== FAQ ==================== -->
+        <div class="glass-panel p-6 shadow-xl mt-8">
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+                <i class="ph-fill ph-question-mark text-hub-accent"></i> URL 常見問題 FAQ
+            </h3>
+            <div class="space-y-4" itemscope itemtype="https://schema.org/FAQPage">
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q1: URL、URI、URN 有什麼差別？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            <strong class="text-white">URI（Uniform Resource Identifier）</strong>是統一資源識別碼，為最上層概念，用來唯一識別一個資源。<br>
+                            <strong class="text-white">URL（Uniform Resource Locator）</strong>是統一資源定位符，不僅識別資源，還告訴你如何取得它（透過網路位置）。<br>
+                            <strong class="text-white">URN（Uniform Resource Name）</strong>是統一資源名稱，僅識別資源但不提供位置資訊。<br><br>
+                            簡單來說，<strong class="text-white">所有的 URL 都是 URI，但並非所有 URI 都是 URL</strong>。例如 <code class="text-hub-accent">https://example.com/page</code> 既是 URI 也是 URL，而 <code class="text-hub-accent">urn:isbn:0-486-27557-4</code> 是 URI 但不是 URL。
+                        </p>
+                    </div>
+                </details></div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q2: Query String 和 Fragment 有什麼不同？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            <strong class="text-white">Query String（查詢字串）</strong>以 <code class="text-hub-accent">?</code> 開頭，包含以 <code class="text-hub-accent">&amp;</code> 分隔的鍵值對（如 <code class="text-hub-accent">?name=gary&id=123</code>）。Query String 會<strong class="text-white">發送給伺服器</strong>，常用於搜尋參數、篩選條件、分頁資訊等。<br><br>
+                            <strong class="text-white">Fragment（片段識別碼）</strong>以 <code class="text-hub-accent">#</code> 開頭，<strong class="text-white">不會發送給伺服器</strong>，只在瀏覽器端使用。常用於頁面內部錨點（跳轉到特定區塊）、SPA 路由狀態等。<br><br>
+                            範例：<br>
+                            <code class="text-hub-accent text-xs">https://example.com/page?query=hello#section-2</code><br>
+                            • <code class="text-sky-400">?query=hello</code> → 伺服器收到<br>
+                            • <code class="text-rose-400">#section-2</code> → 僅瀏覽器使用
+                        </p>
+                    </div>
+                </details></div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q3: 什麼是 TLD（頂級網域）？什麼是 Subdomain？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            <strong class="text-white">TLD（Top-Level Domain，頂級網域）</strong>是網域中最後一個部分，如 <code class="text-hub-accent">.com</code>、<code class="text-hub-accent">.org</code>、<code class="text-hub-accent">.tw</code>、<code class="text-hub-accent">.co.uk</code> 等。由 ICANN 管理。<br><br>
+                            <strong class="text-white">Second Level Domain（二級網域）</strong>是 TLD 前一個部分，通常是網站的主要名稱。例如 <code class="text-hub-accent">example</code> 在 <code class="text-hub-accent">example.com</code> 中。<br><br>
+                            <strong class="text-white">Subdomain（子網域）</strong>是二級網域前的部分，用於劃分不同的服務區域。例如 <code class="text-hub-accent">blog</code> 在 <code class="text-hub-accent">blog.example.com</code> 中，<code class="text-hub-accent">api</code> 在 <code class="text-hub-accent">api.example.com</code> 中。<br><br>
+                            對於 <code class="text-hub-accent text-xs">blog.example.co.uk</code>：<br>
+                            • Subdomain: <code class="text-sky-400">blog</code><br>
+                            • Domain: <code class="text-emerald-400">example</code><br>
+                            • TLD: <code class="text-orange-400">co.uk</code>
+                        </p>
+                    </div>
+                </details></div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q4: URL 中的 Port（連接埠）是什麼？預設埠號是多少？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            Port（連接埠）是網路通訊中用來區分不同服務的數字標籤，範圍從 0 到 65535。當 URL 中不指定 Port 時，瀏覽器會使用<strong class="text-white">預設埠號</strong>：<br>
+                            • <strong class="text-white">HTTP</strong>：80<br>
+                            • <strong class="text-white">HTTPS</strong>：443<br>
+                            • <strong class="text-white">FTP</strong>：21<br>
+                            • <strong class="text-white">SSH</strong>：22<br><br>
+                            例如 <code class="text-hub-accent">https://example.com:8080/path</code> 中的 <code class="text-hub-accent">8080</code> 就是非標準埠號，常用於開發階段的測試伺服器。非標準埠號需要在 URL 中明確指定。
+                        </p>
+                    </div>
+                </details></div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q5: URL 中的 Username 和 Password 是做什麼的？安全嗎？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            URL 中的 Username 和 Password 格式為 <code class="text-hub-accent">https://user:pass@host/</code>，屬於 HTTP Basic Authentication 的 URL 編碼方式。早期常用於瀏覽器直接傳遞認證資訊。<br><br>
+                            <strong class="text-white">⚠️ 安全風險：</strong><br>
+                            • 密碼以明碼顯示在 URL 中，容易被竊聽或洩漏。<br>
+                            • URL 可能被瀏覽器歷史記錄、伺服器日誌、Referer 標頭等記錄下來。<br>
+                            • 現代瀏覽器已逐步淘汰 URL 中的密碼認證方式。<br><br>
+                            <strong class="text-white">建議：</strong>不要在 URL 中包含認證資訊，改用 Authorization 標頭或 Cookie 進行認證。
+                        </p>
+                    </div>
+                </details></div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q6: 什麼是 URL Encoding（Percent-Encoding）？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            <strong class="text-white">URL Encoding（又稱 Percent-Encoding）</strong>是將 URL 中的特殊字元轉換為 <code class="text-hub-accent">%</code> 後接兩位十六進位碼的機制。這是因為 URL 中某些字元具有特殊含義（如 <code class="text-hub-accent">?</code> 開始 Query String、<code class="text-hub-accent">#</code> 開始 Fragment），如果需要在這些部分中使用字面值，必須進行編碼。<br><br>
+                            常見編碼：<br>
+                            • <code class="text-hub-accent">空格</code> → <code class="text-hub-accent">%20</code><br>
+                            • <code class="text-hub-accent">#</code> → <code class="text-hub-accent">%23</code><br>
+                            • <code class="text-hub-accent">?</code> → <code class="text-hub-accent">%3F</code><br>
+                            • <code class="text-hub-accent">&amp;</code> → <code class="text-hub-accent">%26</code><br><br>
+                            瀏覽器會自動對 URL 進行編碼，這也是為什麼在網址列中貼上含中文的 URL 時會看到 <code class="text-hub-accent">%E4%B8%AD%E6%96%87</code> 這樣的形式。
+                        </p>
+                    </div>
+                </details></div>
+
+                <div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+                    <summary itemprop="name"><span>Q7: 本工具會將我的 URL 資訊上傳到伺服器嗎？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+                    <div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+                        <p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+                            完全不會。本工具是<strong class="text-white">純前端應用</strong>，所有的 URL 解析、網域分析和健康檢查都在您的瀏覽器中本地完成，沒有任何資料被傳送到伺服器。即使離線狀態下也能正常運作，請放心使用任何敏感的網址。
+                        </p>
+                    </div>
+                </details></div>
+
+            </div>
+        </div>
+
+        <!-- ==================== SEO ARTICLE ==================== -->
+        <div class="glass-panel p-6 shadow-xl mt-8">
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+                <i class="ph ph-book-open text-hub-accent"></i> 網址結構完全指南：從 URL 到 Query String 的深度解析
+            </h3>
+            <div class="space-y-5 text-slate-400 text-sm leading-relaxed">
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">URL 的完整組成結構</h4>
+                    <p>一個完整的 URL 遵循以下格式：</p>
+                    <div class="mt-2 p-3 bg-slate-900/50 rounded-lg border border-hub-700 font-mono text-xs leading-relaxed text-slate-300">
+                        <span class="text-orange-400">scheme</span>://<span class="text-emerald-400">user:pass</span>@<span class="text-sky-400">host</span>:<span class="text-amber-400">port</span><span class="text-purple-400">/path/file.ext</span><span class="text-cyan-400">?key=value</span><span class="text-rose-400">#fragment</span>
+                    </div>
+                    <ul class="mt-2 space-y-1 list-disc list-inside">
+                        <li><strong class="text-orange-400">Scheme（協定）</strong>：告訴瀏覽器使用何種協定連線，如 https、http、ftp、mailto。</li>
+                        <li><strong class="text-emerald-400">User:Password@（認證）</strong>：可選的 HTTP Basic Authentication 資訊。</li>
+                        <li><strong class="text-sky-400">Host（主機）</strong>：伺服器的網域名稱或 IP 位址。</li>
+                        <li><strong class="text-amber-400">Port（連接埠）</strong>：可選，指定伺服器的連接埠號。</li>
+                        <li><strong class="text-purple-400">Path（路徑）</strong>：伺服器上資源的路徑，可包含檔案名稱與副檔名。</li>
+                        <li><strong class="text-cyan-400">Query String（查詢字串）</strong>：以 ? 開頭，包含鍵值對參數。</li>
+                        <li><strong class="text-rose-400">Fragment（片段）</strong>：以 # 開頭，指向頁面內的特定位置。</li>
+                    </ul>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">URL 解析在 Web 開發中的應用</h4>
+                    <p>精確解析 URL 在 Web 開發中有著廣泛的應用場景：</p>
+                    <ul class="mt-2 space-y-1.5 list-disc list-inside">
+                        <li><strong class="text-white">路由設計</strong>：前端 SPA 框架（如 React Router、Vue Router）需要解析 URL 來決定渲染哪個元件。</li>
+                        <li><strong class="text-white">API 開發</strong>：後端 API 需要從 URL 中提取路徑參數和 Query String 來處理請求。</li>
+                        <li><strong class="text-white">SEO 優化</strong>：URL 結構直接影響搜尋引擎排名，清晰的 URL 路徑和參數設計有助於提升 SEO。</li>
+                        <li><strong class="text-white">安全分析</strong>：檢測 URL 是否包含惡意參數、釣魚網站的偽裝手法（如 IDN Homograph Attack）。</li>
+                        <li><strong class="text-white">資料擷取</strong>：從第三方網址中提取有用資訊，如電商商品 ID、社群貼文 ID 等。</li>
+                        <li><strong class="text-white">重導向與代理</strong>：URL 解析是實現 URL 重寫、反向代理和 CDN 路由的基礎。</li>
+                    </ul>
+                </div>
+
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                    <h4 class="text-sm font-bold text-white mb-2">URL 安全：如何辨識惡意網址？</h4>
+                    <p>URL 解析對於網路安全至關重要。以下是幾種常見的惡意 URL 手法：</p>
+                    <ul class="mt-2 space-y-1.5 list-disc list-inside">
+                        <li><strong class="text-white">IDN Homograph Attack</strong>：使用視覺相似的字元（如用「ｇoogle.com」中的西里爾字母「ｇ」冒充 "google.com"）。</li>
+                        <li><strong class="text-white">URL 偽裝</strong>：在 URL 中加入 <code class="text-hub-accent">@</code> 符號，讓前面的文字被視為 Username，實際連接到 @ 後的網站。</li>
+                        <li><strong class="text-white">雙層編碼</strong>：對 URL 進行兩次 Percent-Encoding，繞過安全過濾器。</li>
+                        <li><strong class="text-white">過長 URL</strong>：將惡意參數藏在極長的 Query String 中，超出安全檢查的掃描範圍。</li>
+                    </ul>
+                    <p class="mt-2">本工具的 <strong class="text-white">URL Health Check</strong> 功能可以幫助您快速識別上述部分風險。</p>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+        <span id="toast-msg">完成</span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- 系統引導程式                               -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const resp = await fetch(filePath);
+                if (!resp.ok) throw new Error();
+                const html = await resp.text();
+                const c = document.getElementById(elementId);
+                c.innerHTML = html;
+                Array.from(c.querySelectorAll('script')).forEach(s => {
+                    const ns = document.createElement('script');
+                    Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(s.innerHTML));
+                    s.parentNode.replaceChild(ns, s);
+                });
+            } catch(e) {}
+        }
+        function setupSidebarActiveState() {
+            const cp = '/url-parser';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const h = item.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';
+                if (cp===ip || (cp!=='/' && ip!=='/' && cp.startsWith(ip + '/'))) {
+                    item.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header','/components/header.html'),
+                loadComponent('component-sidebar','/components/sidebar.html'),
+                loadComponent('component-footer','/components/footer.html')
+            ]);
+            if (typeof lucide!=='undefined') lucide.createIcons();
+            document.body.addEventListener('click', e => {
+                const tb = e.target.closest('#sidebar-trigger-btn'), cb = e.target.closest('#sidebar-close-btn'), ol = e.target.closest('#sidebar-overlay');
+                if (tb||cb||ol) {
+                    const c=document.getElementById('sidebar-container'), o=document.getElementById('sidebar-overlay');
+                    if (c&&o) {
+                        const cl=c.classList.contains('translate-x-full');
+                        if (cl&&tb) { o.classList.remove('pointer-events-none'); requestAnimationFrame(()=>{c.classList.remove('translate-x-full');o.classList.remove('opacity-0');o.classList.add('opacity-100');}); }
+                        else if (!cl&&(cb||ol||tb)) { c.classList.add('translate-x-full');o.classList.remove('opacity-0');o.classList.add('opacity-100');setTimeout(()=>o.classList.add('pointer-events-none'),300); }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 核心業務邏輯：URL Parser 引擎              -->
+    <!-- ========================================== -->
+    <script>
+        // ============================================================
+        // 1. Common TLD list (abbreviated — covers most common cases)
+        // ============================================================
+        const COMMON_TLDS = new Set([
+            'com','org','net','edu','gov','mil','int','biz','info','name','pro','aero','coop','museum','mobi','travel','jobs','cat','tel',
+            'uk','us','ca','au','jp','de','fr','it','es','cn','br','in','ru','kr','nl','se','no','fi','dk','pl','be','ch','at','ie','nz',
+            'sg','hk','tw','my','ph','th','vn','id','za','mx','ar','cl','co','io','me','cc','tv','ws','xyz','top','club','online','site',
+            'co.uk','org.uk','ac.uk','gov.uk','net.uk','co.jp','ne.jp','or.jp','co.kr','or.kr','ne.kr','com.au','net.au','org.au',
+            'com.cn','net.cn','org.cn','gov.cn','co.in','net.in','org.in','firm.in','gen.in','ind.in','com.br','org.br','net.br',
+            'gov.br','com.mx','org.mx','net.mx','co.nz','net.nz','org.nz','co.za','org.za','net.za','web.za'
+        ]);
+
+        // ============================================================
+        // 2. Main URL Parser
+        // ============================================================
+        function parseUrl(urlStr) {
+            if (!urlStr || !urlStr.trim()) return null;
+            let s = urlStr.trim();
+
+            // Auto-add protocol if missing
+            let autoProtocol = false;
+            if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(s) && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s)) {
+                s = 'https://' + s;
+                autoProtocol = true;
+            }
+
+            let url;
+            try { url = new URL(s); } catch(e) { return null; }
+
+            const parsed = {
+                raw: urlStr.trim(),
+                autoProtocol,
+                protocol: url.protocol.replace(':', ''),
+                username: url.username,
+                password: url.password,
+                host: url.host,
+                hostname: url.hostname,
+                port: url.port,
+                pathname: url.pathname,
+                search: url.search,
+                hash: url.hash,
+                origin: url.origin,
+                queryParams: parseQueryString(url.search),
+                domainInfo: parseDomain(url.hostname),
+                isIp: false,
+                ipVersion: null,
+                isValid: true,
+                warnings: [],
+                health: {},
+            };
+
+            // Check if hostname is IP
+            const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(url.hostname);
+            const ipv6 = url.hostname.includes(':');
+            parsed.isIp = ipv4 || ipv6;
+            parsed.ipVersion = ipv6 ? 6 : (ipv4 ? 4 : null);
+
+            // Warnings
+            if (autoProtocol) parsed.warnings.push('缺少 Protocol，已自動補上 https://');
+            if (autoProtocol) parsed.autoProtocol = true;
+            if (parsed.username || parsed.password) parsed.warnings.push('URL 包含 Username/Password 認證資訊');
+            if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1') {
+                parsed.warnings.push('此為 Localhost 位址');
+            }
+            if (parsed.pathname && !parsed.pathname.startsWith('/')) parsed.pathname = '/' + parsed.pathname;
+
+            // Extract filename & extension from pathname
+            const pathParts = parsed.pathname.split('/');
+            const lastPart = pathParts[pathParts.length-1] || '';
+            if (lastPart && lastPart.includes('.')) {
+                parsed.filename = lastPart;
+                const extIdx = lastPart.lastIndexOf('.');
+                parsed.extension = lastPart.substring(extIdx + 1);
+            } else {
+                parsed.filename = null;
+                parsed.extension = null;
+            }
+
+            // Health check
+            parsed.health = healthCheck(parsed);
+
+            return parsed;
+        }
+
+        // ============================================================
+        // 3. Query String Parser
+        // ============================================================
+        function parseQueryString(search) {
+            if (!search || search === '?') return [];
+            const q = search.startsWith('?') ? search.slice(1) : search;
+            if (!q) return [];
+            const params = [];
+            const pairs = q.split('&');
+            for (const pair of pairs) {
+                if (!pair) continue;
+                const eqIdx = pair.indexOf('=');
+                let key, val;
+                if (eqIdx === -1) {
+                    key = decodeURIComponent(pair.replace(/\+/g, ' '));
+                    val = '';
+                } else {
+                    key = decodeURIComponent(pair.substring(0, eqIdx).replace(/\+/g, ' '));
+                    val = decodeURIComponent(pair.substring(eqIdx + 1).replace(/\+/g, ' '));
+                }
+                params.push({ key, value: val });
+            }
+            return params;
+        }
+
+        // ============================================================
+        // 4. Domain Parser (Subdomain / TLD / SLD)
+        // ============================================================
+        function parseDomain(hostname) {
+            const parts = hostname.split('.');
+            const result = { subdomain: null, domain: null, sld: null, tld: null, rootDomain: null };
+
+            if (parts.length < 2) {
+                result.domain = hostname;
+                result.rootDomain = hostname;
+                return result;
+            }
+
+            // Try to match multi-part TLD (e.g. co.uk)
+            let tld = '';
+            let domainStart = 0;
+
+            for (let i = parts.length - 1; i >= 0; i--) {
+                const candidate = parts.slice(i).join('.');
+                if (COMMON_TLDS.has(candidate.toLowerCase())) {
+                    tld = candidate;
+                    domainStart = i;
+                    break;
+                }
+            }
+
+            if (!tld) {
+                // Fallback: last 2 parts are TLD (e.g. .com, .org) or last part only
+                if (parts.length >= 3) {
+                    tld = parts.slice(parts.length - 2).join('.');
+                    // Check if the second-to-last is a common TLD-like prefix
+                    if (!COMMON_TLDS.has(tld.toLowerCase())) {
+                        tld = parts[parts.length - 1];
+                        domainStart = parts.length - 1;
+                    } else {
+                        domainStart = parts.length - 2;
+                    }
+                } else {
+                    tld = parts[parts.length - 1];
+                    domainStart = parts.length - 1;
+                }
+            }
+
+            const domainParts = parts.slice(0, domainStart);
+            const sld = domainStart > 0 ? parts[domainStart - 1] : null;
+            const subdomain = domainParts.length > 1 ? domainParts.slice(0, -1).join('.') : null;
+            const domain = sld;
+            const rootDomain = sld ? sld + '.' + tld : tld;
+
+            result.tld = tld;
+            result.sld = sld || parts[parts.length - 2] || null;
+            result.domain = domain;
+            result.subdomain = subdomain;
+            result.rootDomain = rootDomain;
+
+            return result;
+        }
+
+        // ============================================================
+        // 5. Health Check (⭐ Bonus)
+        // ============================================================
+        function healthCheck(parsed) {
+            const checks = [];
+            const s = parsed.raw;
+            const p = parsed.protocol;
+
+            // HTTPS check
+            checks.push({
+                name: 'HTTPS',
+                status: p === 'https' ? 'ok' : (p === 'http' ? 'warn' : 'info'),
+                msg: p === 'https' ? '使用 HTTPS 加密連線 ✓' :
+                     p === 'http' ? '未使用 HTTPS，建議升級以確保安全' :
+                     '非 HTTP 協定'
+            });
+
+            // Default port
+            const defaultPorts = { 'http': '80', 'https': '443', 'ftp': '21' };
+            if (parsed.port && defaultPorts[p] === parsed.port) {
+                checks.push({ name: 'Default Port', status: 'info', msg: `使用 ${p} 預設埠號 ${parsed.port}` });
+            } else if (parsed.port) {
+                checks.push({ name: 'Port', status: 'ok', msg: `使用非標準埠號 ${parsed.port}` });
+            } else {
+                checks.push({ name: 'Port', status: 'ok', msg: '使用預設埠號（未指定）' });
+            }
+
+            // Query param count
+            const qc = parsed.queryParams.length;
+            if (qc === 0) {
+                checks.push({ name: 'Query Params', status: 'info', msg: '無 Query 參數' });
+            } else if (qc <= 5) {
+                checks.push({ name: 'Query Params', status: 'ok', msg: `${qc} 個參數` });
+            } else {
+                checks.push({ name: 'Query Params', status: 'warn', msg: `${qc} 個參數（數量較多）` });
+            }
+
+            // URL length
+            if (s.length > 2000) {
+                checks.push({ name: 'URL Length', status: 'bad', msg: `${s.length} 字元（過長，可能不利於分享與快取）` });
+            } else if (s.length > 500) {
+                checks.push({ name: 'URL Length', status: 'warn', msg: `${s.length} 字元（偏長）` });
+            } else {
+                checks.push({ name: 'URL Length', status: 'ok', msg: `${s.length} 字元（正常）` });
+            }
+
+            // Fragment
+            if (parsed.hash) {
+                checks.push({ name: 'Fragment', status: 'info', msg: '包含 Fragment (#)，不會發送給伺服器' });
+            } else {
+                checks.push({ name: 'Fragment', status: 'info', msg: '無 Fragment' });
+            }
+
+            // Username/Password
+            if (parsed.username || parsed.password) {
+                checks.push({ name: 'Auth Info', status: 'bad', msg: 'URL 包含帳號密碼，不建議公開分享' });
+            } else {
+                checks.push({ name: 'Auth Info', status: 'ok', msg: '無認證資訊' });
+            }
+
+            // IP vs Domain
+            if (parsed.isIp) {
+                checks.push({ name: 'Host Type', status: 'info', msg: `使用 IPv${parsed.ipVersion} 位址` });
+            } else {
+                checks.push({ name: 'Host Type', status: 'ok', msg: '使用網域名稱' });
+            }
+
+            return checks;
+        }
+
+        // ============================================================
+        // 6. URL Structure Diagram
+        // ============================================================
+        function buildDiagram(parsed) {
+            const segments = [];
+            const u = parsed.raw;
+
+            // Protocol
+            if (parsed.protocol) {
+                const protoText = parsed.protocol + '://';
+                if (u.startsWith(protoText) || (parsed.autoProtocol && u.startsWith(parsed.protocol + '://'))) {
+                    segments.push({ text: protoText, label: 'Protocol', color: '#F97316' });
+                }
+            }
+
+            // User:Pass@
+            if (parsed.username || parsed.password) {
+                let authText = '';
+                if (parsed.username && parsed.password) authText = `${parsed.username}:${parsed.password}@`;
+                else if (parsed.username) authText = `${parsed.username}@`;
+                if (authText) segments.push({ text: authText, label: 'Auth', color: '#34D399' });
+            }
+
+            // Host
+            if (parsed.hostname) {
+                let hostText = parsed.hostname;
+                if (parsed.port && u.includes(':' + parsed.port)) {
+                    hostText = parsed.hostname + ':';
+                }
+                segments.push({ text: hostText, label: parsed.isIp ? 'IP' : 'Host', color: '#38BDF8' });
+            }
+
+            // Port
+            if (parsed.port) {
+                segments.push({ text: parsed.port, label: 'Port', color: '#F59E0B' });
+            }
+
+            // Path
+            if (parsed.pathname && parsed.pathname !== '/') {
+                let path = parsed.pathname;
+                // Remove filename from path if we show filename separately
+                if (parsed.filename && path.endsWith(parsed.filename)) {
+                    const pathBefore = path.substring(0, path.length - parsed.filename.length);
+                    if (pathBefore) segments.push({ text: pathBefore, label: 'Path', color: '#A855F7' });
+                    segments.push({ text: parsed.filename, label: 'File', color: '#A855F7' });
+                } else {
+                    segments.push({ text: path, label: 'Path', color: '#A855F7' });
+                }
+            } else if (parsed.pathname === '/') {
+                segments.push({ text: '/', label: 'Path', color: '#A855F7' });
+            }
+
+            // Query
+            if (parsed.search) {
+                segments.push({ text: parsed.search, label: 'Query', color: '#06B6D4' });
+            }
+
+            // Hash
+            if (parsed.hash) {
+                segments.push({ text: parsed.hash, label: 'Hash', color: '#EC4899' });
+            }
+
+            return segments;
+        }
+
+        // ============================================================
+        // 7. UI Rendering
+        // ============================================================
+        function renderResults(parsed, shouldScroll = true) {
+            if (!parsed) {
+                showToast('請輸入有效的 URL', true);
+                return;
+            }
+
+            const container = document.getElementById('results-container');
+            container.style.display = 'block';
+            if (shouldScroll) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Validation
+            renderValidation(parsed);
+            // Diagram
+            renderDiagram(parsed);
+            // Fields
+            renderFields(parsed);
+            // Query params
+            renderQueryParams(parsed);
+            // Domain
+            renderDomain(parsed);
+            // Health
+            renderHealth(parsed);
+        }
+
+        function renderValidation(parsed) {
+            const el = document.getElementById('validation-content');
+            const items = [];
+            items.push({ icon: 'ph-check-circle', color: '#10B981', text: 'URL 格式有效' });
+            if (parsed.autoProtocol) items.push({ icon: 'ph-info', color: '#F59E0B', text: '缺少 Protocol，已自動補上 https://' });
+            if (parsed.isIp) items.push({ icon: 'ph-info', color: '#38BDF8', text: `此為 IPv${parsed.ipVersion} 位址` });
+            else if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') items.push({ icon: 'ph-info', color: '#38BDF8', text: '此為 Localhost 位址' });
+            if (parsed.username || parsed.password) items.push({ icon: 'ph-warning', color: '#EF4444', text: 'URL 包含 Username/Password，不建議公開分享' });
+
+            el.innerHTML = items.map(it =>
+                `<div class="flex items-center gap-2 text-sm mb-1.5"><i class="ph ${it.icon}" style="color:${it.color}"></i><span class="text-slate-300">${it.text}</span></div>`
+            ).join('');
+        }
+
+        function renderDiagram(parsed) {
+            const el = document.getElementById('diagram-content');
+            const segs = buildDiagram(parsed);
+            if (!segs.length) { el.innerHTML = '<div class="text-slate-500 text-sm">無法生成結構圖</div>'; return; }
+
+            // Top line: the URL with colored segments
+            let topHtml = '<div class="diagram-line">';
+            let bottomHtml = '<div class="diagram-label-line" style="margin-top:0.25rem">';
+            for (const seg of segs) {
+                topHtml += `<span style="color:${seg.color};font-weight:600">${escapeHtml(seg.text)}</span>`;
+                // Calculate approx position — just show labels underneath
+                const len = seg.text.length;
+                const padding = Math.max(0, (len - seg.label.length) / 2);
+                bottomHtml += ' '.repeat(Math.floor(padding)) + `<span style="color:${seg.color}">${seg.label}</span>` + ' '.repeat(Math.ceil(padding));
+            }
+            topHtml += '</div>';
+            bottomHtml += '</div>';
+
+            el.innerHTML = `
+                <div class="text-xs text-slate-500 mb-2">URL 結構視覺化 — 每個顏色區塊對應下方標籤：</div>
+                ${topHtml}
+                <div class="h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent my-1"></div>
+                ${bottomHtml}
+            `;
+        }
+
+        function renderFields(parsed) {
+            const el = document.getElementById('parsed-fields');
+            const fields = [
+                { label: 'Protocol', value: parsed.protocol, color: '#F97316' },
+                { label: 'Username', value: parsed.username || '(無)', color: '#34D399' },
+                { label: 'Password', value: parsed.password ? '••••••' : '(無)', color: '#34D399' },
+                { label: 'Host', value: parsed.host, color: '#38BDF8' },
+                { label: 'Hostname', value: parsed.hostname, color: '#38BDF8' },
+                { label: 'Port', value: parsed.port || '(預設)', color: '#F59E0B' },
+                { label: 'Pathname', value: parsed.pathname || '/', color: '#A855F7' },
+                { label: 'Filename', value: parsed.filename || '(無)', color: '#A855F7' },
+                { label: 'Extension', value: parsed.extension || '(無)', color: '#A855F7' },
+                { label: 'Query String', value: parsed.search || '(無)', color: '#06B6D4' },
+                { label: 'Hash', value: parsed.hash || '(無)', color: '#EC4899' },
+                { label: 'Origin', value: parsed.origin, color: '#64748b' },
+            ];
+
+            el.innerHTML = fields.map(f => `
+                <div class="field-row">
+                    <div class="field-label" style="color:${f.color}">
+                        <span style="width:6px;height:6px;border-radius:50%;background:${f.color};display:inline-block"></span>
+                        ${f.label}
+                    </div>
+                    <div class="field-val">${escapeHtml(f.value)}</div>
+                    <div class="field-copy" onclick="copyField('${escapeHtml(f.value)}')" title="複製 ${f.label}">
+                        <i class="ph ph-copy-simple"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderQueryParams(parsed) {
+            const el = document.getElementById('query-panel');
+            const ct = document.getElementById('query-content');
+            if (!parsed.queryParams.length) { el.style.display = 'none'; return; }
+            el.style.display = 'block';
+            let html = '<table class="query-table"><thead><tr><th>#</th><th>Key</th><th>Value</th></tr></thead><tbody>';
+            parsed.queryParams.forEach((p, i) => {
+                html += `<tr><td style="color:#475569">${i+1}</td><td>${escapeHtml(p.key)}</td><td>${escapeHtml(p.value)}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            ct.innerHTML = html;
+        }
+
+        function renderDomain(parsed) {
+            const el = document.getElementById('domain-content');
+            const d = parsed.domainInfo;
+            if (parsed.isIp) {
+                el.innerHTML = `<div class="text-sm text-slate-400">此為 IP 位址（${parsed.hostname}），不適用網域分析。</div>`;
+                return;
+            }
+            const items = [
+                { label: 'Subdomain', value: d.subdomain || '(無)', desc: '主網域前的子網域部分' },
+                { label: 'Domain', value: d.domain || '?', desc: '網站的主名稱（二級網域）' },
+                { label: 'TLD', value: d.tld || '?', desc: '頂級網域' },
+                { label: 'Root Domain', value: d.rootDomain || '?', desc: '根網域（Domain + TLD）' },
+            ];
+            el.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${items.map(it => `
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3">
+                    <div class="text-xs text-slate-500 uppercase tracking-wider font-semibold">${it.label}</div>
+                    <div class="text-lg font-bold text-white font-mono mt-0.5">${escapeHtml(it.value)}</div>
+                    <div class="text-xs text-slate-500 mt-0.5">${it.desc}</div>
+                </div>
+            `).join('')}</div>`;
+        }
+
+        function renderHealth(parsed) {
+            const el = document.getElementById('health-content');
+            const checks = parsed.health || [];
+            if (!checks.length) { el.innerHTML = '<div class="text-slate-500 text-sm">無健康檢查資料</div>'; return; }
+
+            const recommendations = [];
+            let hasBad = false;
+            checks.forEach(c => {
+                if (c.status === 'bad') { hasBad = true; recommendations.push(c.msg); }
+                if (c.status === 'warn') recommendations.push(c.msg);
+            });
+
+            el.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                    ${checks.map(c => `
+                        <div class="flex items-center gap-2 bg-hub-900/30 rounded-lg p-2.5">
+                            <span class="health-badge ${c.status}">${c.name}</span>
+                            <span class="text-xs text-slate-300">${c.msg}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${recommendations.length ? `
+                <div class="bg-${hasBad?'red':'amber'}-500/5 border border-${hasBad?'red':'amber'}-500/20 rounded-lg p-3">
+                    <div class="text-xs font-semibold text-${hasBad?'red':'amber'}-400 mb-1">建議：</div>
+                    <ul class="space-y-0.5">
+                        ${recommendations.map(r => `<li class="text-xs text-slate-400 flex items-start gap-1.5"><span class="text-${hasBad?'red':'amber'}-400 mt-0.5">•</span>${r}</li>`).join('')}
+                    </ul>
+                </div>` : '<div class="text-xs text-emerald-400">✅ 所有檢查通過，URL 狀態良好。</div>'}
+            `;
+        }
+
+        function copyField(val) {
+            const text = val === '(無)' || val === '(預設)' ? '' : val;
+            if (!text) { showToast('無內容可複製', true); return; }
+            navigator.clipboard.writeText(text).then(() => showToast('已複製', false)).catch(() => fallbackCopy(text));
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); ta.remove();
+            showToast('已複製', false);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ============================================================
+        // 8. Sample URLs
+        // ============================================================
+        const SAMPLE_URLS = [
+            { label: '完整 URL', url: 'https://user:pass@blog.example.com:8080/path/to/page.html?name=gary&id=123&lang=en#section-1' },
+            { label: '複雜 Query', url: 'https://www.google.com/search?q=url+parser&source=hp&ei=abc123&iflsig=xyz' },
+            { label: '含 Fragment', url: 'https://developer.mozilla.org/en-US/docs/Web/API/URL#instance_properties' },
+            { label: 'API 端點', url: 'https://api.github.com/repos/owner/repo/issues?state=open&per_page=50&sort=created' },
+            { label: 'IPv4 位址', url: 'http://192.168.1.1:8080/admin/login' },
+            { label: '子網域', url: 'https://subdomain.example.co.uk/products?category=electronics&sort=price_desc' },
+            { label: 'FTP 協定', url: 'ftp://anonymous:guest@ftp.example.com/pub/files/readme.txt' },
+            { label: '電商產品', url: 'https://shop.example.com/products/iphone-16-pro?utm_source=google&utm_medium=cpc&utm_campaign=launch&ref=homepage' },
+        ];
+
+        function getRandomSample() {
+            return SAMPLE_URLS[Math.floor(Math.random() * SAMPLE_URLS.length)];
+        }
+
+        // ============================================================
+        // 9. Toast
+        // ============================================================
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            const ic = document.getElementById('toast-icon');
+            document.getElementById('toast-msg').textContent = msg;
+            if (isError) {
+                t.classList.replace('bg-slate-800','bg-red-950'); t.classList.replace('border-slate-700','border-red-900');
+                ic.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+            } else {
+                t.classList.replace('bg-red-950','bg-slate-800'); t.classList.replace('border-red-900','border-slate-700');
+                ic.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+            }
+            t.classList.remove('opacity-0','pointer-events-none','translate-y-4');
+            t.classList.add('opacity-100','translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                t.classList.remove('opacity-100','translate-y-0');
+                t.classList.add('opacity-0','pointer-events-none','translate-y-4');
+            }, 2500);
+        }
+
+        function performParse() {
+            const input = document.getElementById('url-input').value.trim();
+            if (!input) { showToast('請先輸入或貼上 URL', true); return; }
+            const result = parseUrl(input);
+            renderResults(result);
+        }
+
+        // ============================================================
+        // 10. Events
+        // ============================================================
+        document.getElementById('btn-parse').addEventListener('click', performParse);
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            document.getElementById('url-input').value = '';
+            document.getElementById('results-container').style.display = 'none';
+            showToast('已清除', false);
+        });
+        document.getElementById('btn-sample').addEventListener('click', () => {
+            const s = getRandomSample();
+            document.getElementById('url-input').value = s.url;
+            const result = parseUrl(s.url);
+            renderResults(result);
+            showToast(`已載入範例：${s.label}`, false);
+        });
+        document.getElementById('url-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); performParse(); }
+        });
+
+        // Copy All
+        document.getElementById('btn-copy').addEventListener('click', () => {
+            const c = document.getElementById('results-container');
+            if (c.style.display === 'none') { showToast('尚無結果可複製', true); return; }
+            const text = c.textContent.trim();
+            fallbackCopy(text);
+        });
+
+        // Download JSON
+        document.getElementById('btn-download-json').addEventListener('click', () => {
+            const input = document.getElementById('url-input').value.trim();
+            if (!input) { showToast('尚無資料可下載', true); return; }
+            const p = parseUrl(input);
+            if (!p) { showToast('URL 解析失敗', true); return; }
+            const data = {
+                url: p.raw,
+                protocol: p.protocol,
+                username: p.username,
+                password: p.password,
+                host: p.host,
+                hostname: p.hostname,
+                port: p.port,
+                pathname: p.pathname,
+                filename: p.filename,
+                extension: p.extension,
+                search: p.search,
+                hash: p.hash,
+                origin: p.origin,
+                queryParams: p.queryParams,
+                domain: p.domainInfo,
+                isIp: p.isIp,
+                ipVersion: p.ipVersion,
+                health: p.health,
+            };
+            const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href=url; a.download=`url-parser-${Date.now()}.json`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            showToast('JSON 已下載', false);
+        });
+
+        // Download TXT
+        document.getElementById('btn-download-txt').addEventListener('click', () => {
+            const input = document.getElementById('url-input').value.trim();
+            if (!input) { showToast('尚無資料可下載', true); return; }
+            const p = parseUrl(input);
+            if (!p) { showToast('URL 解析失敗', true); return; }
+            const qs = p.queryParams.map(q => `  ${q.key}: ${q.value}`).join('\n');
+            const report =
+`========================================
+URL Parser 分析報告
+========================================
+產生時間: ${new Date().toLocaleString('zh-TW')}
+URL: ${p.raw}
+
+--- URL 組成 ---
+Protocol:     ${p.protocol}
+Username:     ${p.username || '(無)'}
+Password:     ${p.password ? '••••••' : '(無)'}
+Host:         ${p.host}
+Hostname:     ${p.hostname}
+Port:         ${p.port || '(預設)'}
+Pathname:     ${p.pathname}
+Filename:     ${p.filename || '(無)'}
+Extension:    ${p.extension || '(無)'}
+Query String: ${p.search || '(無)'}
+Hash:         ${p.hash || '(無)'}
+Origin:       ${p.origin}
+
+--- Query Parameters ---
+${qs || '(無)'}
+
+--- 網域分析 ---
+Subdomain:    ${p.domainInfo.subdomain || '(無)'}
+Domain:       ${p.domainInfo.domain || '?'}
+TLD:          ${p.domainInfo.tld || '?'}
+Root Domain:  ${p.domainInfo.rootDomain || '?'}
+
+--- 健康檢查 ---
+${p.health.map(h => `${h.name}: ${h.msg}`).join('\n')}
+========================================
+`;
+            const blob = new Blob([report], {type:'text/plain;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href=url; a.download=`url-parser-${Date.now()}.txt`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            showToast('TXT 報告已下載', false);
+        });
+
+        // ============================================================
+        // 11. Init
+        // ============================================================
+        function initApp() {
+            // Auto-parse a sample on first load to show features
+            const sample = SAMPLE_URLS[0];
+            document.getElementById('url-input').value = sample.url;
+            const result = parseUrl(sample.url);
+            renderResults(result, false);
+        }
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Query String Parser URL 參數解析工具 | ToolHub - Query 編輯、JSON 互轉、編碼解碼</title>
+<meta name="description" content="免費線上 Query String Parser 工具。解析、編輯、驗證 URL Query Parameters。支援可編輯表格、JSON ↔ Query 互轉、URL Encode/Decode、排序去重、統計分析。純前端本地運算。">
+<meta name="keywords" content="Query String Parser, URL Query 解析, Query Parameters 編輯, Query Builder, URL 參數, JSON Query 互轉, URL Encode Decode, API 開發工具">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script>
+tailwind.config={theme:{extend:{colors:{hub:{900:'#0B1120',800:'#151F32',700:'#1E293B',accent:'#00E5FF'}},fontFamily:{sans:['"Noto Sans TC"','ui-sans-serif','system-ui','sans-serif'],mono:['"Fira Code"','ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','monospace']}}}}
+</script>
+<style>
+body{background-color:#0B1120;color:#E2E8F0;background-image:linear-gradient(to right,rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:30px 30px;background-attachment:fixed}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1E293B;border-radius:10px;border:2px solid #0B1120}
+::-webkit-scrollbar-thumb:hover{background:#00E5FF}
+.glass-panel{background-color:rgba(21,31,50,0.8);backdrop-filter:blur(8px);border:1px solid #1E293B;border-radius:1rem}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.qs-input{width:100%;min-height:70px;background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;border-radius:0.75rem;padding:0.75rem 1rem;outline:none;font-family:'Fira Code',monospace;font-size:0.82rem;line-height:1.6;resize:vertical;transition:border-color 0.2s,box-shadow 0.2s;word-break:break-all}
+.qs-input:focus{border-color:#00E5FF;box-shadow:0 0 0 3px rgba(0,229,255,0.1)}
+.qs-input::placeholder{color:#475569}
+.action-btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 0.9rem;border-radius:0.5rem;font-size:0.78rem;font-weight:500;border:1px solid #1e293b;background:transparent;color:#94a3b8;transition:all 0.2s;cursor:pointer}
+.action-btn:hover{color:#e2e8f0;background:rgba(0,229,255,0.08);border-color:rgba(0,229,255,0.25)}
+.action-btn.primary{background:rgba(0,229,255,0.12);color:#00E5FF;border-color:rgba(0,229,255,0.25)}
+.action-btn.primary:hover{background:rgba(0,229,255,0.2)}
+.action-btn svg{width:0.9rem;height:0.9rem}
+.action-btn.danger{background:rgba(239,68,68,0.1);color:#FCA5A5;border-color:rgba(239,68,68,0.2)}
+.action-btn.danger:hover{background:rgba(239,68,68,0.2)}
+.param-input{width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;padding:0.4rem 0.6rem;outline:none;border-radius:0.375rem;font-family:'Fira Code',monospace;font-size:0.78rem;transition:border-color 0.2s}
+.param-input:focus{border-color:#00E5FF;box-shadow:0 0 0 2px rgba(0,229,255,0.08)}
+.param-input::placeholder{color:#475569}
+.param-table{width:100%;border-collapse:collapse}
+.param-table th{text-align:left;padding:0.5rem 0.6rem;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;border-bottom:1px solid #1e293b;background:rgba(11,17,32,0.3)}
+.param-table td{padding:0.35rem 0.4rem;border-bottom:1px solid rgba(30,41,59,0.4);vertical-align:middle}
+.param-table tr:hover td{background:rgba(0,229,255,0.015)}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:1.6rem;height:1.6rem;border-radius:0.375rem;color:#64748b;transition:all 0.15s;cursor:pointer;border:none;background:transparent;padding:0}
+.icon-btn:hover{color:#e2e8f0;background:rgba(0,229,255,0.1)}
+.icon-btn.del:hover{color:#EF4444;background:rgba(239,68,68,0.1)}
+.stat-card{background:#0f172a;border:1px solid #1e293b;border-radius:0.5rem;padding:0.6rem 0.85rem;text-align:center}
+.stat-card .num{font-size:1.15rem;font-weight:700;color:#e2e8f0;font-family:'Fira Code',monospace}
+.stat-card .lbl{font-size:0.6rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-top:0.15rem}
+.output-box{background:#0f172a;border:1px solid #1e293b;border-radius:0.5rem;padding:0.6rem 0.85rem;font-family:'Fira Code',monospace;font-size:0.8rem;color:#e2e8f0;word-break:break-all;transition:border-color 0.2s;min-height:2.4rem}
+.output-box:hover{border-color:rgba(0,229,255,0.2)}
+.tab-btn{padding:0.4rem 0.85rem;border-radius:0.5rem;font-size:0.75rem;font-weight:500;border:1px solid transparent;background:transparent;color:#94a3b8;transition:all 0.2s;cursor:pointer}
+.tab-btn:hover{color:#e2e8f0;background:rgba(0,229,255,0.05)}
+.tab-btn.active{background:rgba(0,229,255,0.1);color:#00E5FF;border-color:rgba(0,229,255,0.2)}
+.json-textarea{width:100%;min-height:120px;background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;border-radius:0.5rem;padding:0.75rem;outline:none;font-family:'Fira Code',monospace;font-size:0.78rem;line-height:1.5;resize:vertical;transition:border-color 0.2s}
+.json-textarea:focus{border-color:#00E5FF;box-shadow:0 0 0 3px rgba(0,229,255,0.08)}
+.json-textarea::placeholder{color:#475569}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary{cursor:pointer;padding:1rem 1.25rem;border-radius:0.75rem;background:#151F32;border:1px solid #1e293b;font-weight:500;color:#e2e8f0;transition:all 0.2s;display:flex;align-items:center;justify-content:space-between}
+.faq-item summary:hover{border-color:rgba(0,229,255,0.3)}
+.faq-item[open] summary{border-color:rgba(0,229,255,0.3);border-radius:0.75rem 0.75rem 0 0}
+.faq-item .faq-content{padding:1rem 1.25rem;background:#151F32;border:1px solid #1e293b;border-top:none;border-radius:0 0 0.75rem 0.75rem;color:#94a3b8;font-size:0.9rem;line-height:1.7}
+.faq-item .chevron-icon{transition:transform 0.3s}
+.faq-item[open] .chevron-icon{transform:rotate(180deg)}
+@media(max-width:640px){.qs-input{font-size:0.75rem;min-height:60px}.param-input{font-size:0.72rem}.param-table td{padding:0.25rem 0.3rem}.param-table th{padding:0.35rem 0.4rem;font-size:0.65rem}}
+</style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/query-string-parser/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/query-string-parser/">
+    <meta property="og:title" content="Query String Parser URL 參數解析工具">
+    <meta property="og:description" content="免費線上 Query String Parser 工具。解析、編輯、驗證 URL Query Parameters。支援可編輯表格、JSON ↔ Query 互轉、URL Encode/Decode、排序去重、統計分析。純前端本地運算。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Query String Parser URL 參數解析工具">
+    <meta name="twitter:description" content="免費線上 Query String Parser 工具。解析、編輯、驗證 URL Query Parameters。支援可編輯表格、JSON ↔ Query 互轉、URL Encode/Decode、排序去重、統計分析。純前端本地運算。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Query String Parser URL 參數解析工具","url":"https://toolhuben.com/query-string-parser/","description":"免費線上 Query String Parser 工具。解析、編輯、驗證 URL Query Parameters。支援可編輯表格、JSON ↔ Query 互轉、URL Encode/Decode、排序去重、統計分析。純前端本地運算。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Query String Parser URL 參數解析工具","item":"https://toolhuben.com/query-string-parser/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/query-string-parser/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/query-string-parser/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/query-string-parser/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#00E5FF;--classic-accent-rgb:0,229,255" data-tool-visual data-classic-tool data-classic-layout="glass">
+
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+
+<main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+<!-- ==================== HERO ==================== -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+<span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+純前端本地運算 · 您的資料絕不離開設備
+</div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+Query String <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-400">Parser</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+解析、編輯、驗證與重組 URL Query Parameters。支援可編輯表格、JSON ↔ Query 互轉、URL Encode/Decode。<br class="hidden sm:block">
+適用於 API 開發、SEO、網站分析與除錯。
+</p>
+</div>
+
+<!-- ==================== MAIN TOOL ==================== -->
+<div class="glass-panel shadow-2xl shadow-black/50 overflow-hidden mb-8">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-question-mark text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">Query String 解析器</span>
+<span class="text-[10px] text-slate-500 ml-auto">支援完整 URL 或純 Query String</span>
+</div>
+<div class="p-4 sm:p-6 space-y-4">
+
+<!-- Input -->
+<div>
+<label class="text-xs font-medium text-slate-400 mb-1.5 block">輸入完整 URL 或純 Query String</label>
+<textarea id="qs-input" class="qs-input" placeholder="例如：&#10;https://example.com/search?q=toolhub&page=2&lang=en&#10;或直接輸入：&#10;q=toolhub&page=2&lang=en" spellcheck="false"></textarea>
+</div>
+<div class="flex flex-wrap gap-2">
+<button id="btn-parse" class="action-btn primary"><i class="ph ph-play"></i> 解析</button>
+<button id="btn-sample" class="action-btn"><i class="ph ph-magic-wand"></i> Sample</button>
+<button id="btn-clear" class="action-btn"><i class="ph ph-trash"></i> Clear</button>
+</div>
+</div>
+</div>
+
+<!-- ==================== RESULTS ==================== -->
+<div id="results-container" style="display:none">
+
+<!-- Query Editor Table -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2 flex-wrap">
+<i class="ph ph-table text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">Query Parameters</span>
+<span class="text-[10px] text-slate-500 ml-auto" id="param-count-label">0 個參數</span>
+</div>
+<div class="p-4 sm:p-6">
+
+<!-- Toolbar -->
+<div class="flex flex-wrap gap-1.5 mb-3 pb-3 border-b border-hub-700/50">
+<button id="btn-add-param" class="action-btn primary" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-plus"></i> 新增</button>
+<button id="btn-sort" class="action-btn" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-sort-ascending"></i> 排序 A→Z</button>
+<button id="btn-dedup" class="action-btn" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-copy-simple"></i> 移除重複</button>
+<button id="btn-remove-empty" class="action-btn" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-backspace"></i> 移除空值</button>
+<span class="h-5 w-px bg-hub-700 self-center mx-1"></span>
+<button id="btn-encode" class="action-btn" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-lock"></i> Encode</button>
+<button id="btn-decode" class="action-btn" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-unlock"></i> Decode</button>
+</div>
+
+<div class="overflow-x-auto">
+<table class="param-table">
+<thead><tr>
+<th style="width:2rem">#</th>
+<th>Key</th>
+<th>Value</th>
+<th style="width:4.5rem">操作</th>
+</tr></thead>
+<tbody id="params-tbody"></tbody>
+</table>
+</div>
+
+<div id="empty-params-msg" class="text-center text-slate-500 text-sm py-6 hidden">
+<i class="ph ph-database text-2xl block mb-2"></i>尚無參數，請先輸入 Query String 或點擊「新增」手動加入。
+</div>
+</div>
+</div>
+
+<!-- Generated Output -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-arrows-left-right text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">即時輸出</span>
+</div>
+<div class="p-4 sm:p-6 space-y-3">
+<div>
+<label class="text-xs font-medium text-slate-400 mb-1 block">Query String</label>
+<div class="flex gap-2">
+<div id="output-query" class="output-box flex-1">—</div>
+<button class="action-btn" style="flex-shrink:0" onclick="copyText('output-query','Query String 已複製')"><i class="ph ph-copy"></i></button>
+</div>
+</div>
+<div>
+<label class="text-xs font-medium text-slate-400 mb-1 block">完整 URL（可輸入 Base URL）</label>
+<div class="flex gap-2 mb-2">
+<input id="base-url-input" class="param-input flex-1" placeholder="https://example.com/api" value="https://example.com/api" spellcheck="false">
+</div>
+<div class="flex gap-2">
+<div id="output-url" class="output-box flex-1">—</div>
+<button class="action-btn" style="flex-shrink:0" onclick="copyText('output-url','完整 URL 已複製')"><i class="ph ph-copy"></i></button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Stats -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-chart-bar text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">統計資訊</span>
+</div>
+<div class="p-4 sm:p-6">
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="stats-grid"></div>
+</div>
+</div>
+
+<!-- JSON ↔ Query (⭐ Bonus) -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-code text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">JSON ↔ Query String</span>
+<span class="text-[10px] text-hub-accent bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">特色功能</span>
+</div>
+<div class="p-4 sm:p-6 space-y-3">
+<div class="flex flex-wrap gap-2 mb-2">
+<button id="btn-json-to-qs" class="action-btn primary" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-arrow-right"></i> JSON → Query</button>
+<button id="btn-qs-to-json" class="action-btn" style="font-size:0.72rem;padding:0.35rem 0.65rem"><i class="ph ph-arrow-left"></i> Query → JSON</button>
+</div>
+<textarea id="json-input" class="json-textarea" placeholder='輸入 JSON 物件，例如：&#10;{&#10;  "name": "Gary",&#10;  "page": 2,&#10;  "lang": "en"&#10;}' spellcheck="false"></textarea>
+<div id="json-output" class="text-xs text-slate-400 mt-1">轉換結果會顯示在這裡，並自動填入上方表格。</div>
+</div>
+</div>
+
+<!-- Action Buttons -->
+<div class="flex flex-wrap gap-2 pt-2">
+<button id="btn-copy-qs" class="action-btn"><i class="ph ph-copy"></i> Copy Query String</button>
+<button id="btn-copy-url" class="action-btn"><i class="ph ph-link"></i> Copy Full URL</button>
+<button id="btn-download-txt" class="action-btn"><i class="ph ph-file-text"></i> Download TXT</button>
+<button id="btn-download-json" class="action-btn"><i class="ph ph-file-js"></i> Download JSON</button>
+</div>
+</div>
+
+<!-- ==================== FAQ ==================== -->
+<div class="glass-panel p-6 shadow-xl mt-8">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5"><i class="ph-fill ph-question-mark text-hub-accent"></i> Query String 常見問題 FAQ</h3>
+<div class="space-y-4" itemscope itemtype="https://schema.org/FAQPage">
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q1: Query String 是什麼？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+<strong class="text-white">Query String（查詢字串）</strong>是 URL 中 <code class="text-hub-accent">?</code> 之後的部分，用於向伺服器傳遞參數。它由一或多個 <strong class="text-white">key=value</strong> 組成，多個參數之間用 <code class="text-hub-accent">&amp;</code> 分隔。<br><br>
+範例：<br>
+<code class="text-hub-accent">https://example.com/search?q=hello&page=2&sort=desc</code><br><br>
+其中 Query String 為 <code class="text-hub-accent">q=hello&page=2&sort=desc</code>，包含三個參數：<strong class="text-white">q</strong>（搜尋關鍵字）、<strong class="text-white">page</strong>（頁碼）、<strong class="text-white">sort</strong>（排序方式）。<br><br>
+Query String 是 HTTP GET 請求中最常見的參數傳遞方式，廣泛應用於搜尋、篩選、分頁、追蹤等場景。
+</p>
+</div>
+</details></div>
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q2: GET 與 POST 在傳遞參數上有什麼差別？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+<strong class="text-white">GET 請求</strong>將參數放在 URL 的 Query String 中（<code class="text-hub-accent">?key=value</code>），優點是：<br>
+• 可加入書籤、可直接分享網址<br>
+• 瀏覽器可快取<br>
+• 適合搜尋、導航等無副作用操作<br><br>
+<strong class="text-white">POST 請求</strong>將參數放在 HTTP Request Body 中，優點是：<br>
+• 參數不會顯示在 URL 中，安全性較高<br>
+• 可傳送大量資料（無長度限制）<br>
+• 支援多種 Content-Type（JSON、Form、Multipart）<br>
+• 適合登入、表單提交等有副作用的操作<br><br>
+<strong class="text-white">實務建議：</strong>查詢、讀取類操作用 GET；新增、修改、刪除類操作用 POST（或 PUT/DELETE）。對於敏感資料，一律使用 POST 或 HTTPS。
+</p>
+</div>
+</details></div>
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q3: URL Encode（Percent-Encoding）是什麼？為什麼需要？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+<strong class="text-white">URL Encode（又稱 Percent-Encoding）</strong>是將 URL 中的特殊字元轉換為 <code class="text-hub-accent">%</code> 加上兩位十六進位碼的機制。<br><br>
+為什麼需要編碼？因為 URL 中某些字元具有<strong class="text-white">特殊含義</strong>：<br>
+• <code class="text-hub-accent">?</code> → 開始 Query String<br>
+• <code class="text-hub-accent">&amp;</code> → 分隔參數<br>
+• <code class="text-hub-accent">=</code> → 分隔 Key 和 Value<br>
+• <code class="text-hub-accent">#</code> → 開始 Fragment<br>
+• 空格 → URL 中不允許<br><br>
+如果參數值中包含這些字元，就必須進行編碼：<br>
+• <code class="text-hub-accent">"hello world"</code> → <code class="text-hub-accent">hello%20world</code><br>
+• <code class="text-hub-accent">"100% done"</code> → <code class="text-hub-accent">100%25%20done</code><br>
+• <code class="text-hub-accent">"a&b=1"</code> → <code class="text-hub-accent">a%26b%3D1</code><br><br>
+JavaScript 中可以使用 <code class="text-hub-accent">encodeURIComponent()</code> 和 <code class="text-hub-accent">decodeURIComponent()</code> 進行編解碼。
+</p>
+</div>
+</details></div>
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q4: 如何設計好的 Query Parameters？有哪些最佳實踐？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+以下是設計 Query Parameters 的建議：<br><br>
+<strong class="text-white">1. 使用一致的名稱慣例</strong><br>
+推薦 camelCase（<code class="text-hub-accent">sortBy</code>）或 snake_case（<code class="text-hub-accent">sort_by</code>），選擇一種並保持一致。<br><br>
+<strong class="text-white">2. 參數名稱要具描述性</strong><br>
+✅ <code class="text-hub-accent">sortOrder=desc</code>  ❌ <code class="text-hub-accent">s=d</code><br><br>
+<strong class="text-white">3. 避免 URL 過長</strong><br>
+瀏覽器對 URL 長度有限制（約 2000~8000 字元），過多的 Query Parameters 可能導致請求失敗。<br><br>
+<strong class="text-white">4. 不要傳送敏感資訊</strong><br>
+Query String 會出現在瀏覽器歷史、伺服器日誌、Referer 標頭中。密碼、Token 等敏感資料不應放在 Query String 中。<br><br>
+<strong class="text-white">5. 對特殊字元進行 URL Encode</strong><br>
+確保參數值中的特殊字元已被正確編碼，避免解析錯誤。<br><br>
+<strong class="text-white">6. 考慮使用陣列格式</strong><br>
+對於多值參數，使用 <code class="text-hub-accent">key[]=val1&key[]=val2</code> 或 <code class="text-hub-accent">key=val1,val2</code> 等明確格式。
+</p>
+</div>
+</details></div>
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q5: Query String 長度有限制嗎？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+<strong class="text-white">是的，URL 有長度限制。</strong>但這個限制並非來自 HTTP 協定本身（RFC 並未規定 URL 最大長度），而是來自瀏覽器和伺服器的實作限制：<br><br>
+• <strong class="text-white">Internet Explorer</strong>：約 2,048 字元（最嚴格）<br>
+• <strong class="text-white">Chrome</strong>：約 64,000 字元<br>
+• <strong class="text-white">Firefox</strong>：約 64,000 字元<br>
+• <strong class="text-white">Safari</strong>：約 64,000 字元<br>
+• <strong class="text-white">Apache/Nginx 伺服器</strong>：預設約 8,000 字元<br><br>
+<strong class="text-white">實務建議：</strong>為了確保最大的相容性，建議將 URL 長度控制在 <strong class="text-white">2,000 字元</strong>以內。如果需要傳送大量資料，應改用 POST 請求並將資料放在 Request Body 中。
+</p>
+</div>
+</details></div>
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q6: Query String 中如何處理陣列或巢狀結構？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+Query String 本質上是 flat（扁平）的鍵值對結構，但可以透過命名慣例來模擬陣列和巢狀物件：<br><br>
+<strong class="text-white">陣列格式（多種常見做法）：</strong><br>
+• <code class="text-hub-accent">tag=tech&tag=dev</code> — 重複 Key（最常見）<br>
+• <code class="text-hub-accent">tag[]=tech&tag[]=dev</code> — PHP 風格<br>
+• <code class="text-hub-accent">tag=tech,dev</code> — 逗號分隔<br><br>
+<strong class="text-white">巢狀物件（多種常見做法）：</strong><br>
+• <code class="text-hub-accent">filter[category]=books&filter[price]=10-20</code> — PHP/Rails 風格<br>
+• <code class="text-hub-accent">filter.category=books&filter.price=10-20</code> — 點分隔<br><br>
+不同的後端框架對巢狀 Query String 的解析方式不同。本工具以最通用的扁平鍵值對 Key/Value 進行解析。如需處理巢狀結構，建議使用 JSON 格式傳遞。
+</p>
+</div>
+</details></div>
+
+<div itemscope itemprop="mainEntity" itemtype="https://schema.org/Question" class="faq-item"><details>
+<summary itemprop="name"><span>Q7: 本工具會將我的資料上傳到伺服器嗎？</span><i class="ph ph-caret-down chevron-icon text-slate-500"></i></summary>
+<div itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" class="faq-content">
+<p itemprop="text" class="text-slate-400 text-sm leading-relaxed">
+完全不會。本工具是<strong class="text-white">純前端應用</strong>，所有的 Query String 解析、編輯、編解碼和格式轉換都在您的瀏覽器中本地完成，沒有任何資料被傳送到伺服器。即使離線狀態下也能正常運作。
+</p>
+</div>
+</details></div>
+
+</div>
+</div>
+
+<!-- ==================== SEO ARTICLE ==================== -->
+<div class="glass-panel p-6 shadow-xl mt-8">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5"><i class="ph ph-book-open text-hub-accent"></i> Query String 使用指南：從基礎到進階</h3>
+<div class="space-y-5 text-slate-400 text-sm leading-relaxed">
+
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">Query String 的組成結構</h4>
+<p>一個 Query String 由以下部分組成：</p>
+<div class="mt-2 p-3 bg-slate-900/50 rounded-lg border border-hub-700 font-mono text-xs leading-relaxed text-slate-300">
+<span class="text-cyan-400">?</span><span class="text-orange-400">key1</span><span class="text-slate-500">=</span><span class="text-emerald-400">value1</span><span class="text-cyan-400">&amp;</span><span class="text-orange-400">key2</span><span class="text-slate-500">=</span><span class="text-emerald-400">value2</span><span class="text-cyan-400">&amp;</span><span class="text-orange-400">key3</span><span class="text-slate-500">=</span><span class="text-emerald-400">value3</span>
+</div>
+<ul class="mt-2 space-y-1 list-disc list-inside">
+<li><strong class="text-cyan-400">?</strong>：標誌 Query String 起始</li>
+<li><strong class="text-orange-400">key</strong>：參數名稱，應具描述性</li>
+<li><strong class="text-slate-400">=</strong>：連接 Key 和 Value</li>
+<li><strong class="text-emerald-400">value</strong>：參數值，特殊字元需要 URL Encode</li>
+<li><strong class="text-cyan-400">&amp;</strong>：分隔多個參數</li>
+</ul>
+</div>
+
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">Query String 在 Web 開發中的常見應用</h4>
+<ul class="space-y-2 list-disc list-inside">
+<li><strong class="text-white">搜尋與篩選</strong>：如 <code class="text-hub-accent">?q=keyword&category=books&price=10-50</code></li>
+<li><strong class="text-white">分頁</strong>：如 <code class="text-hub-accent">?page=2&per_page=20</code></li>
+<li><strong class="text-white">排序</strong>：如 <code class="text-hub-accent">?sort=price&order=desc</code></li>
+<li><strong class="text-white">UTM 追蹤</strong>：如 <code class="text-hub-accent">?utm_source=google&utm_medium=cpc</code></li>
+<li><strong class="text-white">API 過濾</strong>：如 <code class="text-hub-accent">?status=active&created_after=2024-01-01</code></li>
+<li><strong class="text-white">OAuth 授權</strong>：如 <code class="text-hub-accent">?client_id=xxx&redirect_uri=yyy&scope=read</code></li>
+<li><strong class="text-white">在地化</strong>：如 <code class="text-hub-accent">?lang=zh-TW&currency=TWD</code></li>
+</ul>
+</div>
+
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">JSON ↔ Query String 的應用場景</h4>
+<p>在 API 開發中，JSON 和 Query String 之間的轉換是常見需求：</p>
+<ul class="mt-2 space-y-1.5 list-disc list-inside">
+<li><strong class="text-white">前端開發</strong>：將 JSON 設定物件轉為 Query String 發送 API 請求</li>
+<li><strong class="text-white">後端除錯</strong>：將收到的 Query String 轉為 JSON 進行日誌記錄與分析</li>
+<li><strong class="text-white">Postman/cURL 測試</strong>：在 JSON 和 Query 格式間快速轉換</li>
+<li><strong class="text-white">URL 分享</strong>：將結構化參數轉為 Query String 便於分享</li>
+<li><strong class="text-white">設定匯出</strong>：將 Query 參數匯出為 JSON 格式保存</li>
+</ul>
+<p class="mt-2">本工具的 <strong class="text-white">JSON ↔ Query String</strong> 功能支援雙向轉換，且轉換結果會自動同步到上方的編輯表格中，方便進一步編輯和調整。</p>
+</div>
+
+</div>
+</div>
+
+</div>
+
+<div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">完成</span>
+</div>
+
+<div id="component-footer"></div>
+
+<script>
+async function loadComponent(e,t){try{const n=await fetch(t);if(!n.ok)throw Error();const o=await n.text(),r=document.getElementById(e);r.innerHTML=o,Array.from(r.querySelectorAll('script')).forEach(e=>{const t=document.createElement('script');Array.from(e.attributes).forEach(e=>t.setAttribute(e.name,e.value)),t.appendChild(document.createTextNode(e.innerHTML)),e.parentNode.replaceChild(t,e)})}catch(e){}}
+function setupSidebarActiveState(){const e='/query-string-parser';document.querySelectorAll('#sidebar-container .nav-item').forEach(t=>{const n=t.getAttribute('href');if(!n)return;const o=n.replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';e===o||'/'!==e&&'/'!==o&&e.startsWith(o)&&(t.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50'),t.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]'))})}
+async function initializeSystem(){await Promise.all([loadComponent('component-header','/components/header.html'),loadComponent('component-sidebar','/components/sidebar.html'),loadComponent('component-footer','/components/footer.html')]),typeof lucide!=='undefined'&&lucide.createIcons(),document.body.addEventListener('click',e=>{const t=e.target.closest('#sidebar-trigger-btn'),n=e.target.closest('#sidebar-close-btn'),o=e.target.closest('#sidebar-overlay');if(t||n||o){const r=document.getElementById('sidebar-container'),i=document.getElementById('sidebar-overlay');if(r&&i){const l=r.classList.contains('translate-x-full');l&&t?(i.classList.remove('pointer-events-none'),requestAnimationFrame(()=>{r.classList.remove('translate-x-full'),i.classList.remove('opacity-0'),i.classList.add('opacity-100')})):!l&&(n||o||t)&&(r.classList.add('translate-x-full'),i.classList.remove('opacity-0'),i.classList.add('opacity-100'),setTimeout(()=>i.classList.add('pointer-events-none'),300))}}}),setupSidebarActiveState(),initApp()}
+document.addEventListener('DOMContentLoaded',initializeSystem);
+</script>
+
+<script>
+// ============================================================
+// 1. State
+// ============================================================
+let params = []; // Array of {key, value}
+let isUpdating = false;
+
+// ============================================================
+// 2. Parse Input
+// ============================================================
+function parseInput(str) {
+    if (!str || !str.trim()) return [];
+    let s = str.trim();
+    // If it's a full URL, extract query string
+    const qIdx = s.indexOf('?');
+    if (qIdx >= 0) {
+        s = s.substring(qIdx + 1);
+    }
+    // Remove hash if present
+    const hIdx = s.indexOf('#');
+    if (hIdx >= 0) s = s.substring(0, hIdx);
+
+    if (!s) return [];
+
+    const result = [];
+    const pairs = s.split('&');
+    for (const pair of pairs) {
+        if (!pair) continue;
+        const eqIdx = pair.indexOf('=');
+        let key, val;
+        if (eqIdx === -1) {
+            key = decodeURIComponent(pair.replace(/\+/g, ' '));
+            val = '';
+        } else {
+            key = decodeURIComponent(pair.substring(0, eqIdx).replace(/\+/g, ' '));
+            val = decodeURIComponent(pair.substring(eqIdx + 1).replace(/\+/g, ' '));
+        }
+        result.push({ key, value: val });
+    }
+    return result;
+}
+
+// ============================================================
+// 3. Build Query String
+// ============================================================
+function buildQueryString(prms, encode = true) {
+    return prms.map(p => {
+        const k = encode ? encodeURIComponent(p.key) : p.key;
+        const v = encode ? encodeURIComponent(p.value) : p.value;
+        return k + '=' + v;
+    }).join('&');
+}
+
+// ============================================================
+// 4. Render Table
+// ============================================================
+function renderTable() {
+    const tbody = document.getElementById('params-tbody');
+    const emptyMsg = document.getElementById('empty-params-msg');
+    const countLabel = document.getElementById('param-count-label');
+
+    countLabel.textContent = params.length + ' 個參數';
+
+    if (params.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        updateOutputs();
+        updateStats();
+        return;
+    }
+    emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = params.map((p, i) => `
+        <tr>
+            <td style="color:#475569;font-size:0.75rem;font-family:'Fira Code',monospace;text-align:center">${i+1}</td>
+            <td><input class="param-input" data-idx="${i}" data-field="key" value="${escapeHtml(p.key)}" placeholder="key"></td>
+            <td><input class="param-input" data-idx="${i}" data-field="value" value="${escapeHtml(p.value)}" placeholder="value"></td>
+            <td>
+                <div style="display:flex;gap:0.15rem;align-items:center">
+                    <button class="icon-btn" onclick="moveParam(${i},-1)" title="上移"><i class="ph ph-caret-up" style="font-size:0.7rem"></i></button>
+                    <button class="icon-btn" onclick="moveParam(${i},1)" title="下移"><i class="ph ph-caret-down" style="font-size:0.7rem"></i></button>
+                    <button class="icon-btn del" onclick="deleteParam(${i})" title="刪除"><i class="ph ph-x" style="font-size:0.7rem"></i></button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    // Bind input events
+    document.querySelectorAll('.param-input').forEach(inp => {
+        inp.addEventListener('input', function() {
+            if (isUpdating) return;
+            const idx = parseInt(this.dataset.idx);
+            const field = this.dataset.field;
+            if (params[idx]) {
+                params[idx][field] = this.value;
+                updateOutputs();
+                updateStats();
+            }
+        });
+    });
+
+    updateOutputs();
+    updateStats();
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// 5. CRUD Operations
+// ============================================================
+function deleteParam(idx) {
+    params.splice(idx, 1);
+    renderTable();
+}
+
+function moveParam(idx, dir) {
+    const target = idx + dir;
+    if (target < 0 || target >= params.length) return;
+    [params[idx], params[target]] = [params[target], params[idx]];
+    renderTable();
+}
+
+function addParam() {
+    params.push({ key: '', value: '' });
+    renderTable();
+    // Scroll to bottom of table
+    const tbody = document.getElementById('params-tbody');
+    const lastInput = tbody.querySelector('tr:last-child input');
+    if (lastInput) setTimeout(() => lastInput.focus(), 50);
+}
+
+function sortParams() {
+    params.sort((a, b) => a.key.localeCompare(b.key));
+    renderTable();
+    showToast('已排序 A→Z', false);
+}
+
+function dedupParams() {
+    const seen = new Set();
+    const deduped = [];
+    for (const p of params) {
+        const sig = p.key + ':' + p.value;
+        if (!seen.has(sig)) {
+            seen.add(sig);
+            deduped.push(p);
+        }
+    }
+    if (deduped.length !== params.length) {
+        params = deduped;
+        renderTable();
+        showToast('已移除重複參數', false);
+    } else {
+        showToast('無重複參數', false);
+    }
+}
+
+function removeEmptyParams() {
+    const before = params.length;
+    params = params.filter(p => p.key.trim() !== '' || p.value.trim() !== '');
+    if (params.length !== before) {
+        renderTable();
+        showToast('已移除空值參數', false);
+    } else {
+        showToast('無空值參數', false);
+    }
+}
+
+function encodeParams() {
+    params = params.map(p => ({
+        key: encodeURIComponent(p.key),
+        value: encodeURIComponent(p.value)
+    }));
+    renderTable();
+    showToast('已 URL Encode', false);
+}
+
+function decodeParams() {
+    params = params.map(p => {
+        try {
+            return { key: decodeURIComponent(p.key.replace(/\+/g,' ')), value: decodeURIComponent(p.value.replace(/\+/g,' ')) };
+        } catch(e) {
+            return p;
+        }
+    });
+    renderTable();
+    showToast('已 URL Decode', false);
+}
+
+// ============================================================
+// 6. Outputs
+// ============================================================
+function updateOutputs() {
+    const qs = buildQueryString(params, true);
+    const qsRaw = buildQueryString(params, false);
+    document.getElementById('output-query').textContent = qs || '(空白)';
+
+    const base = document.getElementById('base-url-input').value.trim();
+    if (base && qs) {
+        const sep = base.includes('?') ? '&' : '?';
+        document.getElementById('output-url').textContent = base + sep + qs;
+    } else if (qs) {
+        document.getElementById('output-url').textContent = qs;
+    } else {
+        document.getElementById('output-url').textContent = base || '(空白)';
+    }
+
+    // Update JSON output area as well
+    updateJsonOutput();
+}
+
+// ============================================================
+// 7. Stats
+// ============================================================
+function updateStats() {
+    const el = document.getElementById('stats-grid');
+    const qs = buildQueryString(params, true);
+    const qsDecoded = buildQueryString(params, false);
+    const qsLen = qs.length;
+    const qsDecodedLen = qsDecoded.length;
+
+    el.innerHTML = `
+        <div class="stat-card"><div class="num">${params.length}</div><div class="lbl">Parameters</div></div>
+        <div class="stat-card"><div class="num">${qsLen}</div><div class="lbl">Encoded Length</div></div>
+        <div class="stat-card"><div class="num">${qsDecodedLen}</div><div class="lbl">Decoded Length</div></div>
+        <div class="stat-card"><div class="num">${qsLen - qsDecodedLen >= 0 ? '+' + (qsLen - qsDecodedLen) : qsLen - qsDecodedLen}</div><div class="lbl">Delta (Encode)</div></div>
+    `;
+}
+
+// ============================================================
+// 8. JSON ↔ Query (⭐ Bonus)
+// ============================================================
+function updateJsonOutput() {
+    if (params.length === 0) {
+        document.getElementById('json-input').placeholder = '輸入 JSON 物件，例如：\n{"name":"Gary","page":2,"lang":"en"}';
+        return;
+    }
+    try {
+        const obj = {};
+        for (const p of params) {
+            if (p.key.trim()) {
+                // Try to preserve numeric values
+                const num = Number(p.value);
+                obj[p.key] = (p.value !== '' && !isNaN(num)) ? num : p.value;
+            }
+        }
+        document.getElementById('json-input').value = JSON.stringify(obj, null, 2);
+    } catch(e) {}
+}
+
+function jsonToQueryString() {
+    const input = document.getElementById('json-input').value.trim();
+    if (!input) { showToast('請先輸入 JSON', true); return; }
+    try {
+        const obj = JSON.parse(input);
+        if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+            showToast('請輸入 JSON 物件（非陣列）', true);
+            return;
+        }
+        params = [];
+        for (const key of Object.keys(obj)) {
+            const val = obj[key];
+            params.push({ key, value: String(val) });
+        }
+        renderTable();
+        showToast('JSON → Query String 轉換完成', false);
+    } catch(e) {
+        showToast('JSON 格式錯誤：' + e.message, true);
+    }
+}
+
+function queryStringToJson() {
+    if (params.length === 0) { showToast('表格中無參數', true); return; }
+    try {
+        const obj = {};
+        for (const p of params) {
+            if (p.key.trim()) {
+                const num = Number(p.value);
+                obj[p.key] = (p.value !== '' && !isNaN(num)) ? num : p.value;
+            }
+        }
+        document.getElementById('json-input').value = JSON.stringify(obj, null, 2);
+        showToast('Query String → JSON 轉換完成', false);
+    } catch(e) {
+        showToast('轉換失敗', true);
+    }
+}
+
+// ============================================================
+// 9. Copy & Download
+// ============================================================
+function copyText(elementId, msg) {
+    const el = document.getElementById(elementId);
+    const text = el.textContent || el.innerText;
+    if (!text || text === '—' || text === '(空白)') { showToast('無內容可複製', true); return; }
+    navigator.clipboard.writeText(text).then(() => showToast(msg || '已複製', false)).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+        showToast(msg || '已複製', false);
+    });
+}
+
+function showToast(msg, isError) {
+    const t = document.getElementById('toast'), ic = document.getElementById('toast-icon');
+    document.getElementById('toast-msg').textContent = msg;
+    if (isError) {
+        t.classList.replace('bg-slate-800','bg-red-950'); t.classList.replace('border-slate-700','border-red-900');
+        ic.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+    } else {
+        t.classList.replace('bg-red-950','bg-slate-800'); t.classList.replace('border-red-900','border-slate-700');
+        ic.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+    }
+    t.classList.remove('opacity-0','pointer-events-none','translate-y-4');
+    t.classList.add('opacity-100','translate-y-0');
+    clearTimeout(window.toastTimer);
+    window.toastTimer = setTimeout(() => {
+        t.classList.remove('opacity-100','translate-y-0');
+        t.classList.add('opacity-0','pointer-events-none','translate-y-4');
+    }, 2500);
+}
+
+// ============================================================
+// 10. Perform Parse
+// ============================================================
+function performParse() {
+    const input = document.getElementById('qs-input').value.trim();
+    if (!input) { showToast('請先輸入 Query String 或 URL', true); return; }
+    params = parseInput(input);
+    document.getElementById('results-container').style.display = 'block';
+    renderTable();
+    document.getElementById('results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================================
+// 11. Sample Data
+// ============================================================
+const SAMPLE_DATA = [
+    { label: '搜尋參數', qs: 'https://example.com/search?q=toolhub+parser&page=2&lang=en&sort=relevance&per_page=20' },
+    { label: 'UTM 追蹤', qs: 'utm_source=google&utm_medium=cpc&utm_campaign=spring_sale&utm_content=banner_a&ref=homepage' },
+    { label: 'API 過濾器', qs: 'status=active&created_after=2024-01-01&category=electronics&price_min=100&price_max=500&in_stock=true' },
+    { label: '複雜參數', qs: '?q=hello%20world&filter%5Bprice%5D=10-50&filter%5Bcolor%5D=red&sort=-created_at&page=1&include=user,tags' },
+    { label: 'OAuth 參數', qs: 'response_type=code&client_id=abc123&redirect_uri=https://app.example.com/callback&scope=read%20write&state=xyz789' },
+];
+
+function getRandomSample() {
+    return SAMPLE_DATA[Math.floor(Math.random() * SAMPLE_DATA.length)];
+}
+
+// ============================================================
+// 12. Events
+// ============================================================
+document.getElementById('btn-parse').addEventListener('click', performParse);
+document.getElementById('btn-clear').addEventListener('click', () => {
+    document.getElementById('qs-input').value = '';
+    document.getElementById('results-container').style.display = 'none';
+    params = [];
+    showToast('已清除', false);
+});
+document.getElementById('btn-sample').addEventListener('click', () => {
+    const s = getRandomSample();
+    document.getElementById('qs-input').value = s.qs;
+    params = parseInput(s.qs);
+    document.getElementById('results-container').style.display = 'block';
+    renderTable();
+    showToast(`已載入範例：${s.label}`, false);
+});
+document.getElementById('qs-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); performParse(); }
+});
+document.getElementById('base-url-input').addEventListener('input', updateOutputs);
+
+// CRUD buttons
+document.getElementById('btn-add-param').addEventListener('click', addParam);
+document.getElementById('btn-sort').addEventListener('click', sortParams);
+document.getElementById('btn-dedup').addEventListener('click', dedupParams);
+document.getElementById('btn-remove-empty').addEventListener('click', removeEmptyParams);
+document.getElementById('btn-encode').addEventListener('click', encodeParams);
+document.getElementById('btn-decode').addEventListener('click', decodeParams);
+
+// JSON ↔ Query
+document.getElementById('btn-json-to-qs').addEventListener('click', jsonToQueryString);
+document.getElementById('btn-qs-to-json').addEventListener('click', queryStringToJson);
+
+// Copy buttons
+document.getElementById('btn-copy-qs').addEventListener('click', () => copyText('output-query', 'Query String 已複製'));
+document.getElementById('btn-copy-url').addEventListener('click', () => copyText('output-url', '完整 URL 已複製'));
+
+// Download TXT
+document.getElementById('btn-download-txt').addEventListener('click', () => {
+    const qs = document.getElementById('output-query').textContent;
+    if (!qs || qs === '—' || qs === '(空白)') { showToast('尚無資料可下載', true); return; }
+    const report = `========================================\nQuery String Parser 報告\n========================================\n產生時間: ${new Date().toLocaleString('zh-TW')}\n\nQuery String:\n${qs}\n\n完整 URL:\n${document.getElementById('output-url').textContent}\n\n參數列表:\n${params.map((p,i) => `  ${i+1}. ${p.key} = ${p.value}`).join('\n')}\n\n========================================\n`;
+    const blob = new Blob([report], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=`query-parser-${Date.now()}.txt`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    showToast('TXT 已下載', false);
+});
+
+// Download JSON
+document.getElementById('btn-download-json').addEventListener('click', () => {
+    if (!params.length) { showToast('尚無資料可下載', true); return; }
+    const obj = {};
+    for (const p of params) { if (p.key.trim()) { const n=Number(p.value); obj[p.key] = (p.value!==''&&!isNaN(n)) ? n : p.value; } }
+    const data = { parameters: params, object: obj, queryString: buildQueryString(params, true), generatedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=`query-parser-${Date.now()}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    showToast('JSON 已下載', false);
+});
+
+// ============================================================
+// 13. Init
+// ============================================================
+function initApp() {
+    // Load a sample on startup
+    const sample = SAMPLE_DATA[0];
+    document.getElementById('qs-input').value = sample.qs;
+    params = parseInput(sample.qs);
+    document.getElementById('results-container').style.display = 'block';
+    renderTable();
+}
+</script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

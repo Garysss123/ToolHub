@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Generator | ToolHub - Schema.org JSON-LD 結構化資料產生器</title>
+    <meta name="description" content="免費線上 Schema.org JSON-LD 結構化資料產生與分析工具。支援 WebSite、Organization、Article、FAQPage、Product 等 10 種 Schema 類型，即時產生 JSON-LD、驗證完整度、一鍵複製下載，協助您滿足 Google 結構化資料規範。">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hub: {
+                            900: '#0B1120',
+                            800: '#151F32',
+                            700: '#1E293B',
+                            accent: '#38BDF8',
+                        },
+                        schema: {
+                            primary: '#818CF8',
+                            indigo: '#818CF8',
+                            purple: '#A855F7',
+                            green: '#10B981',
+                            amber: '#F59E0B',
+                            red: '#EF4444',
+                            blue: '#3B82F6',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #818CF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        .schema-input {
+            background-color: #0B1120;
+            border: 1px solid #1E293B;
+            color: #CBD5E1;
+            transition: all 0.2s;
+        }
+        .schema-input:focus {
+            border-color: #818CF8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+            outline: none;
+        }
+        .schema-input.error {
+            border-color: #EF4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .schema-select {
+            background-color: #0B1120;
+            border: 1px solid #1E293B;
+            color: #CBD5E1;
+        }
+        .schema-select:focus {
+            border-color: #818CF8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+            outline: none;
+        }
+
+        .mode-btn-active {
+            background: linear-gradient(135deg, rgba(129, 140, 248, 0.15), rgba(168, 85, 247, 0.1));
+            border-color: rgba(129, 140, 248, 0.3);
+            color: #818CF8;
+        }
+
+        .json-output {
+            background-color: #0B1120;
+            border: 1px solid #1E293B;
+        }
+
+        .badge-pass { background-color: rgba(16, 185, 129, 0.12); border-color: #10B981; color: #10B981; }
+        .badge-warn { background-color: rgba(245, 158, 11, 0.12); border-color: #F59E0B; color: #F59E0B; }
+        .badge-fail { background-color: rgba(239, 68, 68, 0.12); border-color: #EF4444; color: #EF4444; }
+
+        .score-bar {
+            transition: width 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(129, 140, 248, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(129, 140, 248, 0.6); }
+        }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+        .field-section {
+            border-left: 2px solid rgba(129, 140, 248, 0.2);
+        }
+
+        .remove-btn {
+            transition: all 0.2s;
+        }
+        .remove-btn:hover {
+            color: #EF4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .tab-btn-active {
+            background-color: rgba(129, 140, 248, 0.12);
+            border-color: rgba(129, 140, 248, 0.3);
+            color: #818CF8;
+        }
+
+        .schema-type-badge {
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .analysis-item {
+            transition: all 0.3s ease;
+        }
+        .analysis-item:hover {
+            transform: translateX(4px);
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        @media (max-width: 640px) {
+            .glass-panel { border-radius: 0.75rem; }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/schema-generator/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/schema-generator/">
+    <meta property="og:title" content="Schema Generator">
+    <meta property="og:description" content="免費線上 Schema.org JSON-LD 結構化資料產生與分析工具。支援 WebSite、Organization、Article、FAQPage、Product 等 10 種 Schema 類型，即時產生 JSON-LD、驗證完整度、一鍵複製下載，協助您滿足 Google 結構化資料規範。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Schema Generator">
+    <meta name="twitter:description" content="免費線上 Schema.org JSON-LD 結構化資料產生與分析工具。支援 WebSite、Organization、Article、FAQPage、Product 等 10 種 Schema 類型，即時產生 JSON-LD、驗證完整度、一鍵複製下載，協助您滿足 Google 結構化資料規範。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Schema Generator","url":"https://toolhuben.com/schema-generator/","applicationCategory":"DeveloperApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Schema Generator","item":"https://toolhuben.com/schema-generator/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/schema-generator/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/schema-generator/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/schema-generator/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#818CF8;--classic-accent-rgb:129,140,248" data-tool-visual data-classic-tool data-classic-layout="aurora">
+
+    <div id="component-header"></div>
+    <div id="component-sidebar"></div>
+
+    <main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+
+        <!-- ===================== Hero ===================== -->
+        <div class="text-center space-y-4 mb-8 mt-2">
+            <div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-indigo-950/30 border border-indigo-900/50 text-xs text-indigo-400 shadow-inner">
+                <i class="ph-fill ph-code-block mr-1.5 text-sm"></i>
+                Schema.org 結構化資料引擎
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Schema <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">Generator</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                雙模運作：<strong class="text-indigo-400">填表產生</strong> Schema.org JSON-LD，或<strong class="text-purple-400">貼上分析</strong> 現有程式碼的完整度與 Google 規範符合性。<br class="hidden sm:block">
+                支援 <strong class="text-indigo-400">10 種 Schema 類型</strong>，即時驗證、一鍵複製、一鍵下載。讓您的網站輕鬆擁有結構化資料優勢。
+            </p>
+        </div>
+
+        <!-- ===================== Mode Switcher ===================== -->
+        <div class="flex justify-center mb-8">
+            <div class="inline-flex bg-hub-800/80 border border-hub-700 rounded-xl p-1 shadow-lg">
+                <button id="mode-generate" class="mode-btn mode-btn-active flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all">
+                    <i class="ph-fill ph-pencil-line text-base"></i> 產生 Schema
+                </button>
+                <button id="mode-analyze" class="mode-btn flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-all">
+                    <i class="ph-fill ph-magnifying-glass text-base"></i> 分析 Schema
+                </button>
+            </div>
+        </div>
+
+        <!-- ===================== Main Grid ===================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ======== Left: Input Panel ======== -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+
+                <!-- Mode 1: Generate Panel -->
+                <div id="panel-generate" class="flex flex-col gap-5">
+
+                    <!-- Schema Type Selector -->
+                    <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                            <i class="ph ph-selection-all text-indigo-400 text-lg"></i> 選擇 Schema 類型
+                        </h3>
+                        <select id="schema-type" class="schema-select w-full rounded-lg px-4 py-3 text-sm outline-none transition-colors">
+                            <option value="WebSite">網站 (WebSite)</option>
+                            <option value="Organization">組織 (Organization)</option>
+                            <option value="Article">文章 (Article)</option>
+                            <option value="FAQPage">FAQ 問答 (FAQPage)</option>
+                            <option value="BreadcrumbList">麵包屑導航 (BreadcrumbList)</option>
+                            <option value="Product">產品 (Product)</option>
+                            <option value="SoftwareApplication">軟體應用 (SoftwareApplication)</option>
+                            <option value="LocalBusiness">在地商家 (LocalBusiness)</option>
+                            <option value="Person">人物 (Person)</option>
+                            <option value="WebPage">網頁 (WebPage)</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Form -->
+                    <div id="form-container" class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                            <i class="ph ph-list-checks text-indigo-400 text-lg"></i> 填寫欄位
+                            <span id="required-indicator" class="text-[10px] text-slate-500 font-normal ml-auto">標示 <span class="text-red-400">*</span> 為必填</span>
+                        </h3>
+                        <div id="form-fields" class="space-y-4">
+                            <!-- Dynamic fields rendered here -->
+                            <div class="text-center py-8 text-slate-500 text-sm">
+                                <i class="ph ph-arrow-circle-down text-3xl block mb-2 opacity-30"></i>
+                                請選擇 Schema 類型以開始填寫
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode 1 Actions -->
+                    <button id="btn-generate"
+                        class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                        <i class="ph-fill ph-code-block text-xl"></i> 產生 JSON-LD
+                    </button>
+                </div>
+
+                <!-- Mode 2: Analyze Panel -->
+                <div id="panel-analyze" class="flex-col gap-5 hidden">
+
+                    <!-- JSON Input -->
+                    <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                            <i class="ph ph-code text-purple-400 text-lg"></i> 貼上 JSON-LD
+                        </h3>
+                        <textarea id="in-json" rows="14"
+                            class="schema-input w-full rounded-lg px-4 py-3 font-mono text-xs leading-relaxed outline-none resize-y transition-colors placeholder:text-slate-600"
+                            placeholder='貼上 JSON-LD 結構化資料：&#10;{&#10;  "@context": "https://schema.org",&#10;  "@type": "WebSite",&#10;  "name": "ToolHub",&#10;  "url": "https://toolhuben.com"&#10;}'></textarea>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">
+                            <i class="ph ph-info text-indigo-400/80"></i> 支援任何有效的 Schema.org JSON-LD，需包含 <code class="text-indigo-400/80">@context</code> 與 <code class="text-indigo-400/80">@type</code>。
+                        </p>
+                    </div>
+
+                    <!-- Analyze Button -->
+                    <button id="btn-analyze"
+                        class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-lg rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                        <i class="ph-fill ph-magnifying-glass text-xl"></i> 分析結構化資料
+                    </button>
+
+                    <!-- Sample -->
+                    <button id="btn-sample"
+                        class="w-full py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-white font-medium text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                        <i class="ph ph-file-code"></i> 載入範例 JSON-LD
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ======== Right: Results ======== -->
+            <div class="lg:col-span-7 flex flex-col gap-5">
+
+                <!-- JSON-LD Output -->
+                <div class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="ph ph-file-js text-indigo-400 text-lg"></i> JSON-LD 輸出
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <span id="schema-badge" class="schema-type-badge bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hidden">WebSite</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <pre id="json-output" class="json-output w-full rounded-lg px-4 py-4 font-mono text-xs leading-relaxed overflow-auto max-h-[400px] min-h-[120px] text-slate-500">{
+    <span class="text-slate-600">// 選擇 Schema 類型和填寫欄位即可產生 JSON-LD</span>
+}</pre>
+                        <div id="copy-toast" class="absolute top-2 right-2 bg-emerald-500/90 text-white text-[10px] px-2.5 py-1 rounded-full opacity-0 transition-opacity pointer-events-none">已複製！</div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button id="btn-copy"
+                            class="flex-1 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-white font-medium text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                            <i class="ph ph-copy"></i> 一鍵複製
+                        </button>
+                        <button id="btn-download"
+                            class="flex-1 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-white font-medium text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                            <i class="ph ph-download"></i> 下載 JSON
+                        </button>
+                        <button id="btn-format"
+                            class="flex-1 py-2.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-white font-medium text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                            <i class="ph ph-magic-wand"></i> 格式化
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Schema Score & Analysis -->
+                <div id="analysis-panel" class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl hidden">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-gauge text-indigo-400 text-lg"></i> Schema 完整度分析
+                    </h3>
+
+                    <!-- Score -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4 text-center">
+                            <div class="text-[9px] text-slate-500 uppercase font-bold tracking-wider mb-1">Schema Score</div>
+                            <div class="flex items-center justify-center gap-2">
+                                <span id="schema-score" class="text-3xl sm:text-4xl font-extrabold font-mono text-indigo-400">--</span>
+                                <span class="text-slate-500 text-sm">/ 100</span>
+                            </div>
+                            <div class="w-full h-2 bg-hub-700/60 rounded-full mt-2 overflow-hidden">
+                                <div id="schema-score-bar" class="h-full rounded-full score-bar" style="width:0%; background: linear-gradient(90deg, #818CF8, #A855F7)"></div>
+                            </div>
+                            <span id="score-label" class="text-xs text-slate-500 mt-2 block">等待分析</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                                <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">必填欄位</span>
+                                <p class="font-mono text-lg sm:text-xl font-bold mt-1">
+                                    <span id="required-filled" class="text-emerald-400">0</span>
+                                    <span class="text-slate-600">/</span>
+                                    <span id="required-total" class="text-white">0</span>
+                                </p>
+                            </div>
+                            <div class="bg-hub-900/50 rounded-lg border border-hub-700 p-3 text-center">
+                                <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">建議改善</span>
+                                <p id="suggestion-count" class="font-mono text-lg sm:text-xl font-bold text-amber-400 mt-1">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Required Fields Status -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">欄位狀態</h4>
+                        <div id="field-status-list" class="space-y-1.5">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Suggestions -->
+                    <div id="suggestion-section" class="hidden">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">改善建議</h4>
+                        <div id="suggestion-list" class="space-y-2">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Panel -->
+                <div id="preview-panel" class="glass-panel p-5 sm:p-6 flex flex-col gap-4 shadow-xl hidden">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+                        <i class="ph ph-eye text-indigo-400 text-lg"></i> Google 搜尋預覽
+                    </h3>
+                    <div id="preview-content" class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+                        <div class="text-center py-6 text-slate-500 text-sm">
+                            <i class="ph ph-search text-3xl block mb-2 opacity-30"></i>
+                            產生 Schema 後將顯示 Google 搜尋預覽效果
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ===================== FAQ ===================== -->
+        <div class="mt-10 glass-panel p-6 shadow-xl">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-3 mb-4">
+                <i class="ph ph-question text-indigo-400 text-lg"></i> 常見問題
+            </h3>
+            <div class="space-y-3" id="faq-container">
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>Schema Generator 是什麼？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            Schema Generator 是一個雙模運作的結構化資料工具。<strong class="text-slate-300">產生模式</strong>：透過表單填寫，自動生成符合 Schema.org 規範的 JSON-LD 程式碼，無需手寫 JSON。<strong class="text-slate-300">分析模式</strong>：貼上現有的 JSON-LD，工具會自動檢測 Schema 類型、驗證欄位完整度、檢查是否符合 Google 建議，並提供改善建議。適用於 WebSite、Organization、Article、FAQPage、Product 等 10 種常見 Schema 類型。
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>什麼是 Schema.org 結構化資料？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            Schema.org 是由 Google、Microsoft、Yahoo 和 Yandex 共同推出的結構化資料標記標準。它透過統一的詞彙表（Vocabulary），讓網站管理者以標準化方式描述網頁內容的意義，例如告訴搜尋引擎「這是一個產品的價格」、「這是一篇文章的作者」。搜尋引擎讀取這些標記後，可以在搜尋結果中顯示更豐富的呈現方式（Rich Results），如評價星級、FAQ 摺疊區、麵包屑導航等，提升點擊率與搜尋曝光。
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>JSON-LD 和 Microdata 有什麼不同？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            JSON-LD（JavaScript Object Notation for Linked Data）是目前 Google 推薦的結構化資料實作方式。與 Microdata 不同，JSON-LD 是獨立於 HTML 之外的程式碼區塊，放在 <code class="text-indigo-400/80 text-xs font-mono">&lt;script type="application/ld+json"&gt;</code> 標籤中。優點包括：(1) 不影響 HTML 結構；(2) 易於維護和更新；(3) 可嵌入多組獨立的 Schema；(4) 支援動態產生。Google 明確表示 JSON-LD 是他們偏好的實作方式，本工具也使用 JSON-LD 格式輸出。
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>Schema.org 對 SEO 有幫助嗎？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            結構化資料雖然不是 Google 排名演算法的直接因素，但它能讓搜尋結果呈現 Rich Results（豐富結果），例如：商品評價星級、FAQ 摺疊問答、麵包屑導航路徑、文章作者與日期等。這些視覺元素能顯著提升搜尋結果的注目度和點擊率（CTR），間接提升 SEO 表現。此外，隨著 AI 搜尋引擎（如 Google SGE、Perplexity）的普及，結構化資料成為 AI 理解網站內容的重要橋樑。
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>如何驗證 Schema.org 是否正確？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            驗證 Schema.org 結構化資料是否正確，可以使用以下方法：(1) <strong class="text-slate-300">Google Rich Results Test</strong> — Google 官方提供的測試工具，可直接驗證結構化資料是否符合 Google Rich Results 規範；(2) <strong class="text-slate-300">Schema.org Validator</strong> — 由 W3C 提供的結構化資料驗證工具；(3) <strong class="text-slate-300">本工具的分析模式</strong> — 貼上 JSON-LD 即可檢測基本完整度、必填欄位與 Google 建議。建議在部署到正式站前至少通過上述任一驗證工具的檢測。
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>一個網頁可以放多組 Schema 嗎？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            可以。一個網頁可以同時包含多組 Schema.org JSON-LD 程式碼，只要各自包在 <code class="text-indigo-400/80 text-xs font-mono">&lt;script type="application/ld+json"&gt;</code> 標籤中即可。例如：一個產品的頁面可以同時包含 <strong class="text-slate-300">Product Schema</strong>（描述產品資訊）、<strong class="text-slate-300">BreadcrumbList Schema</strong>（描述導航路徑）、以及 <strong class="text-slate-300">WebSite Schema</strong>（描述整個網站）。Google 也會合併解析這些資料，用於不同的 Rich Results 呈現。本工具每次產生一組 Schema，您可多次使用並同時放置於同一網頁中。
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-hub-900/50 rounded-lg border border-hub-700/60 overflow-hidden">
+                    <button class="faq-btn w-full flex items-center justify-between p-3 sm:p-4 text-left text-sm font-medium text-white hover:bg-hub-800/60 transition-colors gap-3">
+                        <span>結構化資料需要放在 HTML 的哪裡？</span>
+                        <i class="ph ph-caret-down text-slate-500 text-lg shrink-0 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-slate-400 leading-relaxed">
+                            JSON-LD 格式的結構化資料可以放在 HTML 的 <code class="text-indigo-400/80 text-xs font-mono">&lt;head&gt;</code> 或 <code class="text-indigo-400/80 text-xs font-mono">&lt;body&gt;</code> 中的任何位置，只需使用 <code class="text-indigo-400/80 text-xs font-mono">&lt;script type="application/ld+json"&gt;</code> 標籤包裹即可。最佳實務建議：將全站的 Schema（如 WebSite、Organization）放在 <code class="text-indigo-400/80 text-xs font-mono">&lt;head&gt;</code> 中統一管理；將頁面特定的 Schema（如 Article、FAQPage、Product）放在對應內容區塊附近的 <code class="text-indigo-400/80 text-xs font-mono">&lt;body&gt;</code> 中。Google 對放置位置沒有限制，但要確保結構化資料的內容與頁面實際顯示的內容一致。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SEO Knowledge ===================== -->
+        <div class="mt-10 space-y-6 max-w-4xl mx-auto pb-8">
+
+            <div class="border-b border-hub-700 pb-2 mb-6">
+                <h2 class="text-xl font-bold text-white tracking-wide">SEO 結構化資料知識百科</h2>
+                <p class="text-slate-500 text-sm mt-1">深入了解 Schema.org 結構化資料與其在 SEO 中的應用</p>
+            </div>
+
+            <!-- Article 1 -->
+            <div class="glass-panel p-6 shadow-xl" itemscope itemtype="https://schema.org/Article">
+                <meta itemprop="headline" content="Schema.org 是什麼？結構化資料完整入門指南">
+                <meta itemprop="author" content="ToolHub SEO Team">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-code-block text-indigo-400"></i> Schema.org 是什麼？結構化資料完整入門指南
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed" itemprop="description">
+                    Schema.org 是一個由 Google、Microsoft、Yahoo 與 Yandex 共同發起的結構化資料詞彙表（Vocabulary），目的是建立一套統一的標記標準，讓網站能夠以機器可讀的方式描述網頁內容的語意。結構化資料透過標準化的屬性（如 name、description、price、rating）來標記網頁中的實體對象（產品、文章、事件、組織等）。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                    在 SEO 領域中，結構化資料是實現 Rich Results（豐富結果）的基礎。Google 支援超過 30 種 Rich Results 類別，包括商品評價（Product）、問答（FAQ）、食譜（Recipe）、事件（Event）等。網站加入對應的結構化資料後，搜尋結果中就可能顯示星級評分、價格範圍、問答預覽等醒目元素，顯著提升點擊率（CTR）。
+                </p>
+            </div>
+
+            <!-- Article 2 -->
+            <div class="glass-panel p-6 shadow-xl" itemscope itemtype="https://schema.org/Article">
+                <meta itemprop="headline" content="JSON-LD 格式完整教學">
+                <meta itemprop="author" content="ToolHub SEO Team">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-file-js text-indigo-400"></i> JSON-LD 格式完整教學
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed" itemprop="description">
+                    JSON-LD（JavaScript Object Notation for Linked Data）是目前 Google 官方最推薦的結構化資料實作方式。與 Microdata 和 RDFa 不同，JSON-LD 完全獨立於 HTML 結構之外，透過獨立的 <code class="text-indigo-400/80 text-xs font-mono">&lt;script type="application/ld+json"&gt;</code> 標籤嵌入，不影響頁面的視覺呈現和 HTML 結構。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                    一個標準的 JSON-LD 結構包含三個核心元素：<strong class="text-slate-300">@context</strong>（定義使用的詞彙表，固定為 <code class="text-indigo-400/80 text-xs font-mono">"https://schema.org"</code>）、<strong class="text-slate-300">@type</strong>（定義實體類型，如 WebSite、Article）、以及<strong class="text-slate-300">屬性鍵值</strong>（依不同類型而異，如 name、description、url）。JSON-LD 支援巢狀結構，可以描述複雜的關聯關係，如產品的供應商、文章的作者等。
+                </p>
+            </div>
+
+            <!-- Article 3 -->
+            <div class="glass-panel p-6 shadow-xl" itemscope itemtype="https://schema.org/Article">
+                <meta itemprop="headline" content="FAQ Schema 完整指南">
+                <meta itemprop="author" content="ToolHub SEO Team">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-question text-indigo-400"></i> FAQ Schema 完整指南
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed" itemprop="description">
+                    FAQ Schema（FAQPage）是 Google Rich Results 中最受歡迎的結構化資料類型之一。啟用 FAQ Schema 後，您的問答內容可以在搜尋結果中直接展開顯示，讓使用者無需點進網頁即可獲得解答，這不僅提升使用者體驗，也大幅提高搜尋結果的注目度。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                    FAQ Schema 使用 <strong class="text-slate-300">mainEntity</strong> 屬性來定義每個問答組，每個問答組包含 <strong class="text-slate-300">Question</strong>（問題名稱）和 <strong class="text-slate-300">AcceptedAnswer</strong>（答案文字）。Google 建議 FAQ 頁面應包含至少 2 組問答，且答案需為完整且有幫助的內容。注意：FAQ Schema 僅適用於頁面主要內容為問答形式的網頁，不應將一般頁面的部分內容標記為 FAQ。
+                </p>
+            </div>
+
+            <!-- Article 4 -->
+            <div class="glass-panel p-6 shadow-xl" itemscope itemtype="https://schema.org/Article">
+                <meta itemprop="headline" content="Product Schema 完整指南">
+                <meta itemprop="author" content="ToolHub SEO Team">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-shopping-cart text-indigo-400"></i> Product Schema 完整指南
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed" itemprop="description">
+                    Product Schema 是電商網站必備的結構化資料。啟用後，搜尋結果中可能顯示產品的價格、庫存狀態、評價星級和評價數量等豐富資訊，極大提升商品在搜尋結果中的吸引力。Google 支援 Product 的 Rich Results 包含價格標籤、購物按鈕和評價資訊。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                    Product Schema 的核心必填欄位至少需要提供 <strong class="text-slate-300">name</strong>（產品名稱）和 <strong class="text-slate-300">offers</strong>（供應資訊）。建議欄位包括 <strong class="text-slate-300">description</strong>（產品描述）、<strong class="text-slate-300">brand</strong>（品牌）、<strong class="text-slate-300">sku</strong>（庫存單位）、<strong class="text-slate-300">image</strong>（產品圖片）、<strong class="text-slate-300">aggregateRating</strong>（評價總覽）以及 <strong class="text-slate-300">review</strong>（使用者評論）。提供越完整的 Product Schema，搜尋結果呈現越豐富。
+                </p>
+            </div>
+
+            <!-- Article 5 -->
+            <div class="glass-panel p-6 shadow-xl" itemscope itemtype="https://schema.org/Article">
+                <meta itemprop="headline" content="SoftwareApplication Schema 完整指南">
+                <meta itemprop="author" content="ToolHub SEO Team">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-hard-drives text-indigo-400"></i> SoftwareApplication Schema 完整指南
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed" itemprop="description">
+                    SoftwareApplication Schema 是軟體產品和應用的專用結構化資料類型。無論是行動 App、桌面軟體、網頁應用還是 SaaS 產品，都能透過此 Schema 向搜尋引擎描述軟體的詳細資訊。啟用後，Google 搜尋結果可能會顯示軟體名稱、評分、作業系統相容性、價格和下載連結等豐富資訊。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                    實作 SoftwareApplication Schema 時，建議包含以下欄位：<strong class="text-slate-300">name</strong>（軟體名稱）、<strong class="text-slate-300">description</strong>（軟體描述）、<strong class="text-slate-300">operatingSystem</strong>（支援的作業系統，如 Windows、macOS、Android）、<strong class="text-slate-300">applicationCategory</strong>（應用類別，如 Game、Multimedia、DeveloperApplication）以及 <strong class="text-slate-300">offers</strong>（價格資訊）。如果軟體有使用者評分，也可以加入 <strong class="text-slate-300">aggregateRating</strong> 顯示平均評價。
+                </p>
+            </div>
+
+            <!-- Article 6 -->
+            <div class="glass-panel p-6 shadow-xl" itemscope itemtype="https://schema.org/Article">
+                <meta itemprop="headline" content="BreadcrumbList Schema 完整指南">
+                <meta itemprop="author" content="ToolHub SEO Team">
+                <h3 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+                    <i class="ph-fill ph-arrow-elbow-left-down text-indigo-400"></i> BreadcrumbList Schema 完整指南
+                </h3>
+                <p class="text-slate-400 text-sm leading-relaxed" itemprop="description">
+                    BreadcrumbList Schema（麵包屑導航結構化資料）是提升網站導覽體驗和搜尋結果顯示的重要工具。啟用後，Google 搜尋結果中的網頁標題上方會顯示導覽路徑（如 首頁 &gt; 產品 &gt; 筆記型電腦），幫助使用者快速理解頁面在網站中的位置，並提升搜尋結果的點擊率。
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed mt-2">
+                    BreadcrumbList Schema 使用 <strong class="text-slate-300">itemListElement</strong> 陣列來定義每個導覽層級，每個元素包含 <strong class="text-slate-300">@type: ListItem</strong>、<strong class="text-slate-300">position</strong>（位置順序，從 1 開始）、<strong class="text-slate-300">name</strong>（顯示名稱）和 <strong class="text-slate-300">item</strong>（對應網址）。實作時應確保麵包屑路徑與頁面實際的導航層級一致。Google 建議 BreadcrumbList 至少包含 2 個項目，且最後一項應為當前頁面。
+                </p>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4">
+        <i class="ph-fill ph-check-circle text-lg text-indigo-400" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <div id="component-footer"></div>
+
+    <!-- ========================================== -->
+    <!-- System Bootstrap                           -->
+    <!-- ========================================== -->
+    <script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/schema-generator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header.html'),
+                loadComponent('component-sidebar', '/components/sidebar.html'),
+                loadComponent('component-footer', '/components/footer.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+
+    <!-- ========================================== -->
+    <!-- Tool Logic: Schema Generator Engine         -->
+    <!-- ========================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ==================== Toast ====================
+            window.showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-indigo-400';
+                }
+                toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'translate-y-4');
+                    setTimeout(() => toast.classList.add('pointer-events-none'), 300);
+                }, 2500);
+            };
+
+            // ==================== DOM Refs ====================
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            const panelGenerate = document.getElementById('panel-generate');
+            const panelAnalyze = document.getElementById('panel-analyze');
+            const schemaTypeSelect = document.getElementById('schema-type');
+            const formFields = document.getElementById('form-fields');
+            const jsonOutput = document.getElementById('json-output');
+            const schemaBadge = document.getElementById('schema-badge');
+            const btnGenerate = document.getElementById('btn-generate');
+            const btnAnalyze = document.getElementById('btn-analyze');
+            const btnSample = document.getElementById('btn-sample');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+            const btnFormat = document.getElementById('btn-format');
+            const copyToast = document.getElementById('copy-toast');
+            const analysisPanel = document.getElementById('analysis-panel');
+            const schemaScore = document.getElementById('schema-score');
+            const schemaScoreBar = document.getElementById('schema-score-bar');
+            const scoreLabel = document.getElementById('score-label');
+            const requiredFilled = document.getElementById('required-filled');
+            const requiredTotal = document.getElementById('required-total');
+            const suggestionCount = document.getElementById('suggestion-count');
+            const fieldStatusList = document.getElementById('field-status-list');
+            const suggestionSection = document.getElementById('suggestion-section');
+            const suggestionListEl = document.getElementById('suggestion-list');
+            const previewPanel = document.getElementById('preview-panel');
+            const previewContent = document.getElementById('preview-content');
+            const inJson = document.getElementById('in-json');
+
+            let currentMode = 'generate';
+            let currentJsonLd = null;
+
+            // ==================== Schema Definitions ====================
+            const SCHEMA_DEFS = {
+                WebSite: {
+                    label: '網站 (WebSite)',
+                    icon: 'globe',
+                    required: ['name', 'url'],
+                    googleRecommended: ['description', 'potentialAction'],
+                    fields: [
+                        { id: 'name', label: '網站名稱', required: true, type: 'text', placeholder: '例如：ToolHub' },
+                        { id: 'url', label: '網站網址', required: true, type: 'url', placeholder: 'https://toolhuben.com' },
+                        { id: 'description', label: '網站描述', type: 'textarea', placeholder: '免費線上實用工具箱' },
+                        { id: 'alternateName', label: '別名', type: 'text', placeholder: 'ToolHub 線上工具' },
+                        { id: 'inLanguage', label: '主要語言', type: 'text', placeholder: 'zh-TW' },
+                        { id: 'searchAction', label: '站內搜尋', type: 'section', children: [
+                            { id: 'sa_target', label: '搜尋網址', type: 'text', placeholder: 'https://toolhuben.com/?s={search_term_string}', help: '使用 {search_term_string} 作為查詢參數佔位符' },
+                            { id: 'sa_query', label: '查詢參數名', type: 'text', placeholder: 'search_term_string' }
+                        ]}
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'WebSite', name: d.name, url: d.url };
+                        if (d.description) obj.description = d.description;
+                        if (d.alternateName) obj.alternateName = d.alternateName;
+                        if (d.inLanguage) obj.inLanguage = d.inLanguage;
+                        if (d.sa_target && d.sa_query) {
+                            obj.potentialAction = {
+                                '@type': 'SearchAction',
+                                target: { '@type': 'EntryPoint', urlTemplate: d.sa_target },
+                                'query-input': { '@type': 'PropertyValueSpecification', valueRequired: true, valueName: d.sa_query }
+                            };
+                        }
+                        return obj;
+                    }
+                },
+                Organization: {
+                    label: '組織 (Organization)',
+                    icon: 'buildings',
+                    required: ['name'],
+                    googleRecommended: ['url', 'logo', 'sameAs'],
+                    fields: [
+                        { id: 'name', label: '組織名稱', required: true, type: 'text', placeholder: '公司或組織名稱' },
+                        { id: 'url', label: '官方網站', type: 'url', placeholder: 'https://www.example.com' },
+                        { id: 'logo', label: 'Logo 網址', type: 'url', placeholder: 'https://www.example.com/logo.png' },
+                        { id: 'description', label: '組織描述', type: 'textarea', placeholder: '組織的簡短介紹' },
+                        { id: 'telephone', label: '電話號碼', type: 'tel', placeholder: '+886-2-12345678' },
+                        { id: 'email', label: '電子郵件', type: 'email', placeholder: 'contact@example.com' },
+                        { id: 'address', label: '地址', type: 'text', placeholder: '台北市大安區...' },
+                        { id: 'sameAs', label: '社交媒體連結', type: 'repeatable', placeholder: 'https://facebook.com/...' }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'Organization', name: d.name };
+                        if (d.url) obj.url = d.url;
+                        if (d.logo) obj.logo = d.logo;
+                        if (d.description) obj.description = d.description;
+                        if (d.telephone) obj.telephone = d.telephone;
+                        if (d.email) obj.email = d.email;
+                        if (d.address) obj.address = { '@type': 'PostalAddress', streetAddress: d.address };
+                        const sameAs = collectRepeatable('sameAs');
+                        if (sameAs.length > 0) obj.sameAs = sameAs;
+                        return obj;
+                    }
+                },
+                Article: {
+                    label: '文章 (Article)',
+                    icon: 'newspaper',
+                    required: ['headline', 'author_name'],
+                    googleRecommended: ['datePublished', 'dateModified', 'image', 'description', 'publisher_name'],
+                    fields: [
+                        { id: 'headline', label: '文章標題', required: true, type: 'text', placeholder: '文章標題' },
+                        { id: 'description', label: '文章摘要', type: 'textarea', placeholder: '文章簡短描述' },
+                        { id: 'author_name', label: '作者名稱', required: true, type: 'text', placeholder: '作者姓名' },
+                        { id: 'author_url', label: '作者網址', type: 'url', placeholder: 'https://example.com/author' },
+                        { id: 'datePublished', label: '發布日期', type: 'date' },
+                        { id: 'dateModified', label: '更新日期', type: 'date' },
+                        { id: 'image', label: '圖片網址', type: 'url', placeholder: 'https://example.com/image.jpg' },
+                        { id: 'publisher_name', label: '發布者名稱', type: 'text', placeholder: '網站或組織名稱' },
+                        { id: 'publisher_logo', label: '發布者 Logo', type: 'url', placeholder: 'https://example.com/logo.png' }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'Article', headline: d.headline };
+                        if (d.description) obj.description = d.description;
+                        if (d.author_name) obj.author = { '@type': 'Person', name: d.author_name };
+                        if (d.author_url && obj.author) obj.author.url = d.author_url;
+                        if (d.datePublished) obj.datePublished = d.datePublished;
+                        if (d.dateModified) obj.dateModified = d.dateModified;
+                        if (d.image) obj.image = d.image;
+                        if (d.publisher_name) {
+                            obj.publisher = { '@type': 'Organization', name: d.publisher_name };
+                            if (d.publisher_logo) obj.publisher.logo = { '@type': 'ImageObject', url: d.publisher_logo };
+                        }
+                        return obj;
+                    }
+                },
+                FAQPage: {
+                    label: 'FAQ 問答 (FAQPage)',
+                    icon: 'question',
+                    required: [],
+                    googleRecommended: [],
+                    fields: [
+                        { id: 'faq_items', label: '問答項目', type: 'repeatable-faq', minCount: 1 }
+                    ],
+                    generate: (d) => {
+                        const questions = collectFAQItems();
+                        const obj = { '@context': 'https://schema.org', '@type': 'FAQPage' };
+                        if (questions.length > 0) {
+                            obj.mainEntity = questions.map((q, i) => ({
+                                '@type': 'Question',
+                                name: q.question,
+                                acceptedAnswer: { '@type': 'Answer', text: q.answer }
+                            }));
+                        }
+                        return obj;
+                    }
+                },
+                BreadcrumbList: {
+                    label: '麵包屑 (BreadcrumbList)',
+                    icon: 'arrow-elbow-left-down',
+                    required: [],
+                    googleRecommended: [],
+                    fields: [
+                        { id: 'breadcrumb_items', label: '導覽項目', type: 'repeatable-breadcrumb', minCount: 2 }
+                    ],
+                    generate: (d) => {
+                        const items = collectBreadcrumbItems();
+                        const obj = { '@context': 'https://schema.org', '@type': 'BreadcrumbList' };
+                        if (items.length > 0) {
+                            obj.itemListElement = items.map((item, i) => ({
+                                '@type': 'ListItem',
+                                position: i + 1,
+                                name: item.name,
+                                item: item.item
+                            }));
+                        }
+                        return obj;
+                    }
+                },
+                Product: {
+                    label: '產品 (Product)',
+                    icon: 'shopping-cart',
+                    required: ['name'],
+                    googleRecommended: ['offers_price', 'offers_currency', 'brand', 'sku', 'image', 'description'],
+                    fields: [
+                        { id: 'name', label: '產品名稱', required: true, type: 'text', placeholder: '產品名稱' },
+                        { id: 'description', label: '產品描述', type: 'textarea', placeholder: '產品詳細描述' },
+                        { id: 'brand', label: '品牌', type: 'text', placeholder: '品牌名稱' },
+                        { id: 'sku', label: 'SKU / 商品編號', type: 'text', placeholder: 'SKU-001' },
+                        { id: 'gtin', label: 'GTIN / UPC / EAN', type: 'text', placeholder: '0123456789012' },
+                        { id: 'image', label: '產品圖片網址', type: 'url', placeholder: 'https://example.com/product.jpg' },
+                        { id: 'offers_price', label: '價格', type: 'number', placeholder: '999', step: '0.01' },
+                        { id: 'offers_currency', label: '貨幣', type: 'text', placeholder: 'TWD', help: '如 TWD、USD、JPY' },
+                        { id: 'offers_availability', label: '庫存狀態', type: 'select', options: [
+                            { value: 'InStock', label: '有庫存' },
+                            { value: 'OutOfStock', label: '缺貨中' },
+                            { value: 'PreOrder', label: '預購' },
+                            { value: 'Discontinued', label: '已停產' }
+                        ]},
+                        { id: 'offers_url', label: '購買網址', type: 'url', placeholder: 'https://example.com/buy' },
+                        { id: 'rating_value', label: '評價分數', type: 'number', placeholder: '4.5', step: '0.1', min: '0', max: '5' },
+                        { id: 'rating_count', label: '評價數量', type: 'number', placeholder: '100' }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'Product', name: d.name };
+                        if (d.description) obj.description = d.description;
+                        if (d.brand) obj.brand = { '@type': 'Brand', name: d.brand };
+                        if (d.sku) obj.sku = d.sku;
+                        if (d.gtin) { obj.gtin = d.gtin.length === 12 ? d.gtin : undefined; obj.gtin13 = d.gtin.length === 13 ? d.gtin : undefined; obj.gtin14 = d.gtin.length === 14 ? d.gtin : undefined; }
+                        if (d.image) obj.image = d.image;
+                        if (d.offers_price) {
+                            obj.offers = { '@type': 'Offer', price: parseFloat(d.offers_price), priceCurrency: d.offers_currency || 'TWD' };
+                            if (d.offers_availability) obj.offers.availability = 'https://schema.org/' + d.offers_availability;
+                            if (d.offers_url) obj.offers.url = d.offers_url;
+                        }
+                        if (d.rating_value && d.rating_count) {
+                            obj.aggregateRating = {
+                                '@type': 'AggregateRating',
+                                ratingValue: parseFloat(d.rating_value),
+                                ratingCount: parseInt(d.rating_count)
+                            };
+                        }
+                        return obj;
+                    }
+                },
+                SoftwareApplication: {
+                    label: '軟體 (SoftwareApplication)',
+                    icon: 'hard-drives',
+                    required: ['name'],
+                    googleRecommended: ['description', 'operatingSystem', 'applicationCategory', 'offers_price'],
+                    fields: [
+                        { id: 'name', label: '軟體名稱', required: true, type: 'text', placeholder: '軟體或應用程式名稱' },
+                        { id: 'description', label: '軟體描述', type: 'textarea', placeholder: '軟體功能與特色描述' },
+                        { id: 'operatingSystem', label: '支援作業系統', type: 'text', placeholder: 'Windows, macOS, Android, iOS' },
+                        { id: 'applicationCategory', label: '應用類別', type: 'select', options: [
+                            { value: 'GameApplication', label: '遊戲' },
+                            { value: 'MultimediaApplication', label: '多媒體' },
+                            { value: 'DeveloperApplication', label: '開發者工具' },
+                            { value: 'BusinessApplication', label: '商業應用' },
+                            { value: 'EducationalApplication', label: '教育' },
+                            { value: 'UtilitiesApplication', label: '工具' },
+                            { value: 'SocialNetworkingApplication', label: '社交' }
+                        ]},
+                        { id: 'url', label: '官方網址', type: 'url', placeholder: 'https://example.com' },
+                        { id: 'image', label: '軟體圖示', type: 'url', placeholder: 'https://example.com/icon.png' },
+                        { id: 'screenshot', label: '截圖網址', type: 'url', placeholder: 'https://example.com/screenshot.jpg' },
+                        { id: 'offers_price', label: '價格', type: 'number', placeholder: '0', step: '0.01', help: '0 表示免費' },
+                        { id: 'offers_currency', label: '貨幣', type: 'text', placeholder: 'TWD' },
+                        { id: 'rating_value', label: '評價分數', type: 'number', placeholder: '4.5', step: '0.1', min: '0', max: '5' },
+                        { id: 'rating_count', label: '評價數量', type: 'number', placeholder: '500' },
+                        { id: 'author_name', label: '開發者名稱', type: 'text', placeholder: '開發者或公司名稱' }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: d.name };
+                        if (d.description) obj.description = d.description;
+                        if (d.operatingSystem) obj.operatingSystem = d.operatingSystem;
+                        if (d.applicationCategory) obj.applicationCategory = d.applicationCategory;
+                        if (d.url) obj.url = d.url;
+                        if (d.image) obj.image = d.image;
+                        if (d.screenshot) obj.screenshot = d.screenshot;
+                        if (d.offers_price !== undefined && d.offers_price !== '') {
+                            obj.offers = { '@type': 'Offer', price: parseFloat(d.offers_price), priceCurrency: d.offers_currency || 'TWD' };
+                        }
+                        if (d.rating_value && d.rating_count) {
+                            obj.aggregateRating = {
+                                '@type': 'AggregateRating',
+                                ratingValue: parseFloat(d.rating_value),
+                                ratingCount: parseInt(d.rating_count)
+                            };
+                        }
+                        if (d.author_name) obj.author = { '@type': 'Organization', name: d.author_name };
+                        return obj;
+                    }
+                },
+                LocalBusiness: {
+                    label: '商家 (LocalBusiness)',
+                    icon: 'storefront',
+                    required: ['name'],
+                    googleRecommended: ['address', 'telephone', 'url', 'openingHours'],
+                    fields: [
+                        { id: 'name', label: '商家名稱', required: true, type: 'text', placeholder: '商家或店舖名稱' },
+                        { id: 'description', label: '商家描述', type: 'textarea', placeholder: '商家簡介' },
+                        { id: 'telephone', label: '電話號碼', type: 'tel', placeholder: '+886-2-12345678' },
+                        { id: 'email', label: '電子郵件', type: 'email', placeholder: 'contact@example.com' },
+                        { id: 'address', label: '地址', type: 'text', placeholder: '台北市大安區忠孝東路四段...' },
+                        { id: 'url', label: '官方網站', type: 'url', placeholder: 'https://example.com' },
+                        { id: 'image', label: '商家圖片', type: 'url', placeholder: 'https://example.com/store.jpg' },
+                        { id: 'priceRange', label: '價格範圍', type: 'text', placeholder: '$$ 或 NT$100-500' },
+                        { id: 'geo_lat', label: '緯度', type: 'number', placeholder: '25.0330', step: '0.0001' },
+                        { id: 'geo_lng', label: '經度', type: 'number', placeholder: '121.5654', step: '0.0001' },
+                        { id: 'openingHours', label: '營業時間', type: 'repeatable-hours', minCount: 1 }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'LocalBusiness', name: d.name };
+                        if (d.description) obj.description = d.description;
+                        if (d.telephone) obj.telephone = d.telephone;
+                        if (d.email) obj.email = d.email;
+                        if (d.address) obj.address = { '@type': 'PostalAddress', streetAddress: d.address };
+                        if (d.url) obj.url = d.url;
+                        if (d.image) obj.image = d.image;
+                        if (d.priceRange) obj.priceRange = d.priceRange;
+                        if (d.geo_lat && d.geo_lng) obj.geo = { '@type': 'GeoCoordinates', latitude: parseFloat(d.geo_lat), longitude: parseFloat(d.geo_lng) };
+                        const hours = collectHours();
+                        if (hours.length > 0) obj.openingHoursSpecification = hours;
+                        return obj;
+                    }
+                },
+                Person: {
+                    label: '人物 (Person)',
+                    icon: 'user',
+                    required: ['name'],
+                    googleRecommended: ['url', 'jobTitle', 'sameAs'],
+                    fields: [
+                        { id: 'name', label: '姓名', required: true, type: 'text', placeholder: '完整姓名' },
+                        { id: 'givenName', label: '名', type: 'text', placeholder: '名' },
+                        { id: 'familyName', label: '姓', type: 'text', placeholder: '姓' },
+                        { id: 'jobTitle', label: '職稱', type: 'text', placeholder: '工程師、設計師等' },
+                        { id: 'description', label: '簡介', type: 'textarea', placeholder: '個人簡短介紹' },
+                        { id: 'url', label: '個人網站', type: 'url', placeholder: 'https://example.com' },
+                        { id: 'email', label: '電子郵件', type: 'email', placeholder: 'person@example.com' },
+                        { id: 'telephone', label: '電話', type: 'tel', placeholder: '+886-9-12345678' },
+                        { id: 'address', label: '地址', type: 'text', placeholder: '城市、國家' },
+                        { id: 'sameAs', label: '社交媒體連結', type: 'repeatable', placeholder: 'https://linkedin.com/in/...' },
+                        { id: 'affiliation', label: '所屬組織', type: 'text', placeholder: '所屬公司或組織' }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'Person', name: d.name };
+                        if (d.givenName) obj.givenName = d.givenName;
+                        if (d.familyName) obj.familyName = d.familyName;
+                        if (d.jobTitle) obj.jobTitle = d.jobTitle;
+                        if (d.description) obj.description = d.description;
+                        if (d.url) obj.url = d.url;
+                        if (d.email) obj.email = d.email;
+                        if (d.telephone) obj.telephone = d.telephone;
+                        if (d.address) obj.address = { '@type': 'PostalAddress', streetAddress: d.address };
+                        const sameAs = collectRepeatable('sameAs');
+                        if (sameAs.length > 0) obj.sameAs = sameAs;
+                        if (d.affiliation) obj.affiliation = { '@type': 'Organization', name: d.affiliation };
+                        return obj;
+                    }
+                },
+                WebPage: {
+                    label: '網頁 (WebPage)',
+                    icon: 'file',
+                    required: ['name'],
+                    googleRecommended: ['description', 'datePublished', 'dateModified'],
+                    fields: [
+                        { id: 'name', label: '網頁名稱', required: true, type: 'text', placeholder: '網頁標題' },
+                        { id: 'url', label: '網頁網址', type: 'url', placeholder: 'https://example.com/page' },
+                        { id: 'description', label: '網頁描述', type: 'textarea', placeholder: '網頁內容摘要' },
+                        { id: 'about', label: '關於', type: 'text', placeholder: '網頁主題' },
+                        { id: 'datePublished', label: '發布日期', type: 'date' },
+                        { id: 'dateModified', label: '更新日期', type: 'date' },
+                        { id: 'author_name', label: '作者名稱', type: 'text', placeholder: '作者姓名' },
+                        { id: 'breadcrumb_name', label: '麵包屑名稱', type: 'text', placeholder: '當前頁面名稱' },
+                        { id: 'breadcrumb_url', label: '麵包屑網址', type: 'url', placeholder: 'https://example.com/page' },
+                        { id: 'image', label: '主要圖片', type: 'url', placeholder: 'https://example.com/image.jpg' }
+                    ],
+                    generate: (d) => {
+                        const obj = { '@context': 'https://schema.org', '@type': 'WebPage', name: d.name };
+                        if (d.url) obj.url = d.url;
+                        if (d.description) obj.description = d.description;
+                        if (d.about) obj.about = d.about;
+                        if (d.datePublished) obj.datePublished = d.datePublished;
+                        if (d.dateModified) obj.dateModified = d.dateModified;
+                        if (d.author_name) obj.author = { '@type': 'Person', name: d.author_name };
+                        if (d.image) obj.primaryImageOfPage = { '@type': 'ImageObject', url: d.image };
+                        if (d.breadcrumb_name && d.breadcrumb_url) {
+                            obj.breadcrumb = {
+                                '@type': 'BreadcrumbList',
+                                itemListElement: [{ '@type': 'ListItem', position: 1, name: d.breadcrumb_name, item: d.breadcrumb_url }]
+                            };
+                        }
+                        return obj;
+                    }
+                }
+            };
+
+            // ==================== State ====================
+            let currentSchemaType = 'WebSite';
+            let faqItemCount = 2;
+            let breadcrumbItemCount = 2;
+            let hoursItemCount = 5;
+            let sameAsCount = 0;
+
+            // ==================== Schema Analysis Database ====================
+            const ANALYSIS_DB = {
+                WebSite: {
+                    required: ['name', 'url'],
+                    google: ['description', 'potentialAction'],
+                    all: ['name', 'url', 'description', 'alternateName', 'inLanguage', 'potentialAction']
+                },
+                Organization: {
+                    required: ['name'],
+                    google: ['url', 'logo', 'sameAs', 'telephone', 'address'],
+                    all: ['name', 'url', 'logo', 'description', 'telephone', 'email', 'address', 'sameAs']
+                },
+                Article: {
+                    required: ['headline', 'author'],
+                    google: ['datePublished', 'dateModified', 'image', 'description', 'publisher'],
+                    all: ['headline', 'description', 'author', 'datePublished', 'dateModified', 'image', 'publisher']
+                },
+                FAQPage: {
+                    required: ['mainEntity'],
+                    google: [],
+                    all: ['mainEntity']
+                },
+                BreadcrumbList: {
+                    required: ['itemListElement'],
+                    google: [],
+                    all: ['itemListElement']
+                },
+                Product: {
+                    required: ['name'],
+                    google: ['description', 'brand', 'image', 'offers', 'aggregateRating'],
+                    all: ['name', 'description', 'brand', 'sku', 'gtin', 'image', 'offers', 'aggregateRating']
+                },
+                SoftwareApplication: {
+                    required: ['name'],
+                    google: ['description', 'operatingSystem', 'applicationCategory', 'offers', 'aggregateRating'],
+                    all: ['name', 'description', 'operatingSystem', 'applicationCategory', 'url', 'image', 'screenshot', 'offers', 'aggregateRating', 'author']
+                },
+                LocalBusiness: {
+                    required: ['name'],
+                    google: ['address', 'telephone', 'url', 'openingHoursSpecification', 'priceRange'],
+                    all: ['name', 'description', 'telephone', 'email', 'address', 'url', 'image', 'priceRange', 'geo', 'openingHoursSpecification']
+                },
+                Person: {
+                    required: ['name'],
+                    google: ['url', 'jobTitle', 'sameAs', 'email'],
+                    all: ['name', 'givenName', 'familyName', 'jobTitle', 'description', 'url', 'email', 'telephone', 'address', 'sameAs', 'affiliation']
+                },
+                WebPage: {
+                    required: ['name'],
+                    google: ['description', 'datePublished', 'dateModified', 'author', 'breadcrumb'],
+                    all: ['name', 'url', 'description', 'about', 'datePublished', 'dateModified', 'author', 'primaryImageOfPage', 'breadcrumb']
+                }
+            };
+
+            const FIELD_LABELS = {
+                'name': '名稱 (name)', 'url': '網址 (url)', 'description': '描述 (description)',
+                'headline': '標題 (headline)', 'author': '作者 (author)', 'datePublished': '發布日期 (datePublished)',
+                'dateModified': '更新日期 (dateModified)', 'image': '圖片 (image)', 'publisher': '發布者 (publisher)',
+                'logo': 'Logo (logo)', 'sameAs': '社交連結 (sameAs)', 'telephone': '電話 (telephone)',
+                'email': '電子郵件 (email)', 'address': '地址 (address)', 'brand': '品牌 (brand)',
+                'sku': 'SKU (sku)', 'gtin': 'GTIN (gtin)', 'offers': '價格 (offers)',
+                'aggregateRating': '評價 (aggregateRating)', 'operatingSystem': '作業系統 (operatingSystem)',
+                'applicationCategory': '應用類別 (applicationCategory)', 'screenshot': '截圖 (screenshot)',
+                'priceRange': '價格範圍 (priceRange)', 'geo': '地理座標 (geo)',
+                'openingHoursSpecification': '營業時間 (openingHoursSpecification)',
+                'givenName': '名 (givenName)', 'familyName': '姓 (familyName)',
+                'jobTitle': '職稱 (jobTitle)', 'affiliation': '所屬組織 (affiliation)',
+                'about': '關於 (about)', 'primaryImageOfPage': '主要圖片 (primaryImageOfPage)',
+                'breadcrumb': '麵包屑 (breadcrumb)', 'alternateName': '別名 (alternateName)',
+                'inLanguage': '語言 (inLanguage)', 'potentialAction': '搜尋動作 (potentialAction)',
+                'mainEntity': '問答項目 (mainEntity)', 'itemListElement': '導覽項目 (itemListElement)'
+            };
+
+            // ==================== Repeatable Data Collection Helpers ====================
+            function collectRepeatable(fieldId) {
+                const items = [];
+                document.querySelectorAll(`[data-repeatable="${fieldId}"]`).forEach(el => {
+                    const val = el.value.trim();
+                    if (val) items.push(val);
+                });
+                return items;
+            }
+
+            function collectFAQItems() {
+                const items = [];
+                document.querySelectorAll('.faq-item').forEach(el => {
+                    const q = el.querySelector('.faq-question').value.trim();
+                    const a = el.querySelector('.faq-answer').value.trim();
+                    if (q && a) items.push({ question: q, answer: a });
+                });
+                return items;
+            }
+
+            function collectBreadcrumbItems() {
+                const items = [];
+                document.querySelectorAll('.breadcrumb-item').forEach(el => {
+                    const name = el.querySelector('.bc-name').value.trim();
+                    const item = el.querySelector('.bc-item').value.trim();
+                    if (name && item) items.push({ name, item });
+                });
+                return items;
+            }
+
+            function collectHours() {
+                const items = [];
+                document.querySelectorAll('.hours-item').forEach(el => {
+                    const day = el.querySelector('.hours-day').value;
+                    const open = el.querySelector('.hours-open').value;
+                    const close = el.querySelector('.hours-close').value;
+                    if (day && open && close) {
+                        items.push({
+                            '@type': 'OpeningHoursSpecification',
+                            dayOfWeek: day,
+                            opens: open,
+                            closes: close
+                        });
+                    }
+                });
+                return items;
+            }
+
+            // ==================== Mode Switching ====================
+            function switchMode(mode) {
+                currentMode = mode;
+                modeBtns.forEach(btn => {
+                    btn.classList.remove('mode-btn-active', 'font-bold');
+                    btn.classList.add('font-medium', 'text-slate-400');
+                });
+                const activeBtn = document.getElementById(`mode-${mode}`);
+                if (activeBtn) {
+                    activeBtn.classList.add('mode-btn-active', 'font-bold');
+                    activeBtn.classList.remove('font-medium', 'text-slate-400');
+                }
+
+                if (mode === 'generate') {
+                    panelGenerate.classList.remove('hidden');
+                    panelGenerate.style.display = 'flex';
+                    panelAnalyze.classList.add('hidden');
+                    panelAnalyze.style.display = 'none';
+                } else {
+                    panelGenerate.classList.add('hidden');
+                    panelGenerate.style.display = 'none';
+                    panelAnalyze.classList.remove('hidden');
+                    panelAnalyze.style.display = 'flex';
+                }
+            }
+
+            // ==================== Form Rendering ====================
+            function renderForm() {
+                const def = SCHEMA_DEFS[currentSchemaType];
+                if (!def) return;
+
+                let html = '';
+                def.fields.forEach(field => {
+                    html += renderField(field);
+                });
+                formFields.innerHTML = html;
+
+                // Show badge
+                schemaBadge.textContent = currentSchemaType;
+                schemaBadge.classList.remove('hidden');
+
+                // Re-render special repeatable fields
+                if (currentSchemaType === 'FAQPage') {
+                    faqItemCount = 2;
+                    renderFAQItems();
+                } else if (currentSchemaType === 'BreadcrumbList') {
+                    breadcrumbItemCount = 2;
+                    renderBreadcrumbItems();
+                } else if (currentSchemaType === 'LocalBusiness') {
+                    hoursItemCount = 5;
+                    renderHoursItems();
+                }
+
+                // Attach event listeners
+                attachFormListeners();
+
+                // Auto-generate
+                generateAndUpdate();
+            }
+
+            function renderField(field) {
+                const req = field.required ? '<span class="text-red-400">*</span>' : '';
+                const baseClass = 'schema-input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-colors';
+
+                if (field.type === 'section') {
+                    let childrenHtml = '';
+                    field.children.forEach(child => {
+                        childrenHtml += renderField(child);
+                    });
+                    return `<div class="field-section pl-3 space-y-3 border-indigo-500/20">
+                        <label class="block text-[11px] text-indigo-400/80 font-medium uppercase tracking-wider">${field.label}</label>
+                        ${childrenHtml}
+                    </div>`;
+                }
+
+                if (field.type === 'repeatable') {
+                    return `<div class="space-y-2">
+                        <label class="block text-xs text-slate-300 font-medium">${field.label}</label>
+                        <div id="repeatable-${field.id}" class="space-y-2">
+                            <div class="text-center py-3 text-slate-500 text-xs">點擊下方按鈕新增</div>
+                        </div>
+                        <button type="button" data-add-repeatable="${field.id}" class="w-full py-1.5 border border-dashed border-hub-700 rounded-lg text-xs text-slate-500 hover:text-indigo-400 hover:border-indigo-500/40 transition-colors">
+                            <i class="ph ph-plus mr-1"></i>新增
+                        </button>
+                    </div>`;
+                }
+
+                if (field.type === 'repeatable-faq') {
+                    return `<div class="space-y-2">
+                        <label class="block text-xs text-slate-300 font-medium">問答項目 ${field.minCount ? `<span class="text-slate-500 font-normal">(至少 ${field.minCount} 組)</span>` : ''}</label>
+                        <div id="faq-items" class="space-y-3"></div>
+                        <button type="button" id="add-faq-btn" class="w-full py-1.5 border border-dashed border-hub-700 rounded-lg text-xs text-slate-500 hover:text-indigo-400 hover:border-indigo-500/40 transition-colors">
+                            <i class="ph ph-plus mr-1"></i>新增問答
+                        </button>
+                    </div>`;
+                }
+
+                if (field.type === 'repeatable-breadcrumb') {
+                    return `<div class="space-y-2">
+                        <label class="block text-xs text-slate-300 font-medium">導覽項目 ${field.minCount ? `<span class="text-slate-500 font-normal">(至少 ${field.minCount} 項)</span>` : ''}</label>
+                        <div id="breadcrumb-items" class="space-y-3"></div>
+                        <button type="button" id="add-breadcrumb-btn" class="w-full py-1.5 border border-dashed border-hub-700 rounded-lg text-xs text-slate-500 hover:text-indigo-400 hover:border-indigo-500/40 transition-colors">
+                            <i class="ph ph-plus mr-1"></i>新增導覽項目
+                        </button>
+                    </div>`;
+                }
+
+                if (field.type === 'repeatable-hours') {
+                    return `<div class="space-y-2">
+                        <label class="block text-xs text-slate-300 font-medium">營業時間</label>
+                        <div id="hours-items" class="space-y-2"></div>
+                        <button type="button" id="add-hours-btn" class="w-full py-1.5 border border-dashed border-hub-700 rounded-lg text-xs text-slate-500 hover:text-indigo-400 hover:border-indigo-500/40 transition-colors">
+                            <i class="ph ph-plus mr-1"></i>新增營業時間
+                        </button>
+                    </div>`;
+                }
+
+                const help = field.help ? `<p class="text-[10px] text-slate-500 mt-0.5">${field.help}</p>` : '';
+
+                if (field.type === 'select') {
+                    const opts = field.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+                    return `<div>
+                        <label class="block text-xs text-slate-300 font-medium mb-1">${req} ${field.label}</label>
+                        <select id="field-${field.id}" class="${baseClass} schema-select">${opts}</select>
+                        ${help}
+                    </div>`;
+                }
+
+                if (field.type === 'textarea') {
+                    return `<div>
+                        <label class="block text-xs text-slate-300 font-medium mb-1">${req} ${field.label}</label>
+                        <textarea id="field-${field.id}" rows="3" class="${baseClass} resize-y" placeholder="${field.placeholder || ''}"></textarea>
+                        ${help}
+                    </div>`;
+                }
+
+                if (field.type === 'date') {
+                    return `<div>
+                        <label class="block text-xs text-slate-300 font-medium mb-1">${req} ${field.label}</label>
+                        <input type="date" id="field-${field.id}" class="${baseClass}">
+                        ${help}
+                    </div>`;
+                }
+
+                const inputType = field.type || 'text';
+                const step = field.step ? `step="${field.step}"` : '';
+                const min = field.min ? `min="${field.min}"` : '';
+                const max = field.max ? `max="${field.max}"` : '';
+                return `<div>
+                    <label class="block text-xs text-slate-300 font-medium mb-1">${req} ${field.label}</label>
+                    <input type="${inputType}" id="field-${field.id}" class="${baseClass}" placeholder="${field.placeholder || ''}" ${step} ${min} ${max}>
+                    ${help}
+                </div>`;
+            }
+
+            function renderFAQItems() {
+                const container = document.getElementById('faq-items');
+                if (!container) return;
+                let html = '';
+                for (let i = 0; i < faqItemCount; i++) {
+                    html += renderFAQItem(i);
+                }
+                container.innerHTML = html;
+                attachFAQListeners();
+            }
+
+            function renderFAQItem(index) {
+                return `<div class="faq-item bg-hub-900/40 rounded-lg border border-hub-700/60 p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-mono">#${index + 1}</span>
+                        ${index > 0 ? `<button type="button" class="remove-faq-btn remove-btn text-slate-500 hover:text-red-400 p-1 rounded text-xs"><i class="ph ph-trash"></i></button>` : ''}
+                    </div>
+                    <input type="text" class="faq-question schema-input w-full rounded-lg px-3 py-2 text-xs outline-none" placeholder="問題">
+                    <textarea rows="2" class="faq-answer schema-input w-full rounded-lg px-3 py-2 text-xs outline-none resize-y" placeholder="答案"></textarea>
+                </div>`;
+            }
+
+            function renderBreadcrumbItems() {
+                const container = document.getElementById('breadcrumb-items');
+                if (!container) return;
+                let html = '';
+                for (let i = 0; i < breadcrumbItemCount; i++) {
+                    html += renderBreadcrumbItem(i);
+                }
+                container.innerHTML = html;
+                attachBreadcrumbListeners();
+            }
+
+            function renderBreadcrumbItem(index) {
+                return `<div class="breadcrumb-item bg-hub-900/40 rounded-lg border border-hub-700/60 p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-mono">位置 ${index + 1}</span>
+                        ${index > 0 ? `<button type="button" class="remove-bc-btn remove-btn text-slate-500 hover:text-red-400 p-1 rounded text-xs"><i class="ph ph-trash"></i></button>` : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="bc-name schema-input w-full rounded-lg px-3 py-2 text-xs outline-none" placeholder="名稱（如：首頁）">
+                        <input type="url" class="bc-item schema-input w-full rounded-lg px-3 py-2 text-xs outline-none" placeholder="網址（如：/）">
+                    </div>
+                </div>`;
+            }
+
+            function renderHoursItems() {
+                const container = document.getElementById('hours-items');
+                if (!container) return;
+                let html = '';
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                const dayLabels = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
+                for (let i = 0; i < Math.min(hoursItemCount, 7); i++) {
+                    html += renderHoursItem(i, days[i], dayLabels[i]);
+                }
+                container.innerHTML = html;
+                attachHoursListeners();
+            }
+
+            function renderHoursItem(index, day, dayLabel) {
+                return `<div class="hours-item bg-hub-900/40 rounded-lg border border-hub-700/60 p-2.5 flex items-center gap-2">
+                    <span class="text-xs text-slate-400 w-10 shrink-0">${dayLabel}</span>
+                    <input type="hidden" class="hours-day" value="${day}">
+                    <input type="time" class="hours-open schema-input w-full rounded-lg px-2 py-1.5 text-xs outline-none" value="09:00" placeholder="開始">
+                    <span class="text-slate-600 text-xs">—</span>
+                    <input type="time" class="hours-close schema-input w-full rounded-lg px-2 py-1.5 text-xs outline-none" value="18:00" placeholder="結束">
+                </div>`;
+            }
+
+            // ==================== Listeners ====================
+            function attachFormListeners() {
+                // All inputs trigger regeneration
+                formFields.querySelectorAll('input, textarea, select').forEach(el => {
+                    el.addEventListener('input', debounce(generateAndUpdate, 200));
+                    el.addEventListener('change', generateAndUpdate);
+                });
+
+                // Add repeatable buttons
+                document.querySelectorAll('[data-add-repeatable]').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const fieldId = this.dataset.addRepeatable;
+                        const container = document.getElementById(`repeatable-${fieldId}`);
+                        if (!container) return;
+                        const wrapper = container.querySelector('.space-y-2') || container;
+                        const input = document.createElement('div');
+                        input.className = 'flex items-center gap-2';
+                        input.innerHTML = `
+                            <input type="url" data-repeatable="${fieldId}" class="schema-input flex-1 rounded-lg px-3 py-2 text-xs outline-none" placeholder="https://...">
+                            <button type="button" class="remove-repeatable-btn remove-btn text-slate-500 hover:text-red-400 p-1 rounded"><i class="ph ph-x"></i></button>
+                        `;
+                        container.appendChild(input);
+                        input.querySelector('.schema-input').addEventListener('input', debounce(generateAndUpdate, 200));
+                        input.querySelector('.remove-repeatable-btn').addEventListener('click', function() {
+                            input.remove();
+                            generateAndUpdate();
+                        });
+                    });
+                });
+            }
+
+            function attachFAQListeners() {
+                document.querySelectorAll('.faq-question, .faq-answer').forEach(el => {
+                    el.addEventListener('input', debounce(generateAndUpdate, 200));
+                });
+                document.querySelectorAll('.remove-faq-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        this.closest('.faq-item').remove();
+                        generateAndUpdate();
+                        renumberFAQ();
+                    });
+                });
+                const addBtn = document.getElementById('add-faq-btn');
+                if (addBtn) {
+                    addBtn.onclick = () => {
+                        const container = document.getElementById('faq-items');
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = renderFAQItem(faqItemCount++);
+                        const div = wrapper.firstElementChild;
+                        container.appendChild(div);
+                        div.querySelector('.faq-question').addEventListener('input', debounce(generateAndUpdate, 200));
+                        div.querySelector('.faq-answer').addEventListener('input', debounce(generateAndUpdate, 200));
+                        div.querySelector('.remove-faq-btn').addEventListener('click', function() {
+                            this.closest('.faq-item').remove();
+                            generateAndUpdate();
+                            renumberFAQ();
+                        });
+                        renumberFAQ();
+                    };
+                }
+            }
+
+            function renumberFAQ() {
+                document.querySelectorAll('.faq-item').forEach((el, i) => {
+                    const num = el.querySelector('.text-slate-500.font-mono');
+                    if (num) num.textContent = '#' + (i + 1);
+                });
+            }
+
+            function attachBreadcrumbListeners() {
+                document.querySelectorAll('.bc-name, .bc-item').forEach(el => {
+                    el.addEventListener('input', debounce(generateAndUpdate, 200));
+                });
+                document.querySelectorAll('.remove-bc-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        this.closest('.breadcrumb-item').remove();
+                        generateAndUpdate();
+                        renumberBreadcrumbs();
+                    });
+                });
+                const addBtn = document.getElementById('add-breadcrumb-btn');
+                if (addBtn) {
+                    addBtn.onclick = () => {
+                        const container = document.getElementById('breadcrumb-items');
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = renderBreadcrumbItem(breadcrumbItemCount++);
+                        const div = wrapper.firstElementChild;
+                        container.appendChild(div);
+                        div.querySelector('.bc-name').addEventListener('input', debounce(generateAndUpdate, 200));
+                        div.querySelector('.bc-item').addEventListener('input', debounce(generateAndUpdate, 200));
+                        div.querySelector('.remove-bc-btn').addEventListener('click', function() {
+                            this.closest('.breadcrumb-item').remove();
+                            generateAndUpdate();
+                            renumberBreadcrumbs();
+                        });
+                        renumberBreadcrumbs();
+                    };
+                }
+            }
+
+            function renumberBreadcrumbs() {
+                document.querySelectorAll('.breadcrumb-item').forEach((el, i) => {
+                    const num = el.querySelector('.text-slate-500.font-mono');
+                    if (num) num.textContent = '位置 ' + (i + 1);
+                });
+            }
+
+            function attachHoursListeners() {
+                document.querySelectorAll('.hours-open, .hours-close').forEach(el => {
+                    el.addEventListener('change', generateAndUpdate);
+                });
+            }
+
+            // ==================== JSON Generation ====================
+            function collectFormData() {
+                const def = SCHEMA_DEFS[currentSchemaType];
+                if (!def) return {};
+                const data = {};
+                def.fields.forEach(field => {
+                    collectFieldData(field, data);
+                });
+                return data;
+            }
+
+            function collectFieldData(field, data) {
+                if (field.type === 'section') {
+                    field.children.forEach(child => collectFieldData(child, data));
+                    return;
+                }
+                if (field.type === 'repeatable' || field.type === 'repeatable-faq' || field.type === 'repeatable-breadcrumb' || field.type === 'repeatable-hours') return;
+                const el = document.getElementById(`field-${field.id}`);
+                if (el) {
+                    const val = el.value.trim();
+                    if (val) data[field.id] = val;
+                }
+            }
+
+            function generateJSON(forceType) {
+                const type = forceType || currentSchemaType;
+                const def = SCHEMA_DEFS[type];
+                if (!def) return null;
+                const data = collectFormData();
+                return def.generate(data);
+            }
+
+            function generateAndUpdate() {
+                const jsonObj = generateJSON();
+                currentJsonLd = jsonObj;
+                if (jsonObj) {
+                    jsonOutput.textContent = JSON.stringify(jsonObj, null, 2);
+                    updateAnalysis(jsonObj, currentSchemaType);
+                    updatePreview(jsonObj, currentSchemaType);
+                } else {
+                    jsonOutput.textContent = '{\n  // 請填寫必填欄位\n}';
+                }
+            }
+
+            // ==================== Analysis ====================
+            function updateAnalysis(jsonObj, type) {
+                const rules = ANALYSIS_DB[type];
+                if (!rules || !jsonObj) {
+                    analysisPanel.classList.add('hidden');
+                    return;
+                }
+
+                analysisPanel.classList.remove('hidden');
+
+                const found = [];
+                const missing = [];
+                const googleMissing = [];
+
+                rules.all.forEach(field => {
+                    const val = findNestedValue(jsonObj, field);
+                    if (val !== undefined && val !== null && val !== '') {
+                        found.push(field);
+                    } else {
+                        missing.push(field);
+                    }
+                });
+
+                rules.google.forEach(field => {
+                    const val = findNestedValue(jsonObj, field);
+                    if (val === undefined || val === null || val === '') {
+                        googleMissing.push(field);
+                    }
+                });
+
+                // Calculate score
+                const totalFields = rules.all.length;
+                const filledCount = found.length;
+                const score = totalFields > 0 ? Math.round((filledCount / totalFields) * 100) : 0;
+
+                // Update score display
+                schemaScore.textContent = score;
+                schemaScoreBar.style.width = score + '%';
+                let scoreText, scoreColor;
+                if (score >= 80) { scoreText = '優良'; scoreColor = '#10B981'; }
+                else if (score >= 60) { scoreText = '良好'; scoreColor = '#F59E0B'; }
+                else if (score >= 40) { scoreText = '待加強'; scoreColor = '#F97316'; }
+                else { scoreText = '不足'; scoreColor = '#EF4444'; }
+                scoreLabel.textContent = `${scoreText} — 完成度 ${score}%`;
+                schemaScoreBar.style.background = `linear-gradient(90deg, ${scoreColor}, #A855F7)`;
+
+                // Required fields
+                const reqFilled = rules.required.filter(f => found.includes(f)).length;
+                const reqTotal = rules.required.length;
+                requiredFilled.textContent = reqFilled;
+                requiredTotal.textContent = reqTotal;
+
+                // Field status list
+                let fieldHtml = '';
+                rules.all.forEach(field => {
+                    const isFilled = found.includes(field);
+                    const isReq = rules.required.includes(field);
+                    const isGoogle = rules.google.includes(field);
+                    const label = FIELD_LABELS[field] || field;
+                    let icon, color;
+                    if (isFilled) { icon = 'ph-check-circle'; color = 'text-emerald-400'; }
+                    else if (isReq) { icon = 'ph-x-circle'; color = 'text-red-400'; }
+                    else if (isGoogle) { icon = 'ph-warning-circle'; color = 'text-amber-400'; }
+                    else { icon = 'ph-circle'; color = 'text-slate-600'; }
+                    const tags = [];
+                    if (isReq) tags.push('<span class="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded">必填</span>');
+                    if (isGoogle && !isReq) tags.push('<span class="text-[8px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">建議</span>');
+                    fieldHtml += `<div class="analysis-item flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-hub-800/40">
+                        <i class="ph ${icon} ${color} text-sm"></i>
+                        <span class="text-xs text-slate-300 flex-1">${label}</span>
+                        <div class="flex gap-1">${tags.join('')}</div>
+                    </div>`;
+                });
+                fieldStatusList.innerHTML = fieldHtml || '<div class="text-xs text-slate-500 text-center py-2">無可用欄位</div>';
+
+                // Suggestions
+                const suggestions = [];
+                if (missing.length > 0) {
+                    suggestions.push({ type: 'missing', text: `缺少 ${missing.length} 個推薦欄位：${missing.map(f => FIELD_LABELS[f] || f).join('、')}` });
+                }
+                if (googleMissing.length > 0) {
+                    suggestions.push({ type: 'google', text: `Google 建議加入以下欄位：${googleMissing.map(f => FIELD_LABELS[f] || f).join('、')}` });
+                }
+                if (score < 60) {
+                    suggestions.push({ type: 'warning', text: 'Schema 完成度偏低，建議補充更多欄位以獲得更好的搜尋呈現效果。' });
+                } else if (score >= 80) {
+                    suggestions.push({ type: 'success', text: 'Schema 結構良好，已具備完整的結構化資料。' });
+                }
+                if (type === 'FAQPage') {
+                    const items = collectFAQItems();
+                    if (items.length < 2) suggestions.push({ type: 'warning', text: 'Google 建議 FAQPage 至少包含 2 組問答項目。' });
+                }
+                if (type === 'BreadcrumbList') {
+                    const items = collectBreadcrumbItems();
+                    if (items.length < 2) suggestions.push({ type: 'warning', text: 'Google 建議 BreadcrumbList 至少包含 2 個導覽項目。' });
+                }
+                if (type === 'Product' || type === 'SoftwareApplication') {
+                    if (!findNestedValue(jsonObj, 'offers')) {
+                        suggestions.push({ type: 'google', text: '建議加入價格資訊 (offers) 以觸發 Rich Results。' });
+                    }
+                }
+
+                suggestionCount.textContent = suggestions.filter(s => s.type !== 'success').length;
+                if (suggestions.length > 0 && suggestions.some(s => s.type !== 'success')) {
+                    suggestionSection.classList.remove('hidden');
+                    suggestionListEl.innerHTML = suggestions.map(s => {
+                        const colors = { missing: 'border-l-amber-400 text-amber-400', google: 'border-l-indigo-400 text-indigo-400', warning: 'border-l-red-400 text-red-400', success: 'border-l-emerald-400 text-emerald-400' };
+                        const icons = { missing: 'ph-warning-circle', google: 'ph-info', warning: 'ph-warning', success: 'ph-check-circle' };
+                        return `<div class="flex items-start gap-2 px-3 py-2 rounded-lg bg-hub-900/40 border-l-3 ${colors[s.type] || 'border-l-slate-500'}">
+                            <i class="ph ${icons[s.type] || 'ph-info'} text-sm mt-0.5"></i>
+                            <span class="text-xs text-slate-300">${s.text}</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    suggestionSection.classList.add('hidden');
+                }
+            }
+
+            function findNestedValue(obj, path) {
+                if (!obj) return undefined;
+                if (path === 'potentialAction') {
+                    return obj.potentialAction ? true : undefined;
+                }
+                if (path === 'offers') {
+                    return obj.offers && obj.offers.price ? obj.offers : undefined;
+                }
+                if (path === 'aggregateRating') {
+                    return obj.aggregateRating && obj.aggregateRating.ratingValue ? obj.aggregateRating : undefined;
+                }
+                if (path === 'author') {
+                    return obj.author && obj.author.name ? obj.author : undefined;
+                }
+                if (path === 'publisher') {
+                    return obj.publisher && obj.publisher.name ? obj.publisher : undefined;
+                }
+                if (path === 'image') {
+                    return obj.image || (obj.primaryImageOfPage && obj.primaryImageOfPage.url) ? true : undefined;
+                }
+                if (path === 'screenshot') {
+                    return obj.screenshot ? true : undefined;
+                }
+                if (path === 'logo') {
+                    return obj.logo ? true : undefined;
+                }
+                if (path === 'sameAs') {
+                    return obj.sameAs && obj.sameAs.length > 0 ? obj.sameAs : undefined;
+                }
+                if (path === 'address') {
+                    return obj.address ? obj.address : undefined;
+                }
+                if (path === 'geo') {
+                    return obj.geo ? obj.geo : undefined;
+                }
+                if (path === 'openingHoursSpecification') {
+                    return obj.openingHoursSpecification && obj.openingHoursSpecification.length > 0 ? obj.openingHoursSpecification : undefined;
+                }
+                if (path === 'mainEntity') {
+                    return obj.mainEntity && obj.mainEntity.length > 0 ? obj.mainEntity : undefined;
+                }
+                if (path === 'itemListElement') {
+                    return obj.itemListElement && obj.itemListElement.length > 0 ? obj.itemListElement : undefined;
+                }
+                if (path === 'breadcrumb') {
+                    return obj.breadcrumb ? obj.breadcrumb : undefined;
+                }
+                if (path === 'primaryImageOfPage') {
+                    return obj.primaryImageOfPage ? obj.primaryImageOfPage : undefined;
+                }
+                return obj[path];
+            }
+
+            // ==================== Preview ====================
+            function updatePreview(jsonObj, type) {
+                if (!jsonObj) {
+                    previewPanel.classList.add('hidden');
+                    return;
+                }
+                previewPanel.classList.remove('hidden');
+
+                const name = jsonObj.name || jsonObj.headline || '';
+                const desc = jsonObj.description || '';
+                const url = jsonObj.url || '';
+
+                let previewHtml = '';
+                if (type === 'FAQPage') {
+                    const items = jsonObj.mainEntity || [];
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽 (FAQ)</div>
+                        <div class="bg-white rounded-lg p-3 text-black shadow-lg">`;
+                    items.slice(0, 3).forEach((item, i) => {
+                        previewHtml += `<div class="${i > 0 ? 'border-t border-gray-200' : ''} py-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-800">${item.name}</span>
+                                <i class="ph ph-caret-down text-gray-400 text-sm"></i>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-0.5 line-clamp-2">${item.acceptedAnswer?.text || ''}</div>
+                        </div>`;
+                    });
+                    if (items.length > 3) previewHtml += `<div class="text-xs text-gray-400 pt-1 border-t border-gray-200">還有 ${items.length - 3} 組問答...</div>`;
+                    previewHtml += `</div></div>`;
+                } else if (type === 'BreadcrumbList') {
+                    const items = jsonObj.itemListElement || [];
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽 (麵包屑)</div>
+                        <div class="flex items-center gap-1 text-sm text-indigo-400 bg-hub-900/60 rounded-lg p-3">`;
+                    items.forEach((item, i) => {
+                        if (i > 0) previewHtml += `<span class="text-slate-600 text-xs mx-0.5">›</span>`;
+                        previewHtml += `<span>${item.name}</span>`;
+                    });
+                    previewHtml += `</div></div>`;
+                } else if (type === 'Product' && jsonObj.offers) {
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽 (產品)</div>
+                        <div class="bg-white rounded-lg p-3 text-black shadow-lg">
+                            <div class="text-lg font-bold text-gray-900">${name}</div>
+                            <div class="text-sm text-gray-600 mt-1">${desc || ''}</div>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-2xl font-bold text-gray-900">$${jsonObj.offers.price || '?'}</span>
+                                <span class="text-xs text-gray-500">${jsonObj.offers.priceCurrency || ''}</span>
+                                ${jsonObj.aggregateRating ? `<span class="text-sm text-amber-500 ml-auto">★ ${jsonObj.aggregateRating.ratingValue}</span>` : ''}
+                            </div>
+                            ${jsonObj.brand ? `<div class="text-xs text-gray-500 mt-1">品牌：${jsonObj.brand.name || jsonObj.brand}</div>` : ''}
+                        </div>
+                    </div>`;
+                } else if (type === 'SoftwareApplication' && jsonObj.offers) {
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽 (軟體)</div>
+                        <div class="bg-white rounded-lg p-3 text-black shadow-lg">
+                            <div class="text-lg font-bold text-gray-900">${name}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">${jsonObj.operatingSystem || ''}</div>
+                            <div class="text-sm text-gray-600 mt-1">${desc || ''}</div>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-2xl font-bold text-gray-900">${parseFloat(jsonObj.offers.price) === 0 ? '免費' : '$' + jsonObj.offers.price}</span>
+                                ${jsonObj.aggregateRating ? `<span class="text-sm text-amber-500 ml-auto">★ ${jsonObj.aggregateRating.ratingValue} (${jsonObj.aggregateRating.ratingCount})</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                } else if (type === 'Article' || type === 'WebPage') {
+                    const author = jsonObj.author?.name || '';
+                    const date = jsonObj.datePublished || '';
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽</div>
+                        <div class="bg-white rounded-lg p-3 text-black shadow-lg">
+                            <div class="flex items-center gap-2 text-xs text-gray-500">
+                                <span>${url.replace('https://', '').replace('http://', '').split('/')[0] || 'example.com'}</span>
+                                ${date ? `<span>${date}</span>` : ''}
+                            </div>
+                            <div class="text-lg font-bold text-blue-700 hover:underline mt-0.5">${name}</div>
+                            <div class="text-sm text-gray-600 mt-0.5">${desc || ''}</div>
+                        </div>
+                    </div>`;
+                } else if (type === 'LocalBusiness') {
+                    const addr = jsonObj.address?.streetAddress || '';
+                    const tel = jsonObj.telephone || '';
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽 (商家)</div>
+                        <div class="bg-white rounded-lg p-3 text-black shadow-lg">
+                            <div class="text-lg font-bold text-gray-900">${name}</div>
+                            <div class="text-sm text-green-700 mt-0.5">★ 4.5 (Google 地標)</div>
+                            ${addr ? `<div class="text-sm text-gray-600 mt-1">📍 ${addr}</div>` : ''}
+                            ${tel ? `<div class="text-sm text-blue-600">📞 ${tel}</div>` : ''}
+                            ${jsonObj.priceRange ? `<div class="text-sm text-gray-500 mt-1">${jsonObj.priceRange}</div>` : ''}
+                        </div>
+                    </div>`;
+                } else {
+                    previewHtml = `<div class="space-y-2">
+                        <div class="text-xs text-slate-500 mb-1">Google 搜尋結果預覽</div>
+                        <div class="bg-white rounded-lg p-3 text-black shadow-lg">
+                            <div class="text-lg font-bold text-blue-700 hover:underline">${name || 'Schema 標題'}</div>
+                            <div class="text-sm text-gray-600 mt-0.5">${desc || 'Schema 描述將顯示於此'}</div>
+                            ${url ? `<div class="text-xs text-green-700 mt-1">${url}</div>` : ''}
+                        </div>
+                    </div>`;
+                }
+                previewContent.innerHTML = previewHtml;
+            }
+
+            // ==================== Analyze Mode ====================
+            function analyzeJSON(input) {
+                try {
+                    const parsed = JSON.parse(input);
+                    if (!parsed['@context'] || parsed['@context'] !== 'https://schema.org') {
+                        showToast('缺少有效的 @context（需為 https://schema.org）', true);
+                        return;
+                    }
+                    if (!parsed['@type']) {
+                        showToast('缺少 @type 定義', true);
+                        return;
+                    }
+
+                    const type = parsed['@type'];
+                    const rules = ANALYSIS_DB[type];
+                    if (!rules) {
+                        // Unknown type - still try to analyze
+                        currentJsonLd = parsed;
+                        jsonOutput.textContent = JSON.stringify(parsed, null, 2);
+                        analysisPanel.classList.remove('hidden');
+
+                        const allKeys = Object.keys(parsed).filter(k => !k.startsWith('@'));
+                        schemaScore.textContent = '--';
+                        schemaScoreBar.style.width = '0%';
+                        scoreLabel.textContent = `${type} — 非標準 Schema 類型，部分分析受限`;
+                        requiredFilled.textContent = '?';
+                        requiredTotal.textContent = '?';
+                        fieldStatusList.innerHTML = `<div class="text-xs text-slate-500 text-center py-2">不支援的 Schema 類型：${type}。欄位驗證僅支援標準 Schema.org 類型。</div>`;
+                        suggestionSection.classList.add('hidden');
+                        suggestionCount.textContent = '0';
+
+                        showToast(`已識別 Schema 類型：${type}（未在標準清單中）`);
+                        return;
+                    }
+
+                    currentJsonLd = parsed;
+                    jsonOutput.textContent = JSON.stringify(parsed, null, 2);
+                    schemaBadge.textContent = type;
+                    schemaBadge.classList.remove('hidden');
+
+                    updateAnalysis(parsed, type);
+                    updatePreview(parsed, type);
+                    showToast(`分析完成！Schema 類型：${type}`);
+
+                } catch (e) {
+                    showToast('JSON 格式錯誤：' + e.message, true);
+                }
+            }
+
+            // ==================== Utility ====================
+            function debounce(fn, delay) {
+                let timer;
+                return function(...args) {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => fn.apply(this, args), delay);
+                };
+            }
+
+            function formatJSON() {
+                try {
+                    const text = jsonOutput.textContent;
+                    const parsed = JSON.parse(text);
+                    jsonOutput.textContent = JSON.stringify(parsed, null, 2);
+                    showToast('已重新格式化');
+                } catch (e) {
+                    showToast('無法格式化：JSON 無效', true);
+                }
+            }
+
+            // ==================== Event Handlers ====================
+            // Mode switching
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const mode = this.id.replace('mode-', '');
+                    switchMode(mode);
+                });
+            });
+
+            // Schema type change
+            schemaTypeSelect.addEventListener('change', function() {
+                currentSchemaType = this.value;
+                renderForm();
+            });
+
+            // Generate button
+            btnGenerate.addEventListener('click', () => {
+                const jsonObj = generateJSON();
+                if (jsonObj) {
+                    jsonOutput.textContent = JSON.stringify(jsonObj, null, 2);
+                    currentJsonLd = jsonObj;
+                    updateAnalysis(jsonObj, currentSchemaType);
+                    updatePreview(jsonObj, currentSchemaType);
+                    showToast('JSON-LD 已產生！');
+                } else {
+                    showToast('請填寫必填欄位', true);
+                }
+            });
+
+            // Analyze button
+            btnAnalyze.addEventListener('click', () => {
+                const input = inJson.value.trim();
+                if (!input) {
+                    showToast('請貼入 JSON-LD 程式碼', true);
+                    return;
+                }
+                analyzeJSON(input);
+            });
+
+            // Analyze: Ctrl+Enter
+            inJson.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    const input = inJson.value.trim();
+                    if (input) analyzeJSON(input);
+                }
+            });
+
+            // Sample
+            btnSample.addEventListener('click', () => {
+                inJson.value = JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "WebSite",
+                    "name": "ToolHub",
+                    "url": "https://toolhuben.com",
+                    "description": "免費線上實用工具箱",
+                    "potentialAction": {
+                        "@type": "SearchAction",
+                        "target": {
+                            "@type": "EntryPoint",
+                            "urlTemplate": "https://toolhuben.com/?s={search_term_string}"
+                        },
+                        "query-input": {
+                            "@type": "PropertyValueSpecification",
+                            "valueRequired": true,
+                            "valueName": "search_term_string"
+                        }
+                    }
+                }, null, 2);
+                showToast('已載入範例 JSON-LD');
+            });
+
+            // Copy
+            btnCopy.addEventListener('click', () => {
+                const text = jsonOutput.textContent;
+                if (!text || text.includes('// 選擇 Schema')) {
+                    showToast('沒有可複製的內容', true);
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(() => {
+                    copyToast.classList.remove('opacity-0');
+                    copyToast.classList.add('opacity-100');
+                    setTimeout(() => {
+                        copyToast.classList.remove('opacity-100');
+                        copyToast.classList.add('opacity-0');
+                    }, 1500);
+                    showToast('已複製到剪貼簿！');
+                }).catch(() => {
+                    // Fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showToast('已複製到剪貼簿！');
+                });
+            });
+
+            // Download
+            btnDownload.addEventListener('click', () => {
+                const text = jsonOutput.textContent;
+                if (!text || text.includes('// 選擇 Schema')) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                const type = currentJsonLd?.['@type'] || 'schema';
+                const name = currentJsonLd?.name || currentJsonLd?.headline || type;
+                const filename = `schema-${type.toLowerCase()}-${name.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)}.json`;
+                const blob = new Blob([text], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('已下載 JSON 檔案！');
+            });
+
+            // Format
+            btnFormat.addEventListener('click', formatJSON);
+
+            // FAQ accordion
+            document.querySelectorAll('.faq-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    const icon = this.querySelector('.ph-caret-down');
+                    if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+                        content.style.maxHeight = null;
+                        if (icon) icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        if (icon) icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            // ==================== Init ====================
+            renderForm();
+
+        });
+    </script>
+
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

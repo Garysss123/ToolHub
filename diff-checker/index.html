@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diff Checker / 文字差異比較工具 | ToolHub</title>
+    <meta name="description" content="專業的文字差異比較工具，支援 Line/Word/Char 三種比較模式、同步捲動、相似度分析、JSON 比對與 AI Prompt 比較。適用於程式碼審查、文件校稿。">
+    <meta name="keywords" content="Diff, Diff Checker, 文字比較, 差異比較, Line Diff, Word Diff, JSON Diff, AI Prompt 比較, ToolHub">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script>tailwind.config={theme:{extend:{colors:{hub:{900:'#0B1120',800:'#151F32',700:'#1E293B',accent:'#38BDF8'},diff:{add:'#10B981',del:'#EF4444',mod:'#F59E0B'}},fontFamily:{sans:['"Noto Sans TC"','ui-sans-serif','system-ui','sans-serif'],mono:['"Fira Code"','ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','monospace']}}}}</script>
+    <style>
+        body{background-color:#0B1120;color:#E2E8F0;background-image:linear-gradient(to right,rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:30px 30px;background-attachment:fixed}
+        ::-webkit-scrollbar{width:8px;height:8px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:#1E293B;border-radius:10px;border:2px solid #0B1120}
+        ::-webkit-scrollbar-thumb:hover{background:#38BDF8}
+        .glass-panel{background:rgba(21,31,50,0.8);backdrop-filter:blur(12px);border:1px solid #1E293B;border-radius:1rem;box-shadow:0 20px 60px -15px rgba(0,0,0,0.5)}
+        .editor-area{background:#0f172a;border:1px solid #1E293B;border-radius:0.5rem;transition:border-color 0.2s}
+        .editor-area:focus-within{border-color:#38BDF8;box-shadow:0 0 0 3px rgba(56,189,248,0.08)}
+        .editor-area textarea{background:transparent;border:none;color:#E2E8F0;font-family:'"Fira Code"',ui-monospace,monospace;font-size:0.8125rem;line-height:1.7;resize:none;width:100%;min-height:300px;padding:0.75rem;tab-size:2}
+        .editor-area textarea:focus{outline:none}
+        .editor-area textarea::placeholder{color:#475569}
+        .diff-table{width:100%;border-collapse:collapse;font-family:'"Fira Code"',ui-monospace,monospace;font-size:0.75rem;line-height:1.6}
+        .diff-table td{padding:0.25rem 0.5rem;vertical-align:top;border-bottom:1px solid rgba(30,41,59,0.3)}
+        .diff-table .ln{color:#475569;text-align:right;padding-right:0.5rem;width:3rem;user-select:none;border-right:1px solid #1E293B}
+        .diff-add{background:rgba(16,185,129,0.12)}.diff-add .ln{background:rgba(16,185,129,0.08)}
+        .diff-del{background:rgba(239,68,68,0.12)}.diff-del .ln{background:rgba(239,68,68,0.08)}
+        .diff-mod{background:rgba(245,158,11,0.1)}.diff-mod .ln{background:rgba(245,158,11,0.06)}
+        .diff-eq{background:transparent}
+        .word-add{background:rgba(16,185,129,0.3);border-radius:2px}
+        .word-del{background:rgba(239,68,68,0.3);border-radius:2px}
+        .stat-card{text-align:center;padding:0.75rem;border-radius:0.75rem;border:1px solid rgba(30,41,59,0.5)}
+        .tab-btn{padding:0.5rem 1rem;font-size:0.8125rem;font-weight:500;color:#94A3B8;cursor:pointer;transition:all 0.2s;border-radius:0.5rem;border:1px solid transparent}
+        .tab-btn:hover{color:#E2E8F0;background:rgba(255,255,255,0.03)}
+        .tab-btn.active{color:#38BDF8;border-color:rgba(56,189,248,0.3);background:rgba(56,189,248,0.08)}
+        .opt-check{display:inline-flex;align-items:center;gap:0.375rem;cursor:pointer;font-size:0.75rem;color:#94A3B8;padding:0.25rem 0}
+        .opt-check:hover{color:#E2E8F0}
+        .opt-check input[type=checkbox]{accent-color:#38BDF8}
+        .faq-item summary{cursor:pointer;font-weight:500;font-size:1rem;padding:0.75rem 0;list-style:none;display:flex;align-items:center;justify-content:space-between}
+        .faq-item summary::-webkit-details-marker{display:none}
+        .faq-item summary::after{content:'+';font-size:1.25rem;color:#38BDF8}
+        .faq-item[open] summary::after{content:'−'}
+        .faq-item .faq-answer{padding-bottom:1rem;color:#94A3B8;line-height:1.75}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .fade-in{animation:fadeIn 0.3s ease-out}
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592" crossorigin="anonymous"></script>
+
+    <!-- SEO Structural Upgrade 2026 -->
+    <link rel="canonical" href="https://toolhuben.com/diff-checker/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://toolhuben.com/diff-checker/">
+    <meta property="og:title" content="Diff Checker / 文字差異比較工具">
+    <meta property="og:description" content="專業的文字差異比較工具，支援 Line/Word/Char 三種比較模式、同步捲動、相似度分析、JSON 比對與 AI Prompt 比較。適用於程式碼審查、文件校稿。">
+    <meta property="og:image" content="https://toolhuben.com/favicon.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Diff Checker / 文字差異比較工具">
+    <meta name="twitter:description" content="專業的文字差異比較工具，支援 Line/Word/Char 三種比較模式、同步捲動、相似度分析、JSON 比對與 AI Prompt 比較。適用於程式碼審查、文件校稿。">
+    <link rel="stylesheet" href="/components/seo-upgrade.css">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Diff Checker / 文字差異比較工具","url":"https://toolhuben.com/diff-checker/","description":"專業的文字差異比較工具，支援 Line/Word/Char 三種比較模式、同步捲動、相似度分析、JSON 比對與 AI Prompt 比較。適用於程式碼審查、文件校稿。","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://toolhuben.com/"},{"@type":"ListItem","position":2,"name":"Diff Checker / 文字差異比較工具","item":"https://toolhuben.com/diff-checker/"}]}]}</script>
+<link rel="stylesheet" href="/components/tool-visual-core.css"><link rel="stylesheet" href="/components/tool-classic-upgrade.css">
+
+    <!-- TOOLHUB I18N START -->
+    <link rel="alternate" hreflang="zh-Hant" href="https://toolhuben.com/diff-checker/">
+    <link rel="alternate" hreflang="en" href="https://toolhuben.com/en/diff-checker/">
+    <link rel="alternate" hreflang="x-default" href="https://toolhuben.com/en/diff-checker/">
+    <!-- TOOLHUB I18N END -->
+</head>
+<body class="flex flex-col min-h-screen relative font-sans" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248" data-tool-visual data-classic-tool data-classic-layout="editorial">
+<div id="component-header"></div><div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+    <div class="text-center mb-8 fade-in">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">文字差異分析引擎</span>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">Diff Checker <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">文字差異比較工具</span></h1>
+        <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">比較兩段文字、程式碼、JSON 或 AI Prompt 的差異。支援 Line / Word / Character 三種比較模式。</p>
+    </div>
+
+    <!-- Options -->
+    <div class="glass-panel p-4 mb-6">
+        <div class="flex flex-wrap gap-3 items-center">
+            <div class="flex gap-1 bg-slate-800/50 rounded-lg p-0.5">
+                <button class="tab-btn active" data-mode="line" onclick="setDiffMode('line')">Line Diff</button>
+                <button class="tab-btn" data-mode="word" onclick="setDiffMode('word')">Word Diff</button>
+                <button class="tab-btn" data-mode="char" onclick="setDiffMode('char')">Character Diff</button>
+            </div>
+            <span class="text-slate-600 text-xs">|</span>
+            <label class="opt-check"><input type="checkbox" id="opt-ignore-case" onchange="runDiff()"> 忽略大小寫</label>
+            <label class="opt-check"><input type="checkbox" id="opt-ignore-space" onchange="runDiff()"> 忽略空白</label>
+            <label class="opt-check"><input type="checkbox" id="opt-ignore-blank" onchange="runDiff()"> 忽略空白行</label>
+            <label class="opt-check"><input type="checkbox" id="opt-json" onchange="toggleJSON()"> JSON 模式</label>
+        </div>
+    </div>
+
+    <!-- Editors -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div>
+            <div class="flex items-center justify-between mb-2"><span class="text-xs font-semibold text-slate-400">原始 (Original)</span><span class="text-xs text-slate-600" id="lines-left">0 lines</span></div>
+            <div class="editor-area"><textarea id="input-left" placeholder="貼上原始文字..." onscroll="syncScroll(this,true)" oninput="onEdit()"></textarea></div>
+            <div class="flex gap-2 mt-2"><label class="text-xs text-slate-500 cursor-pointer hover:text-hub-accent"><i class="ph ph-upload-simple"></i> 上傳 TXT<input type="file" class="hidden" accept=".txt" onchange="loadFile(this,true)"></label></div>
+        </div>
+        <div>
+            <div class="flex items-center justify-between mb-2"><span class="text-xs font-semibold text-slate-400">修改 (Modified)</span><span class="text-xs text-slate-600" id="lines-right">0 lines</span></div>
+            <div class="editor-area"><textarea id="input-right" placeholder="貼上修改後文字..." onscroll="syncScroll(this,false)" oninput="onEdit()"></textarea></div>
+            <div class="flex gap-2 mt-2"><label class="text-xs text-slate-500 cursor-pointer hover:text-hub-accent"><i class="ph ph-upload-simple"></i> 上傳 TXT<input type="file" class="hidden" accept=".txt" onchange="loadFile(this,false)"></label></div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="runDiff()" class="px-4 py-2 bg-hub-accent text-white rounded-lg text-sm font-medium hover:bg-sky-400 transition-colors flex items-center gap-1.5"><i class="ph ph-arrows-counter-clockwise"></i> 比較</button>
+        <button onclick="loadSample()" class="px-4 py-2 bg-slate-700/50 text-slate-300 border border-hub-700 rounded-lg text-sm hover:bg-slate-700 transition-colors flex items-center gap-1.5"><i class="ph ph-example"></i> 樣本</button>
+        <button onclick="swapText()" class="px-4 py-2 bg-slate-700/50 text-slate-300 border border-hub-700 rounded-lg text-sm hover:bg-slate-700 transition-colors flex items-center gap-1.5"><i class="ph ph-arrows-left-right"></i> 交換</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-sm hover:bg-red-500/20 transition-colors flex items-center gap-1.5"><i class="ph ph-x-circle"></i> 清除</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-sm hover:bg-blue-500/20 transition-colors flex items-center gap-1.5"><i class="ph ph-copy-simple"></i> 複製結果</button>
+        <button onclick="downloadReport()" class="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5"><i class="ph ph-download-simple"></i> 下載報告</button>
+    </div>
+
+    <!-- Diff Results -->
+    <div id="diff-results" class="hidden space-y-6">
+        <!-- Stats -->
+        <div class="glass-panel p-4 sm:p-6">
+            <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><i class="ph ph-chart-bar text-hub-accent"></i> 統計</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-3" id="stats-grid">
+                <div class="stat-card"><div class="text-xs text-slate-500">新增</div><div class="text-lg font-bold text-diff-add" id="stat-add">0</div></div>
+                <div class="stat-card"><div class="text-xs text-slate-500">刪除</div><div class="text-lg font-bold text-diff-del" id="stat-del">0</div></div>
+                <div class="stat-card"><div class="text-xs text-slate-500">修改</div><div class="text-lg font-bold text-diff-mod" id="stat-mod">0</div></div>
+                <div class="stat-card"><div class="text-xs text-slate-500">相同</div><div class="text-lg font-bold text-white" id="stat-eq">0</div></div>
+                <div class="stat-card"><div class="text-xs text-slate-500">總變更</div><div class="text-lg font-bold text-white" id="stat-total">0</div></div>
+                <div class="stat-card border-hub-accent/30 bg-hub-accent/5"><div class="text-xs text-slate-500">相似度</div><div class="text-lg font-bold text-hub-accent" id="stat-similarity">0%</div></div>
+            </div>
+            <!-- AI Prompt Info -->
+            <div id="ai-prompt-info" class="hidden mt-3 p-3 bg-purple-500/8 border border-purple-500/20 rounded-lg text-sm">
+                <div class="flex items-center gap-2 text-purple-400 font-medium mb-2"><i class="ph ph-robot"></i> AI Prompt 偵測</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs" id="ai-prompt-stats"></div>
+            </div>
+        </div>
+
+        <!-- Diff View -->
+        <div class="glass-panel p-4 sm:p-6 overflow-hidden">
+            <div class="flex items-center justify-between mb-3"><h2 class="text-sm font-bold text-white flex items-center gap-2"><i class="ph ph-git-diff text-hub-accent"></i> 差異檢視</h2><span class="text-xs text-slate-500" id="diff-mode-label">Line Diff</span></div>
+            <div id="diff-view" class="overflow-x-auto border border-hub-700 rounded-lg max-h-[600px] overflow-y-auto" style="scrollbar-width:thin"></div>
+        </div>
+    </div>
+
+    <!-- FAQ + SEO -->
+    <div class="mt-8 space-y-6">
+        <div class="glass-panel p-4 sm:p-6">
+            <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i class="ph ph-question text-hub-accent"></i> 常見問題 (FAQ)</h2>
+            <div class="space-y-2 divide-y divide-hub-700/50">
+                <details class="faq-item"><summary class="text-slate-200">Diff 是什麼？</summary>
+                <div class="faq-answer">Diff 是 difference（差異）的縮寫，指透過比較兩段文字內容，找出新增、刪除與修改的部分。Diff 工具廣泛應用於程式碼版本控制（如 Git diff）、文件校稿與資料比對。其核心演算法基於最長共同子序列（LCS, Longest Common Subsequence），可精確定位哪些內容被加入、移除或變更。</div></details>
+                <details class="faq-item"><summary class="text-slate-200">Line Diff、Word Diff 與 Character Diff 有什麼不同？</summary>
+                <div class="faq-answer"><strong>Line Diff</strong>：以行為單位比較最適合程式碼與結構化文字變更，為最常用的 Diff 模式。<br><br><strong>Word Diff</strong>：以單詞為單位比較，適合文章校稿與 Prompt 比較，可精確到每個單字的變更。<br><br><strong>Character Diff</strong>：以字元為單位比較，最精細的比較模式，可顯示每個字元的增減，但對於大量文字可能較難閱讀。<br><br>建議：程式碼用 Line Diff，文章用 Word Diff，需要精確找出拼寫變更時用 Character Diff。</div></details>
+                <details class="faq-item"><summary class="text-slate-200">JSON Diff 的最佳實踐？</summary>
+                <div class="faq-answer">開啟「JSON 模式」後，工具會自動對兩邊的 JSON 進行格式化和排序，然後再比較。這樣可以避免因縮排、鍵值順序不同而產生的誤判。<br><br>建議在比較 JSON 時同時開啟「忽略空白」選項，以獲得更乾淨的比較結果。如果 JSON 中有時間戳或 UUID 等動態值，可以先將其正規化再比較。</div></details>
+                <details class="faq-item"><summary class="text-slate-200">相似度 (Similarity) 是如何計算的？</summary>
+                <div class="faq-answer">相似度使用最長共同子序列（LCS）演算法計算，公式為：<br><br><code class="text-slate-400 font-mono text-xs">Similarity = (2 × LCS長度) / (左文字長度 + 右文字長度) × 100%</code><br><br>這個指標也稱為 Díce 係數，值越接近 100% 表示兩段文字越相似。一般來說：<br>• 100%：完全相同<br>• 80-99%：小幅修改<br>• 50-79%：大幅修改<br>• < 50%：大部分不同</div></details>
+                <details class="faq-item"><summary class="text-slate-200">如何比較 AI 產生內容？</summary>
+                <div class="faq-answer">本工具會自動偵測輸入內容是否為 AI Prompt（系統提示詞、角色設定等），並顯示 Token 估算值與 Prompt 特定統計。比較 AI 產生內容時，建議使用 Word Diff 模式，因為 LLM 輸出通常會在同義詞與句式上出現差異。<br><br>常見的使用場景包括：<br>• 比較不同版本 Prompt 的輸出差異<br>• 比較 A/B 測試的 LLM 回覆<br>• 比較微調前後的模型輸出</div></details>
+                <details class="faq-item"><summary class="text-slate-200">Diff 在 Git 中是如何運作的？</summary>
+                <div class="faq-answer">Git 使用內建的 diff 引擎來追蹤檔案變更。當你執行 <code class="text-slate-400 font-mono text-xs">git diff</code> 時，Git 會比較工作目錄與暫存區（或兩個 commit 之間）的內容，並以統一格式（Unified Diff）顯示差異。本工具提供了類似但更視覺化的比較體驗，支援同步捲動與色彩標示，適合不熟悉命令列的操作。</div></details>
+            </div>
+        </div>
+        <div class="glass-panel p-4 sm:p-6">
+            <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i class="ph ph-book-open text-hub-accent"></i> Diff 比較完整指南</h2>
+            <div class="space-y-4 text-sm text-slate-400 leading-relaxed">
+                <section><h3 class="text-white font-bold text-base mb-2">選擇適合的 Diff 模式</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                    <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-xs font-bold text-white mb-1">📝 Line Diff</p><p class="text-[11px] text-slate-500">程式碼、文件版本、結構化文字<br>優點：快速、清晰<br>缺點：無法看到行內變更</p></div>
+                    <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-xs font-bold text-white mb-1">🔤 Word Diff</p><p class="text-[11px] text-slate-500">文章、Prompt、校稿<br>優點：精確到單字變更<br>缺點：對長文字的運算較重</p></div>
+                    <div class="bg-slate-800/30 rounded-lg p-3"><p class="text-xs font-bold text-white mb-1">✏️ Character Diff</p><p class="text-[11px] text-slate-500">拼寫檢查、細微變更<br>優點：最精確<br>缺點：大量文字時較難閱讀</p></div>
+                </div></section>
+            </div>
+        </div>
+    </div>
+</main>
+<div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
+    <span id="toast-icon" class="text-lg">✅</span><span id="toast-message" class="text-sm font-medium text-slate-300"></span>
+</div>
+<div id="component-footer"></div>
+
+<script>
+async function loadComponent(id,path){try{const r=await fetch(path);if(!r.ok)throw Error('HTTP '+r.status);const html=await r.text();const c=document.getElementById(id);c.innerHTML=html;Array.from(c.querySelectorAll('script')).forEach(os=>{const ns=document.createElement('script');Array.from(os.attributes).forEach(a=>ns.setAttribute(a.name,a.value));ns.appendChild(document.createTextNode(os.innerHTML));os.parentNode.replaceChild(ns,os)})}catch(e){console.error('[System Error]',path,e)}}
+function setupSidebarActiveState(){const cp='/diff-checker';document.querySelectorAll('#sidebar-container .nav-item').forEach(i=>{const h=i.getAttribute('href');if(!h)return;const ip=h.replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';if(cp===ip||(cp!=='/'&&ip!=='/'&&cp.startsWith(ip+'/'))){i.classList.remove('text-slate-400','border-transparent','hover:bg-slate-800/50');i.classList.add('text-[#3ebcf0]','border-[#3ebcf0]','bg-slate-800/70','shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');const ic=i.querySelector('svg');if(ic)ic.classList.add('text-[#3ebcf0]')}})}
+async function initializeSystem(){await Promise.all([loadComponent('component-header','/components/header.html'),loadComponent('component-sidebar','/components/sidebar.html'),loadComponent('component-footer','/components/footer.html')]);if(typeof lucide!=='undefined')lucide.createIcons();document.body.addEventListener('click',function(e){const t=e.target.closest('#sidebar-trigger-btn');if(t)window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar'))});setupSidebarActiveState();initApp()}
+document.addEventListener('DOMContentLoaded',initializeSystem);
+</script>
+
+<script>
+// ===================== STATE =====================
+let diffMode = 'line';
+let isSyncing = false;
+
+// ===================== LCS ALGORITHM =====================
+function LCS(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, () => new Uint16Array(n+1));
+    for (let i = 1; i <= m; i++)
+        for (let j = 1; j <= n; j++)
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+    return dp;
+}
+
+function backtrackLCS(dp, a, b, i, j) {
+    const result = [];
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && a[i-1] === b[j-1]) { result.unshift({type:'eq',val:a[i-1]}); i--; j--; }
+        else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) { result.unshift({type:'add',val:b[j-1]}); j--; }
+        else { result.unshift({type:'del',val:a[i-1]}); i--; }
+    }
+    return result;
+}
+
+// ===================== TEXT PROCESSING =====================
+function normalizeText(text, opts) {
+    if (opts.json) {
+        try { text = JSON.stringify(JSON.parse(text), null, 2); } catch(e) {}
+    }
+    let lines = text.split('\n');
+    if (opts.ignoreBlank) lines = lines.filter(l => l.trim() !== '');
+    if (opts.ignoreSpace) lines = lines.map(l => l.replace(/\s+/g, ' ').trim());
+    else lines = lines.map(l => opts.trimTrailing ? l.replace(/\s+$/, '') : l);
+    if (opts.ignoreCase) lines = lines.map(l => l.toLowerCase());
+    return lines;
+}
+
+function getTokens(str, mode) {
+    if (mode === 'char') return str.split('');
+    if (mode === 'word') return str.match(/[a-zA-Z0-9_]+|[^a-zA-Z0-9_]/g) || [str];
+    return [str]; // line mode, return whole line
+}
+
+// ===================== DIFF ENGINE =====================
+function computeDiff(left, right, mode, opts) {
+    const linesL = normalizeText(left, opts);
+    const linesR = normalizeText(right, opts);
+
+    // Pre-process lines for comparison
+    const compareL = linesL;
+    const compareR = linesR;
+
+    const dp = LCS(compareL, compareR);
+    const diff = backtrackLCS(dp, compareL, compareR, compareL.length, compareR.length);
+
+    // Build detailed line-by-line result
+    let result = [];
+    let stats = { add:0, del:0, mod:0, eq:0 };
+    let totalLenL = 0, totalLenR = 0;
+    let lcsLen = 0;
+    let li = 0, ri = 0;
+
+    for (const item of diff) {
+        if (item.type === 'eq') {
+            result.push({ type:'eq', left:item.val, right:item.val, lnL:++li, lnR:++ri });
+            stats.eq++;
+            totalLenL += item.val.length;
+            totalLenR += item.val.length;
+            lcsLen += item.val.length;
+        } else if (item.type === 'del') {
+            // Check if next is an add (modified line)
+            const nextIdx = diff.indexOf(item) + 1;
+            if (nextIdx < diff.length && diff[nextIdx].type === 'add') {
+                // Modified: pair the deletion and addition
+                const addItem = diff[nextIdx];
+                if (mode === 'line') {
+                    result.push({ type:'mod', left:item.val, right:addItem.val, lnL:++li, lnR:++ri });
+                    stats.mod++;
+                } else {
+                    // Word/Char: compute within-line diff
+                    const innerDiff = computeLineDiff(item.val, addItem.val, mode);
+                    result.push({ type:'mod', left:item.val, right:addItem.val, lnL:++li, lnR:++ri, innerDiff });
+                    stats.mod++;
+                }
+                totalLenL += item.val.length;
+                totalLenR += addItem.val.length;
+                lcsLen += computeLCSLength(item.val, addItem.val);
+                // Skip next item since we paired it
+                diff[nextIdx] = { type:'skipped' };
+            } else {
+                result.push({ type:'del', left:item.val, right:null, lnL:++li, lnR:null });
+                stats.del++;
+                totalLenL += item.val.length;
+            }
+        } else if (item.type === 'add') {
+            result.push({ type:'add', left:null, right:item.val, lnL:null, lnR:++ri });
+            stats.add++;
+            totalLenR += item.val.length;
+        }
+    }
+
+    stats.total = stats.add + stats.del + stats.mod;
+    const similarity = totalLenL + totalLenR > 0 ? Math.round((2 * lcsLen) / (totalLenL + totalLenR) * 1000) / 10 : 100;
+
+    return { result, stats, similarity, linesL: compareL, linesR: compareR };
+}
+
+function computeLCSLength(a, b) {
+    const dp = Array.from({length: a.length+1}, () => new Uint16Array(b.length+1));
+    for (let i = 1; i <= a.length; i++)
+        for (let j = 1; j <= b.length; j++)
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+    return dp[a.length][b.length];
+}
+
+function computeLineDiff(lineL, lineR, mode) {
+    const tokensL = getTokens(lineL, mode);
+    const tokensR = getTokens(lineR, mode);
+    const dp = LCS(tokensL, tokensR);
+    const diff = backtrackLCS(dp, tokensL, tokensR, tokensL.length, tokensR.length);
+    // Build HTML with highlighting
+    let htmlL = '', htmlR = '';
+    for (const item of diff) {
+        if (item.type === 'eq') { htmlL += escHtml(item.val); htmlR += escHtml(item.val); }
+        else if (item.type === 'del') { htmlL += `<span class="word-del">${escHtml(item.val)}</span>`; }
+        else if (item.type === 'add') { htmlR += `<span class="word-add">${escHtml(item.val)}</span>`; }
+    }
+    return { htmlL, htmlR };
+}
+
+// ===================== RENDER =====================
+function renderDiff(diffResult) {
+    const { result, stats, similarity } = diffResult;
+    document.getElementById('stat-add').textContent = stats.add;
+    document.getElementById('stat-del').textContent = stats.del;
+    document.getElementById('stat-mod').textContent = stats.mod;
+    document.getElementById('stat-eq').textContent = stats.eq;
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-similarity').textContent = similarity + '%';
+
+    // AI Prompt detection
+    detectAIPrompt();
+
+    // Build table
+    let html = '<table class="diff-table"><tbody>';
+    for (const row of result) {
+        const cls = row.type === 'add' ? 'diff-add' : row.type === 'del' ? 'diff-del' : row.type === 'mod' ? 'diff-mod' : 'diff-eq';
+        const lnL = row.lnL !== null ? row.lnL : '';
+        const lnR = row.lnR !== null ? row.lnR : '';
+        const leftContent = row.left !== null ? (row.innerDiff ? row.innerDiff.htmlL : escHtml(row.left)) : '';
+        const rightContent = row.right !== null ? (row.innerDiff ? row.innerDiff.htmlR : escHtml(row.right)) : '';
+        html += `<tr class="${cls}"><td class="ln">${lnL}</td><td style="width:50%;padding-right:0.75rem;white-space:pre-wrap;word-break:break-all">${leftContent}</td>`;
+        html += `<td class="ln">${lnR}</td><td style="width:50%;padding-left:0.75rem;white-space:pre-wrap;word-break:break-all">${rightContent}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('diff-view').innerHTML = html;
+    document.getElementById('diff-mode-label').textContent = diffMode === 'line' ? 'Line Diff' : diffMode === 'word' ? 'Word Diff' : 'Character Diff';
+    document.getElementById('diff-results').classList.remove('hidden');
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// =================== AI PROMPT DETECTION =====================
+function detectAIPrompt() {
+    const left = document.getElementById('input-left').value;
+    const right = document.getElementById('input-right').value;
+    const combined = left + ' ' + right;
+    const promptKeywords = ['system','assistant','user','prompt','role:','context:','instruction:','you are','你是一個','請扮演','請作為','請用','# system','# role','# instruction','<s>','<|system|','<|user|','<|assistant|'];
+    const isPrompt = promptKeywords.some(k => combined.toLowerCase().includes(k.toLowerCase()));
+
+    const info = document.getElementById('ai-prompt-info');
+    if (!isPrompt) { info.classList.add('hidden'); return; }
+
+    info.classList.remove('hidden');
+    const lTokens = Math.round(left.length / 4);
+    const rTokens = Math.round(right.length / 4);
+
+    document.getElementById('ai-prompt-stats').innerHTML = `
+        <div><span class="text-slate-500">原始 Token (估)</span><div class="text-white font-bold">~${lTokens.toLocaleString()}</div></div>
+        <div><span class="text-slate-500">修改 Token (估)</span><div class="text-white font-bold">~${rTokens.toLocaleString()}</div></div>
+        <div><span class="text-slate-500">差異 Token</span><div class="text-white font-bold">~${Math.abs(lTokens - rTokens).toLocaleString()}</div></div>
+        <div><span class="text-slate-500">Prompt 長度</span><div class="text-white font-bold">${combined.length.toLocaleString()} chars</div></div>
+    `;
+}
+
+// ===================== SYNC SCROLL =====================
+function syncScroll(el, isLeft) {
+    if (isSyncing) return;
+    isSyncing = true;
+    const other = isLeft ? document.querySelector('#input-right') : document.querySelector('#input-left');
+    const pct = el.scrollTop / (el.scrollHeight - el.clientHeight);
+    other.scrollTop = pct * (other.scrollHeight - other.clientHeight);
+    setTimeout(() => isSyncing = false, 50);
+}
+
+// ===================== ACTIONS =====================
+function setDiffMode(mode) {
+    diffMode = mode;
+    document.querySelectorAll('.tab-btn[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    runDiff();
+}
+
+function onEdit() {
+    document.getElementById('lines-left').textContent = document.getElementById('input-left').value.split('\n').length + ' lines';
+    document.getElementById('lines-right').textContent = document.getElementById('input-right').value.split('\n').length + ' lines';
+}
+
+function toggleJSON() {
+    const isJson = document.getElementById('opt-json').checked;
+    if (isJson) {
+        try { document.getElementById('input-left').value = JSON.stringify(JSON.parse(document.getElementById('input-left').value), null, 2); } catch(e) {}
+        try { document.getElementById('input-right').value = JSON.stringify(JSON.parse(document.getElementById('input-right').value), null, 2); } catch(e) {}
+    }
+    runDiff();
+}
+
+function runDiff() {
+    const left = document.getElementById('input-left').value;
+    const right = document.getElementById('input-right').value;
+    if (!left && !right) return;
+
+    const opts = {
+        ignoreCase: document.getElementById('opt-ignore-case').checked,
+        ignoreSpace: document.getElementById('opt-ignore-space').checked,
+        ignoreBlank: document.getElementById('opt-ignore-blank').checked,
+        trimTrailing: true,
+        json: document.getElementById('opt-json').checked
+    };
+
+    const diffResult = computeDiff(left, right, diffMode, opts);
+    renderDiff(diffResult);
+}
+
+function swapText() {
+    const l = document.getElementById('input-left');
+    const r = document.getElementById('input-right');
+    const tmp = l.value; l.value = r.value; r.value = tmp;
+    runDiff();
+}
+
+function clearAll() {
+    document.getElementById('input-left').value = '';
+    document.getElementById('input-right').value = '';
+    document.getElementById('diff-results').classList.add('hidden');
+    document.getElementById('lines-left').textContent = '0 lines';
+    document.getElementById('lines-right').textContent = '0 lines';
+    document.getElementById('ai-prompt-info').classList.add('hidden');
+    showToast('已清除');
+}
+
+function copyResult() {
+    const view = document.getElementById('diff-view');
+    const text = view.textContent || view.innerText;
+    if (text) copyToClipboard(text);
+    else showToast('尚無結果', true);
+}
+
+function downloadReport() {
+    const left = document.getElementById('input-left').value;
+    const right = document.getElementById('input-right').value;
+    if (!left && !right) { showToast('尚無資料', true); return; }
+    const stats = document.getElementById('stat-similarity').textContent;
+    const lines = [
+        '═══════════════════════════════════════',
+        '  Diff Report',
+        '  ToolHub - Diff Checker',
+        '═══════════════════════════════════════',
+        '',
+        `Mode:       ${diffMode === 'line' ? 'Line Diff' : diffMode === 'word' ? 'Word Diff' : 'Character Diff'}`,
+        `Similarity: ${stats}`,
+        '',
+        '--- Original ---',
+        left,
+        '',
+        '--- Modified ---',
+        right,
+        '',
+        '───────────────────────────────────────',
+        `Generated by ToolHub (https://toolhuben.com/diff-checker)`,
+        `Timestamp: ${new Date().toISOString()}`,
+        '───────────────────────────────────────'
+    ].join('\n');
+    downloadFile(lines, 'diff-report.txt', 'text/plain');
+    showToast('報告已下載');
+}
+
+function loadFile(input, isLeft) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById(isLeft ? 'input-left' : 'input-right').value = e.target.result;
+        input.value = '';
+        onEdit();
+    };
+    reader.readAsText(file);
+}
+
+// ===================== SAMPLES =====================
+function loadSample() {
+    const samples = [
+        { left: 'Hello World\nThis is a test\nThird line\nFourth line\nFifth line',
+          right: 'Hello World\nThis is modified test\nThird line\nAdded line\nFourth line\nFifth line updated' },
+        { left: 'function greet(name) {\n  return "Hello, " + name;\n}\n\nconsole.log(greet("World"));',
+          right: 'function greet(name, title) {\n  return `Hello, ${title} ${name}`;\n}\n\nconsole.log(greet("World", "Dr."));' },
+        { left: '{\n  "name": "John",\n  "age": 30,\n  "city": "New York"\n}',
+          right: '{\n  "name": "John",\n  "age": 31,\n  "email": "john@example.com",\n  "city": "New York"\n}' }
+    ];
+    const pick = samples[Math.floor(Math.random() * samples.length)];
+    document.getElementById('input-left').value = pick.left;
+    document.getElementById('input-right').value = pick.right;
+    onEdit();
+    runDiff();
+    showToast('已載入樣本');
+}
+
+// ===================== UTILITIES =====================
+function showToast(msg, isError) {
+    const t=document.getElementById('toast'),ic=document.getElementById('toast-icon'),m=document.getElementById('toast-message');
+    ic.textContent=isError?'❌':'✅';m.textContent=msg;
+    t.classList.remove('opacity-0','pointer-events-none','translate-y-4');
+    t.classList.add('opacity-100','pointer-events-auto');
+    clearTimeout(t._timeout);
+    t._timeout=setTimeout(()=>{t.classList.remove('opacity-100','pointer-events-auto');t.classList.add('opacity-0','pointer-events-none','translate-y-4')},2500);
+}
+function copyToClipboard(text) { if (navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(()=>showToast('已複製')).catch(()=>fallbackCopy(text)); else fallbackCopy(text); }
+function fallbackCopy(text) { const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');showToast('已複製')}catch(e){showToast('複製失敗',true)}document.body.removeChild(ta); }
+function downloadFile(content,filename,mimeType) { const blob=new Blob([content],{type:mimeType});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url); }
+
+function initApp() {
+    setTimeout(loadSample, 600);
+}
+
+window.setDiffMode=setDiffMode;window.runDiff=runDiff;window.swapText=swapText;
+window.clearAll=clearAll;window.copyResult=copyResult;window.downloadReport=downloadReport;
+window.loadSample=loadSample;window.loadFile=loadFile;window.onEdit=onEdit;window.toggleJSON=toggleJSON;
+window.syncScroll=syncScroll;
+</script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>
