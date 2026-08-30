@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),http=require('http'),os=require('os'),{spawn}=require('child_process');
 const root=path.resolve(__dirname,'..'),chrome=process.env.TOOLHUB_CHROME||'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',sitePort=4186,debugPort=9236;
-const expectedTools=Number(process.env.TOOLHUB_TOTAL_TOOLS||450);
+const expectedTools=Number(process.env.TOOLHUB_TOTAL_TOOLS||600);
 const extraSampleRoutes=(process.env.TOOLHUB_I18N_SAMPLE_ROUTES||'').split(',').map(route=>route.trim().replace(/^\/+|\/+$/g,'')).filter(Boolean).map(route=>`/${route.startsWith('en/')?route:`en/${route}`}/`);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon'};
 const server=http.createServer((request,response)=>{const pathname=decodeURIComponent(new URL(request.url,`http://localhost:${sitePort}`).pathname);let file=path.resolve(root,'.'+pathname);if(!file.startsWith(root)){response.writeHead(403).end();return}if(fs.existsSync(file)&&fs.statSync(file).isDirectory())file=path.join(file,'index.html');if(!fs.existsSync(file)){response.writeHead(404).end('Not found');return}response.setHeader('Content-Type',types[path.extname(file)]||'application/octet-stream');fs.createReadStream(file).pipe(response)});

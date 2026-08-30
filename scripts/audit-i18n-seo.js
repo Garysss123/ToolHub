@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path');
 const root=path.resolve(__dirname,'..'),site='https://toolhuben.com',cjk=/[\u3400-\u9fff\uf900-\ufaff]/;
-const expectedTools=Number(process.env.TOOLHUB_TOTAL_TOOLS||450);
+const expectedTools=Number(process.env.TOOLHUB_TOTAL_TOOLS||600);
 const read=file=>fs.readFileSync(file,'utf8');
 const sidebar=read(path.join(root,'components','sidebar.html'));
 const slugs=[...new Set([...sidebar.matchAll(/<a\b[^>]*>/gi)].map(match=>match[0]).filter(tag=>/\bclass=["'][^"']*\bnav-item\b/i.test(tag)).map(tag=>tag.match(/\bhref=["']\/([^"'?#/]+)\/?(?:[?#][^"']*)?["']/i)?.[1]).filter(slug=>slug&&fs.existsSync(path.join(root,slug,'index.html'))))];
@@ -58,8 +58,9 @@ for(const file of scanFiles){const body=read(file);check(!bareLink.test(body),`�
 const language=read(path.join(root,'components','language.js'));
 check(!/preferred\s*&&[\s\S]{0,120}location\.replace/.test(language),'語言偏好仍會自動重新導向');
 const allFiles=[];(function all(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){if(entry.name.startsWith('.'))continue;const full=path.join(dir,entry.name);entry.isDirectory()?all(full):allFiles.push(full)}})(root);
-check(allFiles.length<=1000,`部署檔案超過 Cloudflare 直接上傳限制：${allFiles.length}`);
+const wranglerFileLimit=20000;
+check(allFiles.length<=wranglerFileLimit,`部署檔案超過 Cloudflare Wrangler 直接上傳限制：${allFiles.length}`);
 if(residual.length)notes.push(`英文靜態可見內容仍含中文 ${residual.length} 頁：${residualSamples.slice(0,8).join(' | ')}`);
-console.log(`TOOLS=${slugs.length}`);console.log(`ENGLISH_PAGES=${pages.length}`);console.log(`SITEMAP_URLS=${locs.length}`);console.log(`DEPLOY_FILES=${allFiles.length}`);console.log(`DEPLOY_FILE_HEADROOM=${1000-allFiles.length}`);console.log(`VISIBLE_CJK_PAGES=${residual.length}`);
+console.log(`TOOLS=${slugs.length}`);console.log(`ENGLISH_PAGES=${pages.length}`);console.log(`SITEMAP_URLS=${locs.length}`);console.log(`DEPLOY_FILES=${allFiles.length}`);console.log(`DEPLOY_FILE_HEADROOM=${wranglerFileLimit-allFiles.length}`);console.log(`VISIBLE_CJK_PAGES=${residual.length}`);
 notes.forEach(note=>console.log(`NOTE: ${note}`));console.log(`FAILURES=${failures.length}`);
 if(failures.length){failures.slice(0,100).forEach(item=>console.error(`- ${item}`));process.exitCode=1}
