@@ -62,6 +62,7 @@
   };
 
   Object.assign(specs,window.ToolHubExpansionExtraSpecs||{});
+  window.ToolHubAllExpansionSpecs=specs;
 
   const workspaceGroups={
     transcode:['base32-converter','base58-converter','quoted-printable-converter','svg-data-uri-converter','xml-escape-converter','base36-converter','base62-converter','ascii85-converter','byte-endian-converter','mac-address-formatter','luhn-check-digit-calculator'],

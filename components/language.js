@@ -52,6 +52,8 @@
   observer.observe(document.documentElement,{childList:true,subtree:true});syncButtons();
   // Never redirect a crawlable URL automatically. The stored preference only
   // suppresses the first-visit prompt; users change language explicitly.
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(showPrompt,180));else setTimeout(showPrompt,180);
+  // English pages remain directly accessible while their copy is reviewed,
+  // but the public Traditional Chinese site no longer interrupts first visits
+  // or promotes an unfinished locale during AdSense quality review.
   window.ToolHubLanguage={initialized:true,current,suggested,switchTo,targetFor,showPrompt,closePrompt,syncButtons};
 })();

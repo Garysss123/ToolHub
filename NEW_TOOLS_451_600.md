@@ -1,6 +1,6 @@
 # ToolHub 第 451–600 個工具清單
 
-產生日期：2026-08-31
+產生日期：2026-09-02
 
 共 150 個不重複工具；每個工具均有繁體中文與英文頁面。
 
@@ -55,7 +55,7 @@
 497. [旋轉機械功率計算器](https://toolhuben.com/mechanical-power-calculator/) / [Rotational Mechanical Power Calculator](https://toolhuben.com/en/mechanical-power-calculator/) — `mechanical-power-calculator`
 498. [齒輪輸出轉速計算器](https://toolhuben.com/gear-ratio-calculator/) / [Gear Output Speed Calculator](https://toolhuben.com/en/gear-ratio-calculator/) — `gear-ratio-calculator`
 499. [皮帶輪輸出轉速計算器](https://toolhuben.com/pulley-speed-calculator/) / [Pulley Output Speed Calculator](https://toolhuben.com/en/pulley-speed-calculator/) — `pulley-speed-calculator`
-500. [液壓水力功率計算器](https://toolhuben.com/hydraulic-power-calculator/) / [Hydraulic Power Calculator](https://toolhuben.com/en/hydraulic-power-calculator/) — `hydraulic-power-calculator`
+500. [液壓壓力功率計算器](https://toolhuben.com/hydraulic-power-calculator/) / [Hydraulic Pressure Power Calculator](https://toolhuben.com/en/hydraulic-power-calculator/) — `hydraulic-power-calculator`
 
 ## 第 501–550 個工具
 

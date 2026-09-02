@@ -37,7 +37,7 @@ async function main(){
         if(!dom.includes('id="exp-output"'))reasons.push('結果區未建立');
         if(/id="exp-status" class="[^"]*error/.test(dom)){const message=dom.match(/id="exp-status" class="[^"]*error[^>]*>([^<]*)</)?.[1]||'';reasons.push(`預設執行發生錯誤${message?`：${message}`:''}`)}
         if(!dom.includes('id="theme-trigger-btn"'))reasons.push('主題按鈕未載入');
-        if(!dom.includes('id="component-footer"')||!dom.includes('hub-monetization-slot'))reasons.push('Footer 或廣告版位未載入');
+        if(!dom.includes('id="component-footer"')||!dom.includes('<footer'))reasons.push('Footer 未載入');
         if(!dom.includes('id="sidebar-container"'))reasons.push('Sidebar 未載入');
         const sidebarIcon=new RegExp(`<a[^>]+href="${urlPrefix}/${slug}/"[^>]*>[\\s\\S]{0,900}<svg[^>]+data-lucide="${iconBySlug[slug]}"`);
         if(!sidebarIcon.test(dom))reasons.push('Sidebar 專屬圖示未載入');

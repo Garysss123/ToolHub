@@ -19,13 +19,13 @@ async function main(){
     const waitFor=async expression=>{for(let i=0;i<300;i++){if(await evaluate(expression))return;await wait(100)}throw new Error(`等待頁面條件逾時：${expression}`)};
     const navigate=async route=>{await c.call('Page.navigate',{url:`http://127.0.0.1:${sitePort}${route}`});await waitFor(`document.readyState==='complete'`);await wait(900)};
     await c.call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-    await waitFor(`!!document.querySelector('#language-welcome')`);
-    let state=await evaluate(`(()=>({path:location.pathname,suggested:window.ToolHubLanguage?.suggested,recommended:document.querySelector('[data-language-choice="en"]')?.classList.contains('recommended'),saved:localStorage.getItem('toolhub-language')}))()`);
-    check(state.path==='/'&&state.suggested==='en'&&state.recommended&&!state.saved,`首次英文建議狀態錯誤：${JSON.stringify(state)}`);
-    let capture=await c.call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const welcome=path.join(shotDir,'language-welcome-mobile.png');fs.writeFileSync(welcome,Buffer.from(capture.data,'base64'));
+    await waitFor(`!!document.querySelector('header [data-language-switch]')`);await wait(400);
+    let state=await evaluate(`(()=>({path:location.pathname,suggested:window.ToolHubLanguage?.suggested,prompt:!!document.querySelector('#language-welcome'),saved:localStorage.getItem('toolhub-language')}))()`);
+    check(state.path==='/'&&state.suggested==='en'&&!state.prompt&&!state.saved,`首次造訪不應遮罩或自動導向：${JSON.stringify(state)}`);
+    let capture=await c.call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const welcome=path.join(shotDir,'language-entry-mobile.png');fs.writeFileSync(welcome,Buffer.from(capture.data,'base64'));
     await c.call('Emulation.setCPUThrottlingRate',{rate:6});await c.call('Network.emulateNetworkConditions',{offline:false,latency:100,downloadThroughput:500000,uploadThroughput:250000,connectionType:'cellular4g'});
     const coldMobileSwitchStarted=Date.now();
-    await evaluate(`document.querySelector('[data-language-choice="en"]').click()`);await waitFor(`location.pathname==='/en/'&&!!document.querySelector('#component-sidebar .nav-item')`);await wait(300);
+    await evaluate(`document.querySelector('header [data-language-switch]').click()`);await waitFor(`location.pathname==='/en/'&&!!document.querySelector('#component-sidebar .nav-item')`);await wait(300);
     const coldMobileSwitchMs=Date.now()-coldMobileSwitchStarted;
     check(coldMobileSwitchMs<20000,`Throttled cold mobile English switch took ${coldMobileSwitchMs}ms`);
     await c.call('Emulation.setCPUThrottlingRate',{rate:1});await c.call('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});

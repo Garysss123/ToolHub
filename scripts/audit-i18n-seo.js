@@ -4,7 +4,7 @@ const expectedTools=Number(process.env.TOOLHUB_TOTAL_TOOLS||600);
 const read=file=>fs.readFileSync(file,'utf8');
 const sidebar=read(path.join(root,'components','sidebar.html'));
 const slugs=[...new Set([...sidebar.matchAll(/<a\b[^>]*>/gi)].map(match=>match[0]).filter(tag=>/\bclass=["'][^"']*\bnav-item\b/i.test(tag)).map(tag=>tag.match(/\bhref=["']\/([^"'?#/]+)\/?(?:[?#][^"']*)?["']/i)?.[1]).filter(slug=>slug&&fs.existsSync(path.join(root,slug,'index.html'))))];
-const pages=['','about','contact','privacy-policy','terms-of-service',...slugs],localized=new Set(pages),failures=[],notes=[];
+const pages=['','about','quality','contact','privacy-policy','terms-of-service',...slugs],localized=new Set(pages),failures=[],notes=[];
 const check=(condition,message)=>{if(!condition)failures.push(message)};
 const url=(slug,en=false)=>site+(en?'/en':'')+(slug?`/${slug}/`:'/');
 function attr(tag,name){return tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`,'i'))?.[1]||''}
@@ -35,7 +35,8 @@ for(const slug of pages){
   check(/<html\b[^>]*\blang=["']en["']/i.test(en),`英文 lang 錯誤：${slug||'/'}`);
   check(e.title&&!cjk.test(e.title),`英文 title 仍含中文：${slug||'/'}`);
   check(e.description&&!cjk.test(e.description),`英文 description 仍含中文：${slug||'/'}`);
-  check((en.match(/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js/g)||[]).length===1,`英文 AdSense 載入次數不是 1：${slug||'/'}`);
+  const expectedAds=['about','quality','contact','privacy-policy','terms-of-service'].includes(slug)?0:1;
+  check((en.match(/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js/g)||[]).length===expectedAds,`英文 AdSense 載入次數錯誤：${slug||'/'}`);
   const visible=visibleEnglish(en);
   if(cjk.test(visible)){
     residual.push(slug||'/');

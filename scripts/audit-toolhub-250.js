@@ -2,6 +2,7 @@ const fs=require('fs');
 const path=require('path');
 const batch=process.env.TOOLHUB_AUDIT_BATCH||'250';
 const targetTotal=Number(process.env.TOOLHUB_AUDIT_TOTAL||batch);
+const indexedToolTotal=Number(process.env.TOOLHUB_INDEXED_TOOLS||targetTotal);
 const {tools,categories}=require(`./tool-expansion-${batch}-data`);
 const root=path.resolve(__dirname,'..');
 global.window={};
@@ -17,8 +18,8 @@ const count=(text,re)=>[...text.matchAll(re)].length;
 const home=read('index.html');
 const sidebar=read('components/sidebar.html');
 const sitemap=read('sitemap.xml');
-const nonTools=new Set(['about','contact','privacy-policy','terms-of-service','mangalens-privacy']);
-const homeSlugs=[...new Set([...home.matchAll(/href="\/([^"/]+)(?:\/index\.html)?\/?"/g)].map(match=>match[1]).filter(slug=>fs.existsSync(path.join(root,slug,'index.html'))))];
+const nonTools=new Set(['about','quality','contact','privacy-policy','terms-of-service','mangalens-privacy']);
+const homeSlugs=[...new Set([...home.matchAll(/href="\/([^"/]+)(?:\/index\.html)?\/?"/g)].map(match=>match[1]).filter(slug=>!nonTools.has(slug)&&fs.existsSync(path.join(root,slug,'index.html'))))];
 const sidebarSlugs=[...sidebar.matchAll(/<a href="\/([^"/]+)\/" class="nav-item/g)].map(match=>match[1]);
 const sitemapSlugs=[...sitemap.matchAll(/<loc>https:\/\/toolhuben\.com\/([^<]+)<\/loc>/g)].map(match=>match[1].replace(/\/$/,'')).filter(slug=>!slug.includes('/')&&!nonTools.has(slug)&&sidebarSlugs.includes(slug)&&fs.existsSync(path.join(root,slug,'index.html')));
 const dataSlugs=tools.map(tool=>tool.slug),specSlugs=Object.keys(specs),groupedSlugs=Object.values(extraGroups).flat();
@@ -46,18 +47,19 @@ if(Number(batch)>=400){
   check(new Set(tools.map(tool=>tool.layout)).size===8,`${batch} 批次應覆蓋 8 種 Hero Layout`);
 }
 
-check(homeSlugs.length===targetTotal,`首頁工具卡應為 ${targetTotal}，實際 ${homeSlugs.length}`);
-check(new Set(homeSlugs).size===targetTotal,`首頁工具卡有重複網址：唯一值 ${new Set(homeSlugs).size}`);
+check(homeSlugs.length===indexedToolTotal,`首頁工具卡應為 ${indexedToolTotal}，實際 ${homeSlugs.length}`);
+check(new Set(homeSlugs).size===indexedToolTotal,`首頁工具卡有重複網址：唯一值 ${new Set(homeSlugs).size}`);
 check(sidebarSlugs.length===targetTotal,`Sidebar 工具連結應為 ${targetTotal}，實際 ${sidebarSlugs.length}`);
 check(new Set(sidebarSlugs).size===targetTotal,`Sidebar 工具連結有重複網址：唯一值 ${new Set(sidebarSlugs).size}`);
-check(sitemapSlugs.length===targetTotal,`Sitemap 工具網址應為 ${targetTotal}，實際 ${sitemapSlugs.length}`);
-check(new Set(sitemapSlugs).size===targetTotal,`Sitemap 工具網址有重複：唯一值 ${new Set(sitemapSlugs).size}`);
+check(sitemapSlugs.length===indexedToolTotal,`Sitemap 工具網址應為 ${indexedToolTotal}，實際 ${sitemapSlugs.length}`);
+check(new Set(sitemapSlugs).size===indexedToolTotal,`Sitemap 工具網址有重複：唯一值 ${new Set(sitemapSlugs).size}`);
 
 for(const [category,config] of Object.entries(categories)){
   const expected=tools.filter(tool=>tool.category===category).length;
   check(expected>0,`${category} 沒有工具資料`);
   if(!config.existing){
-    check(home.includes(`>${category}</h2>`),`首頁缺少新分類 ${category}`);
+    const visible=tools.some(tool=>tool.category===category&&homeSlugs.includes(tool.slug));
+    if(visible)check(home.includes(`>${category}</h2>`),`首頁缺少新分類 ${category}`);
     check(sidebar.includes(`>${category}</span>`),`Sidebar 缺少新分類 ${category}`);
   }
 }
@@ -77,12 +79,13 @@ for(const tool of tools){
   check(html.includes('/components/tool-expansion.js?v=20260823-experiences-2'),`${tool.slug} 缺少用途型介面框架`);
   check(html.includes('/components/tool-expansion.css?v=20260821-compositions-3'),`${tool.slug} 缺少共用工具基礎樣式`);
   check(html.includes('/components/tool-experience.css?v=20260823-1'),`${tool.slug} 缺少用途型介面樣式`);
-  check(count(html,/pagead2\.googlesyndication\.com/g)===1,`${tool.slug} AdSense Script 數量不為 1`);
+  const noindex=/<meta\b(?=[^>]*name="robots")[^>]*content="[^"]*noindex/i.test(html);
+  check(count(html,/pagead2\.googlesyndication\.com/g)===(noindex?0:1),`${tool.slug} AdSense 與索引狀態不一致`);
   check(count(html,/<details>/g)>=5,`${tool.slug} FAQ 少於 5 題`);
   check(html.includes('<article class="seo">')&&count(html,/<h3>/g)>=4,`${tool.slug} SEO 文章不完整`);
-  check(homeSlugs.includes(tool.slug),`首頁缺少 ${tool.slug}`);
+  check(homeSlugs.includes(tool.slug)===!noindex,`${tool.slug} 首頁卡與索引狀態不一致`);
   check(sidebarSlugs.includes(tool.slug),`Sidebar 缺少 ${tool.slug}`);
-  check(sitemapSlugs.includes(tool.slug),`Sitemap 缺少 ${tool.slug}`);
+  check(sitemapSlugs.includes(tool.slug)===!noindex,`${tool.slug} Sitemap 與索引狀態不一致`);
 }
 
 if(failures.length){console.error(`AUDIT_FAILED=${failures.length}`);failures.forEach(item=>console.error(`- ${item}`));process.exit(1)}
