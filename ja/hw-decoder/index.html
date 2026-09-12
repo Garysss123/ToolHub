@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>Hardware Decoder | 無料オンラインツール - ToolHub</title>
+<meta content="一般的な resistor color code と SMD marking を解読し、分圧や基本的な電子パラメーターを計算し、quick reference と結果説明を提供します。" name="description"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* Tabs */
+        .hw-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+        .hw-tab.active { border-color: #38BDF8; color: #38BDF8; background: rgba(56, 189, 248, 0.05); font-weight: bold; }
+        .hw-panel { display: none; animation: fadeIn 0.3s ease-out forwards; }
+        .hw-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 擬真電阻 CSS (Skeuomorphic Resistor) */
+        .resistor-body {
+            background: linear-gradient(to bottom, #d4b59e 0%, #e8d0bd 20%, #d4b59e 40%, #b59077 80%, #8a654e 100%);
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -4px 8px rgba(0,0,0,0.4), 0 10px 15px -3px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .resistor-wire {
+            background: linear-gradient(to bottom, #a1a1aa 0%, #e2e8f0 30%, #94a3b8 70%, #64748b 100%);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.5);
+        }
+        .resistor-band {
+            transition: all 0.2s ease;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+            cursor: pointer;
+            position: relative;
+        }
+        .resistor-band:hover::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border: 2px solid #38BDF8;
+            border-radius: 4px;
+            animation: pulse-border 1.5s infinite;
+        }
+        .resistor-band.selected::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border: 2px solid #34d399;
+            border-radius: 4px;
+            background: rgba(52, 211, 153, 0.2);
+        }
+        @keyframes pulse-border { 0% { border-color: rgba(56,189,248,0.4); } 50% { border-color: rgba(56,189,248,1); } 100% { border-color: rgba(56,189,248,0.4); } }
+
+        /* 顏色球 */
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; transition: transform 0.1s; box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.4); border: 2px solid transparent; }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { border-color: #38BDF8; transform: scale(1.1); box-shadow: 0 0 10px rgba(56,189,248,0.6); }
+
+        /* SMD 卡片 */
+        .smd-chip {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 2px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255,255,255,0.1);
+        }
+        .smd-pad { background: linear-gradient(to right, #cbd5e1, #94a3b8); }
+    </style>
+<!-- SEO Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/hw-decoder/" property="og:url"/>
+<meta content="Hardware Decoder | 無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="一般的な resistor color code と SMD marking を解読し、分圧や基本的な電子パラメーターを計算し、quick reference と結果説明を提供します。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Hardware Decoder | 無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="一般的な resistor color code と SMD marking を解読し、分圧や基本的な電子パラメーターを計算し、quick reference と結果説明を提供します。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"hardware component decoding と voltage division calculation tool","url":"https://toolhuben.com/ja/hw-decoder/","description":"一般的な resistor color code と SMD marking を解読し、分圧や基本的な電子パラメーターを計算し、quick reference と結果説明を提供します。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"},"author":{"@type":"組織","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"hardware component decoding と voltage division calculation tool","item":"https://toolhuben.com/ja/hw-decoder/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"質問","name":"the uses of hardware component decoding and voltage division calculation tools とは何ですか？","acceptedAnswer":{"@type":"回答","text":"電子部品のデコードツールは、一般的な抵抗カラーコード、SMD マーキングの識別や、基本的な分圧計算に使用します。表記方式は部品の種類やメーカーによって異なる場合があります。計算結果は設計・保守時の初期確認に適していますが、データシートや実測の代替にはなりません。"}},{"@type":"質問","name":"hardware component decoding / voltage division calculation tool の使い方は？","acceptedAnswer":{"@type":"回答","text":"部品ラベルまたは計算種別を選び、表示されている情報を入力します。抵抗値、許容差、分圧結果と単位を確認し、元のメーカーのデータシートと照合してください。実測する場合は、電源を切った安全な状態で確認してください。"}},{"@type":"質問","name":"ハードウェア部品のデコードや分圧計算ツールを使う際、どのような点に注意すべきでしょうか？","acceptedAnswer":{"@type":"回答","text":"抵抗器の許容電力、許容差、温度係数、回路負荷は実際の性能に影響します。商用電源、高電圧、大電流を扱う作業は有資格者が行ってください。"}},{"@type":"質問","name":"ハードウェア部品デコードや分圧計算ツールはデータをアップロードしますか？","acceptedAnswer":{"@type":"回答","text":"入力した部品ラベルと回路パラメーターはブラウザー内だけで計算されます。"}},{"@type":"質問","name":"ソフトウェアのインストールやアカウント登録は必要ですか？","acceptedAnswer":{"@type":"回答","text":"不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。"}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","建立理念":"創業時の理念","建議":"推奨事項","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","請精確留下「一個」空白欄位作為求解目標":"解答対象として空の field を正確に「1つ」だけ残してください。","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","無法辨識此代碼":"一時フォルダーを閉じられませんでした：%s","解碼成功":"デコードに成功しました。","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/hw-decoder/" rel="canonical"/><link href="https://toolhuben.com/hw-decoder/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/hw-decoder/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/hw-decoder/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/hw-decoder/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="glass" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<!-- 1. 系統組件：Header & Sidebar -->
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：Hardware Decoder -->
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="パンくずリスト" class="seo-upgrade-breadcrumb"><a href="/ja/">ホーム</a><span>›</span><span>hardware component decoding と voltage division calculation tool</span></nav>
+<!-- 模塊標題區 -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-amber-400 shadow-inner">
+<i class="ph-fill ph-cpu mr-1.5 text-sm"></i>
+                physical microcircuit analysis matrix を公開しました。
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                ハードウェア <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">デコーダーとマトリクス</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                ハードウェアエンジニア向けの多機能ツールです。抵抗器のカラーコードを対話的に読み取り、SMD / EIA-96 表記を逆引きし、E-Series 標準値の提案付きで分圧回路を動的に計算できます。
+            </p>
+</div>
+<div class="glass-panel flex flex-col overflow-hidden shadow-2xl">
+<!-- 模組切換導航 -->
+<div class="flex bg-hub-900/80 border-b border-hub-700 overflow-x-auto no-scrollbar">
+<button class="hw-tab active flex-1 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-2" data-target="panel-resistor">
+<i class="ph ph-paint-brush-broad text-lg"></i> カラーサークルと SMD デコード
+                </button>
+<button class="hw-tab flex-1 py-4 text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-2" data-target="panel-divider">
+<i class="ph ph-wave-sine text-lg"></i> 分圧・推論マトリクス
+                </button>
+</div>
+<!-- ========================================== -->
+<!-- 模組 A：電阻解碼器 (Color Band & SMD)          -->
+<!-- ========================================== -->
+<div class="hw-panel active p-6 sm:p-8" id="panel-resistor">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- 互動式色環電阻 (Interactive Color Band) -->
+<div class="flex flex-col gap-6 bg-hub-900/30 p-6 rounded-xl border border-hub-700/50">
+<div class="flex justify-between items-center">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-palette text-amber-400"></i> カラーコード抵抗値解析（Color Band）
+                            </h3>
+<select class="bg-hub-800 border border-hub-700 rounded-md px-2 py-1 text-xs text-white outline-none cursor-pointer hover:border-hub-accent transition-colors" id="band-count">
+<option selected="" value="4">4バンド（標準）</option>
+<option value="5">5 バンド（高精度）</option>
+<option value="6">6 Bands（温度係数を含む）</option>
+</select>
+</div>
+<!-- 擬真電阻圖形 -->
+<div class="py-12 flex items-center justify-center relative my-4">
+<div class="resistor-wire w-16 h-2 absolute left-0 rounded-l-full"></div>
+<div class="resistor-body w-full max-w-[280px] h-16 rounded-[20px] flex items-stretch justify-around px-4 sm:px-6 z-10" id="resistor-graphic">
+<!-- Bands injected dynamically by JS -->
+</div>
+<div class="resistor-wire w-16 h-2 absolute right-0 rounded-r-full"></div>
+</div>
+<!-- 色環調色盤 (Palette Picker) -->
+<div class="bg-hub-800/80 p-4 rounded-xl border border-hub-700">
+<div class="text-xs text-slate-400 mb-3 flex items-center justify-between">
+<span id="palette-instruction">上の resistor color band をクリックして色を変更してください。</span>
+<span class="font-bold text-hub-accent uppercase tracking-wider" id="current-editing-band">--</span>
+</div>
+<div class="flex flex-wrap gap-2 justify-center" id="color-palette">
+<!-- Colors injected by JS -->
+</div>
+</div>
+<!-- 阻值結果 -->
+<div class="mt-auto bg-hub-900 border border-hub-700 rounded-xl p-4 flex flex-col items-center text-center shadow-inner relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent pointer-events-none"></div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">抵抗出力</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-mono font-bold text-white drop-shadow-md" id="band-result-value">0</span>
+<span class="text-xl font-bold text-amber-400" id="band-result-unit">Ω</span>
+</div>
+<div class="flex items-center gap-3 mt-1 font-mono text-sm text-slate-400">
+<span>Tol： <span class="text-emerald-400 font-bold" id="band-result-tol">±5%</span></span>
+<span class="hidden" id="band-result-tcr-wrap">TCR： <span class="text-sky-400 font-bold" id="band-result-tcr">--</span></span>
+</div>
+</div>
+</div>
+<!-- SMD 與 EIA-96 逆向解碼器 -->
+<div class="flex flex-col gap-6 bg-hub-900/30 p-6 rounded-xl border border-hub-700/50">
+<div class="flex items-center gap-2 border-b border-hub-700 pb-3">
+<i class="ph-fill ph-magnifying-glass text-fuchsia-400 text-lg"></i>
+<h3 class="text-sm font-bold text-white">SMD / EIA-96 パッチ逆デコード</h3>
+</div>
+<p class="text-xs text-slate-400">基板上のチップ抵抗に印字されたコード（例：103、4R7、01C）を入力すると、抵抗値を即座に復元します。</p>
+<div class="flex items-center gap-6">
+<!-- 擬真 SMD 卡片 -->
+<div class="relative w-24 h-14 sm:w-32 sm:h-20 smd-chip rounded flex items-center justify-center shrink-0">
+<div class="absolute left-0 top-0 bottom-0 w-3 sm:w-4 smd-pad rounded-l"></div>
+<span class="text-slate-300 font-mono text-base sm:text-xl font-bold tracking-widest z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" id="smd-chip-text">103</span>
+<div class="absolute right-0 top-0 bottom-0 w-3 sm:w-4 smd-pad rounded-r"></div>
+</div>
+<!-- 輸入框 -->
+<div class="flex-grow">
+<input autocomplete="off" class="w-full bg-hub-900 border-2 border-hub-700 rounded-xl px-4 py-3 text-white font-mono text-lg focus:border-fuchsia-500 outline-none transition-all uppercase" id="smd-input" placeholder="例：472、R10、01A" type="text"/>
+<div class="text-xs mt-2 text-slate-400 flex items-center gap-1 h-4 font-mono" id="smd-status"></div>
+</div>
+</div>
+<!-- 阻值結果 -->
+<div class="mt-auto bg-hub-900 border border-hub-700 rounded-xl p-4 flex flex-col items-center text-center shadow-inner relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-fuchsia-500/5 to-transparent pointer-events-none"></div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">デコード値</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-mono font-bold text-white drop-shadow-md" id="smd-result-value">10</span>
+<span class="text-xl font-bold text-fuchsia-400" id="smd-result-unit">kΩ</span>
+</div>
+<div class="mt-1 font-mono text-sm text-slate-400" id="smd-result-type">
+                                3桁標準
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 模組 B：分壓推演矩陣 (Voltage Divider)         -->
+<!-- ========================================== -->
+<div class="hw-panel p-6 sm:p-8" id="panel-divider">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- 電路圖與原理說明 -->
+<div class="flex flex-col gap-6 bg-hub-900/30 p-6 rounded-xl border border-hub-700/50">
+<div class="flex items-center gap-2 border-b border-hub-700 pb-3">
+<i class="ph-fill ph-lightning text-sky-400 text-lg"></i>
+<h3 class="text-sm font-bold text-white">non-inductive partial pressure deduction matrix</h3>
+</div>
+<p class="text-xs text-slate-400 leading-relaxed">
+                            数式： <code class="bg-hub-800 px-1 rounded text-sky-300 font-mono">Vout = Vin × (R2 / (R1 + R2))</code><br/>
+                            これは「双方向バインディング」の推論器です。<strong>既知の値を 3 つ入力すると、空欄の 4 つ目を system が自動計算します。</strong>
+</p>
+<!-- 簡化版電路圖 SVG -->
+<div class="bg-hub-900 border border-hub-700 rounded-xl p-6 flex justify-center items-center">
+<svg fill="none" height="200" stroke="currentColor" viewbox="0 0 200 200" width="200" xmlns="http://www.w3.org/2000/svg">
+<!-- Vin -->
+<circle cx="40" cy="40" fill="#38bdf8" r="4" stroke="none"></circle>
+<text fill="#38bdf8" font-family="monospace" font-size="14" stroke="none" x="20" y="35">Vin</text>
+<line stroke="#94a3b8" stroke-width="2" x1="40" x2="100" y1="40" y2="40"></line>
+<!-- R1 -->
+<line stroke="#94a3b8" stroke-width="2" x1="100" x2="100" y1="40" y2="60"></line>
+<rect fill="#1e293b" height="40" stroke="#cbd5e1" stroke-width="2" width="30" x="85" y="60"></rect>
+<text fill="#e2e8f0" font-family="monospace" font-size="14" stroke="none" x="125" y="85">R1</text>
+<line stroke="#94a3b8" stroke-width="2" x1="100" x2="100" y1="100" y2="120"></line>
+<!-- Node Vout -->
+<circle cx="100" cy="120" fill="#34d399" r="4" stroke="none"></circle>
+<line stroke="#94a3b8" stroke-width="2" x1="100" x2="160" y1="120" y2="120"></line>
+<text fill="#34d399" font-family="monospace" font-size="14" stroke="none" x="165" y="125">Vout</text>
+<!-- R2 -->
+<line stroke="#94a3b8" stroke-width="2" x1="100" x2="100" y1="120" y2="140"></line>
+<rect fill="#1e293b" height="40" stroke="#cbd5e1" stroke-width="2" width="30" x="85" y="140"></rect>
+<text fill="#e2e8f0" font-family="monospace" font-size="14" stroke="none" x="125" y="165">R2</text>
+<line stroke="#94a3b8" stroke-width="2" x1="100" x2="100" y1="180" y2="190"></line>
+<!-- GND -->
+<line stroke="#94a3b8" stroke-width="2" x1="80" x2="120" y1="190" y2="190"></line>
+<line stroke="#94a3b8" stroke-width="2" x1="90" x2="110" y1="195" y2="195"></line>
+<line stroke="#94a3b8" stroke-width="2" x1="95" x2="105" y1="200" y2="200"></line>
+</svg>
+</div>
+</div>
+<!-- 計算面板 -->
+<div class="flex flex-col gap-5">
+<!-- Inputs -->
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1 relative">
+<label class="text-[10px] font-bold text-sky-400 uppercase tracking-widest">入力電圧（Vin）</label>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-sky-400 transition-colors">
+<input class="w-full bg-transparent px-3 py-2 text-white font-mono text-sm outline-none" id="calc-vin" placeholder="--" step="any" type="number"/>
+<span class="px-3 py-2 bg-hub-800 text-slate-400 font-bold border-l border-hub-700">V</span>
+</div>
+</div>
+<div class="space-y-1 relative">
+<label class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">出力電圧（Vout）</label>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-emerald-400 transition-colors">
+<input class="w-full bg-transparent px-3 py-2 text-white font-mono text-sm outline-none" id="calc-vout" placeholder="--" step="any" type="number"/>
+<span class="px-3 py-2 bg-hub-800 text-slate-400 font-bold border-l border-hub-700">V</span>
+</div>
+</div>
+<div class="space-y-1 relative">
+<label class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">抵抗 1（R1）</label>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-hub-accent transition-colors">
+<input class="w-full bg-transparent px-3 py-2 text-white font-mono text-sm outline-none" id="calc-r1" placeholder="--" step="any" type="number"/>
+<select class="bg-hub-800 text-slate-300 font-mono text-xs border-l border-hub-700 outline-none cursor-pointer px-1" id="calc-r1-unit">
+<option value="1">Ω</option>
+<option selected="" value="1000">kΩ</option>
+<option value="1000000">MΩ</option>
+</select>
+</div>
+</div>
+<div class="space-y-1 relative">
+<label class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">抵抗 2 (R2)</label>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-hub-accent transition-colors">
+<input class="w-full bg-transparent px-3 py-2 text-white font-mono text-sm outline-none" id="calc-r2" placeholder="--" step="any" type="number"/>
+<select class="bg-hub-800 text-slate-300 font-mono text-xs border-l border-hub-700 outline-none cursor-pointer px-1" id="calc-r2-unit">
+<option value="1">Ω</option>
+<option selected="" value="1000">kΩ</option>
+<option value="1000000">MΩ</option>
+</select>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-3 bg-hub-accent hover:bg-sky-400 text-hub-900 font-bold rounded-xl text-sm transition-all shadow-lg active:scale-[0.98]" id="btn-calc-solve">
+                                マトリクス推論を実行
+                            </button>
+<button class="px-4 py-3 bg-hub-800 hover:bg-red-900/50 border border-hub-700 hover:border-red-500/50 rounded-xl text-slate-300 hover:text-red-400 transition-colors" id="btn-calc-clear">
+<i class="ph ph-trash text-lg"></i>
+</button>
+</div>
+<!-- 推演結果與 E12 推薦 -->
+<div class="mt-auto bg-hub-900 border border-hub-700 rounded-xl p-5 shadow-inner min-h-[140px] flex flex-col justify-center">
+<div class="hidden flex-col items-center text-center" id="calc-result-display">
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1" id="calc-solved-label">解の値</span>
+<div class="text-3xl font-mono font-bold text-emerald-400 drop-shadow-md mb-2" id="calc-solved-value">--</div>
+<!-- E12 建議 (僅當算出電阻時顯示) -->
+<div class="hidden bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-2 text-xs text-emerald-300 flex-col items-center" id="calc-e12-suggestion">
+<span class="font-bold flex items-center gap-1"><i class="ph-fill ph-lightbulb"></i> E12 標準推奨値</span>
+<span>市販品で最も近い仕様はおよそ <strong class="font-mono text-white text-sm" id="calc-e12-val">--</strong></span>
+</div>
+</div>
+<div class="text-center text-slate-500 text-sm" id="calc-idle-display">
+                                求めたい項目は空欄のままにして「実行」をクリックしてください<br/>system が自動的に reverse deduction を行います。
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="hardware component decoding と voltage divider calculation tool の tutorial／FAQ" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>Hardware Component Decoding and Voltage Division Calculation Tool 完全ユーザーガイド</h2>
+<p>電子部品のデコードツールは、一般的な抵抗カラーコード、SMD マーキングの識別や、基本的な分圧計算に使用します。表記方式は部品の種類やメーカーによって異なる場合があります。計算結果は設計・保守時の初期確認に適していますが、データシートや実測の代替にはなりません。</p>
+<h3>操作手順</h3>
+<ol><li>component label または calculation type を選び、表示する情報を入力します。</li><li>resistance、tolerance、voltage divider の結果と unit を確認します。</li><li>メーカー純正のデータシートと照合し、必ず電源を切った安全な状態で測定・確認してください。</li></ol>
+<h3>実用的な提案と制限事項</h3>
+<p>抵抗器の許容電力、許容差、温度係数、回路負荷は実際の性能に影響します。商用電源、高電圧、大電流を扱う作業は有資格者が行ってください。</p>
+<h3>プライバシーと端末内処理</h3>
+<p>入力した部品ラベルと回路パラメーターはブラウザー内だけで計算されます。</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>hardware component decoding と voltage division calculation tool の FAQ</h2>
+<details><summary>the uses of hardware component decoding and voltage division calculation tools とは何ですか？</summary><div class="seo-upgrade-answer">電子部品のデコードツールは、一般的な抵抗カラーコード、SMD マーキングの識別や、基本的な分圧計算に使用します。表記方式は部品の種類やメーカーによって異なる場合があります。計算結果は設計・保守時の初期確認に適していますが、データシートや実測の代替にはなりません。</div></details>
+<details><summary>hardware component decoding / voltage division calculation tool の使い方は？</summary><div class="seo-upgrade-answer">部品ラベルまたは計算種別を選び、表示されている情報を入力します。抵抗値、許容差、分圧結果と単位を確認し、元のメーカーのデータシートと照合してください。実測する場合は、電源を切った安全な状態で確認してください。</div></details>
+<details><summary>ハードウェア部品のデコードや分圧計算ツールを使う際、どのような点に注意すべきでしょうか？</summary><div class="seo-upgrade-answer">抵抗器の許容電力、許容差、温度係数、回路負荷は実際の性能に影響します。商用電源、高電圧、大電流を扱う作業は有資格者が行ってください。</div></details>
+<details><summary>ハードウェア部品デコードや分圧計算ツールはデータをアップロードしますか？</summary><div class="seo-upgrade-answer">入力した部品ラベルと回路パラメーターはブラウザー内だけで計算されます。</div></details>
+<details><summary>ソフトウェアのインストールやアカウント登録は必要ですか？</summary><div class="seo-upgrade-answer">不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/hw-decoder'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：硬體解析與分壓演算法矩陣      -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // --- Tabs 邏輯 ---
+            document.querySelectorAll('.hw-tab').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.hw-tab').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.hw-panel').forEach(p => p.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(e.currentTarget.dataset.target).classList.add('active');
+                });
+            });
+
+            // ==========================================
+            // 子模塊 1：互動式色環電阻 (Color Band Resistor)
+            // ==========================================
+            const bandColors = {
+                0: { name: 'Black', hex: '#0f172a', val: 0, mult: 1, tol: null, tcr: 250 },
+                1: { name: 'Brown', hex: '#78350f', val: 1, mult: 10, tol: 1, tcr: 100 },
+                2: { name: 'Red', hex: '#dc2626', val: 2, mult: 100, tol: 2, tcr: 50 },
+                3: { name: 'Orange', hex: '#ea580c', val: 3, mult: 1000, tol: null, tcr: 15 },
+                4: { name: 'Yellow', hex: '#eab308', val: 4, mult: 10000, tol: null, tcr: 25 },
+                5: { name: 'Green', hex: '#16a34a', val: 5, mult: 100000, tol: 0.5, tcr: null },
+                6: { name: 'Blue', hex: '#2563eb', val: 6, mult: 1000000, tol: 0.25, tcr: 10 },
+                7: { name: 'Violet', hex: '#9333ea', val: 7, mult: 10000000, tol: 0.1, tcr: 5 },
+                8: { name: 'Gray', hex: '#64748b', val: 8, mult: 100000000, tol: 0.05, tcr: null },
+                9: { name: 'White', hex: '#f8fafc', val: 9, mult: 1000000000, tol: null, tcr: 1 },
+                10: { name: 'Gold', hex: '#fbbf24', val: null, mult: 0.1, tol: 5, tcr: null },
+                11: { name: 'Silver', hex: '#94a3b8', val: null, mult: 0.01, tol: 10, tcr: null }
+            };
+
+            const bandCountSelect = document.getElementById('band-count');
+            const resistorGraphic = document.getElementById('resistor-graphic');
+            const colorPalette = document.getElementById('color-palette');
+            const currentEditingBand = document.getElementById('current-editing-band');
+            
+            const resValue = document.getElementById('band-result-value');
+            const resUnit = document.getElementById('band-result-unit');
+            const resTol = document.getElementById('band-result-tol');
+            const resTcr = document.getElementById('band-result-tcr');
+            const resTcrWrap = document.getElementById('band-result-tcr-wrap');
+
+            // 預設狀態 (4環: 棕黑紅金 = 1kΩ 5%)
+            let currentBands = [1, 0, 2, 10]; 
+            let selectedBandIndex = -1;
+
+            const formatResistance = (ohms) => {
+                if (ohms >= 1e9) return { v: parseFloat((ohms / 1e9).toFixed(2)), u: 'GΩ' };
+                if (ohms >= 1e6) return { v: parseFloat((ohms / 1e6).toFixed(2)), u: 'MΩ' };
+                if (ohms >= 1e3) return { v: parseFloat((ohms / 1e3).toFixed(2)), u: 'kΩ' };
+                return { v: parseFloat(ohms.toFixed(2)), u: 'Ω' };
+            };
+
+            const calculateColorBand = () => {
+                let ohms = 0;
+                let tolStr = '';
+                let tcrStr = '';
+                const count = parseInt(bandCountSelect.value);
+
+                // 防呆：如果切換規格導致某些環的顏色不再合法 (例如 digit 環選了金/銀)
+                for(let i=0; i<currentBands.length; i++) {
+                    const b = currentBands[i];
+                    if (count === 4) {
+                        if (i < 2 && b >= 10) currentBands[i] = 0; // Digits 不能是金銀
+                        if (i === 3 && bandColors[b].tol === null) currentBands[i] = 10; // Tol 沒有時預設金
+                    } else if (count === 5) {
+                        if (i < 3 && b >= 10) currentBands[i] = 0; 
+                        if (i === 4 && bandColors[b].tol === null) currentBands[i] = 1; // 預設棕 1%
+                    } else if (count === 6) {
+                        if (i < 3 && b >= 10) currentBands[i] = 0; 
+                        if (i === 4 && bandColors[b].tol === null) currentBands[i] = 1;
+                        if (i === 5 && bandColors[b].tcr === null) currentBands[i] = 1; // 預設棕 100ppm
+                    }
+                }
+
+                if (count === 4) {
+                    ohms = ((bandColors[currentBands[0]].val * 10) + bandColors[currentBands[1]].val) * bandColors[currentBands[2]].mult;
+                    tolStr = bandColors[currentBands[3]].tol ? `±${bandColors[currentBands[3]].tol}%` : 'N/A';
+                    resTcrWrap.classList.add('hidden');
+                } else if (count === 5) {
+                    ohms = ((bandColors[currentBands[0]].val * 100) + (bandColors[currentBands[1]].val * 10) + bandColors[currentBands[2]].val) * bandColors[currentBands[3]].mult;
+                    tolStr = bandColors[currentBands[4]].tol ? `±${bandColors[currentBands[4]].tol}%` : 'N/A';
+                    resTcrWrap.classList.add('hidden');
+                } else if (count === 6) {
+                    ohms = ((bandColors[currentBands[0]].val * 100) + (bandColors[currentBands[1]].val * 10) + bandColors[currentBands[2]].val) * bandColors[currentBands[3]].mult;
+                    tolStr = bandColors[currentBands[4]].tol ? `±${bandColors[currentBands[4]].tol}%` : 'N/A';
+                    tcrStr = bandColors[currentBands[5]].tcr ? `${bandColors[currentBands[5]].tcr} ppm/K` : 'N/A';
+                    resTcrWrap.classList.remove('hidden');
+                    resTcr.textContent = tcrStr;
+                }
+
+                const fmt = formatResistance(ohms);
+                resValue.textContent = fmt.v;
+                resUnit.textContent = fmt.u;
+                resTol.textContent = tolStr;
+            };
+
+            const renderResistorGraphic = () => {
+                resistorGraphic.innerHTML = '';
+                currentBands.forEach((colorKey, index) => {
+                    const div = document.createElement('div');
+                    // 第一條和最後一條特別靠邊
+                    let marginClass = 'mx-0.5 sm:mx-1';
+                    if(index === 0) marginClass = 'ml-2 sm:ml-4 mr-0.5 sm:mr-1';
+                    if(index === currentBands.length - 1) marginClass = 'ml-4 sm:ml-8 mr-2 sm:mr-4'; // Tolerance 或 TCR 環拉開距離
+                    
+                    div.className = `resistor-band w-3 sm:w-4 h-full ${marginClass} ${index === selectedBandIndex ? 'selected' : ''}`;
+                    div.style.backgroundColor = bandColors[colorKey].hex;
+                    div.dataset.index = index;
+                    
+                    div.addEventListener('click', () => {
+                        selectedBandIndex = index;
+                        renderResistorGraphic(); // 重新渲染選取框
+                        renderPalette();
+                    });
+                    
+                    resistorGraphic.appendChild(div);
+                });
+                calculateColorBand();
+            };
+
+            const renderPalette = () => {
+                colorPalette.innerHTML = '';
+                if (selectedBandIndex === -1) {
+                    currentEditingBand.textContent = '--';
+                    return;
+                }
+
+                const count = parseInt(bandCountSelect.value);
+                let role = '';
+                let validKeys = [];
+
+                if (count === 4) {
+                    if (selectedBandIndex < 2) { role = `Digit ${selectedBandIndex+1}`; validKeys = [0,1,2,3,4,5,6,7,8,9]; }
+                    else if (selectedBandIndex === 2) { role = 'Multiplier'; validKeys = [0,1,2,3,4,5,6,7,8,9,10,11]; }
+                    else if (selectedBandIndex === 3) { role = 'Tolerance'; validKeys = [1,2,5,6,7,8,10,11]; }
+                } else if (count === 5) {
+                    if (selectedBandIndex < 3) { role = `Digit ${selectedBandIndex+1}`; validKeys = [0,1,2,3,4,5,6,7,8,9]; }
+                    else if (selectedBandIndex === 3) { role = 'Multiplier'; validKeys = [0,1,2,3,4,5,6,7,8,9,10,11]; }
+                    else if (selectedBandIndex === 4) { role = 'Tolerance'; validKeys = [1,2,5,6,7,8,10,11]; }
+                } else if (count === 6) {
+                    if (selectedBandIndex < 3) { role = `Digit ${selectedBandIndex+1}`; validKeys = [0,1,2,3,4,5,6,7,8,9]; }
+                    else if (selectedBandIndex === 3) { role = 'Multiplier'; validKeys = [0,1,2,3,4,5,6,7,8,9,10,11]; }
+                    else if (selectedBandIndex === 4) { role = 'Tolerance'; validKeys = [1,2,5,6,7,8,10,11]; }
+                    else if (selectedBandIndex === 5) { role = 'Temp Coeff (TCR)'; validKeys = [0,1,2,3,4,6,7,9]; }
+                }
+
+                currentEditingBand.textContent = `Editing: ${role}`;
+
+                validKeys.forEach(k => {
+                    const col = bandColors[k];
+                    const btn = document.createElement('div');
+                    btn.className = `color-dot ${currentBands[selectedBandIndex] == k ? 'active' : ''}`;
+                    btn.style.backgroundColor = col.hex;
+                    btn.title = col.name;
+                    btn.addEventListener('click', () => {
+                        currentBands[selectedBandIndex] = k;
+                        renderResistorGraphic();
+                        renderPalette(); // 更新 active 狀態
+                    });
+                    colorPalette.appendChild(btn);
+                });
+            };
+
+            bandCountSelect.addEventListener('change', (e) => {
+                const c = parseInt(e.target.value);
+                if (c === 4) currentBands = [1, 0, 2, 10]; // 1k 5%
+                if (c === 5) currentBands = [1, 0, 0, 1, 1]; // 1k 1%
+                if (c === 6) currentBands = [1, 0, 0, 1, 1, 1]; // 1k 1% 100ppm
+                selectedBandIndex = 0; // 自動選取第一環
+                renderResistorGraphic();
+                renderPalette();
+            });
+
+            // 初始化
+            selectedBandIndex = 0;
+            renderResistorGraphic();
+            renderPalette();
+
+            // ==========================================
+            // 子模塊 2：SMD / EIA-96 逆向解碼器
+            // ==========================================
+            const smdInput = document.getElementById('smd-input');
+            const smdChipText = document.getElementById('smd-chip-text');
+            const smdStatus = document.getElementById('smd-status');
+            const smdResVal = document.getElementById('smd-result-value');
+            const smdResUnit = document.getElementById('smd-result-unit');
+            const smdResType = document.getElementById('smd-result-type');
+
+            // EIA-96 Base Values Table
+            const eia96_values = [
+                100, 102, 105, 107, 110, 113, 115, 118, 121, 124, 127, 130, 133, 137, 140, 143, 147, 150, 154, 158,
+                162, 165, 169, 174, 178, 182, 187, 191, 196, 200, 205, 210, 215, 221, 226, 232, 237, 243, 249, 255,
+                261, 267, 274, 280, 287, 294, 301, 309, 316, 324, 332, 340, 348, 357, 365, 374, 383, 392, 402, 412,
+                422, 432, 442, 453, 464, 475, 487, 499, 511, 523, 536, 549, 562, 576, 590, 604, 619, 634, 649, 665,
+                681, 698, 715, 732, 750, 768, 787, 806, 825, 845, 866, 887, 909, 931, 953, 976
+            ];
+            const eia96_mult = { 'Z':0.001, 'Y':0.01, 'R':0.01, 'X':0.1, 'S':0.1, 'A':1, 'B':10, 'C':100, 'D':1000, 'E':10000, 'F':100000 };
+
+            const parseSMD = () => {
+                let code = smdInput.value.trim().toUpperCase();
+                smdChipText.textContent = code || '---';
+                
+                if (!code) {
+                    smdStatus.innerHTML = '';
+                    smdResVal.textContent = '0'; smdResUnit.textContent = 'Ω'; smdResType.textContent = 'Waiting for input...';
+                    return;
+                }
+
+                let ohms = null;
+                let type = '';
+
+                try {
+                    // 1. 含字母的通用格式 (e.g. 4R7, R10, 4K7, 1M0)
+                    if (/^[0-9]*[RKM][0-9]*$/.test(code) && code.length >= 2) {
+                        let mult = 1;
+                        if (code.includes('K')) mult = 1e3;
+                        if (code.includes('M')) mult = 1e6;
+                        
+                        let numericStr = code.replace(/[RKM]/, '.');
+                        // 處理開頭或結尾是小數點的情況 (.10 -> 0.10)
+                        if(numericStr.startsWith('.')) numericStr = '0' + numericStr;
+                        
+                        ohms = parseFloat(numericStr) * mult;
+                        type = 'R/K/M Decimal Format';
+                    }
+                    // 2. EIA-96 格式 (e.g. 01A, 01C, 68X) - 2 digits + 1 letter
+                    else if (/^[0-9]{2}[A-Z]$/.test(code)) {
+                        const idx = parseInt(code.substring(0, 2), 10) - 1;
+                        const letter = code.substring(2);
+                        
+                        if (idx >= 0 && idx < 96 && eia96_mult[letter] !== undefined) {
+                            ohms = eia96_values[idx] * eia96_mult[letter];
+                            type = 'EIA-96 (1% Precision)';
+                        } else {
+                            throw new Error('Invalid EIA-96 Code');
+                        }
+                    }
+                    // 3. 3-digit 標準格式 (e.g. 103, 472)
+                    else if (/^[0-9]{3}$/.test(code)) {
+                        const base = parseInt(code.substring(0, 2), 10);
+                        const mult = Math.pow(10, parseInt(code.substring(2), 10));
+                        ohms = base * mult;
+                        type = '3-Digit Standard (5%)';
+                    }
+                    // 4. 4-digit 精密格式 (e.g. 1002, 4702)
+                    else if (/^[0-9]{4}$/.test(code)) {
+                        const base = parseInt(code.substring(0, 3), 10);
+                        const mult = Math.pow(10, parseInt(code.substring(3), 10));
+                        ohms = base * mult;
+                        type = '4-Digit Precision (1%)';
+                    }
+                    else {
+                        throw new Error('Unrecognized Format');
+                    }
+
+                    // Success
+                    const fmt = formatResistance(ohms);
+                    smdResVal.textContent = fmt.v;
+                    smdResUnit.textContent = fmt.u;
+                    smdResType.textContent = type;
+                    smdStatus.innerHTML = '<i class="ph-fill ph-check-circle text-emerald-400"></i> <span class="text-emerald-400">解碼成功</span>';
+
+                } catch (e) {
+                    smdResVal.textContent = 'ERR';
+                    smdResUnit.textContent = '';
+                    smdResType.textContent = 'Unknown Format';
+                    smdStatus.innerHTML = '<i class="ph-fill ph-warning-circle text-red-500"></i> <span class="text-red-400">無法辨識此代碼</span>';
+                }
+            };
+
+            smdInput.addEventListener('input', parseSMD);
+            parseSMD(); // init 103
+
+            // ==========================================
+            // 子模塊 3：分壓推演矩陣 (Voltage Divider)
+            // ==========================================
+            const inVin = document.getElementById('calc-vin');
+            const inVout = document.getElementById('calc-vout');
+            const inR1 = document.getElementById('calc-r1');
+            const inR2 = document.getElementById('calc-r2');
+            const uR1 = document.getElementById('calc-r1-unit');
+            const uR2 = document.getElementById('calc-r2-unit');
+            
+            const btnSolve = document.getElementById('btn-calc-solve');
+            const btnClear = document.getElementById('btn-calc-clear');
+            
+            const resDisplay = document.getElementById('calc-result-display');
+            const idleDisplay = document.getElementById('calc-idle-display');
+            const solvedLabel = document.getElementById('calc-solved-label');
+            const solvedValue = document.getElementById('calc-solved-value');
+            const e12Box = document.getElementById('calc-e12-suggestion');
+            const e12Val = document.getElementById('calc-e12-val');
+
+            // E12 標準庫 (每十倍數區間)
+            const E12_BASE = [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2];
+            
+            const getClosestE12 = (ohms) => {
+                if (ohms <= 0) return 0;
+                const magnitude = Math.pow(10, Math.floor(Math.log10(ohms)));
+                const normalized = ohms / magnitude; // 得到 1.0 ~ 9.99 之間的值
+                
+                // 尋找最接近的 E12 base
+                let closestBase = E12_BASE[0];
+                let minDiff = Math.abs(normalized - E12_BASE[0]);
+                
+                for (let i = 1; i < E12_BASE.length; i++) {
+                    const diff = Math.abs(normalized - E12_BASE[i]);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestBase = E12_BASE[i];
+                    }
+                }
+                // 處理邊界，例如 9.8 可能更接近 10.0 (也就是下一個量級的 1.0)
+                if (Math.abs(normalized - 10.0) < minDiff) {
+                    return 1.0 * (magnitude * 10);
+                }
+                return closestBase * magnitude;
+            };
+
+            const solveMatrix = () => {
+                const vin = parseFloat(inVin.value);
+                const vout = parseFloat(inVout.value);
+                const r1Raw = parseFloat(inR1.value);
+                const r2Raw = parseFloat(inR2.value);
+                
+                const r1 = r1Raw * parseFloat(uR1.value);
+                const r2 = r2Raw * parseFloat(uR2.value);
+
+                const hasVin = !isNaN(vin);
+                const hasVout = !isNaN(vout);
+                const hasR1 = !isNaN(r1Raw);
+                const hasR2 = !isNaN(r2Raw);
+
+                const filledCount = [hasVin, hasVout, hasR1, hasR2].filter(Boolean).length;
+
+                if (filledCount !== 3) {
+                    showToast('請精確留下「一個」空白欄位作為求解目標', true);
+                    return;
+                }
+
+                idleDisplay.classList.add('hidden');
+                resDisplay.classList.remove('hidden');
+                resDisplay.classList.add('flex');
+                e12Box.classList.add('hidden');
+
+                try {
+                    if (!hasVout) {
+                        if (r1 + r2 === 0) throw new Error("R1 + R2 cannot be 0");
+                        const ans = vin * (r2 / (r1 + r2));
+                        solvedLabel.textContent = 'Output Voltage (Vout)';
+                        solvedValue.textContent = `${ans.toFixed(3)} V`;
+                    } 
+                    else if (!hasVin) {
+                        if (r2 === 0) throw new Error("R2 cannot be 0");
+                        const ans = vout * (r1 + r2) / r2;
+                        solvedLabel.textContent = 'Input Voltage (Vin)';
+                        solvedValue.textContent = `${ans.toFixed(3)} V`;
+                    }
+                    else if (!hasR1) {
+                        if (vout === 0) throw new Error("Vout cannot be 0");
+                        const ans = r2 * (vin / vout - 1);
+                        if (ans < 0) throw new Error("Invalid Voltage Ratio (Vout > Vin)");
+                        
+                        const fmt = formatResistance(ans);
+                        solvedLabel.textContent = 'Resistor 1 (R1)';
+                        solvedValue.textContent = `${fmt.v} ${fmt.u}`;
+                        
+                        // 推薦 E12
+                        const recOhms = getClosestE12(ans);
+                        const recFmt = formatResistance(recOhms);
+                        e12Val.textContent = `${recFmt.v} ${recFmt.u}`;
+                        e12Box.classList.remove('hidden');
+                        e12Box.classList.add('flex');
+                    }
+                    else if (!hasR2) {
+                        if (vin - vout === 0) throw new Error("Vin cannot equal Vout");
+                        const ans = r1 * (vout / (vin - vout));
+                        if (ans < 0) throw new Error("Invalid Voltage Ratio");
+
+                        const fmt = formatResistance(ans);
+                        solvedLabel.textContent = 'Resistor 2 (R2)';
+                        solvedValue.textContent = `${fmt.v} ${fmt.u}`;
+
+                        const recOhms = getClosestE12(ans);
+                        const recFmt = formatResistance(recOhms);
+                        e12Val.textContent = `${recFmt.v} ${recFmt.u}`;
+                        e12Box.classList.remove('hidden');
+                        e12Box.classList.add('flex');
+                    }
+                } catch (e) {
+                    solvedLabel.textContent = 'Calculation Error';
+                    solvedValue.textContent = 'Invalid Params';
+                    solvedValue.classList.replace('text-emerald-400', 'text-red-500');
+                    setTimeout(() => solvedValue.classList.replace('text-red-500', 'text-emerald-400'), 2000);
+                }
+            };
+
+            btnSolve.addEventListener('click', solveMatrix);
+            
+            // 允許在 Input 按下 Enter 觸發計算
+            [inVin, inVout, inR1, inR2].forEach(el => {
+                el.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') solveMatrix();
+                });
+            });
+
+            btnClear.addEventListener('click', () => {
+                inVin.value = ''; inVout.value = ''; inR1.value = ''; inR2.value = '';
+                resDisplay.classList.add('hidden'); resDisplay.classList.remove('flex');
+                idleDisplay.classList.remove('hidden');
+                e12Box.classList.add('hidden');
+            });
+
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

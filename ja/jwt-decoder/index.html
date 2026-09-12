@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>JWT Decoder | 無料オンラインツール - ToolHub</title>
+<meta content="JWT Header、Payload、time field をブラウザ内でローカル解析し、encoding 表示と format check に対応します。Token はアップロードされません。" name="description"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 模塊專屬依賴：CryptoJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 雙層高亮輸入框技巧 */
+        #encoded-input { word-break: break-all; }
+        .jwt-segment-header { color: #fb7185; }
+        .jwt-segment-payload { color: #c084fc; }
+        .jwt-segment-signature { color: #38bdf8; }
+        .jwt-segment-dot { color: #475569; font-weight: bold; }
+        
+        /* 錯誤狀態高亮 */
+        .json-error { border-color: rgba(248, 113, 113, 0.5) !important; background-color: rgba(69, 10, 10, 0.2) !important; }
+    </style>
+<!-- SEO Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/jwt-decoder/" property="og:url"/>
+<meta content="JWT Decoder | 無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="JWT Header、Payload、time field をブラウザ内でローカル解析し、encoding 表示と format check に対応します。Token はアップロードされません。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="JWT Decoder | 無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="JWT Header、Payload、time field をブラウザ内でローカル解析し、encoding 表示と format check に対応します。Token はアップロードされません。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"JWT デコーダー／エンコーダー","url":"https://toolhuben.com/ja/jwt-decoder/","description":"JWT Header、Payload、time field をブラウザ内でローカル解析し、encoding 表示と format check に対応します。Token はアップロードされません。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"},"author":{"@type":"組織","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"JWT デコーダー／エンコーダー","item":"https://toolhuben.com/ja/jwt-decoder/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"質問","name":"JWT Decoder/Encoder はどのような利用シーンに適していますか？","acceptedAnswer":{"@type":"回答","text":"JWT は Header、Payload、Signature の 3 部分で構成されます。Base64URL をデコードして内容を読めても、署名が有効、または Token が信頼できることを意味しません。本番システムでは、想定アルゴリズム、キー、issuer、audience、有効期限を含めて完全に検証する必要があります。"}},{"@type":"質問","name":"JWT Decoder/Encoder の使い方は？","acceptedAnswer":{"@type":"回答","text":"Token を貼り付け、3 セグメント形式と JSON 内容を確認します。exp、nbf、iat などの時刻フィールドと claim 値も確認してください。署名と権限の検証は信頼できるバックエンドだけで行い、フロントエンドのデコード結果だけを信用しないでください。"}},{"@type":"質問","name":"JWT Decoder/Encoder を使用するときの注意点は何ですか？","acceptedAnswer":{"@type":"回答","text":"payload は通常暗号化されておらず、token を入手した人が内容を読める場合があります。パスワードや機微な個人情報を入力せず、正式な access token を信頼できない Web サイトへ貼り付けないでください。"}},{"@type":"質問","name":"JWT Decoder/Encoder はデータをアップロードしますか？","acceptedAnswer":{"@type":"回答","text":"JWT はローカルでのみ解析され、ToolHub が Token を送信・保存することはありません。"}},{"@type":"質問","name":"ソフトウェアのインストールやアカウント登録は必要ですか？","acceptedAnswer":{"@type":"回答","text":"不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。"}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","Paste a JWT here, or click \"預設模板\" to start encoding from scratch...":"JWT をここへ貼り付けるか、「Default Template」をクリックして最初から encode できます⋯","Token 已過期":"トークンの有効期限が切れています","Token 有效中":"トークンは有効です","[System Error] 模組":"[System Error] Module","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","已載入預設模板，您可以開始修改並編碼":"既定のテンプレートを読み込みました。すぐに編集・コーディングを始められます","建立理念":"創業時の理念","建議":"推奨事項","未攜帶時間聲明":"時刻情報を含みません","未設定":"未設定","永不過期 (無 exp)":"有効期限なし（exp なし）","無到期限制":"有効期限なし","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","載入失敗:":"読み込みに失敗しました：","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/jwt-decoder/" rel="canonical"/><link href="https://toolhuben.com/jwt-decoder/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/jwt-decoder/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/jwt-decoder/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/jwt-decoder/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="aurora" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<!-- 1. 系統組件：Header -->
+<div id="component-header"></div>
+<!-- 2. 系統組件：Sidebar -->
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：JWT Decoder & Encoder -->
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="パンくずリスト" class="seo-upgrade-breadcrumb"><a href="/ja/">ホーム</a><span>›</span><span>JWT デコーダー／エンコーダー</span></nav>
+<!-- 模塊標題區 -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-emerald-950/50 border border-emerald-900/50 text-xs text-emerald-400">
+<span class="flex w-2 h-2 bg-emerald-400 rounded-full animate-pulse mr-2"></span>
+                Zero-Knowledge Edge Engine 稼働中
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                JWT <span class="text-transparent bg-clip-text bg-gradient-to-r from-jwt-header via-jwt-payload to-jwt-signature">デコーダーとエンコーダー</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                シームレスな双方向コーデックハブです。Token を貼り付けると即座に解析し、右側の JSON を直接編集すれば新しい Token へ即時 Encode できます。HS256 署名検証と時空間ステータス監視にも対応します。
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- ========================================== -->
+<!-- 左側：Encoded Token 輸入與簽章驗證區          -->
+<!-- ========================================== -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<!-- Encoded Token Input -->
+<div class="glass-panel flex flex-col overflow-hidden shadow-xl">
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-lock-key text-hub-accent text-lg"></i> エンコード済みトークン
+                        </h3>
+<div class="flex gap-2">
+<button class="text-xs text-hub-accent hover:text-sky-300 transition-colors bg-hub-800 px-2 py-1 rounded border border-hub-700 flex items-center gap-1" id="btn-template"><i class="ph ph-file-plus"></i> デフォルトテンプレート</button>
+<button class="text-xs text-slate-400 hover:text-red-400 transition-colors bg-hub-800 px-2 py-1 rounded border border-hub-700" id="btn-clear">クリア</button>
+</div>
+</div>
+<div class="relative w-full min-h-[300px] bg-[#0f172a] group">
+<div class="absolute inset-0 p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none text-slate-500 opacity-60 group-focus-within:opacity-100 transition-opacity" id="encoded-visual">
+                            JWT をここへ貼り付けるか、「Default Template」をクリックして最初から encode できます⋯
+                        </div>
+<textarea class="absolute inset-0 w-full h-full p-4 font-mono text-sm leading-relaxed bg-transparent text-transparent caret-white outline-none resize-none" id="encoded-input" spellcheck="false"></textarea>
+</div>
+<div class="bg-hub-900 px-4 py-2 border-t border-hub-700 flex items-center gap-4 text-xs font-mono font-bold tracking-wider">
+<span class="text-jwt-header flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-jwt-header"></div> HEADER</span>
+<span class="text-slate-600">.</span>
+<span class="text-jwt-payload flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-jwt-payload"></div> PAYLOAD</span>
+<span class="text-slate-600">.</span>
+<span class="text-jwt-signature flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-jwt-signature"></div> SIGNATURE</span>
+</div>
+</div>
+<!-- 簽章驗證與設定 (Signature & Verify) -->
+<div class="glass-panel flex flex-col overflow-hidden shadow-xl">
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-shield-check text-jwt-signature text-lg"></i> Signature Engine
+                        </h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700" id="sig-status-badge">待機中</span>
+</div>
+<div class="p-4 space-y-4">
+<div class="space-y-2">
+<label class="text-xs text-slate-400 font-medium">Secret Key（HS256）で検証 / 署名</label>
+<div class="relative">
+<input class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-jwt-signature outline-none transition-all pr-10" id="secret-input" placeholder="Your-256-bit-secret" type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1" id="btn-toggle-secret">
+<i class="ph ph-eye"></i>
+</button>
+</div>
+</div>
+<!-- 安全信任宣告區 (Security Trust Badge) -->
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex items-start gap-2 text-xs text-emerald-400 bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-900/50 leading-relaxed shadow-inner">
+<i class="ph-fill ph-shield-check text-base mt-0.5 shrink-0"></i>
+<div>
+<strong class="text-emerald-300 block mb-0.5">ゼロ知識セキュリティ</strong>
+                                    この処理は100%ローカルのブラウザー内で実行されます。JWT と Secret Key は <span class="underline decoration-emerald-500/50 underline-offset-2 font-bold">絶対に不可</span> いかなるサーバーにも送信されません。
+                                </div>
+</div>
+<div class="flex items-start gap-2 text-xs text-slate-400 bg-hub-900/50 p-2.5 rounded-lg border border-hub-700/50 leading-relaxed">
+<i class="ph-fill ph-info text-sky-400 text-base mt-0.5 shrink-0"></i>
+<div>Secret を入力すると、右側の編集内容が <strong class="text-slate-300">自動的に Encode して署名</strong>。</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：Decoded 數據與時空觀測區               -->
+<!-- ========================================== -->
+<div class="lg:col-span-7 flex flex-col gap-6">
+<!-- 時空狀態感知器 (Chrono-State Observer) -->
+<div class="glass-panel p-4 flex flex-col sm:flex-row items-center gap-4 shadow-xl border-l-4 border-l-slate-700 transition-colors" id="chrono-panel">
+<div class="flex items-center justify-center w-12 h-12 rounded-full bg-hub-900 border border-hub-700 shrink-0">
+<i class="ph ph-hourglass-high text-2xl text-slate-400" id="chrono-icon"></i>
+</div>
+<div class="flex-grow w-full">
+<div class="flex justify-between items-center mb-1">
+<h4 class="text-sm font-bold text-white tracking-wide" id="chrono-title">Token の時空間状態</h4>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700" id="chrono-badge">不明</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-2">
+<div class="bg-hub-900 rounded p-2 border border-hub-700/50">
+<div class="text-[9px] text-slate-500 uppercase font-bold mb-0.5">発行日時（iat）</div>
+<div class="text-xs text-slate-300 font-mono truncate" id="chrono-iat">--</div>
+</div>
+<div class="bg-hub-900 rounded p-2 border border-hub-700/50">
+<div class="text-[9px] text-slate-500 uppercase font-bold mb-0.5">有効期限（exp）</div>
+<div class="text-xs text-slate-300 font-mono truncate" id="chrono-exp">--</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Decoded Header -->
+<div class="glass-panel flex flex-col overflow-hidden shadow-xl border border-jwt-header/30 transition-colors" id="container-header">
+<div class="bg-hub-900/80 px-4 py-2 border-b border-jwt-header/30 flex justify-between items-center">
+<h3 class="text-sm font-bold text-jwt-header flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-jwt-header"></div> デコード済みヘッダー
+                        </h3>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">自動エンコーディング</span>
+</div>
+<div class="relative group">
+<textarea class="w-full h-32 bg-[#0f172a] text-slate-300 font-mono text-sm p-4 outline-none resize-y" id="decoded-header" placeholder="{}" spellcheck="false"></textarea>
+</div>
+</div>
+<!-- Decoded Payload -->
+<div class="glass-panel flex flex-col overflow-hidden shadow-xl border border-jwt-payload/30 flex-grow transition-colors" id="container-payload">
+<div class="bg-hub-900/80 px-4 py-2 border-b border-jwt-payload/30 flex justify-between items-center">
+<h3 class="text-sm font-bold text-jwt-payload flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-jwt-payload"></div> デコード済み Payload
+                        </h3>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">自動エンコーディング</span>
+</div>
+<div class="relative group flex-grow flex flex-col">
+<textarea class="flex-grow w-full min-h-[200px] bg-[#0f172a] text-sky-200 font-mono text-sm p-4 outline-none resize-y" id="decoded-payload" placeholder="{}" spellcheck="false"></textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="JWT Decoder/Encoder のチュートリアルと FAQ" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>JWT デコーダー／エンコーダー完全ガイド</h2>
+<p>JWT は Header、Payload、Signature の 3 部分で構成されます。Base64URL をデコードして内容を読めても、署名が有効、または Token が信頼できることを意味しません。本番システムでは、想定アルゴリズム、キー、issuer、audience、有効期限を含めて完全に検証する必要があります。</p>
+<h3>操作手順</h3>
+<ol><li>Token を貼り付け、3-part format と JSON content を確認します。</li><li>exp、nbf、iat などの time field と declared value を確認します。</li><li>署名と権限の検証は信頼できる backend でのみ行い、front-end の decode 結果だけを受け入れないでください。</li></ol>
+<h3>実用的な提案と制限事項</h3>
+<p>payload は通常暗号化されておらず、token を入手した人が内容を読める場合があります。パスワードや機微な個人情報を入力せず、正式な access token を信頼できない Web サイトへ貼り付けないでください。</p>
+<h3>プライバシーと端末内処理</h3>
+<p>JWT はローカルでのみ解析され、ToolHub が Token を送信・保存することはありません。</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>JWT デコーダー／エンコーダー FAQ</h2>
+<details><summary>JWT Decoder/Encoder はどのような利用シーンに適していますか？</summary><div class="seo-upgrade-answer">JWT は Header、Payload、Signature の 3 部分で構成されます。Base64URL をデコードして内容を読めても、署名が有効、または Token が信頼できることを意味しません。本番システムでは、想定アルゴリズム、キー、issuer、audience、有効期限を含めて完全に検証する必要があります。</div></details>
+<details><summary>JWT Decoder/Encoder の使い方は？</summary><div class="seo-upgrade-answer">Token を貼り付け、3 セグメント形式と JSON 内容を確認します。exp、nbf、iat などの時刻フィールドと claim 値も確認してください。署名と権限の検証は信頼できるバックエンドだけで行い、フロントエンドのデコード結果だけを信用しないでください。</div></details>
+<details><summary>JWT Decoder/Encoder を使用するときの注意点は何ですか？</summary><div class="seo-upgrade-answer">payload は通常暗号化されておらず、token を入手した人が内容を読める場合があります。パスワードや機微な個人情報を入力せず、正式な access token を信頼できない Web サイトへ貼り付けないでください。</div></details>
+<details><summary>JWT Decoder/Encoder はデータをアップロードしますか？</summary><div class="seo-upgrade-answer">JWT はローカルでのみ解析され、ToolHub が Token を送信・保存することはありません。</div></details>
+<details><summary>ソフトウェアのインストールやアカウント登録は必要ですか？</summary><div class="seo-upgrade-answer">不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast 提示 -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 4. 動態載入：頁尾 (Footer) -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/jwt-decoder';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            // Sidebar Trigger
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：即時雙向編解碼引擎             -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 基礎設施 ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const encodedInput = document.getElementById('encoded-input');
+            const encodedVisual = document.getElementById('encoded-visual');
+            const decodedHeader = document.getElementById('decoded-header');
+            const decodedPayload = document.getElementById('decoded-payload');
+            const containerHeader = document.getElementById('container-header');
+            const containerPayload = document.getElementById('container-payload');
+            
+            const btnClear = document.getElementById('btn-clear');
+            const btnTemplate = document.getElementById('btn-template');
+            
+            const chronoPanel = document.getElementById('chrono-panel');
+            const chronoIcon = document.getElementById('chrono-icon');
+            const chronoTitle = document.getElementById('chrono-title');
+            const chronoBadge = document.getElementById('chrono-badge');
+            const chronoIat = document.getElementById('chrono-iat');
+            const chronoExp = document.getElementById('chrono-exp');
+
+            const secretInput = document.getElementById('secret-input');
+            const btnToggleSecret = document.getElementById('btn-toggle-secret');
+            const sigStatusBadge = document.getElementById('sig-status-badge');
+
+            // 防呆鎖定：避免左右互相觸發死迴圈
+            let isTypingEncoded = false;
+            let isTypingDecoded = false;
+
+            // --- Base64Url 核心演算法 ---
+            const base64UrlDecode = (str) => {
+                try {
+                    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+                    const pad = base64.length % 4;
+                    if (pad) {
+                        if (pad === 1) return null;
+                        base64 += new Array(5 - pad).join('=');
+                    }
+                    const raw = window.atob(base64);
+                    return decodeURIComponent(raw.split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            const base64UrlEncode = (str) => {
+                try {
+                    const utf8Str = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1));
+                    const base64 = window.btoa(utf8Str);
+                    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            // --- 狀態感知器 ---
+            const renderChronoState = (payloadObj) => {
+                if (!payloadObj || (typeof payloadObj.exp === 'undefined' && typeof payloadObj.iat === 'undefined')) {
+                    chronoPanel.classList.remove('border-l-emerald-500', 'border-l-red-500');
+                    chronoPanel.classList.add('border-l-slate-700');
+                    chronoIcon.className = 'ph ph-hourglass-high text-2xl text-slate-400';
+                    chronoTitle.textContent = '未攜帶時間聲明';
+                    chronoBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                    chronoBadge.textContent = 'N/A';
+                    chronoIat.textContent = '--';
+                    chronoExp.textContent = '--';
+                    return;
+                }
+
+                const now = Math.floor(Date.now() / 1000);
+                const formatTime = (ts) => new Date(ts * 1000).toLocaleString('zh-TW', { hour12: false });
+
+                if (payloadObj.iat) chronoIat.textContent = formatTime(payloadObj.iat);
+                else chronoIat.textContent = '未設定';
+
+                if (payloadObj.exp) {
+                    chronoExp.textContent = formatTime(payloadObj.exp);
+                    if (payloadObj.exp < now) {
+                        chronoPanel.classList.remove('border-l-slate-700', 'border-l-emerald-500');
+                        chronoPanel.classList.add('border-l-red-500');
+                        chronoIcon.className = 'ph-fill ph-clock-user text-2xl text-red-500';
+                        chronoTitle.textContent = 'Token 已過期';
+                        chronoBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-900/50 text-red-400 border border-red-500/50';
+                        chronoBadge.textContent = 'Expired';
+                    } else {
+                        chronoPanel.classList.remove('border-l-slate-700', 'border-l-red-500');
+                        chronoPanel.classList.add('border-l-emerald-500');
+                        chronoIcon.className = 'ph-fill ph-clock-countdown text-2xl text-emerald-500';
+                        chronoTitle.textContent = 'Token 有效中';
+                        chronoBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50';
+                        chronoBadge.textContent = 'Valid';
+                    }
+                } else {
+                    chronoExp.textContent = '永不過期 (無 exp)';
+                    chronoPanel.classList.remove('border-l-slate-700', 'border-l-red-500');
+                    chronoPanel.classList.add('border-l-emerald-500');
+                    chronoIcon.className = 'ph-fill ph-infinity text-2xl text-emerald-500';
+                    chronoTitle.textContent = '無到期限制';
+                    chronoBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50';
+                    chronoBadge.textContent = 'Infinite';
+                }
+            };
+
+            const verifySignature = (encodedToken) => {
+                const secret = secretInput.value;
+                const parts = encodedToken.split('.');
+
+                if (parts.length !== 3) {
+                    sigStatusBadge.textContent = 'Waiting';
+                    sigStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                    return;
+                }
+                
+                if (!secret) {
+                    sigStatusBadge.textContent = 'Unverified (No Secret)';
+                    sigStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                    return;
+                }
+
+                try {
+                    const dataToSign = parts[0] + '.' + parts[1];
+                    const hash = CryptoJS.HmacSHA256(dataToSign, secret);
+                    const base64Hash = CryptoJS.enc.Base64.stringify(hash).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+                    if (base64Hash === parts[2]) {
+                        sigStatusBadge.textContent = 'Signature Verified';
+                        sigStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]';
+                    } else {
+                        sigStatusBadge.textContent = 'Invalid Signature';
+                        sigStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-900/50 text-red-400 border border-red-500/50 shadow-[0_0_10px_rgba(248,113,113,0.2)]';
+                    }
+                } catch (e) {
+                    sigStatusBadge.textContent = 'Error';
+                }
+            };
+
+            // --- 核心：Decode (左 -> 右) ---
+            const parseJWT = () => {
+                if (isTypingDecoded) return; // 避免互相觸發
+                isTypingEncoded = true;
+
+                const token = encodedInput.value.trim();
+                
+                // 重置簽章狀態
+                sigStatusBadge.textContent = 'Waiting';
+                sigStatusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+
+                if (!token) {
+                    encodedVisual.innerHTML = 'Paste a JWT here, or click "預設模板" to start encoding from scratch...';
+                    decodedHeader.value = '';
+                    decodedPayload.value = '';
+                    renderChronoState(null);
+                    verifySignature('');
+                    containerHeader.classList.remove('json-error');
+                    containerPayload.classList.remove('json-error');
+                    isTypingEncoded = false;
+                    return;
+                }
+
+                const parts = token.split('.');
+                
+                // 視覺渲染
+                if (parts.length >= 1) {
+                    let visHtml = `<span class="jwt-segment-header">${parts[0]}</span>`;
+                    if (parts.length >= 2) visHtml += `<span class="jwt-segment-dot">.</span><span class="jwt-segment-payload">${parts[1]}</span>`;
+                    if (parts.length === 3) visHtml += `<span class="jwt-segment-dot">.</span><span class="jwt-segment-signature">${parts[2]}</span>`;
+                    encodedVisual.innerHTML = visHtml;
+                } else {
+                    encodedVisual.innerHTML = token;
+                }
+
+                // Decode Header
+                let headerObj = null;
+                if (parts[0]) {
+                    const headerRaw = base64UrlDecode(parts[0]);
+                    if (headerRaw) {
+                        try {
+                            headerObj = JSON.parse(headerRaw);
+                            decodedHeader.value = JSON.stringify(headerObj, null, 2);
+                            containerHeader.classList.remove('json-error');
+                        } catch (e) { 
+                            decodedHeader.value = headerRaw; 
+                            containerHeader.classList.add('json-error');
+                        }
+                    }
+                }
+
+                // Decode Payload
+                let payloadObj = null;
+                if (parts[1]) {
+                    const payloadRaw = base64UrlDecode(parts[1]);
+                    if (payloadRaw) {
+                        try {
+                            payloadObj = JSON.parse(payloadRaw);
+                            decodedPayload.value = JSON.stringify(payloadObj, null, 2);
+                            containerPayload.classList.remove('json-error');
+                        } catch (e) { 
+                            decodedPayload.value = payloadRaw; 
+                            containerPayload.classList.add('json-error');
+                        }
+                    }
+                }
+
+                renderChronoState(payloadObj);
+                verifySignature(token);
+                
+                // 釋放鎖定
+                setTimeout(() => isTypingEncoded = false, 50);
+            };
+
+            // --- 核心：Encode (右 -> 左) ---
+            const encodeJWT = () => {
+                if (isTypingEncoded) return;
+                isTypingDecoded = true;
+
+                const headerStr = decodedHeader.value;
+                const payloadStr = decodedPayload.value;
+                const secret = secretInput.value;
+
+                if (!headerStr && !payloadStr) {
+                    encodedInput.value = '';
+                    encodedVisual.innerHTML = 'Paste a JWT here, or click "預設模板" to start encoding from scratch...';
+                    isTypingDecoded = false;
+                    return;
+                }
+
+                try {
+                    let headerObj = {};
+                    if (headerStr) headerObj = JSON.parse(headerStr);
+                    containerHeader.classList.remove('json-error');
+
+                    let payloadObj = {};
+                    if (payloadStr) payloadObj = JSON.parse(payloadStr);
+                    containerPayload.classList.remove('json-error');
+
+                    // 1. Encode
+                    const encodedH = base64UrlEncode(JSON.stringify(headerObj));
+                    const encodedP = base64UrlEncode(JSON.stringify(payloadObj));
+                    let encodedS = '';
+
+                    // 2. Sign (若有設定密鑰，且為 HS256)
+                    if (headerObj.alg === 'HS256' && secret) {
+                        const dataToSign = encodedH + '.' + encodedP;
+                        const hash = CryptoJS.HmacSHA256(dataToSign, secret);
+                        encodedS = CryptoJS.enc.Base64.stringify(hash).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                    }
+
+                    // 3. Assemble
+                    const newToken = encodedS ? `${encodedH}.${encodedP}.${encodedS}` : `${encodedH}.${encodedP}`;
+                    
+                    // 只有當新生成的 Token 和原本不同時才覆寫
+                    if (encodedInput.value !== newToken) {
+                        encodedInput.value = newToken;
+                        
+                        // 視覺渲染更新
+                        const parts = newToken.split('.');
+                        let visHtml = `<span class="jwt-segment-header">${parts[0]}</span>`;
+                        if (parts.length >= 2) visHtml += `<span class="jwt-segment-dot">.</span><span class="jwt-segment-payload">${parts[1]}</span>`;
+                        if (parts.length === 3) visHtml += `<span class="jwt-segment-dot">.</span><span class="jwt-segment-signature">${parts[2]}</span>`;
+                        encodedVisual.innerHTML = visHtml;
+                        
+                        verifySignature(newToken);
+                    }
+                    
+                    renderChronoState(payloadObj);
+
+                } catch (e) {
+                    if (!e.message) return;
+                    if (e.message.includes('JSON')) {
+                       try { JSON.parse(headerStr); } catch(err) { containerHeader.classList.add('json-error'); }
+                       try { JSON.parse(payloadStr); } catch(err) { containerPayload.classList.add('json-error'); }
+                    }
+                }
+
+                setTimeout(() => isTypingDecoded = false, 50);
+            };
+
+            // --- 綁定事件 ---
+            
+            // 左側輸入
+            encodedInput.addEventListener('input', parseJWT);
+            encodedInput.addEventListener('scroll', () => { encodedVisual.scrollTop = encodedInput.scrollTop; });
+            
+            // 右側 JSON 即時編碼
+            decodedHeader.addEventListener('input', encodeJWT);
+            decodedPayload.addEventListener('input', encodeJWT);
+            secretInput.addEventListener('input', () => {
+                if (encodedInput.value) {
+                    encodeJWT(); 
+                    verifySignature(encodedInput.value);
+                }
+            });
+
+            // 工具按鈕
+            btnClear.addEventListener('click', () => {
+                encodedInput.value = '';
+                secretInput.value = '';
+                parseJWT();
+            });
+
+            btnTemplate.addEventListener('click', () => {
+                const defaultHeader = {
+                    "alg": "HS256",
+                    "typ": "JWT"
+                };
+                const defaultPayload = {
+                    "sub": "1234567890",
+                    "name": "ToolHub Admin",
+                    "admin": true,
+                    "iat": Math.floor(Date.now() / 1000),
+                    "exp": Math.floor(Date.now() / 1000) + 3600 // 1小時後過期
+                };
+                
+                decodedHeader.value = JSON.stringify(defaultHeader, null, 2);
+                decodedPayload.value = JSON.stringify(defaultPayload, null, 2);
+                
+                encodeJWT(); 
+                showToast('已載入預設模板，您可以開始修改並編碼');
+            });
+
+            btnToggleSecret.addEventListener('click', () => {
+                if (secretInput.type === 'password') {
+                    secretInput.type = 'text';
+                    btnToggleSecret.innerHTML = '<i class="ph ph-eye-slash"></i>';
+                } else {
+                    secretInput.type = 'password';
+                    btnToggleSecret.innerHTML = '<i class="ph ph-eye"></i>';
+                }
+            });
+
+            // 允許 Tab 鍵縮排
+            [decodedHeader, decodedPayload].forEach(el => {
+                el.addEventListener('keydown', function(e) {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = this.selectionStart;
+                        const end = this.selectionEnd;
+                        this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+                        this.selectionStart = this.selectionEnd = start + 2;
+                        encodeJWT(); 
+                    }
+                });
+            });
+
+            // 初始狀態
+            parseJWT();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

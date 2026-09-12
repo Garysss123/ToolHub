@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>HTML から Markdown | 無料オンラインツール - ToolHub</title>
+<meta content="HTML ソースコードを、読みやすく整理された Markdown 形式へすばやく変換します。見出し、表、コードブロック、リストなど主要タグの変換に対応し、内蔵 HTML クリーナーで不要なインラインスタイルや空属性もまとめて除去できます。主要処理はフロントエンドのローカル環境で完結します。" name="description"/>
+<meta content="HTML轉Markdown, HTML to Markdown, HTML轉換器, Markdown產生器, 網頁轉Markdown, HTML to MD, 線上轉換工具" name="keywords"/>
+<meta content="ToolHub" name="author"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<!-- HTML to Markdown 轉換引擎 (turndown) -->
+<script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
+<!-- Markdown 渲染引擎 (preview) -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #EA580C; }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            tab-size: 2;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
+        }
+
+        .editor-textarea::placeholder {
+            color: #475569;
+        }
+
+        /* Markdown 輸出區域 (Raw) */
+        .markdown-output {
+            width: 100%;
+            height: 100%;
+            min-height: 650px;
+            background-color: #0B1120;
+            color: #e2e8f0;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace';
+            font-size: 0.8rem;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        /* 預覽區塊 Markdown 渲染樣式 */
+        .md-preview {
+            padding: 1.25rem;
+            line-height: 1.8;
+            color: #e2e8f0;
+        }
+
+        .md-preview h1 { font-size: 1.75rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: #f1f5f9; padding-bottom: 0.4rem; border-bottom: 1px solid #1e293b; }
+        .md-preview h2 { font-size: 1.45rem; font-weight: 700; margin: 1.4rem 0 0.6rem; color: #f1f5f9; padding-bottom: 0.3rem; border-bottom: 1px solid #1e293b; }
+        .md-preview h3 { font-size: 1.2rem; font-weight: 600; margin: 1.2rem 0 0.5rem; color: #e2e8f0; }
+        .md-preview h4 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.4rem; color: #e2e8f0; }
+        .md-preview p { margin: 0.6rem 0; }
+        .md-preview a { color: #EA580C; text-decoration: underline; text-decoration-color: rgba(234, 88, 12, 0.3); text-underline-offset: 2px; }
+        .md-preview a:hover { color: #F97316; text-decoration-color: #F97316; }
+        .md-preview strong { font-weight: 700; color: #f1f5f9; }
+        .md-preview em { font-style: italic; }
+        .md-preview code {
+            background-color: #1e293b;
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-family: '"Fira Code"', 'ui-monospace', 'SFMono-Regular', monospace;
+            font-size: 0.875em;
+            color: #FDBA74;
+        }
+        .md-preview pre {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        .md-preview pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            color: inherit;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+        .md-preview blockquote {
+            border-left: 3px solid #EA580C;
+            padding: 0.5rem 1rem;
+            margin: 1rem 0;
+            background-color: rgba(234, 88, 12, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: #94a3b8;
+        }
+        .md-preview blockquote p { margin: 0.25rem 0; }
+        .md-preview ul, .md-preview ol { margin: 0.6rem 0; padding-left: 1.5rem; }
+        .md-preview li { margin: 0.25rem 0; }
+        .md-preview ul li { list-style-type: disc; }
+        .md-preview ol li { list-style-type: decimal; }
+        .md-preview hr { border: none; border-top: 1px solid #1e293b; margin: 1.5rem 0; }
+        .md-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+        .md-preview th, .md-preview td {
+            border: 1px solid #1e293b;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+        }
+        .md-preview th {
+            background-color: #151F32;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        .md-preview td {
+            background-color: rgba(15, 23, 42, 0.5);
+        }
+        .md-preview tr:nth-child(even) td {
+            background-color: rgba(21, 31, 50, 0.5);
+        }
+        .md-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid #1e293b;
+        }
+        .md-preview input[type="checkbox"] {
+            accent-color: #EA580C;
+            margin-right: 0.4rem;
+            transform: scale(1.1);
+        }
+        .md-preview del {
+            color: #64748b;
+            text-decoration: line-through;
+        }
+
+        /* 檢視模式切換按鈕 */
+        .view-tab {
+            transition: all 0.2s ease;
+        }
+        .view-tab.active {
+            background-color: rgba(234, 88, 12, 0.15);
+            color: #EA580C;
+            border-color: rgba(234, 88, 12, 0.3);
+        }
+
+        /* 開關/選項樣式 */
+        .option-checkbox {
+            accent-color: #EA580C;
+        }
+
+        /* 狀態指示動畫 */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-pulse { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        /* FAQ 手風琴動畫 */
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .faq-content.open {
+            max-height: 600px;
+        }
+        .faq-chevron {
+            transition: transform 0.3s ease;
+        }
+        .faq-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 767px) {
+            .editor-textarea { min-height: 380px; font-size: 0.8rem; }
+            .markdown-output { min-height: 380px; font-size: 0.75rem; }
+            .md-preview { padding: 0.875rem; min-height: 380px; }
+            .md-preview h1 { font-size: 1.4rem; }
+            .md-preview h2 { font-size: 1.2rem; }
+            .flex-grow.relative { min-height: 380px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .flex-grow.relative { min-height: 400px; }
+            .editor-textarea { min-height: 400px; }
+            .markdown-output { min-height: 400px; }
+            .md-preview { min-height: 400px; }
+        }
+        @media (min-width: 1024px) {
+            .flex-grow.relative { min-height: 600px; }
+            .editor-textarea { min-height: 600px; }
+            .markdown-output { min-height: 600px; }
+            .md-preview { min-height: 600px; }
+        }
+    </style>
+<!-- SEO Structural Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/html-to-markdown/" property="og:url"/>
+<meta content="HTML から Markdown | 無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="HTML ソースコードを、読みやすく整理された Markdown 形式へすばやく変換します。見出し、表、コードブロック、リストなど主要タグの変換に対応し、内蔵 HTML クリーナーで不要なインラインスタイルや空属性もまとめて除去できます。主要処理はフロントエンドのローカル環境で完結します。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="HTML から Markdown | 無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="HTML ソースコードを、読みやすく整理された Markdown 形式へすばやく変換します。見出し、表、コードブロック、リストなど主要タグの変換に対応し、内蔵 HTML クリーナーで不要なインラインスタイルや空属性もまとめて除去できます。主要処理はフロントエンドのローカル環境で完結します。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"HTML → Markdown コンバーター","url":"https://toolhuben.com/ja/html-to-markdown/","description":"HTML ソースコードを、読みやすく整理された Markdown 形式へすばやく変換します。見出し、表、コードブロック、リストなど主要タグの変換に対応し、内蔵 HTML クリーナーで不要なインラインスタイルや空属性もまとめて除去できます。主要処理はフロントエンドのローカル環境で完結します。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"HTML → Markdown コンバーター","item":"https://toolhuben.com/ja/html-to-markdown/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","HTML 已清理完成":"HTML をクリーンアップしました","Markdown 已複製到剪貼簿":"Markdown をクリップボードへコピーしました","Markdown 檔案已下載":"Markdown ファイルをダウンロードしました","[System Error] 模組":"[System Error] Module","⚠️ 轉換錯誤：":"⚠️ 変換エラー：","⚠️ Turndown 解析器未載入，請重新整理頁面。":"⚠️ Turndown parser が読み込まれていません。ページを refresh してください。","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","已清空全部內容":"すべての内容をクリアしました","已載入範例 HTML":"サンプル HTML を読み込みました","已載入範例，立即體驗 HTML 轉 Markdown！":"サンプルを読み込みました。HTML から Markdown への変換を試してみてください。","建立理念":"創業時の理念","建議":"推奨事項","或點擊「範例」按鈕載入範例":"または「Example」button をクリックして sample を読み込みます。","沒有內容可清理":"整理するものがありません","沒有可以下載的內容":"ダウンロードできるものがありません","沒有可以複製的內容":"コピーする内容がありません","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","行":"OK","載入失敗:":"読み込みに失敗しました：","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","Markdown 預覽":"Markdown プレビュー","執行處理":"実行","本機處理":"ローカルで処理されます","輸入 HTML 內容即可轉換":"変換する HTML コンテンツを入力","轉換錯誤：":"変換エラー：","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/html-to-markdown/" rel="canonical"/><link href="https://toolhuben.com/html-to-markdown/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/html-to-markdown/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/html-to-markdown/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/html-to-markdown/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="glass" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#EA580C;--classic-accent-rgb:234,88,12">
+<!-- 系統組件 -->
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 核心模塊：HTML to Markdown Converter -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Hero -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-hm">
+<span class="flex w-2 h-2 bg-hub-hm rounded-full animate-pulse mr-2"></span>
+                変換エンジンの準備ができました
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                HTML <span class="text-transparent bg-clip-text bg-gradient-to-r from-hub-hm to-orange-300">Markdown へ</span> 変換ツール
+            </h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                HTML ソースコードを読みやすく整理された Markdown へすばやく変換します。見出し、表、コードブロック、リストなど主要タグに対応。HTML クリーナーを内蔵し、Word や Google Docs からコピーした余分なスタイルも効率よく除去します。完全なフロントエンドローカル処理でデータのプライバシーを守ります。
+            </p>
+</div>
+<!-- 主控台 -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+<!-- 工具列 -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-hub-900/80 border-b border-hub-700 p-3 sm:p-4 gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-sample">
+<i class="ph ph-lightbulb text-base"></i> 例
+                    </button>
+<button class="px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-400 hover:text-red-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-clear">
+<i class="ph ph-trash text-base"></i> クリア
+                    </button>
+</div>
+<div class="flex flex-wrap items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-hub-700 pt-3 sm:pt-0">
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-200 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-copy">
+<i class="ph ph-copy text-base"></i> MD をコピー
+                    </button>
+<button class="flex-1 sm:flex-none px-3 py-1.5 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/50 text-orange-400 font-medium rounded-lg text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" id="btn-download">
+<i class="ph ph-download-simple text-base"></i> .md をダウンロード
+                    </button>
+<div class="h-5 w-px bg-hub-700 hidden sm:block"></div>
+<!-- 檢視模式切換 -->
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden">
+<button class="view-tab active px-3 py-1.5 text-xs sm:text-sm font-medium flex items-center gap-1.5" id="tab-raw">
+<i class="ph ph-file-text text-sm"></i>
+<span>Raw MD</span>
+</button>
+<button class="view-tab px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-400 flex items-center gap-1.5 border-l border-hub-700" id="tab-preview">
+<i class="ph ph-eye text-sm"></i>
+<span>プレビュー</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 選項列 (Options Bar) -->
+<div class="bg-hub-900/50 border-b border-hub-700 px-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+<span class="text-slate-500 font-medium uppercase tracking-wider mr-1">オプション</span>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-comments" type="checkbox"/>
+                    HTML コメントを保持
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-images" type="checkbox"/>
+                    画像 URL を保持
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-blanklines" type="checkbox"/>
+                    空行を自動的に並べ替えます
+                </label>
+<label class="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+<input checked="" class="option-checkbox rounded" id="opt-gfm" type="checkbox"/>
+                    GFM
+                </label>
+<div class="h-4 w-px bg-hub-700 hidden sm:block"></div>
+<button class="px-2.5 py-1 bg-hub-800 hover:bg-hub-700 border border-hub-700 text-slate-300 hover:text-orange-400 rounded-lg transition-all flex items-center gap-1.5 active:scale-[0.98]" id="btn-clean">
+<i class="ph ph-broom text-sm"></i>
+<span>Markdown をクリーンアップ</span>
+</button>
+</div>
+<!-- 編輯器與預覽區域 (Split Pane) -->
+<div class="flex flex-col lg:flex-row flex-grow">
+<!-- 左側：HTML 編輯器 -->
+<div class="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-hub-700 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-code text-hub-hm text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">HTML 入力</span>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="html-size">0 bytes</span>
+</div>
+<div class="flex-grow relative">
+<textarea class="editor-textarea w-full h-full absolute inset-0" id="html-input" placeholder="HTML 内容を貼り付けます。変換対応タグ: * 見出し (h1～h6) * 段落、太字、斜体 * リンク、画像 * 表 (table) * 番号付き／番号なしリスト * コードブロック (pre &gt; code) * inline code * 引用 (blockquote) * 区切り線 (hr)" spellcheck="false"></textarea>
+</div>
+</div>
+<!-- 右側：Markdown 輸出 / 預覽 -->
+<div class="w-full lg:w-1/2 flex flex-col">
+<div class="bg-hub-900/60 px-4 py-2 border-b border-hub-700 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="ph ph-markdown-logo text-hub-hm text-base"></i>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider" id="output-label">Raw Markdown</span>
+</div>
+<span class="text-xs text-slate-500 font-mono" id="md-size">0 bytes</span>
+</div>
+<div class="flex-grow relative overflow-hidden">
+<!-- Raw Markdown 輸出 -->
+<textarea class="markdown-output w-full h-full absolute inset-0" id="md-output" placeholder="変換後の Markdown はここに表示されます⋯" readonly="" spellcheck="false"></textarea>
+<!-- Render Preview (隱藏) -->
+<div class="md-preview w-full h-full absolute inset-0 overflow-y-auto hidden" id="render-preview">
+<div class="text-slate-500 text-sm flex items-center justify-center h-full">
+<div class="text-center space-y-2">
+<i class="ph ph-markdown-logo text-3xl text-slate-600"></i>
+<p>HTML コンテンツを入力してプレビュー</p>
+<p class="text-xs text-slate-600">または「Example」button をクリックして sample を読み込みます。</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 底部狀態列 -->
+<div class="bg-hub-900 border-t border-hub-700 p-3 sm:px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+<div class="flex items-center gap-4 text-xs font-mono">
+<div class="flex items-center gap-1.5" id="status-indicator">
+<div class="w-2 h-2 rounded-full bg-slate-500" id="status-dot"></div>
+<span class="text-slate-400 uppercase tracking-wider text-[10px]" id="status-text">準備完了</span>
+</div>
+<div class="h-3 w-px bg-hub-700"></div>
+<span class="text-slate-500" id="line-count">0行</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="hidden sm:inline flex items-center gap-1"><i class="ph ph-info text-xs"></i> 完全なフロントエンドローカル処理で、データはブラウザ外へ出ません。</span>
+</div>
+</div>
+</div>
+<!-- ==================== -->
+<!-- FAQ 常見問題區       -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="text-center mb-10">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-3">HTML → Markdown FAQ</h2>
+<p class="text-slate-400 text-sm">HTML から Markdown への変換に関するよくある質問と利用シーンです。</p>
+</div>
+<div class="space-y-3" id="faq-container">
+<!-- FAQ 1 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">どのような場合に HTML を Markdown へ変換する必要がありますか？</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>HTML から Markdown への変換は、特に次のような場面で役立ちます：</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">技術文書の作成:</strong> 既存の Web コンテンツを Markdown 形式へ変換し、GitHub README、Wiki、静的サイトジェネレーター（Hugo、Jekyll など）で利用できます。</li>
+<li><strong class="text-slate-300">AI プロンプト作成：</strong> ChatGPT や Claude などの AI model は Markdown を非常によく理解します。Web content を Markdown へ変換すると、より良い AI response を得やすくなります。</li>
+<li><strong class="text-slate-300">コンテンツ移行：</strong> blog、CMS、newsletter の HTML content を Markdown へ変換し、別 platform へ移行できます。</li>
+<li><strong class="text-slate-300">ナレッジ管理：</strong> Web page から抽出した content を Markdown へ変換し、Obsidian、Notion、Logseq などの note tool へ保存できます。</li>
+<li><strong class="text-slate-300">冗長な書式を削除：</strong> Word や Google Docs からコピーした内容には不要なスタイルが多く含まれますが、Markdown へ変換する際に自動的に整理できます。</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- FAQ 2 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">HTML を Markdown に変換すると、どの情報が失われますか？</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>Markdown は「コンテンツ優先」の形式であり、変換時には次の情報が自動的に除外されます。</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">CSS スタイル：</strong> color、font、margin、animation などの visual style は保持されません。</li>
+<li><strong class="text-slate-300">JavaScript：</strong> インタラクティブ動作、イベント処理、動的エフェクトは変換できません。</li>
+<li><strong class="text-slate-300">複雑なレイアウト：</strong> multi-column layout、Flexbox、Grid などの layout structure は linear arrangement へ簡略化されます。</li>
+<li><strong class="text-slate-300">フォーム要素：</strong> 入力欄、ボタン、ドロップダウンなどのフォーム部品は変換できません。</li>
+<li><strong class="text-slate-300">埋め込みマルチメディア：</strong> video、audio、iframe などの embedded content は interactivity を失います。</li>
+</ul>
+<p class="mt-2 text-xs text-slate-500">これは欠点というより利点です。Markdown は見た目の装飾ではなく、コンテンツの意味構造に集中するよう促します。</p>
+</div>
+</div>
+</div>
+<!-- FAQ 3 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">Clean Markdown 機能は何をしますか？</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>「Clean Markdown」は独自の HTML preprocessing 機能で、特に次の問題を解決します： <strong class="text-slate-300">Word、Google Docs、Evernote</strong> また、ChatGPT などの AI ツールから HTML をコピーした際に大量の不要コードが混入する問題にも対応できます。</p>
+<p>Clean Markdown は自動的に：</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>すべて削除 <code class="text-hub-hm text-xs">&lt;span&gt;</code> および空 <code class="text-hub-hm text-xs">&lt;div&gt;</code> ラップ要素</li>
+<li>空白や意味のない内容を削除 <code class="text-hub-hm text-xs">style</code>、<code class="text-hub-hm text-xs">class</code>、<code class="text-hub-hm text-xs">id</code> プロパティ</li>
+<li>Word 固有の MSO 名前空間タグを削除（<code class="text-hub-hm text-xs">&lt;o:p&gt;</code>、<code class="text-hub-hm text-xs">&lt;!--[if ...]--&gt;</code>）</li>
+<li>削除 <code class="text-hub-hm text-xs">&lt;font&gt;</code> 空のネストコンテナを持つ label</li>
+<li>XML の処理命令と CDATA セクションを整理します</li>
+</ul>
+<p class="mt-2 text-xs text-slate-500">有効にすると直接変換よりはるかに整理された Markdown が得られ、利用者から特に評価の高い機能の一つです。</p>
+</div>
+</div>
+</div>
+<!-- FAQ 4 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">このツールはどの HTML タグをサポートしますか？</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p>このツールは、次の HTML タグを完全に変換できます。</p>
+<div class="grid grid-cols-2 gap-2 text-xs">
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">タイトル</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;h1&gt;</code> ~ <code class="text-hub-hm">&lt;h6&gt;</code> → <code class="text-slate-300"># ~ ######</code></p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">テキスト形式</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;strong&gt;</code> <code class="text-hub-hm">&lt;em&gt;</code> <code class="text-hub-hm">&lt;del&gt;</code> → <code class="text-slate-300">** * ~~</code></p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">リンク／画像</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;a&gt;</code> <code class="text-hub-hm">&lt;img&gt;</code> → <code class="text-slate-300">[text](url) ![alt](src)</code></p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">テーブル</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;table&gt;</code> → GFM パイプテーブル</p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">チェックリスト</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;ul&gt;</code> <code class="text-hub-hm">&lt;ol&gt;</code> → <code class="text-slate-300">- 1.</code> チェックリスト</p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">プログラムコード</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;pre&gt;&lt;code&gt;</code> → <code class="text-slate-300">```</code> ブロック</p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">引用</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;blockquote&gt;</code> → <code class="text-slate-300">&gt;</code> 引用</p>
+</div>
+<div class="bg-hub-900/50 rounded-lg p-3">
+<p class="text-slate-300 font-medium mb-1">区切り</p>
+<p class="text-slate-500"><code class="text-hub-hm">&lt;hr&gt;</code> → <code class="text-slate-300">---</code></p>
+</div>
+</div>
+<p class="text-xs text-slate-500 mt-2">未対応のタグは自動的に無視され、変換結果には影響しません。</p>
+</div>
+</div>
+</div>
+<!-- FAQ 5 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">GFM（GitHub Flavored Markdown）とは何ですか？</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-slate-300">GFM（GitHub Flavored Markdown）</strong> 標準 Markdown を基に GitHub が拡張した構文仕様で、現在では事実上の Markdown 業界標準の一つです。GFM では次の機能が追加されています：</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">テーブル：</strong> パイプラインを使用 <code class="text-hub-hm">|</code> 構造化された表を作成</li>
+<li><strong class="text-slate-300">取り消し線:</strong> 使用 <code class="text-hub-hm">~~文字~~</code> 削除を示します</li>
+<li><strong class="text-slate-300">タスクリスト：</strong> 使用 <code class="text-hub-hm">- [x]</code> および <code class="text-hub-hm">- [ ]</code></li>
+<li><strong class="text-slate-300">コードブロックのシンタックスハイライト:</strong> 使用 <code class="text-hub-hm">```語言</code> プログラミング言語を指定</li>
+<li><strong class="text-slate-300">自動リンク：</strong> URL を自動的に clickable link へ変換します。</li>
+<li><strong class="text-slate-300">段落の折り返し：</strong> newline character は soft line break として扱います（option で有効化が必要です）。</li>
+</ul>
+<p class="mt-2">GFM オプションを有効にすると、変換後の Markdown は GitHub や GitLab などのコード管理プラットフォームとの互換性が高くなります。</p>
+</div>
+</div>
+</div>
+<!-- FAQ 6 -->
+<div class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<button class="faq-question w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-hub-800/80 transition-colors">
+<span class="text-sm sm:text-base font-medium text-white pr-4">この tool は安全ですか？私の data は server へ upload されますか？</span>
+<svg class="faq-chevron w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="faq-content">
+<div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-400 leading-relaxed space-y-2">
+<p><strong class="text-green-400">100% 安全です。</strong> このツールは純粋なフロントエンド（Client-side）構成で、HTML 変換処理はすべてブラウザ内で完結します。<strong class="text-slate-300">データがサーバーへアップロードされることはありません</strong>。</p>
+<p>つまり：</p>
+<ul class="list-disc pl-5 space-y-1">
+<li>営業秘密、API ファイル、非公開の Web コンテンツがコンピューター外へ送信されることはありません</li>
+<li>変換処理そのものに internet connection は不要です。初回の page load 時を除き、offline でも実行できます。</li>
+<li>バックエンドサーバーが内容を保存・処理することはありません</li>
+<li>入力したデータには ToolHub の管理者でさえアクセスできません</li>
+</ul>
+<p class="mt-2">これが他のクラウド変換ツールとの大きな違いです。セキュリティを後付けではなくアーキテクチャから設計しています。</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ==================== -->
+<!-- SEO 教學文章區        -->
+<!-- ==================== -->
+<section class="mt-16 max-w-4xl mx-auto">
+<div class="bg-hub-800/40 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2 class="text-xl sm:text-2xl font-bold text-white mb-6 flex items-center gap-3">
+<i class="ph ph-book-open-text text-hub-hm text-2xl"></i>
+                    HTML と Markdown：構造化マークアップからコンテンツ中心の文章作成へ
+                </h2>
+<div class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+<p>
+                        Web 技術の発展過程では、<strong class="text-white">HTML</strong>（HyperText Markup Language）と <strong class="text-white">Markdown</strong> 両者は異なる時代と思想を表しています。HTML は Web の基盤であり、完全なマルチメディア統合とインタラクティブ制御を提供します。一方 Markdown は「<em class="text-slate-300">フォームより内容を優先</em>「ミニマリズムの精神」。両者の違いと補完関係を理解することは、現代の開発者やコンテンツ制作者にとって重要です。
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">HTML と Markdown の設計思想の違い</h3>
+<div class="grid sm:grid-cols-2 gap-4 mb-4">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-code text-hub-hm"></i>
+<h4 class="font-medium text-white">HTML — 精密制御</h4>
+</div>
+<p class="text-xs text-slate-400">HTML は表現力の高い markup language です。各要素の色、サイズ、位置、interactive behavior を細かく制御できますが、その代わり構文は複雑で、単純な段落でも <code class="text-hub-hm text-xs">&lt;p&gt;&lt;/p&gt;</code> パッケージ。</p>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-file-text text-hub-hm"></i>
+<h4 class="font-medium text-white">Markdown — コンテンツ優先</h4>
+</div>
+<p class="text-xs text-slate-400">Markdown は「意味を表す」軽量マークアップです。直感的な記号（<code class="text-hub-hm text-xs">#</code>、<code class="text-hub-hm text-xs">*</code>、<code class="text-hub-hm text-xs">-</code>) で構造を示し、書き手が内容そのものに集中できるようにします。学習コストは非常に低く、10 分ほどで基本を使い始められます。</p>
+</div>
+</div>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">GitHub Flavored Markdown (GFM) とは何ですか？</h3>
+<p>
+                        GitHub Flavored Markdown（GFM）は GitHub が 2013 年に提案した Markdown 拡張仕様です。標準 Markdown の実務上の不足を補うために、次の機能を追加しています<strong class="text-slate-300">table、strikethrough、task list、syntax-highlighted code block、auto-link、emoji などに対応します。</strong> などの実用機能があります。現在 GFM は GitLab、Bitbucket、Notion、Discord、Slack など主要なプラットフォームでも広く採用され、クロスプラットフォームで使われる代表的な Markdown 方言の1つになっています。
+                    </p>
+<p>
+                        このツールの「GFM」オプションを有効にすると、変換後の Markdown は GFM 形式のパイプテーブルとタスクリスト構文を使用し、GitHub エコシステムとの互換性を確保します。
+                    </p>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">Markdown を使うのが適しているのはどのような場合ですか？</h3>
+<div class="space-y-3">
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4 flex gap-3">
+<i class="ph ph-git-pull-request text-hub-hm text-xl shrink-0 mt-0.5"></i>
+<div>
+<h4 class="font-medium text-white text-sm">技術ドキュメントと README</h4>
+<p class="text-xs text-slate-400">GitHub や GitLab のプロジェクト説明、API ドキュメント、Contribution Guide などで Markdown は広く使われており、開発者コミュニティの共通言語と言えます。</p>
+</div>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4 flex gap-3">
+<i class="ph ph-notebook text-hub-hm text-xl shrink-0 mt-0.5"></i>
+<div>
+<h4 class="font-medium text-white text-sm">ナレッジ管理とノート作成</h4>
+<p class="text-xs text-slate-400">Obsidian、Notion、Logseq、Bear などのノートツールは Markdown を中核形式として利用しています。クロスプラットフォームで扱いやすく、将来互換性が高く、バージョン管理にも向いています。</p>
+</div>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4 flex gap-3">
+<i class="ph ph-robot text-hub-hm text-xl shrink-0 mt-0.5"></i>
+<div>
+<h4 class="font-medium text-white text-sm">AI との対話と Prompt engineering</h4>
+<p class="text-xs text-slate-400">ChatGPT、Claude、Gemini などの AI モデルは Markdown の構造を理解しやすいため、プロンプトを Markdown で整理すると出力品質を大きく改善できる場合があります。</p>
+</div>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-xl p-4 flex gap-3">
+<i class="ph ph-globe text-hub-hm text-xl shrink-0 mt-0.5"></i>
+<div>
+<h4 class="font-medium text-white text-sm">静的 Web サイトとブログ</h4>
+<p class="text-xs text-slate-400">Hugo、Jekyll、Next.js（MDX）などの静的サイトジェネレーターは Markdown を主要なコンテンツソースとして使います。Markdown 記事は単なるファイルなので管理もしやすい形式です。</p>
+</div>
+</div>
+</div>
+<h3 class="text-lg font-bold text-white mt-6 mb-3">なぜ choose ToolHub’s HTML to Markdown Converter のですか？</h3>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong class="text-slate-300">デュアル表示モード：</strong> 変換結果を確認しやすいよう、Raw Markdown source code と Render Preview の両方を表示します。</li>
+<li><strong class="text-slate-300">Markdown クリーナーで整形：</strong> 専用 HTML preprocessing により、Word、Google Docs など由来の余分な style を効果的に削除し、より clean な出力を生成します。</li>
+<li><strong class="text-slate-300">柔軟な変換オプション：</strong> annotation を保持、image を保持、blank cleanup、GFM mode などを必要に応じて on/off します。</li>
+<li><strong class="text-slate-300">ゼロサーバーアーキテクチャ：</strong> すべての変換は 100% browser 内で行われ、data leakage の risk を抑えます。</li>
+<li><strong class="text-slate-300">ワンクリック出力:</strong> コピーとダウンロード機能により、手動選択せず標準 Markdown ファイルを取得できます。</li>
+</ul>
+<p class="mt-4 text-slate-500 text-xs border-t border-hub-700 pt-4">
+                        Web コンテンツをノートへ変換する場合、ブログ記事を移行する場合、AI 用の構造化プロンプトを準備する場合、HTML 内の不要な書式を整理する場合でも、ToolHub の HTML to Markdown Converter ならシンプルかつ効率的に処理できます。今すぐ変換を始めて、HTML から Markdown へのスムーズな移行を体験してください。
+                    </p>
+</div>
+</div>
+</section>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-hm" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 組件載入區 -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- 系統級中樞神經：組件載入與事件代理           -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/html-to-markdown';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+
+                    const parentGroup = item.closest('.nav-group');
+                    if (parentGroup) {
+                        const content = parentGroup.querySelector('.group-content');
+                        const chevron = parentGroup.querySelector('.chevron');
+                        if (content && chevron) {
+                            setTimeout(() => {
+                                content.style.maxHeight = content.scrollHeight + 'px';
+                                chevron.classList.add('rotate-180');
+                            }, 50);
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：HTML to Markdown 轉換引擎    -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // === DOM 節點映射 ===
+            const htmlInput = document.getElementById('html-input');
+            const mdOutput = document.getElementById('md-output');
+            const renderPreview = document.getElementById('render-preview');
+
+            const btnSample = document.getElementById('btn-sample');
+            const btnClear = document.getElementById('btn-clear');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownload = document.getElementById('btn-download');
+            const btnClean = document.getElementById('btn-clean');
+
+            const tabRaw = document.getElementById('tab-raw');
+            const tabPreview = document.getElementById('tab-preview');
+            const outputLabel = document.getElementById('output-label');
+
+            const htmlSize = document.getElementById('html-size');
+            const mdSize = document.getElementById('md-size');
+            const lineCount = document.getElementById('line-count');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            const optComments = document.getElementById('opt-comments');
+            const optImages = document.getElementById('opt-images');
+            const optBlankLines = document.getElementById('opt-blanklines');
+            const optGfm = document.getElementById('opt-gfm');
+
+            // === 配置 marked.js (用於 Preview) ===
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                });
+            }
+
+            // === Clean Markdown：HTML 預處理器 ===
+            function cleanHTML(html) {
+                if (!html.trim()) return html;
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(`<body>${html}</body>`, 'text/html');
+                const body = doc.body;
+
+                // 移除所有 inline style 屬性
+                body.querySelectorAll('[style]').forEach(el => {
+                    el.removeAttribute('style');
+                });
+
+                // 移除空白 class/id 屬性
+                body.querySelectorAll('[class=""]').forEach(el => el.removeAttribute('class'));
+                body.querySelectorAll('[id=""]').forEach(el => el.removeAttribute('id'));
+
+                // 移除 <font> 標籤，保留內容
+                body.querySelectorAll('font').forEach(el => {
+                    el.replaceWith(...el.childNodes);
+                });
+
+                // 移除空的 <span> 與 <div>
+                body.querySelectorAll('span:empty, div:empty, p:empty').forEach(el => el.remove());
+
+                // 展開單一內容的 <span>（不具語義的包裹）
+                body.querySelectorAll('span').forEach(el => {
+                    if (!el.hasAttributes()) {
+                        el.replaceWith(...el.childNodes);
+                    }
+                });
+
+                // 移除 Word 的 MSO 命名空間標籤
+                body.querySelectorAll('o\\:p, o\\:P, w\\:p, w\\:P').forEach(el => el.remove());
+
+                // 清理 XML 處理指令與 IE 條件註解
+                let result = body.innerHTML;
+                result = result.replace(/<\?xml[^>]*\?>/gi, '');
+                result = result.replace(/<!\[if[^>]*>.*?<!\[endif\]>/gis, '');
+                result = result.replace(/<!--\[if[^>]*>.*?<!\[endif\]-->/gis, '');
+
+                return result;
+            }
+
+            // === 建立 TurndownService ===
+            function createTurndown() {
+                const opts = {
+                    headingStyle: 'atx',
+                    hr: '---',
+                    bulletListMarker: '-',
+                    codeBlockStyle: 'fenced',
+                    emDelimiter: '*',
+                    strongDelimiter: '**',
+                    linkStyle: 'inlined',
+                    linkReferenceStyle: 'full',
+                };
+
+                if (typeof TurndownService === 'undefined') {
+                    return null;
+                }
+
+                const turndownService = new TurndownService(opts);
+
+                // 可選：保留 HTML 註解
+                if (optComments.checked) {
+                    turndownService.addRule('htmlComment', {
+                        filter: (node) => node.nodeType === 8,
+                        replacement: (_content, node) => {
+                            return `<!--${node.nodeValue}-->`;
+                        }
+                    });
+                }
+
+                // 可選：保留圖片
+                if (!optImages.checked) {
+                    turndownService.addRule('removeImages', {
+                        filter: ['img'],
+                        replacement: () => ''
+                    });
+                }
+
+                return turndownService;
+            }
+
+            // === 核心轉換邏輯 ===
+            function convert() {
+                const html = htmlInput.value;
+                const isEmpty = !html.trim();
+
+                // 更新 HTML 大小
+                const htmlBytes = new TextEncoder().encode(html).length;
+                htmlSize.textContent = formatBytes(htmlBytes);
+
+                if (isEmpty) {
+                    mdOutput.value = '';
+                    renderPreview.innerHTML = `<div class="text-slate-500 text-sm flex items-center justify-center h-full">
+                        <div class="text-center space-y-2">
+                            <i class="ph ph-markdown-logo text-3xl text-slate-600"></i>
+                            <p>輸入 HTML 內容即可轉換</p>
+                            <p class="text-xs text-slate-600">或點擊「範例」按鈕載入範例</p>
+                        </div>
+                    </div>`;
+                    updateStats('');
+                    updateStatus(false);
+                    return;
+                }
+
+                try {
+                    const turndownService = createTurndown();
+                    if (!turndownService) {
+                        mdOutput.value = '⚠️ Turndown 解析器未載入，請重新整理頁面。';
+                        updateStats(mdOutput.value);
+                        updateStatus(false);
+                        return;
+                    }
+
+                    // Clean Markdown 預處理
+                    let cleanedHtml = html;
+                    // 我們不使用獨立的 clean 按鈕，而是讓 Clean Markdown 按鈕觸發一次性的清理
+                    // 平時直接轉換原始 HTML
+
+                    let markdown = turndownService.turndown(cleanedHtml);
+
+                    // 自動整理空白行
+                    if (optBlankLines.checked) {
+                        markdown = markdown.replace(/\n{4,}/g, '\n\n\n');
+                    }
+
+                    mdOutput.value = markdown;
+
+                    // 更新 Preview
+                    if (typeof marked !== 'undefined' && markdown.trim()) {
+                        // 根據 GFM 選項動態設定 marked
+                        if (optGfm.checked) {
+                            marked.setOptions({ gfm: true, breaks: true });
+                        } else {
+                            marked.setOptions({ gfm: false, breaks: false });
+                        }
+                        let previewHtml = marked.parse(markdown);
+                        renderPreview.innerHTML = previewHtml;
+                        // 外部連結新分頁開啟
+                        renderPreview.querySelectorAll('a').forEach(link => {
+                            if (link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) {
+                                link.setAttribute('target', '_blank');
+                                link.setAttribute('rel', 'noopener noreferrer');
+                            }
+                        });
+                    } else {
+                        renderPreview.innerHTML = `<div class="text-slate-500 text-sm flex items-center justify-center h-full">
+                            <div class="text-center space-y-2">
+                                <i class="ph ph-markdown-logo text-3xl text-slate-600"></i>
+                                <p>Markdown 預覽</p>
+                            </div>
+                        </div>`;
+                    }
+
+                    updateStats(markdown);
+                    updateStatus(true);
+                } catch (error) {
+                    mdOutput.value = `⚠️ 轉換錯誤：${error.message}`;
+                    renderPreview.innerHTML = `<div class="text-red-400 p-4 border border-red-900/50 rounded-lg bg-red-950/20">
+                        <strong>轉換錯誤：</strong>${error.message}
+                    </div>`;
+                    console.error('Conversion error:', error);
+                    updateStatus(false);
+                }
+            }
+
+            // clean 後再轉換
+            function cleanAndConvert() {
+                const html = htmlInput.value;
+                if (!html.trim()) {
+                    showToast('沒有內容可清理', true);
+                    return;
+                }
+                const cleaned = cleanHTML(html);
+                htmlInput.value = cleaned;
+                convert();
+                showToast('HTML 已清理完成');
+            }
+
+            // === 輔助函數 ===
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 bytes';
+                if (bytes < 1024) return bytes + ' bytes';
+                return (bytes / 1024).toFixed(1) + ' KB';
+            }
+
+            function updateStats(markdown) {
+                const lines = markdown ? markdown.split('\n').length : 0;
+                lineCount.textContent = `${lines} 行`;
+
+                const mdBytes = new TextEncoder().encode(markdown).length;
+                mdSize.textContent = formatBytes(mdBytes);
+            }
+
+            function updateStatus(hasContent) {
+                if (hasContent) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-hub-hm status-pulse';
+                    statusText.textContent = 'Converted';
+                    statusText.className = 'text-hub-hm uppercase tracking-wider text-[10px] font-bold';
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                    statusText.textContent = 'Ready';
+                    statusText.className = 'text-slate-400 uppercase tracking-wider text-[10px]';
+                }
+            }
+
+            // === 檢視模式切換 ===
+            const setViewMode = (mode) => {
+                if (mode === 'raw') {
+                    mdOutput.classList.remove('hidden');
+                    renderPreview.classList.add('hidden');
+                    tabRaw.classList.add('active');
+                    tabPreview.classList.remove('active');
+                    outputLabel.textContent = 'Raw Markdown';
+                } else {
+                    mdOutput.classList.add('hidden');
+                    renderPreview.classList.remove('hidden');
+                    tabPreview.classList.add('active');
+                    tabRaw.classList.remove('active');
+                    outputLabel.textContent = 'Render Preview';
+                    // 切換時重新轉換以更新預覽
+                    if (htmlInput.value.trim()) {
+                        convert();
+                    }
+                }
+            };
+
+            // === Toast ===
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+
+                document.getElementById('toast-msg').textContent = msg;
+
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-hm';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // === 範例 HTML ===
+            const sampleHTML = `<html lang="zh-TW">
+<head><meta charset="UTF-8"><title>範例文件</title></head>
+<body>
+
+<h1>歡迎使用 ToolHub HTML to Markdown 轉換器</h1>
+
+<p>這是一份<strong>範例 HTML</strong>，展示本工具支援的所有<em>標籤轉換</em>功能。</p>
+
+<h2>文字樣式</h2>
+<p>這是<strong>粗體文字</strong>，這是<em>斜體文字</em>，這是<del>刪除線文字</del>，還有<code>行內程式碼</code>。</p>
+
+<h2>引用區塊</h2>
+<blockquote>
+    <p>Markdown 是一種輕量級標記語言，由 John Gruber 於 2004 年創建。</p>
+    <p>它的核心理念是：讓文件在保持可讀性的同時，具備結構化標記的能力。</p>
+</blockquote>
+
+<h2>連結與圖片</h2>
+<p>訪問 <a href="https://toolhuben.com">ToolHub 官網</a> 了解更多工具。</p>
+<p>圖片範例：<img src="https://via.placeholder.com/400x200" alt="範例圖片" /></p>
+
+<h2>程式碼區塊</h2>
+<pre><code>function helloToolHub() {
+    console.log("歡迎使用 HTML to Markdown 轉換器！");
+    return true;
+}</code></pre>
+
+<h2>表格</h2>
+<table>
+    <thead>
+        <tr>
+            <th>功能</th>
+            <th>支援情況</th>
+            <th>備註</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>標題轉換</td>
+            <td>✅</td>
+            <td>h1 ~ h6</td>
+        </tr>
+        <tr>
+            <td>表格轉換</td>
+            <td>✅</td>
+            <td>GFM Pipe Table</td>
+        </tr>
+        <tr>
+            <td>程式碼區塊</td>
+            <td>✅</td>
+            <td>含語言標記</td>
+        </tr>
+        <tr>
+            <td>清單</td>
+            <td>✅</td>
+            <td>有序與無序</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>清單</h2>
+
+<h3>無序清單</h3>
+<ul>
+    <li>HTML 解析引擎</li>
+    <li>Markdown 生成引擎
+        <ul>
+            <li>Turndown.js</li>
+            <li>Marked.js</li>
+        </ul>
+    </li>
+    <li>Clean Markdown 預處理器</li>
+</ul>
+
+<h3>有序清單</h3>
+<ol>
+    <li>第一步：貼上 HTML 內容</li>
+    <li>第二步：即時轉換為 Markdown</li>
+    <li>第三步：複製或下載結果</li>
+</ol>
+
+<h2>分隔線</h2>
+<hr />
+
+<p><em>由 ToolHub HTML to Markdown Converter 產生 · 純前端處理 · 保障資料隱私</em></p>
+
+</body>
+</html>`;
+
+            // === 綁定事件監聽 ===
+
+            // 即時轉換（每次按鍵觸發）
+            htmlInput.addEventListener('input', convert);
+
+            // 選項變更時重新轉換
+            [optComments, optImages, optBlankLines, optGfm].forEach(cb => {
+                cb.addEventListener('change', convert);
+            });
+
+            // 範例
+            btnSample.addEventListener('click', () => {
+                htmlInput.value = sampleHTML;
+                convert();
+                showToast('已載入範例 HTML');
+            });
+
+            // 清空
+            btnClear.addEventListener('click', () => {
+                htmlInput.value = '';
+                convert();
+                showToast('已清空全部內容');
+            });
+
+            // 複製 Markdown
+            btnCopy.addEventListener('click', () => {
+                const content = mdOutput.value.trim();
+                if (!content) {
+                    showToast('沒有可以複製的內容', true);
+                    return;
+                }
+
+                navigator.clipboard.writeText(content).then(() => {
+                    showToast('Markdown 已複製到剪貼簿');
+                }).catch(() => {
+                    mdOutput.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('Markdown 已複製到剪貼簿');
+                });
+            });
+
+            // 下載 .md
+            btnDownload.addEventListener('click', () => {
+                const content = mdOutput.value.trim();
+                if (!content) {
+                    showToast('沒有可以下載的內容', true);
+                    return;
+                }
+
+                const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Converted_${Date.now()}.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('Markdown 檔案已下載');
+            });
+
+            // Clean Markdown 按鈕
+            btnClean.addEventListener('click', cleanAndConvert);
+
+            // 檢視模式切換
+            tabRaw.addEventListener('click', () => setViewMode('raw'));
+            tabPreview.addEventListener('click', () => setViewMode('preview'));
+
+            // 鍵盤快捷鍵：Tab 縮排
+            htmlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const target = e.target;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    target.value = target.value.substring(0, start) + '    ' + target.value.substring(end);
+                    target.selectionStart = target.selectionEnd = start + 4;
+                    convert();
+                }
+            });
+
+            // FAQ 手風琴切換
+            document.querySelectorAll('.faq-question').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const item = btn.closest('.faq-item');
+                    const content = item.querySelector('.faq-content');
+                    const chevron = btn.querySelector('.faq-chevron');
+                    content.classList.toggle('open');
+                    chevron.classList.toggle('rotated');
+                });
+            });
+
+            // 初始載入範例
+            htmlInput.value = sampleHTML;
+            convert();
+            showToast('已載入範例，立即體驗 HTML 轉 Markdown！');
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

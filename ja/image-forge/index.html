@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>Image Forge | 無料オンラインツール - ToolHub</title>
+<meta content="ブラウザ上で画像を直接トリミング、リサイズ、再書き出しできます。一般的な縦横比、正確な寸法指定、即時プレビューに対応します。" name="description"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- 模塊專屬依賴：Cropper.js (業界標準的影像裁切矩陣) -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 檔案上傳拖曳區 */
+        .drag-active {
+            border-color: #38BDF8 !important;
+            background-color: rgba(56, 189, 248, 0.05) !important;
+        }
+
+        /* 互動選項卡 (Radio Pills) */
+        .radio-pill-input:checked + .radio-pill-label {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38BDF8;
+            color: #38BDF8;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        /* Range Slider 美化 */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #38BDF8; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56,189,248,0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px; }
+
+        /* Cropper 畫布自訂樣式 */
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 4px; /* 柔和裁切框邊緣 */
+        }
+        .cropper-line { background-color: #38BDF8; }
+        .cropper-point {
+            background-color: #38BDF8;
+            border: 1px solid #E0F2FE;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.85), 0 0 10px rgba(56, 189, 248, 0.7);
+            opacity: 1;
+        }
+        .cropper-center { background-color: #38BDF8; }
+
+        /* Give Cropper.js reliable pointer ownership and finger-sized hit targets. */
+        #cropper-stage,
+        #cropper-stage .cropper-container,
+        #cropper-stage .cropper-canvas,
+        #cropper-stage .cropper-drag-box,
+        #cropper-stage .cropper-crop-box,
+        #cropper-stage .cropper-face {
+            touch-action: none !important;
+            overscroll-behavior: contain;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .cropper-point::after {
+            content: '';
+            position: absolute;
+            inset: -7px;
+        }
+
+        .cropper-line::after {
+            content: '';
+            position: absolute;
+        }
+
+        .cropper-line.line-e::after,
+        .cropper-line.line-w::after { inset: 0 -8px; }
+        .cropper-line.line-n::after,
+        .cropper-line.line-s::after { inset: -8px 0; }
+
+        @media (pointer: coarse), (max-width: 767px) {
+            .cropper-point {
+                width: 12px;
+                height: 12px;
+            }
+            .cropper-point::after { inset: -12px; }
+            .cropper-line.line-e::after,
+            .cropper-line.line-w::after { inset: 0 -14px; }
+            .cropper-line.line-n::after,
+            .cropper-line.line-s::after { inset: -14px 0; }
+        }
+        
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+                linear-gradient(135deg, #1e293b 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+                linear-gradient(135deg, transparent 75%, #1e293b 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+            background-color: #0f172a;
+        }
+    </style>
+<!-- SEO Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/image-forge/" property="og:url"/>
+<meta content="Image Forge | 無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="ブラウザ上で画像を直接トリミング、リサイズ、再書き出しできます。一般的な縦横比、正確な寸法指定、即時プレビューに対応します。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Image Forge | 無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="ブラウザ上で画像を直接トリミング、リサイズ、再書き出しできます。一般的な縦横比、正確な寸法指定、即時プレビューに対応します。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Image Forge の画像切り抜きと拡大縮小","url":"https://toolhuben.com/ja/image-forge/","description":"ブラウザ上で画像を直接トリミング、リサイズ、再書き出しできます。一般的な縦横比、正確な寸法指定、即時プレビューに対応します。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"},"author":{"@type":"組織","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"Image Forge の画像切り抜きと拡大縮小","item":"https://toolhuben.com/ja/image-forge/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"質問","name":"the uses for Image Forge image cropping and scaling とは何ですか？","acceptedAnswer":{"@type":"回答","text":"画像の切り抜き・リサイズツールを使うと、Web サイト、SNS、アバター、文書などの用途に合わせて構図を調整できます。クロップでは画像内容の一部が失われ、拡大しても元画像に存在しない細部を本当に生成することはできません。可能な限り高解像度の元画像から始めてください。"}},{"@type":"質問","name":"Image Forge で画像を切り抜き・ズームするには？","acceptedAnswer":{"@type":"回答","text":"元画像を追加し、自由切り抜きまたは固定アスペクト比を選択します。切り抜き枠、出力サイズ、形式を調整して構図の焦点を確認し、ダウンロード前に 100% 表示で端や文字の見え方を確認してください。"}},{"@type":"質問","name":"Image Forge で画像を crop・zoom する際、どのような点に注意すべきでしょうか？","acceptedAnswer":{"@type":"回答","text":"サムネイル化の前に適度なシャープ処理を行えますが、過度に強めるとハローが発生します。透明背景の素材は PNG または WebP、写真は画質要件に応じて JPEG で出力すると扱いやすくなります。"}},{"@type":"質問","name":"Image Forge image cropping and scaling はデータをアップロードしますか？","acceptedAnswer":{"@type":"回答","text":"画像編集と出力にはネイティブ Canvas を使用し、素材はアップロードされません。"}},{"@type":"質問","name":"ソフトウェアのインストールやアカウント登録は必要ですか？","acceptedAnswer":{"@type":"回答","text":"不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。"}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","建立理念":"創業時の理念","建議":"推奨事項","影像重鑄完成 (":"画像の再変換が完了しました（","產生檔案失敗":"ファイルの生成に失敗しました","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","裁切失敗，請檢查影像範圍":"切り抜きに失敗しました。画像範囲を確認してください","請上傳有效的圖片檔案 (JPG, PNG, WebP)":"有効な image file（JPG、PNG、WebP）を upload してください。","請先載入影像":"先に画像を読み込んでください","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/image-forge/" rel="canonical"/><link href="https://toolhuben.com/image-forge/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/image-forge/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/image-forge/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/image-forge/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="aurora" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<!-- 1. 系統組件：Header -->
+<div id="component-header"></div>
+<!-- 2. 系統組件：Sidebar -->
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：Image Forge Matrix -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="パンくずリスト" class="seo-upgrade-breadcrumb"><a href="/ja/">ホーム</a><span>›</span><span>Image Forge の画像切り抜きと拡大縮小</span></nav>
+<!-- 模塊標題區 -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-forge-scale/10 border border-forge-scale/30 text-xs text-forge-scale shadow-inner">
+<i class="ph-fill ph-bounding-box mr-1.5 text-sm"></i>
+                光学画像の再構成・切断マトリクスが利用可能になりました
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Image Forge <span class="text-transparent bg-clip-text bg-gradient-to-r from-forge-crop to-forge-scale">＆切り抜き</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                任意の画像を目標サイズへ高精度に変換します。自由切り抜き、厳密なアスペクト比固定、指定解像度での強制出力、次世代 WebP 圧縮に対応。100% ネイティブ処理でプライバシーを保ちます。
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ========================================== -->
+<!-- 左側：參數控制台 (Configuration Console)      -->
+<!-- ========================================== -->
+<div class="lg:col-span-4 flex flex-col gap-5">
+<!-- 上傳與重置區 -->
+<div class="glass-panel p-5 flex flex-col gap-4 shadow-xl relative overflow-hidden">
+<input accept="image/png, image/jpeg, image/webp, image/gif" class="hidden" id="file-input" type="file"/>
+<div class="w-full border-2 border-dashed border-hub-700 hover:border-hub-accent rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/30 py-8" id="drop-zone">
+<div class="p-3 bg-hub-800 rounded-full mb-3 text-sky-400 shadow-lg border border-hub-700 relative group">
+<i class="ph ph-image text-3xl group-hover:scale-110 transition-transform"></i>
+</div>
+<p class="text-white font-bold text-sm mb-1">画像を読み込む（クリックまたはドラッグ）</p>
+<p class="text-[10px] text-slate-500 font-mono">JPG、PNG、WebP（Zero-Knowledge）</p>
+</div>
+<div class="hidden flex justify-between items-center bg-hub-900/80 p-3 rounded-lg border border-hub-700/50" id="file-info">
+<div class="flex flex-col overflow-hidden">
+<span class="text-xs text-emerald-400 font-bold truncate max-w-[150px]" id="info-name">image.jpg</span>
+<span class="text-[10px] text-slate-400 font-mono" id="info-res">1920 × 1080</span>
+</div>
+<button class="text-xs text-red-400 hover:text-white bg-red-950/30 hover:bg-red-900/50 border border-red-900/50 px-3 py-1.5 rounded transition-colors" id="btn-reset">
+                            リセット
+                        </button>
+</div>
+</div>
+<!-- 裁切比例約束 (Aspect Ratio Matrix) -->
+<div class="glass-panel p-5 flex flex-col gap-4 shadow-xl pointer-events-none opacity-50 transition-all duration-300" id="control-crop">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+<i class="ph-fill ph-crop text-forge-crop text-lg"></i> アスペクト比
+                    </h3>
+<div class="grid grid-cols-3 gap-2">
+<label class="cursor-pointer relative">
+<input checked="" class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="NaN"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">無料</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="1"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">1:1（正方形）</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="1.7777777777777777"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">16:9（横向き）</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="1.3333333333333333"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">4:3（標準）</div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="0.5625"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center">9:16（縦長）</div>
+</label>
+<!-- 自訂比例 -->
+<label class="cursor-pointer relative" id="label-custom-ratio">
+<input class="peer sr-only radio-pill-input" name="aspect-ratio" type="radio" value="custom"/>
+<div class="radio-pill-label py-2 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-mono">カスタム</div>
+</label>
+</div>
+<!-- 自訂比例輸入框 (預設 640x400) -->
+<div class="hidden flex items-center gap-2 mt-1 bg-hub-900/50 p-2 rounded-lg border border-hub-700/50" id="custom-ratio-box">
+<input class="w-full bg-hub-800 border border-hub-700 rounded px-2 py-1.5 text-white font-mono text-xs outline-none text-center focus:border-forge-crop" id="in-ratio-w" min="1" type="number" value="640"/>
+<span class="text-slate-500 font-bold">:</span>
+<input class="w-full bg-hub-800 border border-hub-700 rounded px-2 py-1.5 text-white font-mono text-xs outline-none text-center focus:border-forge-crop" id="in-ratio-h" min="1" type="number" value="400"/>
+<button class="bg-forge-crop/20 hover:bg-forge-crop/40 text-forge-crop border border-forge-crop/50 rounded px-3 py-1.5 text-xs font-bold transition-colors" id="btn-apply-ratio">適用</button>
+</div>
+</div>
+<!-- 強制維度收斂與輸出格式 (Export Matrix) -->
+<div class="glass-panel p-5 flex flex-col gap-5 shadow-xl pointer-events-none opacity-50 transition-all duration-300" id="control-export">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-hub-700 pb-2">
+<i class="ph-fill ph-export text-forge-format text-lg"></i> パッケージ化・エクスポート設定
+                    </h3>
+<!-- The Killer Feature: 強制輸出解析度 -->
+<div class="space-y-3 bg-forge-scale/10 border border-forge-scale/30 rounded-xl p-3">
+<label class="flex items-center gap-2 cursor-pointer group w-full">
+<input class="rounded border-slate-600 text-forge-scale focus:ring-0 bg-hub-900 cursor-pointer" id="toggle-force-res" type="checkbox"/>
+<span class="text-xs font-bold text-forge-scale group-hover:text-violet-300 transition-colors uppercase tracking-wider">絶対解像度での出力を強制</span>
+</label>
+<div class="flex items-center gap-2 opacity-50 pointer-events-none transition-opacity" id="force-res-box">
+<div class="flex-1 relative">
+<span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono">W</span>
+<input class="w-full bg-hub-900 border border-hub-700 rounded-md pl-6 pr-2 py-1.5 text-white font-mono text-xs outline-none focus:border-forge-scale" id="in-out-w" min="1" type="number" value="640"/>
+</div>
+<i class="ph ph-x text-slate-500 text-xs"></i>
+<div class="flex-1 relative">
+<span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono">H</span>
+<input class="w-full bg-hub-900 border border-hub-700 rounded-md pl-6 pr-2 py-1.5 text-white font-mono text-xs outline-none focus:border-forge-scale" id="in-out-h" min="1" type="number" value="400"/>
+</div>
+</div>
+<p class="text-[9px] text-slate-400 leading-relaxed">
+                            この option を有効にすると、右側の crop box をどれだけ大きく／小さくしても、最終 export image の pixel 数は<strong>絶対収束</strong> 上で指定したサイズへ変換します。厳密なアップロード仕様を要求するシステムのバックエンド用途にも適しています。
+                        </p>
+</div>
+<!-- 圖片格式 (Format) -->
+<div class="space-y-2 pt-1">
+<label class="text-xs font-bold text-slate-400 uppercase tracking-widest">形式</label>
+<div class="flex gap-2">
+<label class="flex-1 cursor-pointer relative">
+<input checked="" class="peer sr-only radio-pill-input" name="out-format" type="radio" value="image/webp"/>
+<div class="radio-pill-label py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-bold">WebP</div>
+</label>
+<label class="flex-1 cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="out-format" type="radio" value="image/jpeg"/>
+<div class="radio-pill-label py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-bold">JPEG</div>
+</label>
+<label class="flex-1 cursor-pointer relative">
+<input class="peer sr-only radio-pill-input" name="out-format" type="radio" value="image/png"/>
+<div class="radio-pill-label py-1.5 bg-hub-900 border border-hub-700 rounded text-xs text-slate-400 transition-all text-center font-bold">PNG</div>
+</label>
+</div>
+</div>
+<!-- 壓縮品質 (Quality) -->
+<div class="space-y-2" id="quality-container">
+<div class="flex justify-between text-xs">
+<span class="text-slate-400 font-bold">圧縮品質</span>
+<span class="text-forge-format font-mono font-bold" id="val-quality">85%</span>
+</div>
+<input id="slider-quality" max="1" min="0.1" step="0.05" type="range" value="0.85"/>
+<p class="text-[9px] text-slate-500 font-mono text-right">PNG は lossless compression のため、この parameter は適用されません。</p>
+</div>
+<!-- 下載按鈕 -->
+<button class="mt-2 w-full px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 active:scale-[0.98]" id="btn-export">
+<i class="ph-bold ph-download-simple text-lg"></i> 変換してダウンロード
+                    </button>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：光學操作畫布 (Optical Canvas)           -->
+<!-- ========================================== -->
+<div class="lg:col-span-8 glass-panel flex flex-col overflow-hidden shadow-2xl h-[600px] sm:h-[750px] border border-hub-700 relative">
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center z-10">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-selection-plus text-sky-400 text-lg"></i> インタラクティブ光学マトリクス
+                    </h3>
+<div class="flex gap-2">
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="zoom-in" title="ズームイン"><i class="ph ph-magnifying-glass-plus"></i></button>
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="zoom-out" title="ズームアウト"><i class="ph ph-magnifying-glass-minus"></i></button>
+<div class="w-px h-6 bg-hub-700 mx-1"></div>
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="rotate-left" title="反時計回り"><i class="ph ph-arrow-counter-clockwise"></i></button>
+<button class="action-btn p-1.5 text-slate-400 hover:text-white bg-hub-800 rounded border border-hub-700" data-action="rotate-right" title="時計回りに回転"><i class="ph ph-arrow-clockwise"></i></button>
+</div>
+</div>
+<!-- Cropper 畫布區 -->
+<div class="flex-grow w-full h-full bg-[#0a0f18] checkerboard relative flex items-center justify-center overflow-hidden" id="cropper-stage">
+<!-- 初始提示 -->
+<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none z-10" id="canvas-placeholder">
+<i class="ph-fill ph-bounding-box text-6xl mb-4 opacity-50"></i>
+<p class="text-sm font-mono">画像の読み込みを待っています...</p>
+</div>
+<!-- 實際被 Cropper 接管的圖片 -->
+<img alt="ワークスペース" class="hidden max-w-full max-h-full" id="image-workspace" src=""/>
+</div>
+<!-- 底部狀態列 (動態顯示預估像素) -->
+<div class="bg-hub-900/80 px-4 py-2 border-t border-hub-700 flex justify-between items-center z-10 font-mono text-[10px] text-slate-400">
+<div class="flex items-center gap-3">
+<span id="stat-natural">Natural: --</span>
+<span class="text-hub-700">|</span>
+<span class="text-forge-crop font-bold" id="stat-cropped">切り抜き：--</span>
+</div>
+<span class="text-forge-scale font-bold bg-forge-scale/20 px-2 py-0.5 rounded border border-forge-scale/30 hidden" id="stat-final">
+                        最終出力：640 x 400
+                    </span>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="Image Forge の画像トリミング・拡大縮小チュートリアルと FAQ" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>Image Forge 完全ユーザーガイド：画像のトリミングと拡大縮小</h2>
+<p>画像の切り抜き・リサイズツールを使うと、Web サイト、SNS、アバター、文書などの用途に合わせて構図を調整できます。クロップでは画像内容の一部が失われ、拡大しても元画像に存在しない細部を本当に生成することはできません。可能な限り高解像度の元画像から始めてください。</p>
+<h3>操作手順</h3>
+<ol><li>original image を追加し、free crop または fixed aspect ratio を選択します。</li><li>crop box、output size、format を調整し、composition focus を確認します。</li><li>download 前に edge と text を 100% 表示で確認してください。</li></ol>
+<h3>実用的な提案と制限事項</h3>
+<p>サムネイル化の前に適度なシャープ処理を行えますが、過度に強めるとハローが発生します。透明背景の素材は PNG または WebP、写真は画質要件に応じて JPEG で出力すると扱いやすくなります。</p>
+<h3>プライバシーと端末内処理</h3>
+<p>画像編集と出力にはネイティブ Canvas を使用し、素材はアップロードされません。</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>Image Forge 画像切り抜き・拡大縮小 FAQ</h2>
+<details><summary>the uses for Image Forge image cropping and scaling とは何ですか？</summary><div class="seo-upgrade-answer">画像の切り抜き・リサイズツールを使うと、Web サイト、SNS、アバター、文書などの用途に合わせて構図を調整できます。クロップでは画像内容の一部が失われ、拡大しても元画像に存在しない細部を本当に生成することはできません。可能な限り高解像度の元画像から始めてください。</div></details>
+<details><summary>Image Forge で画像を切り抜き・ズームするには？</summary><div class="seo-upgrade-answer">元画像を追加し、自由切り抜きまたは固定アスペクト比を選択します。切り抜き枠、出力サイズ、形式を調整して構図の焦点を確認し、ダウンロード前に 100% 表示で端や文字の見え方を確認してください。</div></details>
+<details><summary>Image Forge で画像を crop・zoom する際、どのような点に注意すべきでしょうか？</summary><div class="seo-upgrade-answer">サムネイル化の前に適度なシャープ処理を行えますが、過度に強めるとハローが発生します。透明背景の素材は PNG または WebP、写真は画質要件に応じて JPEG で出力すると扱いやすくなります。</div></details>
+<details><summary>Image Forge image cropping and scaling はデータをアップロードしますか？</summary><div class="seo-upgrade-answer">画像編集と出力にはネイティブ Canvas を使用し、素材はアップロードされません。</div></details>
+<details><summary>ソフトウェアのインストールやアカウント登録は必要ですか？</summary><div class="seo-upgrade-answer">不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/image-forge'; // 假設的新路徑
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：光學影像重鑄與裁切矩陣        -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const fileInput = document.getElementById('file-input');
+            const dropZone = document.getElementById('drop-zone');
+            const fileInfo = document.getElementById('file-info');
+            const infoName = document.getElementById('info-name');
+            const infoRes = document.getElementById('info-res');
+            const btnReset = document.getElementById('btn-reset');
+            
+            const controlCrop = document.getElementById('control-crop');
+            const controlExport = document.getElementById('control-export');
+            
+            const ratioRadios = document.getElementsByName('aspect-ratio');
+            const customRatioBox = document.getElementById('custom-ratio-box');
+            const inRatioW = document.getElementById('in-ratio-w');
+            const inRatioH = document.getElementById('in-ratio-h');
+            const btnApplyRatio = document.getElementById('btn-apply-ratio');
+
+            const toggleForceRes = document.getElementById('toggle-force-res');
+            const forceResBox = document.getElementById('force-res-box');
+            const inOutW = document.getElementById('in-out-w');
+            const inOutH = document.getElementById('in-out-h');
+
+            const formatRadios = document.getElementsByName('out-format');
+            const qualityContainer = document.getElementById('quality-container');
+            const sliderQuality = document.getElementById('slider-quality');
+            const valQuality = document.getElementById('val-quality');
+            const btnExport = document.getElementById('btn-export');
+
+            const imageWorkspace = document.getElementById('image-workspace');
+            const canvasPlaceholder = document.getElementById('canvas-placeholder');
+            
+            const statNatural = document.getElementById('stat-natural');
+            const statCropped = document.getElementById('stat-cropped');
+            const statFinal = document.getElementById('stat-final');
+
+            let cropper = null;
+            let currentFileName = 'image';
+
+            // --- 核心：解鎖儀表板 ---
+            const unlockDashboard = (file, src, width, height) => {
+                currentFileName = file.name.split('.').slice(0, -1).join('.');
+                
+                dropZone.classList.add('hidden');
+                fileInfo.classList.remove('hidden');
+                fileInfo.classList.add('flex');
+                infoName.textContent = file.name;
+                infoRes.textContent = `${width} x ${height}`;
+
+                controlCrop.classList.remove('pointer-events-none', 'opacity-50');
+                controlExport.classList.remove('pointer-events-none', 'opacity-50');
+                
+                canvasPlaceholder.classList.add('hidden');
+                imageWorkspace.src = src;
+                imageWorkspace.classList.remove('hidden');
+                
+                statNatural.textContent = `Natural: ${width} x ${height}`;
+
+                // 若之前有啟動過，先摧毀
+                if (cropper) cropper.destroy();
+
+                // 初始化 Cropper.js
+                // viewMode: 1 限制裁切框不能超過圖片範圍
+                // viewMode: 2 限制圖片不能小於容器 (我們用 1 較適合自由裁切)
+                cropper = new Cropper(imageWorkspace, {
+                    viewMode: 1,
+                    dragMode: 'crop',
+                    aspectRatio: NaN, // Free by default
+                    autoCropArea: 0.8,
+                    responsive: true,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    movable: true,
+                    zoomable: true,
+                    zoomOnTouch: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    minCropBoxWidth: 48,
+                    minCropBoxHeight: 48,
+                    toggleDragModeOnDblclick: false,
+                    crop(event) {
+                        // 即時更新裁切後像素狀態
+                        const width = Math.round(event.detail.width);
+                        const height = Math.round(event.detail.height);
+                        statCropped.textContent = `Cropped: ${width} x ${height}`;
+                        
+                        // 若未開啟強制維度，讓強制維度輸入框跟隨裁切框變動 (提供參考)
+                        if (!toggleForceRes.checked) {
+                            inOutW.value = width;
+                            inOutH.value = height;
+                        }
+                    },
+                });
+            };
+
+            const cropperStage = document.getElementById('cropper-stage');
+            ['touchstart', 'touchmove'].forEach((eventName) => {
+                cropperStage.addEventListener(eventName, (event) => {
+                    if (cropper && event.target.closest('.cropper-container')) event.preventDefault();
+                }, { passive: false });
+            });
+
+            // --- 檔案處理引擎 ---
+            const handleFile = (file) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    return showToast('請上傳有效的圖片檔案 (JPG, PNG, WebP)', true);
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        unlockDashboard(file, img.src, img.naturalWidth, img.naturalHeight);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drag-active'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); 
+                dropZone.classList.remove('drag-active');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+
+            // 系統重置
+            btnReset.addEventListener('click', () => {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                fileInput.value = '';
+                imageWorkspace.src = '';
+                imageWorkspace.classList.add('hidden');
+                canvasPlaceholder.classList.remove('hidden');
+                
+                dropZone.classList.remove('hidden');
+                fileInfo.classList.add('hidden');
+                fileInfo.classList.remove('flex');
+                
+                controlCrop.classList.add('pointer-events-none', 'opacity-50');
+                controlExport.classList.add('pointer-events-none', 'opacity-50');
+
+                statNatural.textContent = 'Natural: --';
+                statCropped.textContent = 'Cropped: --';
+                
+                // Reset radios
+                document.querySelector('input[name="aspect-ratio"][value="NaN"]').checked = true;
+                customRatioBox.classList.add('hidden');
+            });
+
+            // --- 比例約束邏輯 (Aspect Ratio) ---
+            Array.from(ratioRadios).forEach(r => {
+                r.addEventListener('change', (e) => {
+                    if (!cropper) return;
+                    const val = e.target.value;
+                    
+                    if (val === 'custom') {
+                        customRatioBox.classList.remove('hidden');
+                        customRatioBox.classList.add('flex');
+                        const ratio = parseFloat(inRatioW.value) / parseFloat(inRatioH.value);
+                        cropper.setAspectRatio(ratio);
+                    } else {
+                        customRatioBox.classList.add('hidden');
+                        customRatioBox.classList.remove('flex');
+                        cropper.setAspectRatio(parseFloat(val));
+                    }
+                });
+            });
+
+            btnApplyRatio.addEventListener('click', () => {
+                if (!cropper) return;
+                const w = parseFloat(inRatioW.value);
+                const h = parseFloat(inRatioH.value);
+                if(w > 0 && h > 0) cropper.setAspectRatio(w / h);
+            });
+
+            // 畫布操作工具列
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (!cropper) return;
+                    const action = e.currentTarget.dataset.action;
+                    switch(action) {
+                        case 'zoom-in': cropper.zoom(0.1); break;
+                        case 'zoom-out': cropper.zoom(-0.1); break;
+                        case 'rotate-left': cropper.rotate(-90); break;
+                        case 'rotate-right': cropper.rotate(90); break;
+                    }
+                });
+            });
+
+            // --- 強制維度與匯出邏輯 (The Killer Feature) ---
+            toggleForceRes.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    forceResBox.classList.remove('opacity-50', 'pointer-events-none');
+                    statFinal.classList.remove('hidden');
+                    updateFinalStat();
+                    
+                    // 如果勾選了強制解析度，自動將裁切框比例鎖定為目標比例，幫助使用者精準構圖
+                    const w = parseFloat(inOutW.value) || 1;
+                    const h = parseFloat(inOutH.value) || 1;
+                    if (cropper) cropper.setAspectRatio(w / h);
+                    
+                    // 自動切換 radio UI 狀態至 custom
+                    document.querySelector('input[name="aspect-ratio"][value="custom"]').checked = true;
+                    customRatioBox.classList.remove('hidden');
+                    customRatioBox.classList.add('flex');
+                    inRatioW.value = w;
+                    inRatioH.value = h;
+                    
+                } else {
+                    forceResBox.classList.add('opacity-50', 'pointer-events-none');
+                    statFinal.classList.add('hidden');
+                    if (cropper) cropper.setAspectRatio(NaN); // 解除鎖定
+                    document.querySelector('input[name="aspect-ratio"][value="NaN"]').checked = true;
+                    customRatioBox.classList.add('hidden');
+                }
+            });
+
+            const updateFinalStat = () => {
+                const w = inOutW.value;
+                const h = inOutH.value;
+                statFinal.textContent = `Force Output: ${w} x ${h}`;
+                
+                // 同步更新自訂比例
+                inRatioW.value = w;
+                inRatioH.value = h;
+                if(cropper && toggleForceRes.checked && w>0 && h>0) cropper.setAspectRatio(w / h);
+            };
+
+            inOutW.addEventListener('input', updateFinalStat);
+            inOutH.addEventListener('input', updateFinalStat);
+
+            // 壓縮品質邏輯
+            sliderQuality.addEventListener('input', (e) => {
+                valQuality.textContent = `${Math.round(e.target.value * 100)}%`;
+            });
+            
+            Array.from(formatRadios).forEach(r => {
+                r.addEventListener('change', (e) => {
+                    if (e.target.value === 'image/png') {
+                        qualityContainer.classList.add('opacity-50', 'pointer-events-none');
+                    } else {
+                        qualityContainer.classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                });
+            });
+
+            // 執行匯出
+            btnExport.addEventListener('click', () => {
+                if (!cropper) return showToast('請先載入影像', true);
+
+                const format = document.querySelector('input[name="out-format"]:checked').value;
+                const quality = parseFloat(sliderQuality.value);
+                const isForced = toggleForceRes.checked;
+
+                let exportOptions = {
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                };
+
+                // 強制收斂維度
+                if (isForced) {
+                    const w = parseInt(inOutW.value);
+                    const h = parseInt(inOutH.value);
+                    if (w > 0 && h > 0) {
+                        exportOptions.width = w;
+                        exportOptions.height = h;
+                    }
+                }
+
+                // 產生 Final Canvas
+                const canvas = cropper.getCroppedCanvas(exportOptions);
+                if (!canvas) return showToast('裁切失敗，請檢查影像範圍', true);
+
+                // 如果原圖是 PNG (有透明通道)，但使用者選擇匯出 JPEG，背景預設會變黑。我們強制填白
+                if (format === 'image/jpeg') {
+                    const ctx = canvas.getContext('2d');
+                    // 我們需要一個新畫布來塗白底
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.width = canvas.width;
+                    newCanvas.height = canvas.height;
+                    const newCtx = newCanvas.getContext('2d');
+                    newCtx.fillStyle = '#fff';
+                    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+                    newCtx.drawImage(canvas, 0, 0);
+                    
+                    newCanvas.toBlob((blob) => { triggerDownload(blob, format); }, format, quality);
+                } else {
+                    // PNG 或 WebP (支援透明)
+                    canvas.toBlob((blob) => { triggerDownload(blob, format); }, format, quality);
+                }
+            });
+
+            const triggerDownload = (blob, format) => {
+                if (!blob) return showToast('產生檔案失敗', true);
+                
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                
+                // 決定副檔名
+                let ext = 'png';
+                if (format === 'image/jpeg') ext = 'jpg';
+                if (format === 'image/webp') ext = 'webp';
+
+                link.href = url;
+                link.download = `${currentFileName}_forged.${ext}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showToast(`影像重鑄完成 (${(blob.size / 1024).toFixed(1)} KB)`);
+            };
+
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

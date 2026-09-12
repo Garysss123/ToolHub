@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>Line Sorter｜無料オンラインツール - ToolHub</title>
+<meta content="無料のオンライン Line Sorter テキスト行ソートツールです。A→Z、Z→A、Natural Sort、Random Shuffle、Reverse Order など複数の並べ替え方式に対応します。Sort Preview では各行の移動方向を視覚的に比較できます。リスト整理、CSV、Log、プログラムコード、一般的な文章処理に適しています。" name="description"/>
+<meta content="Line Sorter, 文字排序, 行排序, Natural Sort, 自然排序, 字母排序, 排序工具, 文字整理, 線上排序, 清單排序" name="keywords"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #2DD4BF; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        /* Editor styles */
+        .editor-textarea {
+            width: 100%;
+            min-height: 320px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+            font-family: 'Fira Code', 'Noto Sans TC', ui-monospace, monospace;
+            transition: border-color 0.2s;
+            tab-size: 4;
+        }
+        .editor-textarea:focus {
+            border-color: #2DD4BF;
+            box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+        }
+        .editor-textarea::placeholder { color: #475569; }
+
+        /* Output area */
+        .output-textarea {
+            width: 100%;
+            min-height: 320px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            resize: vertical;
+            padding: 1.25rem;
+            outline: none;
+            line-height: 1.7;
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+            font-family: 'Fira Code', 'Noto Sans TC', ui-monospace, monospace;
+            tab-size: 4;
+        }
+        .output-textarea:focus {
+            border-color: #2DD4BF;
+            box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+        }
+        .output-textarea::placeholder { color: #475569; }
+
+        /* Preview output area */
+        #preview-output {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Fira Code', 'Noto Sans TC', ui-monospace, monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            tab-size: 4;
+        }
+        #preview-output .preview-line {
+            display: block;
+            padding: 1px 8px;
+            border-radius: 2px;
+            border-left: 3px solid transparent;
+            transition: background-color 0.2s;
+        }
+        #preview-output .preview-line-up {
+            background-color: rgba(251, 191, 36, 0.10);
+            border-left-color: #F59E0B;
+        }
+        #preview-output .preview-line-down {
+            background-color: rgba(59, 130, 246, 0.10);
+            border-left-color: #3B82F6;
+        }
+        #preview-output .preview-line-stay {
+            background-color: rgba(45, 212, 191, 0.06);
+            border-left-color: #2DD4BF;
+        }
+        .preview-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        .preview-badge-up {
+            background: rgba(251, 191, 36, 0.2);
+            color: #F59E0B;
+        }
+        .preview-badge-down {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3B82F6;
+        }
+        .preview-badge-stay {
+            background: rgba(45, 212, 191, 0.2);
+            color: #2DD4BF;
+        }
+
+        /* Sort mode buttons */
+        .sort-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .sort-btn:hover {
+            background: #1E293B;
+            color: #2DD4BF;
+            border-color: rgba(45, 212, 191, 0.4);
+        }
+        .sort-btn.active {
+            background: rgba(45, 212, 191, 0.15);
+            color: #2DD4BF;
+            border-color: #2DD4BF;
+            box-shadow: 0 0 10px rgba(45, 212, 191, 0.15);
+        }
+
+        /* Toggle switches */
+        .toggle-checkbox:checked ~ .toggle-bg { background-color: #2DD4BF; border-color: #2DD4BF; }
+        .toggle-checkbox:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+        .toggle-bg { transition: background-color 0.2s, border-color 0.2s; }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            transition: color 0.2s;
+        }
+        .option-label:hover {
+            color: #e2e8f0;
+        }
+
+        /* Stat cards */
+        .stat-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem 0.75rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(45, 212, 191, 0.3);
+        }
+        .stat-card .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2DD4BF;
+            font-family: 'Fira Code', ui-monospace, monospace;
+        }
+        .stat-card .stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        /* Action buttons */
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .action-btn-primary {
+            background: rgba(45, 212, 191, 0.2);
+            border: 1px solid rgba(45, 212, 191, 0.5);
+            color: #2DD4BF;
+        }
+        .action-btn-primary:hover {
+            background: rgba(45, 212, 191, 0.3);
+            box-shadow: 0 0 15px rgba(45, 212, 191, 0.15);
+        }
+
+        .action-btn-copy {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            color: #94a3b8;
+        }
+        .action-btn-copy:hover {
+            background: #1E293B;
+            color: #2DD4BF;
+            border-color: #2DD4BF;
+        }
+
+        .action-btn-download {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34D399;
+        }
+        .action-btn-download:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+
+        .action-btn-clear {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #F87171;
+        }
+        .action-btn-clear:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .action-btn-sample {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #60A5FA;
+        }
+        .action-btn-sample:hover {
+            background: rgba(59, 130, 246, 0.25);
+        }
+
+        /* View mode buttons */
+        .view-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: #151F32;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .view-btn:hover {
+            background: #1E293B;
+            color: #2DD4BF;
+            border-color: rgba(45, 212, 191, 0.4);
+        }
+        .view-btn.active {
+            background: rgba(45, 212, 191, 0.15);
+            color: #2DD4BF;
+            border-color: #2DD4BF;
+            box-shadow: 0 0 10px rgba(45, 212, 191, 0.15);
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 4px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+
+        /* FAQ */
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+
+        /* SEO Article Styles */
+        .seo-article h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+        }
+        .seo-article h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #2DD4BF;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .seo-article p {
+            color: #94a3b8;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+        .seo-article ul, .seo-article ol {
+            color: #94a3b8;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+        .seo-article li { margin-bottom: 0.5rem; }
+        .seo-article code {
+            background: #1e293b;
+            color: #2DD4BF;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Fira Code', ui-monospace, monospace;
+            font-size: 0.85em;
+        }
+        .seo-article strong { color: #e2e8f0; }
+        .seo-article .highlight-box {
+            background: rgba(45, 212, 191, 0.05);
+            border-left: 3px solid #2DD4BF;
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .editor-textarea { min-height: 200px; }
+            .output-textarea { min-height: 200px; }
+            #preview-output { min-height: 200px; }
+            .stat-card .stat-value { font-size: 1.2rem; }
+        }
+    </style>
+<!-- SEO Structural Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/line-sorter/" property="og:url"/>
+<meta content="Line Sorter｜無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="無料のオンライン Line Sorter テキスト行ソートツールです。A→Z、Z→A、Natural Sort、Random Shuffle、Reverse Order など複数の並べ替え方式に対応します。Sort Preview では各行の移動方向を視覚的に比較できます。リスト整理、CSV、Log、プログラムコード、一般的な文章処理に適しています。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Line Sorter｜無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="無料のオンライン Line Sorter テキスト行ソートツールです。A→Z、Z→A、Natural Sort、Random Shuffle、Reverse Order など複数の並べ替え方式に対応します。Sort Preview では各行の移動方向を視覚的に比較できます。リスト整理、CSV、Log、プログラムコード、一般的な文章処理に適しています。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"行ソートツール","url":"https://toolhuben.com/ja/line-sorter/","description":"無料のオンライン Line Sorter テキスト行ソートツールです。A→Z、Z→A、Natural Sort、Random Shuffle、Reverse Order など複数の並べ替え方式に対応します。Sort Preview では各行の移動方向を視覚的に比較できます。リスト整理、CSV、Log、プログラムコード、一般的な文章処理に適しています。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"行ソートツール","item":"https://toolhuben.com/ja/line-sorter/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","[System Error] 模組":"[System Error] Module","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","切換到 Preview 模式檢視排序視覺化":"Preview モードへ切り替えて、並べ替え後の可視化を確認します","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","已排序完成 (":"並べ替え済み（","已清除所有內容":"すべてのコンテンツをクリアしました","已經沒有內容了":"コンテンツがありません","已複製到剪貼簿":"クリップボードにコピーしました","已下載 CSV 檔案":"CSV ファイルをダウンロードしました","已下載 TXT 檔案":"TXT ファイルをダウンロードしました","已載入範例資料":"サンプルデータを読み込みました","建立理念":"創業時の理念","建議":"推奨事項","沒有可下載的內容":"ダウンロード可能なコンテンツがありません","沒有可複製的內容":"コピーする内容がありません","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","行)":"OK）","請先執行排序操作":"先に並べ替えを実行してください","請先輸入文字":"先にテキストを入力してください","載入失敗:":"読み込みに失敗しました：","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","沒有足夠的資料行進行預覽":"preview するための情報が不足しています。","請先輸入文字再執行排序":"並べ替える前にテキストを入力してください","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/line-sorter/" rel="canonical"/><link href="https://toolhuben.com/line-sorter/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/line-sorter/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/line-sorter/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/line-sorter/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="aurora" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#2DD4BF;--classic-accent-rgb:45,212,191">
+<!-- 1. Header -->
+<div id="component-header"></div>
+<!-- 2. Sidebar -->
+<div id="component-sidebar"></div>
+<!-- 3. Core Module: Line Sorter -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- Module Title -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-sorter-primary">
+<span class="flex w-2 h-2 bg-sorter-primary rounded-full animate-pulse mr-2"></span>
+                並べ替え・整理 · 即時ソートエンジン
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                行ソートツール <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">テキスト行並べ替えツール</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-3xl mx-auto leading-relaxed">
+                テキストをさまざまなルールですばやく並べ替えます。アルファベット順、自然順、ランダムシャッフル、逆順に対応します。<br class="hidden sm:block"/>
+                組み込み <strong class="text-sorter-primary">並べ替えプレビュー</strong> 各行がどの方向へ移動したかを視覚的に示し、並べ替え前後の違いを分かりやすく確認できます。
+            </p>
+</div>
+<!-- Main Tool Area -->
+<div class="bg-hub-800/80 backdrop-blur-sm border border-hub-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+<!-- Mode Tabs -->
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<i class="ph ph-arrows-down-up text-sorter-primary text-sm"></i>
+<span class="text-xs font-bold text-sorter-primary uppercase tracking-widest">表示モード</span>
+</div>
+<div class="flex items-center gap-1 sm:gap-2">
+<button class="view-btn active" data-view="result" id="view-result">
+<i class="ph ph-text-align-left mr-1 text-xs"></i>結果
+                    </button>
+<button class="view-btn" data-view="preview" id="view-preview">
+<i class="ph ph-sort-ascending mr-1 text-xs"></i>プレビュー
+                    </button>
+</div>
+</div>
+<!-- Tool Content -->
+<div class="flex flex-col lg:flex-row min-h-[500px]">
+<!-- ===== LEFT PANEL: Input (Before) ===== -->
+<div class="w-full lg:w-1/2 p-4 sm:p-6 flex flex-col gap-4 border-b lg:border-b-0 lg:border-r border-hub-700">
+<!-- Input Label Row -->
+<div class="flex items-center justify-between">
+<label class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-text-align-left text-sorter-primary text-lg"></i> 前
+                        </label>
+<span class="text-xs text-slate-500 font-mono" id="input-stats">0行 · 0文字</span>
+</div>
+<!-- Input Textarea -->
+<div class="flex flex-col gap-3" id="input-panel">
+<textarea class="editor-textarea" id="input-textarea" placeholder="ここに text を 1 行 1 item で入力... 対応：plain text、CSV、Markdown、Log、code 例：Orange Apple Banana 10. Item 10 2. Item 2 1. Item 1" spellcheck="false"></textarea>
+</div>
+<!-- Sort Method -->
+<div class="bg-hub-900/50 rounded-xl p-4 border border-hub-700">
+<div class="flex items-center gap-2 mb-3">
+<i class="ph ph-faders-horizontal text-sorter-primary text-sm"></i>
+<span class="text-xs font-bold text-white uppercase tracking-wider">並べ替え基準</span>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+<button class="sort-btn active" data-sort="az" id="sort-az">
+<i class="ph ph-sort-ascending mr-1"></i>A → Z
+                            </button>
+<button class="sort-btn" data-sort="za" id="sort-za">
+<i class="ph ph-sort-descending mr-1"></i>Z → A
+                            </button>
+<button class="sort-btn" data-sort="natural" id="sort-natural">
+<i class="ph ph-list-numbers mr-1"></i>Natural Sort
+                            </button>
+<button class="sort-btn" data-sort="reverse" id="sort-reverse">
+<i class="ph ph-arrow-arc-left mr-1"></i>逆順
+                            </button>
+<button class="sort-btn" data-sort="shuffle" id="sort-shuffle">
+<i class="ph ph-shuffle mr-1"></i>Random Shuffle
+                            </button>
+</div>
+<!-- Options -->
+<div class="flex items-center gap-2 mb-2">
+<i class="ph ph-sliders-horizontal text-sorter-primary text-sm"></i>
+<span class="text-xs font-bold text-white uppercase tracking-wider">オプション</span>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-ignore-case" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                大文字・小文字を無視
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-ignore-leading" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                先頭を無視
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-ignore-trailing" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                末尾を無視
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-remove-empty" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                空行を削除
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-keep-header" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                ヘッダー（1 行目）を保持
+                            </label>
+<label class="option-label">
+<div class="relative">
+<input class="sr-only toggle-checkbox" id="opt-remove-duplicates" type="checkbox"/>
+<div class="block bg-hub-800 border border-hub-700 w-8 h-5 rounded-full transition-colors toggle-bg"></div>
+<div class="toggle-dot absolute left-0.5 top-0.5 bg-slate-400 w-4 h-4 rounded-full"></div>
+</div>
+                                重複を削除
+                            </label>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-wrap items-center gap-2 pt-2">
+<button class="action-btn action-btn-primary text-sm px-5 py-2.5" id="btn-sort">
+<i class="ph ph-sort-ascending"></i> 今すぐ並べ替え
+                        </button>
+<button class="action-btn action-btn-copy" id="btn-copy">
+<i class="ph ph-copy"></i> コピー
+                        </button>
+<button class="action-btn action-btn-download" id="btn-download-txt">
+<i class="ph ph-download-simple"></i> TXT
+                        </button>
+<button class="action-btn action-btn-download" id="btn-download-csv">
+<i class="ph ph-file-csv"></i> CSV
+                        </button>
+<button class="action-btn action-btn-clear" id="btn-clear">
+<i class="ph ph-trash"></i> クリア
+                        </button>
+<button class="action-btn action-btn-sample" id="btn-sample">
+<i class="ph ph-file-text"></i> サンプル
+                        </button>
+</div>
+</div>
+<!-- ===== RIGHT PANEL: Output (After) ===== -->
+<div class="w-full lg:w-1/2 p-4 sm:p-6 flex flex-col gap-4">
+<!-- Output Label Row -->
+<div class="flex items-center justify-between">
+<label class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph ph-check-square text-sorter-primary text-lg"></i> 後
+                        </label>
+<span class="text-xs text-slate-500 font-mono" id="output-stats-label">0行 · 0文字</span>
+</div>
+<!-- RESULT VIEW: Output Textarea -->
+<div class="flex flex-col gap-3 flex-grow" id="view-result-panel">
+<textarea class="output-textarea flex-grow" id="output-textarea" placeholder="並べ替え結果がここに表示されます..." readonly=""></textarea>
+<!-- Statistics -->
+<div class="grid grid-cols-4 gap-2 sm:gap-3">
+<div class="stat-card">
+<div class="stat-value" id="stat-original">0</div>
+<div class="stat-label">元の行数</div>
+</div>
+<div class="stat-card">
+<div class="stat-value" id="stat-sorted">0</div>
+<div class="stat-label">並べ替え後の行数</div>
+</div>
+<div class="stat-card">
+<div class="stat-value" id="stat-removed">0</div>
+<div class="stat-label">行を削除</div>
+</div>
+<div class="stat-card">
+<div class="stat-value" id="stat-sort-type">—</div>
+<div class="stat-label">並べ替え基準</div>
+</div>
+</div>
+</div>
+<!-- PREVIEW VIEW: Visual preview with movement indicators -->
+<div class="hidden flex-col gap-3 flex-grow" id="view-preview-panel">
+<div class="flex items-center gap-3 text-xs text-slate-500 mb-1">
+<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-amber-500/20 border border-amber-500/40 inline-block"></span> ↑ 上へ移動</span>
+<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-blue-500/20 border border-blue-500/40 inline-block"></span> ↓ 下へ移動</span>
+<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-teal-500/20 border border-teal-400/40 inline-block"></span> ✓ 位置は変更されません</span>
+</div>
+<div class="bg-[#0f172a] border border-[#1e293b] rounded-xl p-4 overflow-auto flex-grow custom-scrollbar" style="min-height: 320px; max-height: 500px;">
+<div id="preview-output">
+<span class="text-slate-500">Preview モードへ切り替えて、並べ替え後の可視化を確認します</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== FAQ SECTION ===== -->
+<div class="mt-12 max-w-4xl mx-auto">
+<div class="text-center mb-8">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-2">❓ FAQ <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">FAQ</span></h2>
+<p class="text-slate-400 text-sm">text line sorting と natural sorting に関するよくある質問</p>
+</div>
+<div class="space-y-3">
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>Alphabetical Sort とは何ですか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">アルファベット順</strong> 最も基本的なテキスト並べ替え方式で、文字の Unicode / ASCII コード順に並べます。英字であれば A、B、C…Z の順になります。</p>
+<div class="highlight-box mt-2">
+<p><strong class="text-sorter-primary">例：</strong></p>
+<p class="mt-1">元の順序：Orange → Apple → Banana</p>
+<p><strong class="text-white">ソート後 A → Z</strong>：Apple → Banana → Orange</p>
+<p><strong class="text-white">並べ替え後 Z → A</strong>：オレンジ → バナナ → りんご</p>
+</div>
+<p class="mt-2">アルファベット順は最も直感的な並べ替え方法で、多くのテキスト整理に適しています。ただし注意点があり、既定のアルファベット順では大文字の ASCII コードが小さいため、大文字が小文字より先に並びます。使用する <strong class="text-sorter-primary">大文字・小文字を無視</strong> Options でこの問題を解決できます。</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>the difference between Natural Sort and Alphabetical Sort とは何ですか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Natural Sort</strong> より「人間らしい」並べ替え方式で、数字を正しく認識して数値の大小で並べ替えます。アルファベット順のように数字を文字として 1 桁ずつ比較することはありません。</p>
+<div class="highlight-box mt-2">
+<p><strong class="text-sorter-primary">例 — アルファベット順と自然順の違い：</strong></p>
+<p class="mt-1">元の順序：Item 1 → Item 2 → Item 10 → Item 20</p>
+<p class="mt-2"><strong class="text-white">アルファベット順</strong>：Item 1 → Item 10 → Item 2 → Item 20 ❌</p>
+<p><strong class="text-white">Natural Sort</strong>：項目 1 → 項目 2 → 項目 10 → 項目 20 ✅</p>
+</div>
+<p class="mt-2">アルファベット順ソートでは文字を 1 文字ずつ比較します。たとえば '1' &lt; '2' のため、「Item 10」と「Item 2」を比較すると先頭の '1' が '2' より小さく、「Item 10」が先に並びます。Natural Sort なら「10」と「2」を数値として正しく認識し、数値順に並べられます。</p>
+<p class="mt-2"><strong class="text-white">Natural Sort はどのような場合に使いますか？</strong> バージョン番号、章番号、数字入りファイル名など、データ内に数値が含まれる場合は、Alphabetical Sort より Natural Sort の方が直感的な並びになります。</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>テキストの並べ替えが必要なのはどんなときですか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p>テキストの並べ替えは、日常作業から専門用途まで幅広く実用的です。</p>
+<ul class="list-disc pl-5 mt-2 space-y-1">
+<li><strong class="text-white">📋 リストと一覧の整理</strong> — 顧客リスト、会員リスト、商品リストなどをアルファベット順に並べ、検索・比較しやすくします。</li>
+<li><strong class="text-white">📊 CSV データ処理</strong> — CSV のデータ行を並べ替え、データを整理して後続の分析を行いやすくします</li>
+<li><strong class="text-white">📝 AI 出力の整理</strong> — AI が生成したリストや提案は順序に意味がないことも多く、並べ替えると読みやすくなります。</li>
+<li><strong class="text-white">💻 コードと設定ファイル</strong> — import statement、CSS property、設定項目などを並べ替え、code style を一貫させます。</li>
+<li><strong class="text-white">🔍 ログ分析</strong> — Log のエラーメッセージをアルファベット順に並べ、異なる種類の問題をすばやく見つけます。</li>
+<li><strong class="text-white">📚 参考資料集</strong> — bibliography、reference、link list をアルファベット順に並べ、参照しやすくします。</li>
+</ul>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>Sort Preview? How can I help とは何ですか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">並べ替えプレビュー</strong> ToolHub Line Sorter 独自の可視化機能です。並べ替え後の結果だけを表示する一般的なツールとは異なり、Sort Preview は各テキスト行が並べ替えによってどちらへ移動したかを 1 行ずつ示します：</p>
+<div class="highlight-box mt-2">
+<p><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-500/20 text-amber-400 text-xs font-bold mr-1">↑</span> その行を示します <strong class="text-amber-400">上へ移動</strong></p>
+<p><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-blue-500/20 text-blue-400 text-xs font-bold mr-1">↓</span> その行を示します <strong class="text-blue-400">下へ移動</strong></p>
+<p><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-teal-500/20 text-teal-400 text-xs font-bold mr-1">✓</span> その行を示します <strong class="text-teal-400">場所は変更されません</strong></p>
+</div>
+<p class="mt-2">この機能は特に次の用途に適しています。</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-white">教育と学習</strong> — sorting algorithm が text をどう並べ替えるか直感的に理解できます。</li>
+<li><strong class="text-white">データ検証</strong> — sorting result が期待どおりかすばやく確認します。</li>
+<li><strong class="text-white">プレゼンテーションと発表資料</strong> — チームへソート前後の違いを示す場合、視覚的な marker を付けると比較しやすくなります。</li>
+</ul>
+<p class="mt-2">💡 ヒント：先に並べ替えを実行し、その後 Preview モードへ切り替えると、各テキスト行の移動軌跡を確認できます。</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>Keep Header 機能は何をしますか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Keep Header（ヘッダー行を保持）</strong> first row を「title row」に設定すると sort 対象から除外され、常に 1 行目へ保持されます。</p>
+<p class="mt-2">これは次の作業で役立ちます：</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-white">CSV ファイル</strong> — field name の行（例：Name、Email、Phone）は sort 対象に含めないでください。</li>
+<li><strong class="text-white">テーブル情報</strong> — table の header row を常に上部へ固定します。</li>
+<li><strong class="text-white">Markdown テーブル</strong> — ヘッダー行と区切り行は並べ替えの対象になりません</li>
+</ul>
+<div class="highlight-box mt-2">
+<p><strong class="text-sorter-primary">例：</strong></p>
+<p class="mt-1">Keep Header を有効にすると、最初の行は <code class="text-white">Name, Score</code> は先頭に残り、残りの data row が sort されます。</p>
+</div>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>Random Shuffle にはどのような実用的な用途がありますか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">Random Shuffle</strong> すべての行をランダムにシャッフルします。実行するたびに異なる並び順になります。</p>
+<p class="mt-2">実際の利用シーンには次のようなものがあります。</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li><strong class="text-white">🎯 抽選とランダム選択</strong> — participant list をランダムに shuffle してから抽選します。</li>
+<li><strong class="text-white">📚 学習とクイズ</strong> — 質問順をランダムに並べ、記憶による影響を減らします。</li>
+<li><strong class="text-white">🔬 実験的ランダム化</strong> — scientific experiment で sample group をランダムに割り当てます。</li>
+<li><strong class="text-white">🎮 ゲーム開発</strong> — game level や item list をランダムに並べ替えます。</li>
+<li><strong class="text-white">🗳️ 公平な分配</strong> — 判定順や投票リストをランダム化し、公平性を高めます。</li>
+</ul>
+<p class="mt-2"><strong class="text-white">技術原理：</strong> Random Shuffle には Fisher-Yates shuffle algorithm を使用します。これは効率的かつ均等なランダム並べ替え手法で、各順列が同じ確率で現れるようにします。</p>
+</div>
+</details>
+<details class="faq-item bg-hub-800/60 border border-hub-700 rounded-xl overflow-hidden">
+<summary class="px-5 py-4 flex items-center justify-between text-sm font-medium text-white hover:bg-hub-700/30 transition-colors">
+<span>この tool の data は安全ですか？information は upload されますか？</span>
+<svg class="faq-chevron w-4 h-4 text-slate-500 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</summary>
+<div class="px-5 pb-4 text-sm text-slate-400 leading-relaxed border-t border-hub-700 pt-3">
+<p><strong class="text-white">完全に安全です！</strong> ToolHub の Line Sorter は <strong class="text-sorter-primary">純粋なフロントエンドツール</strong>, 入力したテキストデータはすべてブラウザ内で処理され、サーバーへアップロードされません。</p>
+<p class="mt-2">つまり：</p>
+<ul class="list-disc pl-5 mt-1 space-y-1">
+<li>ページ読み込み後は、オフラインでもツールを利用できます</li>
+<li>データがコンピューター外へ送信されることはありません</li>
+<li>登録やアカウントへのログインは不要です</li>
+<li>顧客 list や社内 data など機密情報を扱う場合でも、外部へ送信しないローカル処理なら漏えいリスクを抑えられます。</li>
+</ul>
+<p class="mt-2">💡 Random Shuffle では、並べ替えるたびに異なるランダム結果になるのが正常です。同じ順序を再現する必要がある場合は、生成した並び順を手動で記録しておくことをおすすめします。</p>
+</div>
+</details>
+</div>
+</div>
+<!-- ===== SEO ARTICLE ===== -->
+<div class="mt-12 max-w-4xl mx-auto seo-article">
+<div class="text-center mb-8">
+<h2 class="text-2xl md:text-3xl font-bold text-white mb-2">📖 テキスト行の並べ替え完全ガイド</h2>
+<p class="text-slate-400 text-sm">text sorting の原理、sorting algorithm、利用シーンを深く理解できます</p>
+</div>
+<div class="bg-hub-800/60 border border-hub-700 rounded-2xl p-6 sm:p-8">
+<h2>なぜテキストを並べ替える必要がありますか？</h2>
+<p>情報量が爆発的に増えた現在、私たちは毎日大量のテキスト情報を扱います。AI の出力、CSV table、server log、code など、対象はさまざまです。<strong>整理された情報</strong> 整理されていない情報より、並び順が整った情報の方が常に理解・分析しやすくなります。ソートはデータ処理における最も基本的で重要な操作の一つで、無秩序なデータを意味のある順序へ変換し、検索や閲覧の効率を大きく高めます。</p>
+<p>認知心理学の研究では、人間の脳は無秩序な情報よりも、整理された情報を処理するときのほうが理解・記憶しやすいとされています。 <strong>40% 超</strong>. そのため sorting は data analysis、file management、daily work で重要な役割を持ちます。</p>
+<div class="highlight-box">
+<p><strong>💡 基本原則：</strong> 並べ替えはデータを「整える」だけではなく、強力なデータ分析手段でもあります。ソートすることで、パターン、外れ値、分布傾向をすばやく見つけられます。</p>
+</div>
+<h2>ソートアルゴリズムの基本原理</h2>
+<p>Line Sorter のソートエンジンは、選択した並べ替えモードに応じて対応するアルゴリズムを使用します。</p>
+<h3>🔤 アルファベット順</h3>
+<p>アルファベット順の並べ替えは、文字の Unicode コード値を比較して順序を決める方式です。JavaScript の Array.sort() はデフォルトで全要素を文字列へ変換し、UTF-16 コード値に基づいて並べ替えます。これは最も基本的で高速な方法で、純粋なテキスト内容のソートに適しています。</p>
+<p><strong class="text-white">時間計算量:</strong> O(n log n) — クイックソートまたはマージソートを使用</p>
+<h3>🔢 Natural Sort</h3>
+<p>Natural sorting は alphabetical sorting を拡張した方式で、数字を <code class="text-white">localeCompare</code> メソッドと有効化 <code class="text-white">numeric: true</code> この option を有効にすると、ソートエンジンが文字列中の数値部分を正しく認識して比較できます。たとえば「Item 2」と「Item 10」を比較すると、natural sorting は文字 '2' と '1' を順番に比べるのではなく、「2」と「10」を数値 2 と 10 として比較します。</p>
+<p><strong class="text-white">適用シーン：</strong> バージョン番号の並べ替え（v1.0、v1.10、v2.0）、数字を含むファイル名（photo-1、photo-2、photo-10）、章番号（Chapter 1、Chapter 2、Chapter 10）などに使えます。</p>
+<h3>🎲 ランダムシャッフル（random shuffle）</h3>
+<p>Random Shuffle は古典的な <strong class="text-white">Fisher-Yates シャッフルアルゴリズム</strong>Knuth Shuffle とも呼ばれるアルゴリズムで、配列の末尾から順に、まだ処理していない要素をランダムに 1 つ選んで現在位置の要素と交換します。これにより、各要素が各位置へ現れる確率を均等にできます。</p>
+<p><strong class="text-white">時間計算量:</strong> O(n) — 線形時間で非常に効率的</p>
+<h3>🔄 逆順</h3>
+<p>Reverse Order は現在の行順をそのまま逆転します。配列要素の順序を反転する単純な O(n) 操作で、ソート方向をすばやく変更したり、特定の並びへ戻したりする用途に使えます。</p>
+<h2>Sort Preview — sorting difference を視覚化します。</h2>
+<p>ToolHub Line Sorter <strong class="text-sorter-primary">並べ替えプレビュー</strong> この機能は、市場でも珍しい並べ替えの可視化ツールです。一般的なソートツールは「Before」と「After」の 2 状態しか示さず、ユーザー自身が差を比較する必要があります。Sort Preview では 3 色のマーカーを使い、各テキスト行がどこへ移動したかを視覚的に表示します：</p>
+<ul>
+<li><strong class="text-amber-400">↑ アンバー</strong> — 並べ替え後に行が上へ移動します（順位向上）</li>
+<li><strong class="text-blue-400">↓ 青</strong> — sort 後に row が下がります（ranking が低下）。</li>
+<li><strong class="text-teal-400">✓ シアン</strong> — 並べ替え後も行の位置は変わりません</li>
+</ul>
+<p>実装原理は、ソート前に各行の元のインデックス位置を記録し、ソート後の各項目について新しい位置と元の位置との差を比較し、移動方向と移動量に応じて印を付けるというものです。この可視化によってソート結果を一目で把握でき、ソートアルゴリズムを理解するための優れた教材にもなります。</p>
+<h2>テキスト並べ替えの活用場面</h2>
+<h3>📊 データ分析と CSV 並べ替え</h3>
+<p>data analysis において sorting は最も基本的かつ頻繁に使われる操作の一つです。CSV を特定 field で並べ替えることで analyst は：</p>
+<ul>
+<li>データ内の最大値と最小値をすばやく見つけます</li>
+<li>データ分布の傾向とパターンを特定します</li>
+<li>類似する情報を分類</li>
+<li>後続のデータ可視化に備えます</li>
+</ul>
+<p>Line Sorter の使い方 <strong class="text-sorter-primary">ヘッダーを保持</strong> sort 後も CSV の field name row を常に先頭へ固定するための機能です。</p>
+<h3>📝 AI 出力の後処理</h3>
+<p>ChatGPT や Claude などの AI 言語モデルがリスト、提案、構造化コンテンツを生成する場合、出力順序は論理的順序ではなく、モデル内部の確率分布に左右されることが多くあります。Line Sorter を使うと、</p>
+<ul>
+<li>AI が生成したリストをアルファベット順に並べ、読みやすさを向上します。</li>
+<li>数字を含む version update record の整理には Natural Sort を使います。</li>
+<li>Remove Duplicates を使い、AI が生成した可能性のある重複項目を削除できます。</li>
+<li>Random Shuffle でアイデアをランダムに並べ替え、思考の固定化を崩す用途にも使えます。</li>
+</ul>
+<h3>💻 プログラムコードの品質維持</h3>
+<p>software development では一貫した coding style が team collaboration の基礎になります。Line Sorter は developer の次の作業を支援します：</p>
+<ul>
+<li><strong class="text-white">import 文を並べ替え</strong> — import order を統一し、merge conflict を減らします。</li>
+<li><strong class="text-white">CSS プロパティを整理</strong> — CSS プロパティをアルファベット順に並べ、可読性を高めます</li>
+<li><strong class="text-white">ソートプロファイル</strong> — JSON または YAML 設定ファイルのキーと値のペアを並べ替えます</li>
+<li><strong class="text-white">重複した定義を整理します</strong> — Remove Duplicates を使い、重複した program definition を検出・削除します。</li>
+</ul>
+<h2>並べ替えのベストプラクティス</h2>
+<p>より良い並べ替え結果を得るには、次の原則に従うことを推奨します：</p>
+<ol>
+<li><strong class="text-white">正しいソートモードを選択します</strong> — 純粋な文字列には Alphabetical Sort、数字を含む場合は Natural Sort を使います。</li>
+<li><strong class="text-white">Ignore Case をうまく活用します</strong> — 大文字・小文字の差が重要でない場合は Ignore Case を有効にし、ソートへの影響を避けてください。</li>
+<li><strong class="text-white">前後の余分な空白を削除</strong> — Ignore Leading / Trailing Spaces を有効にし、見えない空白文字がソート結果へ影響しないようにします。</li>
+<li><strong class="text-white">ヘッダー行を保持</strong> — CSV や表データを扱う場合は、必ず Keep Header を有効にしてください</li>
+<li><strong class="text-white">空行と重複を削除</strong> — ソート前に空行と重複行を削除すると、結果をよりきれいに整理できます。</li>
+<li><strong class="text-white">Preview で確認</strong> — sort 実行後は Preview mode に切り替え、各 row の移動方向が想定どおりか確認してください。</li>
+</ol>
+<div class="highlight-box">
+<p><strong>📌 実用的なアドバイス：</strong> 重要なデータを処理する前に Sample Data でサンプルを読み込み、各ソート方式の動作を確認してから実データへ適用することを推奨します。Line Sorter は完全なフロントエンド構成で、データを外部へ送信せず安全に処理できます。左側にテキストを入力して、スマートソートの機能を試してみてください。</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-sorter-primary" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 4. Footer -->
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- System Init Script -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error(`[System Error] 模組 ${filePath} 載入失敗:`, error);
+            }
+        }
+
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/line-sorter';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation();
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- Line Sorter Business Logic -->
+<!-- ========================================== -->
+<style>
+        input[type="checkbox"]:checked ~ .toggle-bg { background-color: #2DD4BF; border-color: #2DD4BF; }
+        input[type="checkbox"]:checked ~ .toggle-dot { transform: translateX(100%); background-color: white; }
+        .toggle-dot { transition: transform 0.2s; }
+        .toggle-bg { transition: background-color 0.2s, border-color 0.2s; }
+    </style>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM References ---
+            const inputTextarea = document.getElementById('input-textarea');
+            const outputTextarea = document.getElementById('output-textarea');
+            const previewOutput = document.getElementById('preview-output');
+            const viewResultPanel = document.getElementById('view-result-panel');
+            const viewPreviewPanel = document.getElementById('view-preview-panel');
+            const viewResultBtn = document.getElementById('view-result');
+            const viewPreviewBtn = document.getElementById('view-preview');
+
+            const statOriginal = document.getElementById('stat-original');
+            const statSorted = document.getElementById('stat-sorted');
+            const statRemoved = document.getElementById('stat-removed');
+            const statSortType = document.getElementById('stat-sort-type');
+            const inputStats = document.getElementById('input-stats');
+            const outputStatsLabel = document.getElementById('output-stats-label');
+
+            const btnSort = document.getElementById('btn-sort');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnDownloadTxt = document.getElementById('btn-download-txt');
+            const btnDownloadCsv = document.getElementById('btn-download-csv');
+            const btnClear = document.getElementById('btn-clear');
+            const btnSample = document.getElementById('btn-sample');
+
+            const sortBtns = {
+                az: document.getElementById('sort-az'),
+                za: document.getElementById('sort-za'),
+                natural: document.getElementById('sort-natural'),
+                reverse: document.getElementById('sort-reverse'),
+                shuffle: document.getElementById('sort-shuffle'),
+            };
+
+            const optIgnoreCase = document.getElementById('opt-ignore-case');
+            const optIgnoreLeading = document.getElementById('opt-ignore-leading');
+            const optIgnoreTrailing = document.getElementById('opt-ignore-trailing');
+            const optRemoveEmpty = document.getElementById('opt-remove-empty');
+            const optKeepHeader = document.getElementById('opt-keep-header');
+            const optRemoveDuplicates = document.getElementById('opt-remove-duplicates');
+
+            let currentSort = 'az';
+            let lastSortResult = null; // Cache for preview
+
+            // --- Sample Data ---
+            const SAMPLE_DATA = `Orange
+Apple
+Banana
+10. Item 10
+2. Item 2
+1. Item 1
+Grape
+Watermelon
+Strawberry
+Kiwi
+Peach
+Mango
+Cherry
+Papaya
+Blueberry
+20. Item 20
+3. Item 3`;
+
+            // --- Sort Mode Labels ---
+            const SORT_LABELS = {
+                az: 'A→Z',
+                za: 'Z→A',
+                natural: 'Natural',
+                reverse: 'Reverse',
+                shuffle: 'Shuffle',
+            };
+
+            // --- Core Sorting Logic ---
+            const sortLines = (text, options) => {
+                let lines = text.split('\n');
+                const { sortMode, ignoreCase, ignoreLeading, ignoreTrailing, removeEmpty, keepHeader, removeDuplicates } = options;
+
+                // Track original positions for preview
+                let items = lines.map((line, index) => {
+                    let processed = line;
+                    if (ignoreLeading) processed = processed.trimStart();
+                    if (ignoreTrailing) processed = processed.trimEnd();
+                    if (ignoreCase) processed = processed.toLowerCase();
+                    return { original: line, processed, index };
+                });
+
+                let headerLine = null;
+                let headerProcessed = null;
+                if (keepHeader && items.length > 0 && items[0].original.trim()) {
+                    headerLine = items[0].original;
+                    headerProcessed = items[0].processed;
+                    items = items.slice(1);
+                }
+
+                // Remove empty lines if needed
+                if (removeEmpty) {
+                    items = items.filter(item => item.original.trim().length > 0);
+                }
+
+                const preSortCount = items.length;
+
+                // Remove duplicates if needed
+                if (removeDuplicates) {
+                    const seen = new Set();
+                    const deduped = [];
+                    for (const item of items) {
+                        const key = ignoreCase ? item.processed.toLowerCase() : item.processed;
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            deduped.push(item);
+                        }
+                    }
+                    items = deduped;
+                }
+
+                const dedupRemovedCount = preSortCount - items.length;
+
+                // Perform sort
+                switch (sortMode) {
+                    case 'az':
+                        items.sort((a, b) => {
+                            const aVal = a.processed;
+                            const bVal = b.processed;
+                            if (ignoreCase) return aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+                            return aVal.localeCompare(bVal);
+                        });
+                        break;
+                    case 'za':
+                        items.sort((a, b) => {
+                            const aVal = a.processed;
+                            const bVal = b.processed;
+                            if (ignoreCase) return bVal.toLowerCase().localeCompare(aVal.toLowerCase());
+                            return bVal.localeCompare(aVal);
+                        });
+                        break;
+                    case 'natural':
+                        items.sort((a, b) => {
+                            const aVal = a.processed;
+                            const bVal = b.processed;
+                            return aVal.localeCompare(bVal, undefined, {
+                                numeric: true,
+                                sensitivity: ignoreCase ? 'base' : 'variant',
+                            });
+                        });
+                        break;
+                    case 'reverse':
+                        items.reverse();
+                        break;
+                    case 'shuffle':
+                        // Fisher-Yates shuffle
+                        for (let i = items.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [items[i], items[j]] = [items[j], items[i]];
+                        }
+                        break;
+                }
+
+                // Re-prepend header
+                if (headerLine !== null) {
+                    items.unshift({ original: headerLine, processed: headerProcessed, index: -1, isHeader: true });
+                }
+
+                const sortedText = items.map(item => item.original).join('\n');
+                const emptyRemoved = removeEmpty ? (lines.length - items.length - (headerLine !== null ? 1 : 0)) : 0;
+
+                return {
+                    items,
+                    sortedText,
+                    originalCount: lines.length,
+                    sortedCount: items.length,
+                    removedCount: dedupRemovedCount + (removeEmpty ? emptyRemoved : 0),
+                    sortLabel: SORT_LABELS[sortMode] || '—',
+                    dedupRemoved: dedupRemovedCount,
+                    emptyRemoved: removeEmpty ? emptyRemoved : 0,
+                };
+            };
+
+            // --- Generate Preview HTML ---
+            const generatePreview = (items) => {
+                // Build position map: for each starting line index, find where it ended up
+                const nonHeaderItems = items.filter(item => !item.isHeader);
+                if (nonHeaderItems.length === 0) {
+                    return '<span class="text-slate-500">沒有足夠的資料行進行預覽</span>';
+                }
+
+                const originalIndices = nonHeaderItems.map(item => item.index);
+                const sortedIndices = nonHeaderItems.map((_, newPos) => originalIndices[newPos]);
+
+                // Find the min and max index for normalization
+                const minIndex = Math.min(...originalIndices);
+                const maxIndex = Math.max(...originalIndices);
+
+                let html = '';
+                for (let newPos = 0; newPos < nonHeaderItems.length; newPos++) {
+                    const item = nonHeaderItems[newPos];
+                    const origPos = item.index;
+                    let badge, badgeClass, lineClass;
+
+                    if (newPos === origPos) {
+                        badge = '✓';
+                        badgeClass = 'preview-badge-stay';
+                        lineClass = 'preview-line-stay';
+                    } else if (newPos < origPos) {
+                        badge = '↑';
+                        badgeClass = 'preview-badge-up';
+                        lineClass = 'preview-line-up';
+                    } else {
+                        badge = '↓';
+                        badgeClass = 'preview-badge-down';
+                        lineClass = 'preview-line-down';
+                    }
+
+                    const lineNum = (newPos + 1).toString().padStart(3, ' ');
+                    html += `<span class="preview-line ${lineClass}"><span class="preview-badge ${badgeClass}">${badge}</span>${escapeHtml(item.original)}</span>`;
+                }
+
+                return html;
+            };
+
+            // --- Utility ---
+            const escapeHtml = (str) => {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            };
+
+            const getOptions = () => ({
+                sortMode: currentSort,
+                ignoreCase: optIgnoreCase.checked,
+                ignoreLeading: optIgnoreLeading.checked,
+                ignoreTrailing: optIgnoreTrailing.checked,
+                removeEmpty: optRemoveEmpty.checked,
+                keepHeader: optKeepHeader.checked,
+                removeDuplicates: optRemoveDuplicates.checked,
+            });
+
+            const updateInputStats = () => {
+                const text = inputTextarea.value;
+                const lines = text ? text.split('\n').length : 0;
+                const chars = text.length;
+                inputStats.textContent = `${lines} lines · ${chars} chars`;
+            };
+
+            const updateOutputStats = (text) => {
+                const lines = text ? text.split('\n').length : 0;
+                const chars = text.length;
+                outputStatsLabel.textContent = `${lines} lines · ${chars} chars`;
+            };
+
+            // --- Process & Update ---
+            const processSort = () => {
+                const text = inputTextarea.value;
+                if (!text.trim()) {
+                    outputTextarea.value = '';
+                    previewOutput.innerHTML = '<span class="text-slate-500">請先輸入文字再執行排序</span>';
+                    statOriginal.textContent = '0';
+                    statSorted.textContent = '0';
+                    statRemoved.textContent = '0';
+                    statSortType.textContent = '—';
+                    updateOutputStats('');
+                    updateInputStats();
+                    lastSortResult = null;
+                    return;
+                }
+
+                const options = getOptions();
+                const result = sortLines(text, options);
+                lastSortResult = result;
+
+                outputTextarea.value = result.sortedText;
+                statOriginal.textContent = result.originalCount;
+                statSorted.textContent = result.sortedCount;
+                statRemoved.textContent = result.removedCount;
+                statSortType.textContent = result.sortLabel;
+                updateOutputStats(result.sortedText);
+                updateInputStats();
+
+                // Generate preview
+                const previewHtml = generatePreview(result.items);
+                previewOutput.innerHTML = previewHtml;
+            };
+
+            // --- Switch View ---
+            const switchView = (view) => {
+                if (view === 'result') {
+                    viewResultPanel.classList.remove('hidden');
+                    viewPreviewPanel.classList.add('hidden');
+                    viewResultBtn.classList.add('active');
+                    viewPreviewBtn.classList.remove('active');
+                } else {
+                    viewResultPanel.classList.add('hidden');
+                    viewPreviewPanel.classList.remove('hidden');
+                    viewResultBtn.classList.remove('active');
+                    viewPreviewBtn.classList.add('active');
+                    // Refresh preview if needed
+                    if (lastSortResult) {
+                        const previewHtml = generatePreview(lastSortResult.items);
+                        previewOutput.innerHTML = previewHtml;
+                    }
+                }
+            };
+
+            // --- Set active sort button ---
+            const setSortMode = (mode) => {
+                currentSort = mode;
+                Object.entries(sortBtns).forEach(([key, btn]) => {
+                    btn.classList.toggle('active', key === mode);
+                });
+            };
+
+            // --- Event Binding ---
+            // Sort buttons
+            Object.entries(sortBtns).forEach(([key, btn]) => {
+                btn.addEventListener('click', () => {
+                    setSortMode(key);
+                });
+            });
+
+            // Input textarea
+            inputTextarea.addEventListener('input', updateInputStats);
+
+            // Sort button
+            btnSort.addEventListener('click', () => {
+                if (!inputTextarea.value.trim()) {
+                    showToast('請先輸入文字', true);
+                    return;
+                }
+                processSort();
+                showToast(`已排序完成 (${statSorted.textContent} 行)`);
+            });
+
+            // Options change
+            [optIgnoreCase, optIgnoreLeading, optIgnoreTrailing, optRemoveEmpty, optKeepHeader, optRemoveDuplicates].forEach(opt => {
+                opt.addEventListener('change', () => {
+                    if (inputTextarea.value.trim()) {
+                        processSort();
+                    }
+                });
+            });
+
+            // View buttons
+            viewResultBtn.addEventListener('click', () => switchView('result'));
+            viewPreviewBtn.addEventListener('click', () => switchView('preview'));
+
+            // Copy
+            btnCopy.addEventListener('click', () => {
+                const source = outputTextarea.value;
+                if (!source) {
+                    showToast('請先執行排序操作', true);
+                    return;
+                }
+                if (!source.trim()) {
+                    showToast('沒有可複製的內容', true);
+                    return;
+                }
+                navigator.clipboard.writeText(source).then(() => {
+                    showToast('已複製到剪貼簿');
+                }).catch(() => {
+                    outputTextarea.select();
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast('已複製到剪貼簿');
+                });
+            });
+
+            // Download TXT
+            btnDownloadTxt.addEventListener('click', () => {
+                const content = outputTextarea.value;
+                if (!content.trim()) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Line_Sorted_${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('已下載 TXT 檔案');
+            });
+
+            // Download CSV
+            btnDownloadCsv.addEventListener('click', () => {
+                const content = outputTextarea.value;
+                if (!content.trim()) {
+                    showToast('沒有可下載的內容', true);
+                    return;
+                }
+                const lines = content.split('\n');
+                const csvContent = lines.map(line => {
+                    if (line.includes(',') || line.includes('"') || line.includes('\n')) {
+                        return `"${line.replace(/"/g, '""')}"`;
+                    }
+                    return line;
+                }).join('\n');
+                const bom = '﻿';
+                const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ToolHub_Line_Sorted_${Date.now()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('已下載 CSV 檔案');
+            });
+
+            // Clear
+            btnClear.addEventListener('click', () => {
+                if (!inputTextarea.value && !outputTextarea.value) {
+                    showToast('已經沒有內容了', true);
+                    return;
+                }
+                inputTextarea.value = '';
+                outputTextarea.value = '';
+                previewOutput.innerHTML = '<span class="text-slate-500">切換到 Preview 模式檢視排序視覺化</span>';
+                statOriginal.textContent = '0';
+                statSorted.textContent = '0';
+                statRemoved.textContent = '0';
+                statSortType.textContent = '—';
+                updateInputStats();
+                updateOutputStats('');
+                lastSortResult = null;
+                showToast('已清除所有內容');
+            });
+
+            // Sample
+            btnSample.addEventListener('click', () => {
+                inputTextarea.value = SAMPLE_DATA;
+                updateInputStats();
+                processSort();
+                showToast('已載入範例資料');
+            });
+
+            // --- Toast ---
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                const toastMsg = document.getElementById('toast-msg');
+
+                toastMsg.textContent = msg;
+
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-sorter-primary';
+                }
+
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            // Initialize with sample data
+            inputTextarea.value = SAMPLE_DATA;
+            updateInputStats();
+            processSort();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

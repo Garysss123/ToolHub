@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>Date Calculator｜無料オンラインツール - ToolHub</title>
+<meta content="無料のオンライン日付計算ツールです。日付差、日付の加算・減算、営業日、年齢、カウントダウン、うるう年判定、ISO Week Number に対応し、カレンダープレビューで期間を直感的に確認できます。" name="description"/>
+<meta content="Date Calculator, 日期計算, 日期差, 工作天, Business Days, 年齡計算, 倒數天數, 閏年, ISO Week, 日曆, ToolHub" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.85); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 500; transition: all 0.2s;
+            border: 1px solid transparent; white-space: nowrap; color: #94A3B8;
+        }
+        .tab-btn:hover { background: rgba(245,158,11,0.05); color: #E2E8F0; }
+        .tab-btn.active {
+            background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3);
+            color: #FBBF24;
+        }
+
+        .result-card {
+            background: rgba(15,23,42,0.6); border: 1px solid #1E293B;
+            border-radius: 0.75rem; padding: 1rem;
+        }
+        .result-value {
+            font-size: 1.75rem; font-weight: 700; color: #FBBF24; font-family: "Fira Code", monospace;
+        }
+        .result-label { font-size: 0.75rem; color: #64748B; margin-top: 0.125rem; }
+
+        input[type="date"], input[type="number"] {
+            background: #0f172a; border: 1px solid #1E293B; border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem; color: #E2E8F0; font-size: 0.875rem;
+            outline: none; font-family: "Fira Code", monospace; width: 100%;
+        }
+        input[type="date"]:focus, input[type="number"]:focus { border-color: #F59E0B; }
+
+        .btn-primary {
+            padding: 0.5rem 1.25rem; border-radius: 0.75rem;
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            color: white; font-weight: 600; font-size: 0.8125rem;
+            transition: all 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(245,158,11,0.25); }
+        .btn-secondary {
+            padding: 0.375rem 0.875rem; border-radius: 0.5rem;
+            background: rgba(30,41,59,0.5); border: 1px solid #1E293B;
+            color: #94A3B8; font-size: 0.75rem; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem;
+        }
+        .btn-secondary:hover { background: rgba(30,41,59,0.8); color: #E2E8F0; border-color: #334155; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #F59E0B; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        /* Calendar Preview */
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-cell {
+            text-align: center; padding: 0.25rem; font-size: 0.75rem;
+            border-radius: 0.25rem; transition: all 0.15s;
+        }
+        .cal-header { color: #64748B; font-weight: 600; font-size: 0.65rem; padding: 0.25rem 0; }
+        .cal-day { color: #94A3B8; cursor: default; }
+        .cal-day.other-month { color: #334155; }
+        .cal-day.range-start { background: #F59E0B; color: #0B1120; font-weight: 700; border-radius: 50%; }
+        .cal-day.range-end { background: #D97706; color: #fff; font-weight: 700; border-radius: 50%; }
+        .cal-day.in-range { background: rgba(245,158,11,0.15); color: #FBBF24; }
+        .cal-day.today { outline: 1px solid #F59E0B; outline-offset: -1px; }
+
+        @media (max-width: 640px) {
+            .result-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+    </style>
+<!-- SEO Structural Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/date-calculator/" property="og:url"/>
+<meta content="Date Calculator｜無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="無料のオンライン日付計算ツールです。日付差、日付の加算・減算、営業日、年齢、カウントダウン、うるう年判定、ISO Week Number に対応し、カレンダープレビューで期間を直感的に確認できます。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Date Calculator｜無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="無料のオンライン日付計算ツールです。日付差、日付の加算・減算、営業日、年齢、カウントダウン、うるう年判定、ISO Week Number に対応し、カレンダープレビューで期間を直感的に確認できます。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"日付計算ツール","url":"https://toolhuben.com/ja/date-calculator/","description":"無料のオンライン日付計算ツールです。日付差、日付の加算・減算、営業日、年齢、カウントダウン、うるう年判定、ISO Week Number に対応し、カレンダープレビューで期間を直感的に確認できます。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"日付計算ツール","item":"https://toolhuben.com/ja/date-calculator/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","=== 倒數計時結果 ===":"=== カウントダウン結果 ===","=== 工作天計算結果 ===":"=== 営業日計算結果 ===","=== 年齡計算結果 ===":"=== 年齢計算結果 ===","=== 日期加減結果 ===":"=== 日付加算・減算結果 ===","=== 日期差計算結果 ===":"=== 日付差分の計算結果 ===","=== 日期資訊結果 ===":"=== 日付情報の結果 ===","⏰ 目標時間已過":"⏰ 目標時刻を過ぎています","❌ 否":"❌ いいえ","✅ 是":"✅ はい","一":"1","三":"3","下次生日:":"次の誕生日：","不足":"不完全","二":"2","五":"5","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","六":"6","出生日期不能晚於目標日期":"生年月日は基準日より後にできません","分鐘:":"分：","剩餘天數:":"残り日数：","四":"4","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","天:":"日：","天數:":"日数:","天）":"日）","季度:":"四半期:","小時:":"時間：","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","工作天:":"勤務日数：","已清除":"クリア済み","已下載 CSV":"CSV をダウンロードしました","已下載 TXT":"TXT をダウンロードしました","年數:":"年：","年齡:":"年齢：","建立理念":"創業時の理念","建議":"推奨事項","年":"年","年內第幾天:":"年間通算日：","日":"日","月":"月","月數:":"月数:","歲":"歳","沒有結果可下載":"ダウンロード可能な結果がありません","沒有結果可複製":"コピーする結果がありません","當年天數:":"1 年の日数:","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","目標：":"目標：","秒:":"秒:","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","結果日期:":"結果日付：","總天數:":"合計日数:","缺少":"不足","請輸入出生日期":"生年月日を入力してください","請輸入有效的日期":"有効な日付を入力してください","請輸入目標日期":"目標日を入力してください","週數:":"週番号：","週末/休息日:":"週末／休業日：","開始日期需早於結束日期":"開始日は終了日より前である必要があります","閏年:":"うるう年：","顯示":"表示中","（剩":"（左","🎉 就是今天！":"🎉 今日はその日です！","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/date-calculator/" rel="canonical"/><link href="https://toolhuben.com/date-calculator/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/date-calculator/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/date-calculator/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/date-calculator/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen font-sans" data-classic-layout="aurora" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#F59E0B;--classic-accent-rgb:245,158,11">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+<!-- Hero -->
+<div class="text-center space-y-3 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 rounded-full bg-hub-800 border border-hub-700 text-xs text-dc">
+<span class="flex w-2 h-2 bg-dc rounded-full animate-pulse mr-2"></span>
+                純フロントエンドの日付計算 · 営業日、年齢、countdown、ISO Week に対応します。
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                日付計算ツール
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-dc to-amber-400"> 日付計算機</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                インストール不要で使える無料のオンライン日付計算ツールです。日付差、日付の加減算、営業日、年齢、カウントダウン日数を計算でき、うるう年判定と ISO Week Number にも対応します。カレンダープレビューで日付範囲を直感的に確認できます。
+            </p>
+</div>
+<!-- Main Tabs -->
+<div class="flex flex-wrap gap-1.5 mb-4 border-b border-hub-700 pb-3" id="main-tabs">
+<button class="tab-btn active" data-tab="diff"><i class="w-3.5 h-3.5 inline" data-lucide="arrow-left-right"></i> 日付差</button>
+<button class="tab-btn" data-tab="addsub"><i class="w-3.5 h-3.5 inline" data-lucide="plus-minus"></i> 日付の加算・減算</button>
+<button class="tab-btn" data-tab="bizdays"><i class="w-3.5 h-3.5 inline" data-lucide="briefcase"></i> 営業日数</button>
+<button class="tab-btn" data-tab="age"><i class="w-3.5 h-3.5 inline" data-lucide="cake"></i> 年齢</button>
+<button class="tab-btn" data-tab="countdown"><i class="w-3.5 h-3.5 inline" data-lucide="timer"></i> カウントダウン</button>
+<button class="tab-btn" data-tab="info"><i class="w-3.5 h-3.5 inline" data-lucide="info"></i> 日付情報</button>
+</div>
+<!-- ============================ -->
+<!-- Tab: Date Difference          -->
+<!-- ============================ -->
+<div class="tab-content" data-tab="diff">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="arrow-left-right"></i> 日付差の計算
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-5">
+<div><label class="text-xs text-slate-500 mb-1 block">開始日</label><input id="diff-start" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">終了日</label><input id="diff-end" type="date"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-diff"><i class="w-3.5 h-3.5" data-lucide="calculator"></i> 日付差を計算</button>
+<div class="grid grid-cols-5 gap-3 result-grid" id="diff-results">
+<div class="result-card text-center"><div class="result-value" id="diff-days">0</div><div class="result-label">総日数</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-weeks">0</div><div class="result-label">週番号</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-months">0</div><div class="result-label">月数</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-years">0</div><div class="result-label">年</div></div>
+<div class="result-card text-center"><div class="result-value" id="diff-hours">0</div><div class="result-label">時間</div></div>
+</div>
+<!-- Calendar Preview -->
+<div class="mt-5 hidden" id="diff-calendar">
+<label class="text-xs text-slate-500 mb-2 block">📅 カレンダープレビュー</label>
+<div class="cal-grid" id="diff-cal-grid"></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Add / Subtract           -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="addsub">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="plus-minus"></i> 日付の加算・減算
+                </h2>
+<div class="grid md:grid-cols-3 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">開始日</label><input id="addsub-date" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">数量</label><input id="addsub-amount" min="1" type="number" value="30"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">単位</label>
+<select class="w-full bg-[#0f172a] border border-hub-700 rounded-lg px-3 py-2.5 text-white font-mono text-sm outline-none focus:border-dc" id="addsub-unit">
+<option value="days">日</option>
+<option value="weeks">週</option>
+<option value="months">月数</option>
+<option value="years">年</option>
+</select>
+</div>
+</div>
+<div class="flex gap-2 mb-5">
+<button class="btn-primary" id="btn-add"><i class="w-3.5 h-3.5" data-lucide="plus"></i> プラス</button>
+<button class="btn-secondary" id="btn-sub"><i class="w-3.5 h-3.5" data-lucide="minus"></i> 減算</button>
+</div>
+<div class="result-card text-center">
+<div class="result-label">結果日付</div>
+<div class="result-value text-2xl" id="addsub-result">—</div>
+<div class="text-xs text-slate-600 mt-1" id="addsub-detail"></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Business Days            -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="bizdays">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="briefcase"></i> 営業日計算
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">開始日</label><input id="biz-start" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">終了日</label><input id="biz-end" type="date"/></div>
+</div>
+<div class="flex flex-wrap gap-3 mb-4">
+<label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+<input class="accent-dc" id="biz-sat" type="checkbox"/> 土曜日に勤務
+                    </label>
+<label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+<input class="accent-dc" id="biz-sun" type="checkbox"/> 日曜勤務
+                    </label>
+</div>
+<button class="btn-primary mb-5" id="btn-biz"><i class="w-3.5 h-3.5" data-lucide="calculator"></i> 営業日を計算</button>
+<div class="grid grid-cols-2 gap-3 result-grid">
+<div class="result-card text-center"><div class="result-value" id="biz-work">0</div><div class="result-label">営業日数</div></div>
+<div class="result-card text-center"><div class="result-value" id="biz-weekend">0</div><div class="result-label">週末 / 休業日</div></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Age Calculator           -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="age">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="cake"></i> 年齢計算
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">生年月日</label><input id="age-birth" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">目標日（既定は今日）</label><input id="age-target" type="date"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-age"><i class="w-3.5 h-3.5" data-lucide="calculator"></i> 年齢を計算</button>
+<div class="grid grid-cols-3 gap-3 result-grid mb-4">
+<div class="result-card text-center"><div class="result-value" id="age-years">0</div><div class="result-label">年齢（歳）</div></div>
+<div class="result-card text-center"><div class="result-value" id="age-months">0</div><div class="result-label">月数</div></div>
+<div class="result-card text-center"><div class="result-value" id="age-days">0</div><div class="result-label">日</div></div>
+</div>
+<div class="result-card text-center">
+<div class="text-xs text-slate-500">🎂 次の誕生日までのカウントダウン</div>
+<div class="result-value text-xl" id="age-next">—</div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Countdown                -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="countdown">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="timer"></i> カウントダウン
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">目標日</label><input id="cd-target" type="date"/></div>
+<div><label class="text-xs text-slate-500 mb-1 block">目標時間</label><input id="cd-time" type="time" value="00:00"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-cd"><i class="w-3.5 h-3.5" data-lucide="clock"></i> 逆数を計算</button>
+<div class="grid grid-cols-4 gap-3 result-grid mb-4">
+<div class="result-card text-center"><div class="result-value" id="cd-days">0</div><div class="result-label">日</div></div>
+<div class="result-card text-center"><div class="result-value" id="cd-hours">0</div><div class="result-label">時間</div></div>
+<div class="result-card text-center"><div class="result-value" id="cd-mins">0</div><div class="result-label">分</div></div>
+<div class="result-card text-center"><div class="result-value" id="cd-secs">0</div><div class="result-label">秒</div></div>
+</div>
+<div class="text-xs text-slate-600 text-center" id="cd-status"></div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- Tab: Date Info                -->
+<!-- ============================ -->
+<div class="tab-content hidden" data-tab="info">
+<div class="glass-panel p-5 md:p-6">
+<h2 class="text-base font-bold text-white mb-4 flex items-center gap-1.5">
+<i class="w-4 h-4 text-dc" data-lucide="info"></i> 日付情報（うるう年 / 週 / 四半期）
+                </h2>
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+<div><label class="text-xs text-slate-500 mb-1 block">日付</label><input id="info-date" type="date"/></div>
+</div>
+<button class="btn-primary mb-5" id="btn-info"><i class="w-3.5 h-3.5" data-lucide="search"></i> 日付情報を照会</button>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 result-grid mb-4">
+<div class="result-card text-center"><div class="result-value text-base" id="info-leap">—</div><div class="result-label">うるう年ですか？</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-year-days">—</div><div class="result-label">1 年の日数</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-week">—</div><div class="result-label">ISO 週番号</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-quarter">—</div><div class="result-label">4 分の 1</div></div>
+</div>
+<div class="grid grid-cols-2 gap-3 result-grid">
+<div class="result-card text-center"><div class="result-value text-base" id="info-doy">—</div><div class="result-label">年間通算日</div></div>
+<div class="result-card text-center"><div class="result-value text-base" id="info-days-left">—</div><div class="result-label">年末までの残り日数</div></div>
+</div>
+</div>
+</div>
+<!-- ============================ -->
+<!-- FAQ                             -->
+<!-- ============================ -->
+<section class="mt-12 glass-panel p-6 md:p-8" itemscope="" itemtype="https://schema.org/FAQPage">
+<h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+<i class="w-5 h-5 text-dc" data-lucide="help-circle"></i> よくある質問
+            </h2>
+<div class="space-y-2 divide-y divide-hub-700/50">
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">日付差はどのように計算されますか？開始日と終了日は含まれますか？</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            このツールは 2 つの日付間の「完全な日数差」を計算し、開始日の time component は除外します。たとえば、 <strong>2026-07-01</strong> 到着 <strong>2026-07-10</strong>, 結果は <strong>9 日</strong>（10日ではなく）。<br/><br/>
+                            これは国際標準の計算方法で、SQL の <code class="text-dc font-mono text-xs px-1">DATEDIFF()</code>, JavaScript <code class="text-dc font-mono text-xs px-1">Date</code> Object、Excel の <code class="text-dc font-mono text-xs px-1">DAYS()</code> 機能は同じです。日付の両端を含める Inclusive 計算が必要なら、手動で +1 できます。
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">営業日はどのように計算されますか？</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            通常、営業日は「月曜日から金曜日」の合計で、土曜・日曜（週末）は除外します。このツールでは柔軟に設定でき、必要に応じて「土曜日も営業」「日曜日も営業」を選択して営業日の定義を変更できます。<br/><br/>
+<strong>ご注意:</strong> 現在、このツールには各国の祝日データベースが含まれていないため、特定国の祝日を自動で除外することはできません。プロジェクトで祝日を考慮する必要がある場合は、計算結果から該当日数を調整してください。将来のリリースで祝日 API 連携が追加される可能性があります。
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">ISO Week Number とは何ですか？</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            ISO 8601 が定義する週番号は国際標準の週番号方式です。主なルールは次のとおりです。<br/><br/>
+<strong>• 毎週月曜日から始まります</strong><br/>
+<strong>• 第 1 週は、その年の最初の木曜日を含む週です</strong><br/>
+                            これは、年の初日（1 月 1 日）が金曜・土曜・日曜の場合、その日が前年の ISO week 52 または 53 に含まれることがある、という意味でもあります。<br/><br/>
+                            ISO Week Number は、欧州のビジネスやスケジュール管理システム、サプライチェーン管理、年間を通して週番号を統一したい場面で広く使用されています。
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">the rules for determining leap years とは何ですか？</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            Gregorian Calendar における leap year の判定規則は次のとおりです：<br/><br/>
+<strong>1.</strong> 西暦が 4 で割り切れる → うるう年の可能性があります<br/>
+<strong>2.</strong> ただし 100 で割り切れる場合 → leap year ではありません（century year rule）<br/>
+<strong>3.</strong> ただし 400 で割り切れる場合 → やはり leap year です（例：2000）<br/><br/>
+                            例：<br/>
+                            • 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。<br/>
+                            • 1900 → ❌ 平年（100 で割り切れるが、400 では割り切れない）<br/>
+                            • Year 2000 → ✅ Leap year（400で割り切れる）<br/><br/>
+                            leap year は 366 日で、2 月は 29 日です。
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">年齢は満年齢と数え年のどちらを基準に計算しますか？</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            このツールは国際的に一般利用されている <strong>暦年齢</strong> birth date と target date の間の満年数として計算します。実年齢の計算原理は：<br/><br/>
+<strong>•</strong> target date の month &gt; birth month の場合 → age = target year - birth year<br/>
+<strong>•</strong> target date の month = birth month かつ date &gt;= birth date → age = target year - birth year<br/>
+<strong>•</strong> それ以外 → age = target year - birth year - 1<br/><br/>
+                            これはパスポート、ビザ、法的文書、医療記録で一般的に使われる年齢計算方法と一致します。
+                        </div>
+</div>
+</details>
+<details class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<summary itemprop="name">Day of Year はどう計算されますか？</summary>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<div itemprop="text">
+                            Day of Year（DOY、年内通算日）とは、その年の 1 月 1 日から指定日までを数えた日番号で、 <strong>1月1日を1日目とします</strong>。<br/><br/>
+                            例：<br/>
+                            • 1 月 1 日 → 1 日目<br/>
+                            • 2 月 1 日（平年）→ 32 日目<br/>
+                            • 12 月 31 日（平年）→ 365 日目<br/><br/>
+                            Day of Year は天文計算、気象データ分析、科学研究、農業スケジュールでよく使われます。残り日数は、その年の総日数から DOY を引いて求めます。
+                        </div>
+</div>
+</details>
+</div>
+</section>
+<!-- ============================ -->
+<!-- SEO Article                    -->
+<!-- ============================ -->
+<section class="mt-12 glass-panel p-6 md:p-8">
+<h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+<i class="w-5 h-5 text-dc" data-lucide="book-open"></i> 日付計算の基礎知識と活用方法
+            </h2>
+<article class="prose prose-invert max-w-none text-slate-400 text-sm leading-relaxed space-y-4">
+<p>日付計算は日常生活と業務の両方で頻繁に必要になります。プロジェクト管理の期限追跡、人事の勤続年数計算、金融の利息日数、個人用途の誕生日カウントダウンや記念日通知など、正確な日付計算は重要です。</p>
+<h3 class="text-white font-bold text-lg mt-6">日付計算の基本概念</h3>
+<p>日付計算は単純に見えますが、実際には多くの細かな取り決めがあります。基本的な「日付差」だけでも開始日を含めるか、終了日を含めるかで結果が変わります。ビジネス用途では Actual/360、Actual/365、30/360 などの計算慣行によって異なる結果が生じます。</p>
+<p>営業日数の計算は、単純な日付差より複雑です。1週間のうち何日を営業日とするか、祝日、振替休日、臨時の出勤日などを考慮する必要があります。国をまたぐプロジェクトでは国ごとに勤務カレンダーが大きく異なるため、国際的なプロジェクト管理ソフトには複数国の勤務カレンダー機能が用意されていることが一般的です。</p>
+<h3 class="text-white font-bold text-lg mt-6">ISO 8601 と日付の標準化</h3>
+<p>ISO 8601 は国際標準化機構が定めた日付・時刻表現の国際規格です。日付形式（YYYY-MM-DD）だけでなく、週番号（ISO Week）、時刻表現、タイムゾーンの扱いなども定義しています。ISO 8601 を使うことで、米国式 MM/DD/YYYY と欧州式 DD/MM/YYYY のような地域差による日付表記の混乱を避けられます。</p>
+<p>このツールは日付計算と表示に ISO 8601 規格を採用し、結果の正確性と国際的な互換性を確保しています。利用地域にかかわらず、一貫した計算結果を得られます。</p>
+<h3 class="text-white font-bold text-lg mt-6">実用的な利用シナリオ</h3>
+<p><strong>プロジェクト管理：</strong> 日付差計算でプロジェクト日程を追跡し、マイルストーン間隔を算出できます。営業日計算では週末を除外でき、タスク完了時期をより現実的に見積もれます。</p>
+<p><strong>人事：</strong> 従業員の勤続年数、在職日数、試用期間の終了日を計算できます。また年齢計算を使って法定年齢要件への適合確認にも利用できます。</p>
+<p><strong>私生活：</strong> 記念日、試験日、旅行出発日など重要な日までのカウントダウンを設定し、2つの日付の間に経過した時間も計算できます。</p>
+<p><strong>財務：</strong> 利息計算日数、手形・請求の満期日、分割払いの間隔を計算します。</p>
+</article>
+</section>
+<!-- SEO Completeness Upgrade 2026 -->
+<article aria-label="Date Calculator 補足ガイド" class="seo-upgrade">
+<section class="seo-upgrade-card"><h2>Date Calculator 使用方法</h2><p>無料のオンライン日付計算ツールです。日付差、日付の加算・減算、営業日、年齢、カウントダウン、うるう年判定、ISO Week Number に対応し、カレンダープレビューで期間を直感的に確認できます。</p><h3>推奨操作手順</h3><ol><li>誤ったデータが結果まで伝播するのを防ぐため、まず input format、unit、required field を確認してください。</li><li>tool option を調整し、instant tip を確認して代表的な boundary value と照合してください。</li><li>コピーや download の前に結果を再確認し、正式な process で使用する場合は対象環境で完全な validation を行ってください。</li></ol><h3>品質とプライバシー</h3><p>このツールはブラウザー上でネイティブに実行され、バックエンド処理には依存しません。結果は入力品質、ブラウザー対応状況、関連する技術仕様の影響を受けます。重要なデータは元ファイルとバックアップを残してください。</p></section>
+</article>
+</main>
+<div id="component-footer"></div>
+<!-- Action Bar (sticky bottom) -->
+<div class="fixed bottom-0 left-0 right-0 z-40 bg-hub-900/90 backdrop-blur border-t border-hub-700 px-4 py-2 flex items-center justify-center gap-2" id="action-bar">
+<span class="text-xs text-slate-600 mr-2 hidden sm:inline">操作:</span>
+<button class="btn-secondary text-[11px]" id="action-copy"><i class="w-3 h-3" data-lucide="copy"></i> 結果をコピー</button>
+<button class="btn-secondary text-[11px]" id="action-download-txt"><i class="w-3 h-3" data-lucide="download"></i> TXT</button>
+<button class="btn-secondary text-[11px]" id="action-download-csv"><i class="w-3 h-3" data-lucide="table"></i> CSV</button>
+<button class="btn-secondary text-[11px]" id="action-clear"><i class="w-3 h-3" data-lucide="trash-2"></i> クリア</button>
+</div>
+<!-- Toast -->
+<div class="fixed bottom-16 left-1/2 -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="w-4 h-4 text-dc" data-lucide="check-circle" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- ========================================== -->
+<!-- System Init                                 -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elId, path) {
+            try {
+                const r = await fetch(path);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const html = await r.text();
+                const c = document.getElementById(elId);
+                c.innerHTML = html;
+                c.querySelectorAll('script').forEach(s => {
+                    const ns = document.createElement('script');
+                    Array.from(s.attributes).forEach(a => ns.setAttribute(a.name, a.value));
+                    ns.appendChild(document.createTextNode(s.innerHTML));
+                    s.parentNode.replaceChild(ns, s);
+                });
+            } catch(e) { console.error(`[System Error] ${path}:`, e); }
+        }
+        function setupEventDelegation() {
+            document.body.addEventListener('click', (e) => {
+                const t = e.target.closest('#sidebar-trigger-btn'), cl = e.target.closest('#sidebar-close-btn'), ol = e.target.closest('#sidebar-overlay');
+                if (t || cl || ol) {
+                    const c = document.getElementById('sidebar-container'), o = document.getElementById('sidebar-overlay');
+                    if (c && o) {
+                        const isClosed = c.classList.contains('translate-x-full');
+                        if (isClosed && t) { o.classList.remove('pointer-events-none'); requestAnimationFrame(() => { c.classList.remove('translate-x-full'); o.classList.remove('opacity-0'); o.classList.add('opacity-100'); }); }
+                        else if (!isClosed && (cl || ol || t)) { c.classList.add('translate-x-full'); o.classList.remove('opacity-100'); o.classList.add('opacity-0'); setTimeout(() => o.classList.add('pointer-events-none'), 300); }
+                    }
+                }
+            });
+        }
+        function setupSidebarActiveState() {
+            const cp = '/date-calculator';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const h = item.getAttribute('href'); if (!h) return;
+                const ip = h.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (cp === ip || (cp !== '/' && ip !== '/' && cp.startsWith(ip + '/'))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg'); if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            setupEventDelegation(); setupSidebarActiveState();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- Date Calculator Engine                      -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Shared Helpers ---
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+
+            function showToast(msg, isErr = false) {
+                const icon = document.getElementById('toast-icon');
+                toastMsg.textContent = msg;
+                if (isErr) { toast.classList.replace('bg-slate-800', 'bg-red-950'); toast.classList.replace('border-slate-700', 'border-red-900'); icon.className = 'w-4 h-4 text-red-500'; }
+                else { toast.classList.replace('bg-red-950', 'bg-slate-800'); toast.classList.replace('border-red-900', 'border-slate-700'); icon.className = 'w-4 h-4 text-dc'; }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => { toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); }, 2000);
+            }
+
+            function todayStr() {
+                return new Date().toISOString().split('T')[0];
+            }
+
+            function parseDate(str) {
+                if (!str) return null;
+                const d = new Date(str + 'T00:00:00');
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            function daysBetween(a, b) {
+                const ms = b.getTime() - a.getTime();
+                return Math.round(ms / 86400000);
+            }
+
+            function isLeapYear(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
+
+            function daysInYear(y) { return isLeapYear(y) ? 366 : 365; }
+
+            function getISOWeek(date) {
+                const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            }
+
+            function getQuarter(date) { return Math.floor(date.getMonth() / 3) + 1; }
+
+            function getDayOfYear(date) {
+                const start = new Date(date.getFullYear(), 0, 0);
+                return Math.floor((date - start) / 86400000);
+            }
+
+            function daysLeftInYear(date) {
+                return daysInYear(date.getFullYear()) - getDayOfYear(date);
+            }
+
+            function formatDate(d) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            function formatDateReadable(d) {
+                return d.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+            }
+
+            // --- Tab system ---
+            const mainTabs = document.querySelectorAll('#main-tabs .tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            mainTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    mainTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    tabContents.forEach(tc => tc.classList.toggle('hidden', tc.dataset.tab !== tab.dataset.tab));
+                });
+            });
+
+            // --- Init dates ---
+            document.querySelectorAll('input[type="date"]').forEach(el => {
+                if (!el.value) el.value = todayStr();
+            });
+
+            // =============================
+            // Calendar Preview
+            // =============================
+            function renderCalendar(containerId, startDate, endDate) {
+                const container = document.getElementById(containerId);
+                const parent = container.closest('.tab-content') || container.closest('.glass-panel');
+                if (!startDate || !endDate) { container.innerHTML = ''; parent.querySelector('#' + containerId.replace('-grid', '')).classList.add('hidden'); return; }
+
+                parent.querySelector('#' + containerId.replace('-grid', '')).classList.remove('hidden');
+
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                if (start > end) return;
+
+                // Show month of start date
+                const year = start.getFullYear();
+                const month = start.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const startDow = firstDay.getDay(); // 0=Sun
+                const daysInMonth = lastDay.getDate();
+
+                const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                let html = `<div class="text-xs text-slate-400 font-bold text-center mb-2">${year} 年 ${month + 1} 月</div>`;
+                html += '<div class="cal-grid">';
+                weekdays.forEach(wd => html += `<div class="cal-cell cal-header">${wd}</div>`);
+
+                // Previous month padding
+                for (let i = 0; i < startDow; i++) {
+                    html += '<div class="cal-cell cal-day other-month"></div>';
+                }
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateObj = new Date(year, month, d);
+                    const dateStr = formatDate(dateObj);
+                    let cls = 'cal-cell cal-day';
+                    if (formatDate(dateObj) === formatDate(start)) cls += ' range-start';
+                    else if (formatDate(dateObj) === formatDate(end)) cls += ' range-end';
+                    else if (dateObj >= start && dateObj <= end) cls += ' in-range';
+
+                    const today = todayStr();
+                    if (dateStr === today) cls += ' today';
+
+                    html += `<div class="${cls}">${d}</div>`;
+                }
+                html += '</div>';
+                // If end date is in a different month, show that month
+                if (end.getMonth() !== start.getMonth() || end.getFullYear() !== start.getFullYear()) {
+                    const year2 = end.getFullYear();
+                    const month2 = end.getMonth();
+                    const firstDay2 = new Date(year2, month2, 1);
+                    const lastDay2 = new Date(year2, month2 + 1, 0);
+                    const startDow2 = firstDay2.getDay();
+                    const daysInMonth2 = lastDay2.getDate();
+
+                    html += `<div class="text-xs text-slate-400 font-bold text-center mb-2 mt-3">${year2} 年 ${month2 + 1} 月</div>`;
+                    html += '<div class="cal-grid">';
+                    weekdays.forEach(wd => html += `<div class="cal-cell cal-header">${wd}</div>`);
+                    for (let i = 0; i < startDow2; i++) {
+                        html += '<div class="cal-cell cal-day other-month"></div>';
+                    }
+                    for (let d = 1; d <= daysInMonth2; d++) {
+                        const dateObj = new Date(year2, month2, d);
+                        const dateStr = formatDate(dateObj);
+                        let cls = 'cal-cell cal-day';
+                        if (formatDate(dateObj) === formatDate(start)) cls += ' range-start';
+                        else if (formatDate(dateObj) === formatDate(end)) cls += ' range-end';
+                        else if (dateObj >= start && dateObj <= end) cls += ' in-range';
+
+                        if (dateStr === todayStr()) cls += ' today';
+                        html += `<div class="${cls}">${d}</div>`;
+                    }
+                    html += '</div>';
+                }
+                container.innerHTML = html;
+            }
+
+            // =============================
+            // Date Difference
+            // =============================
+            document.getElementById('btn-diff').addEventListener('click', () => {
+                const s = parseDate(document.getElementById('diff-start').value);
+                const e = parseDate(document.getElementById('diff-end').value);
+                if (!s || !e) { showToast('請輸入有效的日期', true); return; }
+                if (s > e) { showToast('開始日期需早於結束日期', true); return; }
+
+                const totalDays = daysBetween(s, e);
+                document.getElementById('diff-days').textContent = totalDays.toLocaleString();
+                document.getElementById('diff-weeks').textContent = (totalDays / 7).toFixed(1);
+                document.getElementById('diff-hours').textContent = (totalDays * 24).toLocaleString();
+
+                // Months and years
+                let months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+                if (e.getDate() < s.getDate()) months--;
+                document.getElementById('diff-months').textContent = months;
+                document.getElementById('diff-years').textContent = (months / 12).toFixed(1);
+
+                renderCalendar('diff-cal-grid', s, e);
+            });
+
+            // =============================
+            // Add / Subtract
+            // =============================
+            function calcAddSub(sign) {
+                const d = parseDate(document.getElementById('addsub-date').value);
+                if (!d) { showToast('請輸入有效的日期', true); return; }
+                const amount = parseInt(document.getElementById('addsub-amount').value) || 0;
+                const unit = document.getElementById('addsub-unit').value;
+                let result = new Date(d);
+                if (unit === 'days') result.setDate(result.getDate() + amount * sign);
+                else if (unit === 'weeks') result.setDate(result.getDate() + amount * 7 * sign);
+                else if (unit === 'months') result.setMonth(result.getMonth() + amount * sign);
+                else if (unit === 'years') result.setFullYear(result.getFullYear() + amount * sign);
+
+                document.getElementById('addsub-result').textContent = formatDate(result);
+                document.getElementById('addsub-detail').textContent = formatDateReadable(result);
+            }
+            document.getElementById('btn-add').addEventListener('click', () => calcAddSub(1));
+            document.getElementById('btn-sub').addEventListener('click', () => calcAddSub(-1));
+
+            // =============================
+            // Business Days
+            // =============================
+            document.getElementById('btn-biz').addEventListener('click', () => {
+                const s = parseDate(document.getElementById('biz-start').value);
+                const e = parseDate(document.getElementById('biz-end').value);
+                if (!s || !e) { showToast('請輸入有效的日期', true); return; }
+                if (s > e) { showToast('開始日期需早於結束日期', true); return; }
+
+                const satWork = document.getElementById('biz-sat').checked;
+                const sunWork = document.getElementById('biz-sun').checked;
+                let work = 0, weekend = 0;
+                const cur = new Date(s);
+                while (cur <= e) {
+                    const dow = cur.getDay();
+                    if (dow === 0 && !sunWork) weekend++;
+                    else if (dow === 6 && !satWork) weekend++;
+                    else work++;
+                    cur.setDate(cur.getDate() + 1);
+                }
+                document.getElementById('biz-work').textContent = work.toLocaleString();
+                document.getElementById('biz-weekend').textContent = weekend.toLocaleString();
+            });
+
+            // =============================
+            // Age Calculator
+            // =============================
+            document.getElementById('btn-age').addEventListener('click', () => {
+                const birth = parseDate(document.getElementById('age-birth').value);
+                let target = parseDate(document.getElementById('age-target').value);
+                if (!target) target = new Date();
+                if (!birth) { showToast('請輸入出生日期', true); return; }
+                if (birth > target) { showToast('出生日期不能晚於目標日期', true); return; }
+
+                let years = target.getFullYear() - birth.getFullYear();
+                let months = target.getMonth() - birth.getMonth();
+                let days = target.getDate() - birth.getDate();
+                if (days < 0) { months--; const prevMonth = new Date(target.getFullYear(), target.getMonth(), 0); days += prevMonth.getDate(); }
+                if (months < 0) { years--; months += 12; }
+
+                const totalDays = daysBetween(birth, target);
+                const totalMonths = years * 12 + months;
+
+                document.getElementById('age-years').textContent = years;
+                document.getElementById('age-months').textContent = totalMonths;
+                document.getElementById('age-days').textContent = totalDays.toLocaleString();
+
+                // Next birthday
+                const nextBday = new Date(target.getFullYear(), birth.getMonth(), birth.getDate());
+                if (nextBday <= target) nextBday.setFullYear(nextBday.getFullYear() + 1);
+                const daysToBday = daysBetween(target, nextBday);
+                document.getElementById('age-next').textContent = daysToBday === 0 ? '🎉 就是今天！' : `${formatDate(nextBday)}（剩 ${daysToBday} 天）`;
+            });
+
+            // =============================
+            // Countdown
+            // =============================
+            document.getElementById('btn-cd').addEventListener('click', () => {
+                const dateStr = document.getElementById('cd-target').value;
+                const timeStr = document.getElementById('cd-time').value;
+                if (!dateStr) { showToast('請輸入目標日期', true); return; }
+                const target = new Date(dateStr + 'T' + (timeStr || '00:00') + ':00');
+                const now = new Date();
+                const diff = target - now;
+                if (diff <= 0) {
+                    document.getElementById('cd-days').textContent = '0';
+                    document.getElementById('cd-hours').textContent = '0';
+                    document.getElementById('cd-mins').textContent = '0';
+                    document.getElementById('cd-secs').textContent = '0';
+                    document.getElementById('cd-status').textContent = '⏰ 目標時間已過';
+                    return;
+                }
+                const totalSecs = Math.floor(diff / 1000);
+                const days = Math.floor(totalSecs / 86400);
+                const hours = Math.floor((totalSecs % 86400) / 3600);
+                const mins = Math.floor((totalSecs % 3600) / 60);
+                const secs = totalSecs % 60;
+
+                document.getElementById('cd-days').textContent = days.toLocaleString();
+                document.getElementById('cd-hours').textContent = hours;
+                document.getElementById('cd-mins').textContent = mins;
+                document.getElementById('cd-secs').textContent = secs;
+                document.getElementById('cd-status').textContent = `目標：${formatDateReadable(target)}`;
+            });
+
+            // =============================
+            // Date Info
+            // =============================
+            document.getElementById('btn-info').addEventListener('click', () => {
+                const d = parseDate(document.getElementById('info-date').value);
+                if (!d) { showToast('請輸入有效的日期', true); return; }
+                const y = d.getFullYear();
+                const leap = isLeapYear(y);
+                document.getElementById('info-leap').textContent = leap ? '✅ 是' : '❌ 否';
+                document.getElementById('info-year-days').textContent = daysInYear(y);
+                document.getElementById('info-week').textContent = getISOWeek(d);
+                document.getElementById('info-quarter').textContent = `Q${getQuarter(d)}`;
+                document.getElementById('info-doy').textContent = getDayOfYear(d);
+                document.getElementById('info-days-left').textContent = daysLeftInYear(d);
+            });
+
+            // =============================
+            // Action Bar
+            // =============================
+            function getActiveResultText() {
+                let lines = [];
+                const activeTab = document.querySelector('#main-tabs .tab-btn.active');
+                if (!activeTab) return '';
+                const tab = activeTab.dataset.tab;
+                if (tab === 'diff') {
+                    lines.push('=== 日期差計算結果 ===');
+                    lines.push(`總天數: ${document.getElementById('diff-days').textContent}`);
+                    lines.push(`週數: ${document.getElementById('diff-weeks').textContent}`);
+                    lines.push(`月數: ${document.getElementById('diff-months').textContent}`);
+                    lines.push(`年數: ${document.getElementById('diff-years').textContent}`);
+                    lines.push(`小時: ${document.getElementById('diff-hours').textContent}`);
+                } else if (tab === 'addsub') {
+                    lines.push('=== 日期加減結果 ===');
+                    lines.push(`結果日期: ${document.getElementById('addsub-result').textContent}`);
+                } else if (tab === 'bizdays') {
+                    lines.push('=== 工作天計算結果 ===');
+                    lines.push(`工作天: ${document.getElementById('biz-work').textContent}`);
+                    lines.push(`週末/休息日: ${document.getElementById('biz-weekend').textContent}`);
+                } else if (tab === 'age') {
+                    lines.push('=== 年齡計算結果 ===');
+                    lines.push(`年齡: ${document.getElementById('age-years').textContent} 歲`);
+                    lines.push(`月數: ${document.getElementById('age-months').textContent}`);
+                    lines.push(`天數: ${document.getElementById('age-days').textContent}`);
+                    lines.push(`下次生日: ${document.getElementById('age-next').textContent}`);
+                } else if (tab === 'countdown') {
+                    lines.push('=== 倒數計時結果 ===');
+                    lines.push(`天: ${document.getElementById('cd-days').textContent}`);
+                    lines.push(`小時: ${document.getElementById('cd-hours').textContent}`);
+                    lines.push(`分鐘: ${document.getElementById('cd-mins').textContent}`);
+                    lines.push(`秒: ${document.getElementById('cd-secs').textContent}`);
+                } else if (tab === 'info') {
+                    lines.push('=== 日期資訊結果 ===');
+                    lines.push(`閏年: ${document.getElementById('info-leap').textContent}`);
+                    lines.push(`當年天數: ${document.getElementById('info-year-days').textContent}`);
+                    lines.push(`ISO Week: ${document.getElementById('info-week').textContent}`);
+                    lines.push(`季度: ${document.getElementById('info-quarter').textContent}`);
+                    lines.push(`年內第幾天: ${document.getElementById('info-doy').textContent}`);
+                    lines.push(`剩餘天數: ${document.getElementById('info-days-left').textContent}`);
+                }
+                return lines.join('\n');
+            }
+
+            document.getElementById('action-copy').addEventListener('click', () => {
+                const text = getActiveResultText();
+                if (!text) { showToast('沒有結果可複製', true); return; }
+                navigator.clipboard.writeText(text).then(() => showToast('已複製'));
+            });
+
+            document.getElementById('action-download-txt').addEventListener('click', () => {
+                const text = getActiveResultText();
+                if (!text) { showToast('沒有結果可下載', true); return; }
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `date-calculator_${todayStr()}.txt`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast('已下載 TXT');
+            });
+
+            document.getElementById('action-download-csv').addEventListener('click', () => {
+                const text = getActiveResultText();
+                if (!text) { showToast('沒有結果可下載', true); return; }
+                // Convert to CSV format
+                const lines = text.split('\n');
+                const csv = lines.map(l => `"${l.replace(/"/g,'""')}"`).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `date-calculator_${todayStr()}.csv`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                showToast('已下載 CSV');
+            });
+
+            document.getElementById('action-clear').addEventListener('click', () => {
+                document.querySelectorAll('input[type="date"]').forEach(el => el.value = todayStr());
+                document.querySelectorAll('input[type="number"]').forEach(el => el.value = el.id === 'addsub-amount' ? '30' : el.value);
+                document.querySelectorAll('.result-value').forEach(el => el.textContent = '0');
+                document.getElementById('addsub-result').textContent = '—';
+                document.getElementById('addsub-detail').textContent = '';
+                document.getElementById('cd-status').textContent = '';
+                document.getElementById('age-next').textContent = '—';
+                document.getElementById('diff-cal-grid').innerHTML = '';
+                document.getElementById('diff-calendar').classList.add('hidden');
+                showToast('已清除');
+            });
+
+            // Auto-calculate on first load
+            setTimeout(() => {
+                document.getElementById('btn-diff').click();
+                document.getElementById('btn-biz').click();
+                document.getElementById('btn-age').click();
+                document.getElementById('btn-info').click();
+            }, 100);
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

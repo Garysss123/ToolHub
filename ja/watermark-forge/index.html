@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>Watermark Forge｜無料オンラインツール - ToolHub</title>
+<meta content="複数画像へ text または logo watermark をブラウザ内で一括追加し、position、opacity、size、output quality を調整できます。" name="description"/>
+<!-- 基地專屬徽章 -->
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- 模塊專屬依賴：JSZip (純前端批次打包引擎) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* Range Slider 美化 */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #6366f1; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1E293B; border-radius: 2px; }
+
+        /* Color Picker 美化 */
+        input[type="color"] { -webkit-appearance: none; border: none; width: 32px; height: 32px; border-radius: 0.5rem; overflow: hidden; cursor: pointer; padding: 0; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.5rem; }
+
+        .drag-active { border-color: #6366f1 !important; background-color: rgba(99, 102, 241, 0.1) !important; }
+
+        .radio-tab-input:checked + .radio-tab-label {
+            background-color: rgba(99, 102, 241, 0.15); border-color: #6366f1; color: #818cf8; font-weight: bold; box-shadow: inset 0 0 10px rgba(99, 102, 241, 0.1);
+        }
+
+        /* ========================================= */
+        /* 預覽畫布與空間操縱層 (Interactive Overlay) */
+        /* ========================================= */
+        #preview-arena {
+            background-image: 
+                linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+                linear-gradient(135deg, #1e293b 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+                linear-gradient(135deg, transparent 75%, #1e293b 75%);
+            background-size: 20px 20px; background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+        }
+
+        #image-frame {
+            position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            max-width: 100%; max-height: 100%;
+        }
+
+        #preview-canvas {
+            display: block; width: 100%; height: 100%; pointer-events: none;
+        }
+
+        /* 虛擬操作框 */
+        #wm-interactor {
+            position: absolute; border: 1.5px dashed rgba(99, 102, 241, 0.8);
+            cursor: move; z-index: 30; touch-action: none;
+            transform-origin: center center;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        #wm-interactor:hover, #wm-interactor.active {
+            border: 2px solid #818cf8; background: rgba(99, 102, 241, 0.15); box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        /* 控制把手 */
+        .handle {
+            position: absolute; background: #fff; border: 2px solid #6366f1; touch-action: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .resize-handle {
+            bottom: -6px; right: -6px; width: 14px; height: 14px; border-radius: 50%; cursor: nwse-resize;
+        }
+        .rotate-handle {
+            top: -30px; left: 50%; transform: translateX(-50%); width: 24px; height: 24px; border-radius: 50%; cursor: grab;
+            display: flex; align-items: center; justify-content: center; background: #1e293b; transition: background 0.2s; color: #fff;
+        }
+        .rotate-handle:hover, .rotate-handle:active { background: #6366f1; }
+        .rotate-line {
+            position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 1.5px; height: 18px; background: rgba(99, 102, 241, 0.8);
+        }
+
+        /* 縮圖列 */
+        .thumb-item {
+            width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; position: relative; opacity: 0.6;
+        }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-item:hover { opacity: 1; }
+        .thumb-item.active { border-color: #6366f1; opacity: 1; box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+        .thumb-remove {
+            position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #ef4444; border-radius: 50%; padding: 2px; font-size: 10px; display: none;
+        }
+        .thumb-item:hover .thumb-remove { display: block; }
+
+        /* 進度條彈窗 */
+        #progress-modal { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        #progress-modal.show { opacity: 1; pointer-events: auto; }
+
+        @keyframes pop { 0% { transform: scale(0.95); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s ease-out; }
+    </style>
+<!-- SEO Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/watermark-forge/" property="og:url"/>
+<meta content="Watermark Forge｜無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="複数画像へ text または logo watermark をブラウザ内で一括追加し、position、opacity、size、output quality を調整できます。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Watermark Forge｜無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="複数画像へ text または logo watermark をブラウザ内で一括追加し、position、opacity、size、output quality を調整できます。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"画像ウォーターマーク一括処理ツール","url":"https://toolhuben.com/ja/watermark-forge/","description":"複数画像へ text または logo watermark をブラウザ内で一括追加し、position、opacity、size、output quality を調整できます。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"},"author":{"@type":"組織","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"画像ウォーターマーク一括処理ツール","item":"https://toolhuben.com/ja/watermark-forge/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"質問","name":"the image watermark batch tool suitable for とは何ですか？","acceptedAnswer":{"@type":"回答","text":"ウォーターマークは出所を示し、無断でそのまま利用する手間を増やせるため、作品プレビュー、商品画像、納品サンプルなどに適しています。ただし完全な DRM ではありません。小さすぎる、薄すぎる、余白だけに配置されたウォーターマークは、切り抜きや画像修復で除去される可能性があります。"}},{"@type":"質問","name":"画像ウォーターマーク一括処理ツールの使い方は？","acceptedAnswer":{"@type":"回答","text":"画像を追加してテキストまたはロゴの透かしを選択し、位置、繰り返し方法、比率、透明度、安全余白を調整します。各画像の見やすさを個別にプレビューした後、まとめて出力できます。元ファイルは透かしなしのまま保持されます。"}},{"@type":"質問","name":"画像 watermark 一括処理ツールを使う際、どのような点に注意すべきでしょうか？","acceptedAnswer":{"@type":"回答","text":"ウォーターマークは、読めることと主題を邪魔しないことのバランスが重要です。公開画像は実際に必要な解像度まで縮小し、著作権を証明できる資料とオリジナルファイルも保管しておくことをおすすめします。"}},{"@type":"質問","name":"image watermark batch tool はデータをサーバーへアップロードしますか？","acceptedAnswer":{"@type":"回答","text":"image と logo は local Canvas 内だけで合成され、未公開作品は upload されません。"}},{"@type":"質問","name":"ソフトウェアのインストールやアカウント登録は必要ですか？","acceptedAnswer":{"@type":"回答","text":"不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。"}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","壓製過程中發生錯誤，請確保記憶體充足":"処理中にエラーが発生しました。十分な memory があることを確認してください。","尚未載入影像...":"まだ画像は読み込まれていません...","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","建立理念":"創業時の理念","建議":"推奨事項","批次防禦矩陣壓製完成！":"一括防御マトリクス抑制が完了しました！","檔案":"アーカイブ","正在封裝 ZIP... (這可能需要幾秒鐘)":"ZIP を作成中...（数秒かかる場合があります）","無影像":"画像なし","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","處理中":"処理中","解析度:":"解像度:","請上傳標誌印記 (Logo)":"ロゴをアップロードしてください","請輸入防禦銘文":"防御用の説明文を入力してください","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/watermark-forge/" rel="canonical"/><link href="https://toolhuben.com/watermark-forge/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/watermark-forge/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/watermark-forge/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/watermark-forge/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="compact" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#6366f1;--classic-accent-rgb:99,102,241">
+<!-- 1. 系統組件：Header & Sidebar -->
+<div class="shrink-0" id="component-header"></div>
+<div id="component-sidebar"></div>
+<!-- 3. 核心模塊：Watermark Forge Matrix -->
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out] flex flex-col">
+<nav aria-label="パンくずリスト" class="seo-upgrade-breadcrumb"><a href="/ja/">ホーム</a><span>›</span><span>画像ウォーターマーク一括処理ツール</span></nav>
+<!-- SEO 友善標題區 -->
+<div class="text-center space-y-4 mb-6 mt-2 shrink-0">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-indigo-950/30 border border-indigo-900/50 text-xs text-indigo-400 shadow-inner">
+<i class="ph-fill ph-shield-check mr-1.5 text-sm"></i>
+                Optical Asset Defense Matrix（Instant Zoom Alignment）
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Watermark Forge <span class="text-transparent bg-clip-text bg-gradient-to-r from-wm-primary to-wm-secondary">Watermark Forge</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                デジタル素材を保護するための機能を備えています。キャンバスのドラッグによるリアルタイム拡大、画像全体へのマトリクスシールド（AI による画像流用への対策）、光学的なハイブリッドレンダリングに対応し、ブラウザー側で非同期の一括処理を行います。
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
+<!-- ========================================== -->
+<!-- 左側：參數控制台 (Configuration Console)      -->
+<!-- ========================================== -->
+<div class="lg:col-span-4 flex flex-col gap-5 h-full">
+<div class="glass-panel p-5 sm:p-6 flex flex-col gap-5 shadow-xl border border-hub-700/50 relative">
+<!-- 模式切換 -->
+<div class="flex gap-2">
+<label class="flex-1 cursor-pointer relative">
+<input checked="" class="peer sr-only radio-tab-input" name="wm-type" type="radio" value="text"/>
+<div class="radio-tab-label py-2 bg-hub-900 border border-hub-700 rounded-lg text-xs text-slate-400 transition-all text-center flex items-center justify-center gap-1.5"><i class="ph-bold ph-text-t"></i> リテラル保護</div>
+</label>
+<label class="flex-1 cursor-pointer relative">
+<input class="peer sr-only radio-tab-input" name="wm-type" type="radio" value="image"/>
+<div class="radio-tab-label py-2 bg-hub-900 border border-hub-700 rounded-lg text-xs text-slate-400 transition-all text-center flex items-center justify-center gap-1.5"><i class="ph-bold ph-image"></i> 画像保護</div>
+</label>
+</div>
+<!-- 模塊：文字防禦設定 -->
+<div class="space-y-4 animate-[fadeIn_0.2s_ease-out]" id="panel-text">
+<div class="space-y-2">
+<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">防御メッセージ（テキスト内容）</label>
+<input class="w-full bg-hub-900 border border-hub-700 rounded-lg px-3 py-2.5 text-white font-sans text-sm focus:border-wm-primary outline-none transition-colors" id="in-text" placeholder="著作権表示テキストを入力..." type="text" value="© COPYRIGHT PROTECTED"/>
+</div>
+<div class="flex gap-3">
+<div class="flex-1 space-y-2">
+<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">フォント</label>
+<select class="w-full bg-hub-900 border border-hub-700 rounded-lg px-2 py-2 text-white font-sans text-xs focus:border-wm-primary outline-none cursor-pointer" id="in-font">
+<option value="sans-serif">サンセリフ</option>
+<option value="serif">セリフ体</option>
+<option selected="" value="monospace">Mono</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">色</label>
+<div class="flex items-center h-[34px] px-2 bg-hub-900 border border-hub-700 rounded-lg">
+<input id="in-color" type="color" value="#ffffff"/>
+</div>
+</div>
+</div>
+</div>
+<!-- 模塊：圖像防禦設定 -->
+<div class="hidden space-y-4 animate-[fadeIn_0.2s_ease-out]" id="panel-image">
+<div class="space-y-2">
+<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ロゴ画像</label>
+<input accept="image/png, image/svg+xml" class="hidden" id="in-logo-file" type="file"/>
+<div class="w-full border-2 border-dashed border-hub-700 hover:border-wm-primary rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors bg-hub-900/50 py-4 group" id="btn-upload-logo">
+<i class="ph ph-upload-simple text-2xl text-slate-500 group-hover:text-wm-primary mb-1 transition-colors"></i>
+<p class="text-[10px] text-slate-400 font-mono">クリックして透かしをアップロード（透明 PNG 推奨）</p>
+</div>
+<div class="hidden items-center gap-3 bg-hub-900 p-2 rounded-lg border border-hub-700" id="logo-preview-box">
+<img class="w-10 h-10 object-contain bg-hub-800 rounded" id="logo-preview" src=""/>
+<span class="text-xs text-slate-300 flex-grow truncate" id="logo-name">logo.png</span>
+<button class="text-red-400 p-1 hover:bg-red-900/30 rounded" id="btn-remove-logo"><i class="ph ph-trash"></i></button>
+</div>
+</div>
+</div>
+<div class="w-full h-px bg-hub-700 my-1"></div>
+<!-- 光學與空間佈局設定 (Optics & Spatial) -->
+<div class="space-y-5">
+<div class="flex justify-between items-center">
+<span class="text-xs font-bold text-slate-300"><i class="ph-fill ph-bounding-box text-wm-secondary"></i> スペースマトリクス設定</span>
+<button class="text-[10px] text-slate-400 hover:text-white border border-hub-700 bg-hub-800 px-2 py-1 rounded transition-colors" id="btn-reset-pos"><i class="ph ph-arrows-in-simple"></i> 位置をリセット</button>
+</div>
+<!-- 滑桿控制器 (與畫布操作雙向同步) -->
+<div class="space-y-4 bg-hub-900/50 p-4 rounded-xl border border-hub-800/50">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+<span>相対スケーリング（Scale）</span><span class="text-wm-primary font-mono" id="val-scale">15%</span>
+</div>
+<input id="in-scale" max="100" min="1" step="1" type="range" value="15"/>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+<span>回転</span><span class="text-wm-primary font-mono" id="val-rotate">0°</span>
+</div>
+<input id="in-rotate" max="180" min="-180" step="1" type="range" value="0"/>
+</div>
+<div class="space-y-2 pt-2 border-t border-hub-800">
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+<span>不透明度</span><span class="text-wm-primary font-mono" id="val-opacity">50%</span>
+</div>
+<input id="in-opacity" max="100" min="0" step="1" type="range" value="50"/>
+</div>
+</div>
+<!-- 混合模式與全域護盾 -->
+<div class="space-y-4">
+<label class="flex items-center justify-between cursor-pointer group p-3 bg-wm-shield/10 border border-wm-shield/30 rounded-lg shadow-sm">
+<span class="text-[11px] font-bold text-wm-shield group-hover:text-purple-300 transition-colors flex items-center gap-1.5"><i class="ph-bold ph-shield-check text-lg"></i> グローバルマトリクスシールド（AI による画像盗用対策）</span>
+<input class="rounded border-slate-600 text-wm-shield focus:ring-0 bg-hub-900 cursor-pointer w-4 h-4" id="in-tiled" type="checkbox"/>
+</label>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">光学ブレンディング（Blend Mode）</label>
+<select class="w-full bg-hub-900 border border-hub-700 rounded-lg px-2 py-2 text-white font-sans text-xs focus:border-wm-primary outline-none cursor-pointer" id="in-blend">
+<option selected="" value="source-over">通常</option>
+<option value="overlay">Overlay（オーバーレイ - 推奨）</option>
+<option value="multiply">乗算（色値の加算）</option>
+<option value="screen">画面</option>
+</select>
+</div>
+</div>
+</div>
+<!-- 執行按鈕 -->
+<button class="mt-4 w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-500 hover:to-blue-400 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed" id="btn-execute">
+<i class="ph-bold ph-file-zip text-xl"></i> 一括圧縮を実行して ZIP を作成
+                    </button>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：視覺預覽競技場 (Visual Preview Arena)    -->
+<!-- ========================================== -->
+<div class="lg:col-span-8 flex flex-col gap-4 h-full">
+<!-- 主畫布 -->
+<div class="glass-panel p-4 sm:p-6 shadow-2xl border border-hub-700/50 flex-grow flex flex-col relative overflow-hidden min-h-[400px]">
+<div class="flex justify-between items-center border-b border-hub-700 pb-3 mb-4 shrink-0">
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+<i class="ph-fill ph-monitor text-wm-secondary text-lg"></i> ホログラフィック空間操作マトリクス（ホログラフィックプレビュー）
+                        </h3>
+<div class="flex items-center gap-2">
+<span class="text-[10px] text-slate-400 bg-hub-900 px-2 py-1 rounded hidden sm:inline-block"><i class="ph ph-hand-pointing"></i> 直接 drag、zoom、rotate できます。</span>
+<span class="text-[10px] font-mono text-slate-500 bg-hub-900 px-2 py-1 rounded border border-hub-700" id="preview-info">画像なし</span>
+</div>
+</div>
+<!-- 影像放置與預覽區 -->
+<div class="flex-grow w-full relative flex items-center justify-center rounded-lg overflow-hidden border border-hub-800" id="preview-arena">
+<!-- 拖曳提示底圖 -->
+<div class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-colors border-2 border-dashed border-transparent hover:border-wm-primary/50 z-10" id="main-dropzone">
+<div class="p-4 bg-hub-900/80 rounded-full mb-3 text-slate-500 shadow-lg border border-hub-700 backdrop-blur-sm">
+<i class="ph ph-images text-4xl"></i>
+</div>
+<p class="text-white font-bold text-sm mb-1 bg-hub-900/50 px-3 py-1 rounded backdrop-blur-sm">複数の画像をここへクリックまたはドラッグします</p>
+</div>
+<input accept="image/png, image/jpeg, image/webp" class="hidden" id="in-images" multiple="" type="file"/>
+<!-- ⚠️ THE KILLER FEATURE: 動態實體疊加層 -->
+<div class="hidden" id="image-frame">
+<!-- 底層預覽 Canvas -->
+<canvas id="preview-canvas"></canvas>
+<!-- DOM 幾何投影操作框 -->
+<div id="wm-interactor">
+<div class="rotate-line"></div>
+<div class="rotate-handle handle" title="回転"><i class="ph-bold ph-arrows-clockwise text-[10px]"></i></div>
+<div class="resize-handle handle" title="スケール"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- 資源池列表 (Pool Thumbnails) -->
+<div class="glass-panel p-3 border border-hub-700/50 shrink-0">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">配列キュー（Queue）</span>
+<span class="text-[10px] font-mono text-wm-secondary" id="queue-count">0 ファイル</span>
+</div>
+<div class="flex gap-2 overflow-x-auto pb-2 min-h-[64px]" id="thumbnail-container">
+<div class="text-[10px] text-slate-600 flex items-center h-full italic px-2">まだ画像は読み込まれていません...</div>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="画像ウォーターマーク一括処理ツールのチュートリアルと FAQ" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>画像ウォーターマーク一括処理ツールの完全ガイド</h2>
+<p>ウォーターマークは出所を示し、無断でそのまま利用する手間を増やせるため、作品プレビュー、商品画像、納品サンプルなどに適しています。ただし完全な DRM ではありません。小さすぎる、薄すぎる、余白だけに配置されたウォーターマークは、切り抜きや画像修復で除去される可能性があります。</p>
+<h3>操作手順</h3>
+<ol><li>画像を追加し、テキストまたはロゴの透かしを選択します</li><li>position、repeat、scale、transparency、safety margin を調整</li><li>各画像の見やすさを1枚ずつプレビューして確認した後、一括で出力できます。ウォーターマークなしの元ファイルはそのまま保持されます。</li></ol>
+<h3>実用的な提案と制限事項</h3>
+<p>ウォーターマークは、読めることと主題を邪魔しないことのバランスが重要です。公開画像は実際に必要な解像度まで縮小し、著作権を証明できる資料とオリジナルファイルも保管しておくことをおすすめします。</p>
+<h3>プライバシーと端末内処理</h3>
+<p>image と logo は local Canvas 内だけで合成され、未公開作品は upload されません。</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>画像ウォーターマーク一括処理ツールのよくある質問</h2>
+<details><summary>the image watermark batch tool suitable for とは何ですか？</summary><div class="seo-upgrade-answer">ウォーターマークは出所を示し、無断でそのまま利用する手間を増やせるため、作品プレビュー、商品画像、納品サンプルなどに適しています。ただし完全な DRM ではありません。小さすぎる、薄すぎる、余白だけに配置されたウォーターマークは、切り抜きや画像修復で除去される可能性があります。</div></details>
+<details><summary>画像ウォーターマーク一括処理ツールの使い方は？</summary><div class="seo-upgrade-answer">画像を追加してテキストまたはロゴの透かしを選択し、位置、繰り返し方法、比率、透明度、安全余白を調整します。各画像の見やすさを個別にプレビューした後、まとめて出力できます。元ファイルは透かしなしのまま保持されます。</div></details>
+<details><summary>画像 watermark 一括処理ツールを使う際、どのような点に注意すべきでしょうか？</summary><div class="seo-upgrade-answer">ウォーターマークは、読めることと主題を邪魔しないことのバランスが重要です。公開画像は実際に必要な解像度まで縮小し、著作権を証明できる資料とオリジナルファイルも保管しておくことをおすすめします。</div></details>
+<details><summary>image watermark batch tool はデータをサーバーへアップロードしますか？</summary><div class="seo-upgrade-answer">image と logo は local Canvas 内だけで合成され、未公開作品は upload されません。</div></details>
+<details><summary>ソフトウェアのインストールやアカウント登録は必要ですか？</summary><div class="seo-upgrade-answer">不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。</div></details>
+</section>
+</article>
+</main>
+<!-- 進度條彈窗 -->
+<div class="fixed inset-0 z-[100] bg-hub-900/90 backdrop-blur-md flex items-center justify-center" id="progress-modal">
+<div class="bg-hub-800 border border-hub-700 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center flex flex-col items-center">
+<i class="ph-fill ph-gear animate-spin text-5xl text-wm-primary mb-4"></i>
+<h3 class="text-lg font-bold text-white mb-2">光学シールドを抑制中...</h3>
+<p class="text-xs text-slate-400 font-mono mb-6" id="progress-text">処理中 0 / 0</p>
+<div class="w-full bg-hub-900 rounded-full h-3 border border-hub-700 overflow-hidden">
+<div class="bg-gradient-to-r from-wm-primary to-wm-secondary h-full rounded-full transition-all duration-300" id="progress-bar" style="width: 0%"></div>
+</div>
+<p class="text-[10px] text-slate-500 mt-4 italic">この処理はすべて端末内で完結し、プライバシーを最大限に保ちます。</p>
+</div>
+</div>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/watermark-forge'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 核心業務邏輯：光學資產防禦矩陣與空間操縱引擎       -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2500);
+            };
+
+            // --- DOM Elements ---
+            const radioTabs = document.getElementsByName('wm-type');
+            const panelText = document.getElementById('panel-text');
+            const panelImage = document.getElementById('panel-image');
+            
+            const inText = document.getElementById('in-text');
+            const inFont = document.getElementById('in-font');
+            const inColor = document.getElementById('in-color');
+            
+            const btnUploadLogo = document.getElementById('btn-upload-logo');
+            const inLogoFile = document.getElementById('in-logo-file');
+            const logoPreviewBox = document.getElementById('logo-preview-box');
+            const logoPreview = document.getElementById('logo-preview');
+            const logoName = document.getElementById('logo-name');
+            const btnRemoveLogo = document.getElementById('btn-remove-logo');
+            
+            const inScale = document.getElementById('in-scale');
+            const valScale = document.getElementById('val-scale');
+            const inRotate = document.getElementById('in-rotate');
+            const valRotate = document.getElementById('val-rotate');
+            const inOpacity = document.getElementById('in-opacity');
+            const valOpacity = document.getElementById('val-opacity');
+            const btnResetPos = document.getElementById('btn-reset-pos');
+            
+            const inTiled = document.getElementById('in-tiled');
+            const inBlend = document.getElementById('in-blend');
+            
+            const previewArena = document.getElementById('preview-arena');
+            const mainDropzone = document.getElementById('main-dropzone');
+            const inImages = document.getElementById('in-images');
+            
+            const imageFrame = document.getElementById('image-frame');
+            const previewCanvas = document.getElementById('preview-canvas');
+            const ctx = previewCanvas.getContext('2d');
+            const interactor = document.getElementById('wm-interactor');
+            
+            const previewInfo = document.getElementById('preview-info');
+            const queueCount = document.getElementById('queue-count');
+            const thumbnailContainer = document.getElementById('thumbnail-container');
+            
+            const btnExecute = document.getElementById('btn-execute');
+            const progressModal = document.getElementById('progress-modal');
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar');
+
+            // --- 狀態矩陣 (State Matrix) ---
+            let uploadedImages = []; 
+            let currentPreviewIndex = -1;
+            let watermarkLogoObj = null; 
+            let lastStampCanvas = null; 
+            
+            let wmState = {
+                type: 'text', 
+                text: '© COPYRIGHT PROTECTED',
+                font: 'monospace',
+                color: '#ffffff',
+                posX: 0.5,    
+                posY: 0.5,    
+                rotation: 0,  
+                scalePct: 15, 
+                opacityPct: 50,
+                isTiled: false,
+                blendMode: 'source-over'
+            };
+
+            // --- 參數連動與事件綁定 ---
+
+            // ⚠️ 核心修復：這支函式會銷毀快取並強迫重繪
+            const requestStampUpdate = () => {
+                lastStampCanvas = null; // 清空印章快取
+                updateVisuals();
+            };
+
+            Array.from(radioTabs).forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    wmState.type = e.target.value;
+                    if (wmState.type === 'text') {
+                        panelText.classList.remove('hidden');
+                        panelImage.classList.add('hidden');
+                    } else {
+                        panelText.classList.add('hidden');
+                        panelImage.classList.remove('hidden');
+                    }
+                    requestStampUpdate();
+                });
+            });
+
+            const updateTextState = () => {
+                wmState.text = inText.value || ' ';
+                wmState.font = inFont.value;
+                wmState.color = inColor.value;
+                requestStampUpdate();
+            };
+            inText.addEventListener('input', updateTextState);
+            inFont.addEventListener('change', updateTextState);
+            inColor.addEventListener('input', updateTextState);
+
+            btnUploadLogo.addEventListener('click', () => inLogoFile.click());
+            inLogoFile.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    watermarkLogoObj = img;
+                    logoPreview.src = url;
+                    logoName.textContent = file.name;
+                    btnUploadLogo.classList.add('hidden');
+                    logoPreviewBox.classList.remove('hidden');
+                    logoPreviewBox.classList.add('flex');
+                    requestStampUpdate();
+                };
+                img.src = url;
+            });
+
+            btnRemoveLogo.addEventListener('click', () => {
+                watermarkLogoObj = null;
+                logoPreview.src = '';
+                inLogoFile.value = '';
+                logoPreviewBox.classList.add('hidden');
+                logoPreviewBox.classList.remove('flex');
+                btnUploadLogo.classList.remove('hidden');
+                requestStampUpdate();
+            });
+
+            // 空間佈局與光學參數 (左側控制面板)
+            inScale.addEventListener('input', (e) => {
+                wmState.scalePct = parseInt(e.target.value);
+                valScale.textContent = `${wmState.scalePct}%`;
+                // ⚠️ 因為 Scale 改變了印章像素尺寸，必須摧毀快取
+                requestStampUpdate(); 
+            });
+            
+            inRotate.addEventListener('input', (e) => {
+                wmState.rotation = parseInt(e.target.value);
+                valRotate.textContent = `${wmState.rotation}°`;
+                updateVisuals(); 
+            });
+
+            inOpacity.addEventListener('input', (e) => {
+                wmState.opacityPct = parseInt(e.target.value);
+                valOpacity.textContent = `${wmState.opacityPct}%`;
+                updateVisuals();
+            });
+
+            btnResetPos.addEventListener('click', () => {
+                wmState.posX = 0.5;
+                wmState.posY = 0.5;
+                wmState.rotation = 0;
+                inRotate.value = 0;
+                valRotate.textContent = '0°';
+                updateVisuals();
+            });
+
+            inTiled.addEventListener('change', (e) => {
+                wmState.isTiled = e.target.checked;
+                updateVisuals();
+            });
+
+            inBlend.addEventListener('change', (e) => {
+                wmState.blendMode = e.target.value;
+                updateVisuals();
+            });
+
+
+            // --- 檔案處理佇列 ---
+            const handleFiles = (files) => {
+                const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+                if (validFiles.length === 0) return;
+
+                let processedCount = 0;
+                validFiles.forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    const img = new Image();
+                    img.onload = () => {
+                        uploadedImages.push({ file, objectUrl: url, imgElement: img });
+                        processedCount++;
+                        if (processedCount === validFiles.length) {
+                            updateQueueUI();
+                            if (currentPreviewIndex === -1) selectPreview(0);
+                        }
+                    };
+                    img.src = url;
+                });
+            };
+
+            const updateQueueUI = () => {
+                queueCount.textContent = `${uploadedImages.length} 檔案`;
+                if (uploadedImages.length > 0) {
+                    btnExecute.disabled = false;
+                    mainDropzone.classList.add('hidden');
+                    imageFrame.classList.remove('hidden');
+                } else {
+                    btnExecute.disabled = true;
+                    mainDropzone.classList.remove('hidden');
+                    imageFrame.classList.add('hidden');
+                    thumbnailContainer.innerHTML = '<div class="text-[10px] text-slate-600 flex items-center h-full italic px-2">尚未載入影像...</div>';
+                    previewInfo.textContent = '無影像';
+                    return;
+                }
+
+                thumbnailContainer.innerHTML = '';
+                uploadedImages.forEach((obj, idx) => {
+                    const div = document.createElement('div');
+                    div.className = `thumb-item shrink-0 ${idx === currentPreviewIndex ? 'active' : ''}`;
+                    div.innerHTML = `
+                        <img src="${obj.objectUrl}" alt="thumb">
+                        <i class="ph-bold ph-x thumb-remove" data-idx="${idx}"></i>
+                    `;
+                    div.addEventListener('click', (e) => {
+                        if(e.target.classList.contains('thumb-remove')) return; 
+                        selectPreview(idx);
+                    });
+                    div.querySelector('.thumb-remove').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        removeImage(idx);
+                    });
+                    thumbnailContainer.appendChild(div);
+                });
+            };
+
+            const selectPreview = (index) => {
+                if (index < 0 || index >= uploadedImages.length) return;
+                currentPreviewIndex = index;
+                updateQueueUI(); 
+                
+                // 動態調整 image-frame 的尺寸以適應圖片比例
+                const img = uploadedImages[currentPreviewIndex].imgElement;
+                const arenaRect = previewArena.getBoundingClientRect();
+                const imgAspect = img.width / img.height;
+                const arenaAspect = arenaRect.width / arenaRect.height;
+
+                let frameW, frameH;
+                const maxWidth = arenaRect.width - 40;
+                const maxHeight = arenaRect.height - 40;
+                
+                if (imgAspect > (maxWidth / maxHeight)) {
+                     frameW = maxWidth;
+                     frameH = maxWidth / imgAspect;
+                } else {
+                     frameH = maxHeight;
+                     frameW = maxHeight * imgAspect;
+                }
+                
+                imageFrame.style.width = `${frameW}px`;
+                imageFrame.style.height = `${frameH}px`;
+                previewInfo.textContent = `解析度: ${img.width} x ${img.height}`;
+                
+                requestStampUpdate();
+            };
+
+            const removeImage = (index) => {
+                const obj = uploadedImages[index];
+                URL.revokeObjectURL(obj.objectUrl); 
+                uploadedImages.splice(index, 1);
+                
+                if (uploadedImages.length === 0) {
+                    currentPreviewIndex = -1;
+                } else if (currentPreviewIndex >= uploadedImages.length) {
+                    currentPreviewIndex = uploadedImages.length - 1;
+                } else if (currentPreviewIndex === index) {
+                    currentPreviewIndex = Math.max(0, index - 1);
+                }
+                
+                updateQueueUI();
+                if(currentPreviewIndex !== -1) selectPreview(currentPreviewIndex);
+            };
+
+            previewArena.addEventListener('click', (e) => {
+                if(uploadedImages.length === 0) inImages.click();
+            });
+            inImages.addEventListener('change', (e) => handleFiles(e.target.files));
+            previewArena.addEventListener('dragover', (e) => { e.preventDefault(); previewArena.classList.add('border-wm-primary'); });
+            previewArena.addEventListener('dragleave', (e) => { e.preventDefault(); previewArena.classList.remove('border-wm-primary'); });
+            previewArena.addEventListener('drop', (e) => {
+                e.preventDefault(); 
+                previewArena.classList.remove('border-wm-primary');
+                if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+            });
+            window.addEventListener('resize', () => {
+                if (currentPreviewIndex !== -1) selectPreview(currentPreviewIndex);
+            });
+
+            // --- 全息空間操縱引擎 (Holographic Interactor) ---
+            
+            let activeAction = null; // 'drag', 'resize', 'rotate'
+            let startX, startY;
+            let startRelX, startRelY, startScalePct, startRotation;
+
+            interactor.addEventListener('pointerdown', (e) => {
+                if (wmState.isTiled) return; 
+                
+                if(e.target.classList.contains('resize-handle')) activeAction = 'resize';
+                else if(e.target.classList.contains('rotate-handle')) activeAction = 'rotate';
+                else activeAction = 'drag';
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startRelX = wmState.posX;
+                startRelY = wmState.posY;
+                startScalePct = wmState.scalePct;
+                startRotation = wmState.rotation;
+                
+                interactor.setPointerCapture(e.pointerId);
+                interactor.classList.add('active');
+                e.preventDefault();
+            });
+
+            interactor.addEventListener('pointermove', (e) => {
+                if(!activeAction) return;
+                
+                const frameRect = imageFrame.getBoundingClientRect();
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                if(activeAction === 'drag') {
+                    wmState.posX = Math.max(0, Math.min(1, startRelX + (dx / frameRect.width)));
+                    wmState.posY = Math.max(0, Math.min(1, startRelY + (dy / frameRect.height)));
+                    
+                } else if (activeAction === 'resize') {
+                    const cx = frameRect.left + frameRect.width * wmState.posX;
+                    const cy = frameRect.top + frameRect.height * wmState.posY;
+                    const startDist = Math.sqrt(Math.pow(startX - cx, 2) + Math.pow(startY - cy, 2));
+                    const currentDist = Math.sqrt(Math.pow(e.clientX - cx, 2) + Math.pow(e.clientY - cy, 2));
+                    
+                    if (startDist > 0) {
+                        const ratio = currentDist / startDist;
+                        wmState.scalePct = Math.max(1, Math.min(100, startScalePct * ratio));
+                        inScale.value = wmState.scalePct;
+                        valScale.textContent = `${Math.round(wmState.scalePct)}%`;
+                        
+                        // ⚠️ THE KILLER FIX: 在即時縮放時強制清空印章快取，才能同步反映在 Canvas 上
+                        lastStampCanvas = null; 
+                    }
+                    
+                } else if (activeAction === 'rotate') {
+                    const cx = frameRect.left + frameRect.width * wmState.posX;
+                    const cy = frameRect.top + frameRect.height * wmState.posY;
+                    let angle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+                    let finalAngle = Math.round(angle + 90);
+                    if (finalAngle > 180) finalAngle -= 360;
+                    if (finalAngle < -180) finalAngle += 360;
+                    
+                    wmState.rotation = finalAngle;
+                    inRotate.value = wmState.rotation;
+                    valRotate.textContent = `${wmState.rotation}°`;
+                }
+
+                updateVisuals();
+            });
+
+            interactor.addEventListener('pointerup', (e) => {
+                activeAction = null;
+                interactor.releasePointerCapture(e.pointerId);
+                interactor.classList.remove('active');
+            });
+
+
+            // --- 光學渲染引擎 (Optical Rendering Engine) ---
+
+            const generateStampCanvas = (baseWidth) => {
+                if (lastStampCanvas) return lastStampCanvas;
+
+                const targetWMWidth = baseWidth * (wmState.scalePct / 100);
+                const stampCanvas = document.createElement('canvas');
+                const sCtx = stampCanvas.getContext('2d');
+
+                if (wmState.type === 'text') {
+                    if (wmState.text.trim() === '') return null;
+                    
+                    let fontSize = targetWMWidth / Math.max(1, wmState.text.length) * 1.5;
+                    sCtx.font = `bold ${fontSize}px ${wmState.font}, sans-serif`;
+                    let metrics = sCtx.measureText(wmState.text);
+
+                    while (metrics.width > targetWMWidth && fontSize > 10) {
+                        fontSize -= 2;
+                        sCtx.font = `bold ${fontSize}px ${wmState.font}, sans-serif`;
+                        metrics = sCtx.measureText(wmState.text);
+                    }
+
+                    stampCanvas.width = Math.max(1, metrics.width);
+                    stampCanvas.height = Math.max(1, fontSize * 1.5);
+
+                    sCtx.font = `bold ${fontSize}px ${wmState.font}, sans-serif`;
+                    sCtx.fillStyle = wmState.color;
+                    sCtx.textAlign = 'left';
+                    sCtx.textBaseline = 'top';
+                    sCtx.fillText(wmState.text, 0, fontSize * 0.2);
+                    
+                } else {
+                    if(!watermarkLogoObj) return null;
+                    const ratio = watermarkLogoObj.height / Math.max(1, watermarkLogoObj.width);
+                    stampCanvas.width = Math.max(1, targetWMWidth);
+                    stampCanvas.height = Math.max(1, targetWMWidth * ratio);
+                    sCtx.drawImage(watermarkLogoObj, 0, 0, stampCanvas.width, stampCanvas.height);
+                }
+                
+                lastStampCanvas = stampCanvas;
+                return stampCanvas;
+            };
+
+            let renderTimeout;
+            const updateVisuals = () => {
+                if (currentPreviewIndex === -1 || !uploadedImages[currentPreviewIndex]) return;
+                
+                if (renderTimeout) cancelAnimationFrame(renderTimeout);
+                renderTimeout = requestAnimationFrame(() => {
+                    const baseImg = uploadedImages[currentPreviewIndex].imgElement;
+                    
+                    // 1. 取得印章 (基於原圖解析度)
+                    const stampCanvas = generateStampCanvas(baseImg.width);
+                    
+                    // 2. 更新 DOM 操作框 (基於螢幕顯示大小)
+                    if (wmState.isTiled || !stampCanvas) {
+                        interactor.style.display = 'none';
+                    } else {
+                        interactor.style.display = 'flex';
+                        const frameRect = imageFrame.getBoundingClientRect();
+                        const displayRatio = frameRect.width / baseImg.width;
+                        
+                        interactor.style.left = `${wmState.posX * 100}%`;
+                        interactor.style.top = `${wmState.posY * 100}%`;
+                        interactor.style.width = `${stampCanvas.width * displayRatio}px`;
+                        interactor.style.height = `${stampCanvas.height * displayRatio}px`;
+                        interactor.style.transform = `translate(-50%, -50%) rotate(${wmState.rotation}deg)`;
+                    }
+                    
+                    // 3. 繪製預覽圖
+                    renderWatermark(baseImg, previewCanvas);
+                });
+            };
+
+            const renderWatermark = (baseImg, targetCanvas) => {
+                const w = baseImg.width;
+                const h = baseImg.height;
+                
+                targetCanvas.width = w;
+                targetCanvas.height = h;
+                const context = targetCanvas.getContext('2d');
+                
+                context.drawImage(baseImg, 0, 0, w, h);
+                
+                const stampCanvas = generateStampCanvas(w);
+                if (!stampCanvas) return;
+
+                context.save();
+                context.globalAlpha = wmState.opacityPct / 100;
+                context.globalCompositeOperation = wmState.blendMode;
+                
+                const sw = stampCanvas.width;
+                const sh = stampCanvas.height;
+
+                if (wmState.isTiled) {
+                    const diag = Math.sqrt(w * w + h * h);
+                    const spacingX = sw * 1.5; 
+                    const spacingY = sh * 3.0;
+
+                    context.translate(w / 2, h / 2);
+                    context.rotate(wmState.rotation * Math.PI / 180); 
+
+                    for (let x = -diag / 2; x < diag / 2; x += spacingX) {
+                        let row = 0;
+                        for (let y = -diag / 2; y < diag / 2; y += spacingY) {
+                            const offset = (row % 2 === 0) ? 0 : spacingX / 2;
+                            context.drawImage(stampCanvas, x + offset, y, sw, sh);
+                            row++;
+                        }
+                    }
+                } else {
+                    context.translate(w * wmState.posX, h * wmState.posY);
+                    context.rotate(wmState.rotation * Math.PI / 180);
+                    context.drawImage(stampCanvas, -sw / 2, -sh / 2, sw, sh);
+                }
+
+                context.restore();
+            };
+
+
+            // --- 異步批次封裝引擎 (Async Batch ZIP Pipeline) ---
+            
+            btnExecute.addEventListener('click', async () => {
+                if (uploadedImages.length === 0) return;
+
+                if (wmState.type === 'text' && wmState.text.trim() === '') {
+                    return showToast('請輸入防禦銘文', true);
+                }
+                if (wmState.type === 'image' && !watermarkLogoObj) {
+                    return showToast('請上傳標誌印記 (Logo)', true);
+                }
+
+                btnExecute.disabled = true;
+                progressModal.classList.add('show');
+                progressBar.style.width = '0%';
+                
+                try {
+                    const zip = new JSZip();
+                    const offscreenCanvas = document.createElement('canvas');
+                    
+                    for (let i = 0; i < uploadedImages.length; i++) {
+                        const imgObj = uploadedImages[i];
+                        
+                        progressText.textContent = `處理中 ${i + 1} / ${uploadedImages.length} : ${imgObj.file.name}`;
+                        progressBar.style.width = `${((i) / uploadedImages.length) * 100}%`;
+                        
+                        await new Promise(resolve => setTimeout(result => resolve(), 50));
+                        
+                        renderWatermark(imgObj.imgElement, offscreenCanvas);
+                        
+                        const blob = await new Promise(resolve => {
+                            const format = imgObj.file.type === 'image/webp' || imgObj.file.type === 'image/png' ? imgObj.file.type : 'image/jpeg';
+                            const quality = format === 'image/jpeg' || format === 'image/webp' ? 0.92 : undefined;
+                            offscreenCanvas.toBlob(resolve, format, quality);
+                        });
+
+                        zip.file(`protected_${imgObj.file.name}`, blob);
+                    }
+
+                    progressText.textContent = `正在封裝 ZIP... (這可能需要幾秒鐘)`;
+                    progressBar.style.width = `100%`;
+                    
+                    await new Promise(resolve => setTimeout(result => resolve(), 50));
+
+                    const content = await zip.generateAsync({ type: "blob" });
+                    
+                    const url = URL.createObjectURL(content);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    const ts = new Date().toISOString().replace(/[:.]/g, '').substring(0, 15);
+                    link.download = `ToolHub_Protected_Assets_${ts}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    
+                    showToast('批次防禦矩陣壓製完成！');
+
+                } catch (err) {
+                    console.error(err);
+                    showToast('壓製過程中發生錯誤，請確保記憶體充足', true);
+                } finally {
+                    progressModal.classList.remove('show');
+                    btnExecute.disabled = false;
+                }
+            });
+
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>Cron Builder｜無料オンラインツール - ToolHub</title>
+<meta content="GUI で Cron スケジュールを作成できるツールです。ドロップダウンと視覚的な操作画面から Cron Expression を素早く作成できます。Reverse Parse、Next Run プレビュー、よく使う Preset、検証機能に対応し、Linux Crontab、Kubernetes CronJob、GitHub Actions で利用できます。" name="description"/>
+<meta content="Cron, Cron Expression, Cron Builder, 排程, Linux Crontab, Kubernetes CronJob, GitHub Actions, 定時任務, ToolHub" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<style>
+        body {
+            background-color: #0B1120; color: #E2E8F0;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background: rgba(21, 31, 50, 0.8); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+            box-shadow: 0 20px 60px -15px rgba(0,0,0,0.5);
+        }
+        .glass-panel-solid {
+            background: rgba(15, 20, 42, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid #1E293B; border-radius: 1rem;
+        }
+
+        .field-group {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(30, 41, 59, 0.5);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            transition: border-color 0.2s;
+        }
+        .field-group:hover { border-color: #334155; }
+        .field-group.focused { border-color: #38BDF8; box-shadow: 0 0 0 2px rgba(56,189,248,0.08); }
+
+        .cron-display {
+            font-family: '"Fira Code"', ui-monospace, monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: #38BDF8;
+        }
+        @media (max-width: 640px) {
+            .cron-display { font-size: 1.125rem; letter-spacing: 0.05em; }
+        }
+
+        .field-input {
+            background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+            transition: border-color 0.2s; width: 100%;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .field-input:focus { outline: none; border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .field-input::placeholder { color: #475569; }
+
+        .field-select {
+            background: #0f172a; border: 1px solid #1E293B; color: #E2E8F0;
+            border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem;
+            transition: border-color 0.2s; cursor: pointer;
+        }
+        .field-select:focus { outline: none; border-color: #38BDF8; }
+
+        .preset-chip {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1rem; border-radius: 9999px;
+            font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+            border: 1px solid #1E293B; color: #94A3B8;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .preset-chip:hover { border-color: #38BDF8; color: #E2E8F0; background: rgba(56,189,248,0.05); }
+        .preset-chip.active { background: rgba(56,189,248,0.12); border-color: #38BDF8; color: #38BDF8; }
+
+        .next-run-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            border-bottom: 1px solid rgba(30,41,59,0.5);
+            font-size: 0.875rem;
+        }
+        .next-run-item:last-child { border-bottom: none; }
+
+        .faq-item summary {
+            cursor: pointer; font-weight: 500; font-size: 1rem;
+            padding: 0.75rem 0; list-style: none;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.25rem; color: #38BDF8; transition: transform 0.2s; }
+        .faq-item[open] summary::after { content: '−'; }
+        .faq-item .faq-answer { padding-bottom: 1rem; color: #94A3B8; line-height: 1.75; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        .checkbox-grid {
+            display: flex; flex-wrap: wrap; gap: 0.375rem;
+        }
+        .checkbox-grid label {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2rem; height: 2rem; border-radius: 0.375rem;
+            border: 1px solid #1E293B; cursor: pointer;
+            font-size: 0.75rem; color: #94A3B8; transition: all 0.15s;
+            font-family: '"Fira Code"', ui-monospace, monospace;
+        }
+        .checkbox-grid label:hover { border-color: #38BDF8; color: #E2E8F0; }
+        .checkbox-grid input:checked + label {
+            background: rgba(56,189,248,0.15); border-color: #38BDF8; color: #38BDF8;
+        }
+        .checkbox-grid input { display: none; }
+
+        .error-text { color: #EF4444; font-size: 0.75rem; margin-top: 0.25rem; }
+        .valid-text { color: #10B981; font-size: 0.75rem; margin-top: 0.25rem; }
+    </style>
+<!-- SEO Structural Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/cron-builder/" property="og:url"/>
+<meta content="Cron Builder｜無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="GUI で Cron スケジュールを作成できるツールです。ドロップダウンと視覚的な操作画面から Cron Expression を素早く作成できます。Reverse Parse、Next Run プレビュー、よく使う Preset、検証機能に対応し、Linux Crontab、Kubernetes CronJob、GitHub Actions で利用できます。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Cron Builder｜無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="GUI で Cron スケジュールを作成できるツールです。ドロップダウンと視覚的な操作画面から Cron Expression を素早く作成できます。Reverse Parse、Next Run プレビュー、よく使う Preset、検証機能に対応し、Linux Crontab、Kubernetes CronJob、GitHub Actions で利用できます。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Cron Expression Builder / Cron スケジュール生成ツール","url":"https://toolhuben.com/ja/cron-builder/","description":"GUI で Cron スケジュールを作成できるツールです。ドロップダウンと視覚的な操作画面から Cron Expression を素早く作成できます。Reverse Parse、Next Run プレビュー、よく使う Preset、検証機能に対応し、Linux Crontab、Kubernetes CronJob、GitHub Actions で利用できます。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"Cron Expression Builder / Cron スケジュール生成ツール","item":"https://toolhuben.com/ja/cron-builder/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","Cron 必須包含 5 個欄位":"Cron は 5 フィールドで指定する必要があります","一":"1","一月":"1 月","七月":"7月","三":"3","三月":"3 月","不足":"不完全","九月":"9 月","二":"2","二月":"2月","五":"5","五月":"5月","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","八月":"8月","六":"6","六月":"6月","分":"点","分執行":"分割実行","到週":"週へ","分鐘":"分","分鐘後":"数分後","十一月":"11 月","十二月":"12月","十月":"10 月","即將執行":"実行直前","四":"4","四月":"4 月","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","天":"日","天後":"天后","小時":"時間","小時後":"時間後","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","建立理念":"創業時の理念","建議":"推奨事項","星期":"週","於第":"Yu Di","日":"日","日期":"日付","時":"時間","月":"月","月份":"月","格式正確":"正しい形式","每分鐘":"毎分","每分鐘執行":"毎分実行","每天午夜執行":"毎日午前0時に実行","每小時":"1時間ごと","每小時整點執行":"毎時0分に実行","每年 1 月 1 日午夜執行":"毎年1月1日の午前0時に実行","每隔":"毎回","每月 1 日午夜執行":"毎月1日の午前0時に実行","無效的 Cron Expression":"無効な Cron Expression","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","第":"番号","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","至週":"Zhizhou","解讀:":"解釈：","請輸入 Cron Expression":"Cron Expression を入力してください","超出範圍 (":"範囲外 (","週":"週","顯示":"表示中","點":"点","（週":"（週","：列表中包含超出範圍的值 (":"：リストに範囲外の値が含まれています（","：含有無效字元":": 無効な文字が含まれています","：步進值超出範圍":": Step 値が範囲外です","：步進值超出範圍 (1-":"：step 値が範囲外です（1-","：範圍值超出 (":": Range 値が次を超えています（","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","* (所有":"::（すべて）","❌ 無效的 Cron Expression：格式不正確或數值超出範圍":"無効な Cron 式：形式エラー、または値が範囲外です","執行處理":"実行","本機處理":"ローカルで処理されます","無法計算 Next Run，請檢查 Cron 格式":"Next Run を計算できませんでした。Cron 形式を確認してください","驗證:":"認証：","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/cron-builder/" rel="canonical"/><link href="https://toolhuben.com/cron-builder/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/cron-builder/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/cron-builder/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/cron-builder/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="editorial" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+<!-- Hero -->
+<div class="text-center mb-8 fade-in">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 mb-4">
+                Cron スケジュール可視化ジェネレーター
+            </span>
+<h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight">
+                Cron Expression ビルダー
+                <span class="block text-base sm:text-lg font-normal text-slate-400 mt-1">Cron スケジュールジェネレーター</span>
+</h1>
+<p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                グラフィカルな UI から Cron スケジュールをすばやく作成できます。視覚的な設定、Reverse Parse、Next Run プレビュー、よく使う Preset に対応し、複雑な Cron Expression を手書きする必要はありません。
+            </p>
+</div>
+<!-- Presets -->
+<div class="glass-panel p-4 sm:p-6 mb-6">
+<div class="flex items-center gap-2 mb-3">
+<i class="ph ph-lightning text-hub-accent text-lg"></i>
+<h2 class="text-sm font-semibold text-white">よく使うプリセット</h2>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="preset-chip" data-cron="* * * * *">毎分</span>
+<span class="preset-chip" data-cron="0 * * * *">1時間ごと</span>
+<span class="preset-chip" data-cron="*/5 * * * *">5 分ごと</span>
+<span class="preset-chip" data-cron="0 */6 * * *">6 時間ごと</span>
+<span class="preset-chip" data-cron="0 3 * * *">毎日午前3時</span>
+<span class="preset-chip" data-cron="30 18 * * 1-5">平日 18:30</span>
+<span class="preset-chip" data-cron="0 0 * * 0">毎週日曜日</span>
+<span class="preset-chip" data-cron="0 0 1 * *">毎月1日</span>
+<span class="preset-chip" data-cron="0 0 1 1 *">年1回 / 1回</span>
+<span class="preset-chip" data-cron="*/10 * * * 1-5">平日の 10 分ごと</span>
+<span class="preset-chip" data-cron="0 */2 * * *">2 時間ごと</span>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<!-- Left: Visual Builder -->
+<div class="lg:col-span-3 space-y-6">
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-base font-bold text-white flex items-center gap-2">
+<i class="ph ph-sliders text-hub-accent"></i>
+                            ビジュアルスケジュール設定
+                        </h2>
+<button class="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1" onclick="resetAll()">
+<i class="ph ph-arrow-counter-clockwise"></i> リセット
+                        </button>
+</div>
+<div class="space-y-3" id="builder-fields">
+<!-- Minute -->
+<div class="field-group" data-field="minute">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">分 0–59</label>
+<span class="text-xs font-mono text-hub-accent" id="minute-preview">*</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<select class="field-select text-xs" data-field="minute" data-part="mode" onchange="onFieldModeChange('minute')">
+<option value="every">1 分あたり *</option>
+<option value="step">N分ごと */N</option>
+<option value="specific">分数を指定</option>
+<option value="range">範囲 N-M</option>
+</select>
+<div class="flex-1 min-w-[120px]" id="minute-controls"></div>
+</div>
+<div class="error-text hidden" id="minute-error"></div>
+</div>
+<!-- Hour -->
+<div class="field-group" data-field="hour">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">時 0～23</label>
+<span class="text-xs font-mono text-hub-accent" id="hour-preview">*</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<select class="field-select text-xs" data-field="hour" data-part="mode" onchange="onFieldModeChange('hour')">
+<option value="every">毎時 *</option>
+<option value="step">N時間ごと */N</option>
+<option value="specific">指定時刻</option>
+<option value="range">範囲 N-M</option>
+</select>
+<div class="flex-1 min-w-[120px]" id="hour-controls"></div>
+</div>
+<div class="error-text hidden" id="hour-error"></div>
+</div>
+<!-- Day of Month -->
+<div class="field-group" data-field="dom">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">日 1～31</label>
+<span class="text-xs font-mono text-hub-accent" id="dom-preview">*</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<select class="field-select text-xs" data-field="dom" data-part="mode" onchange="onFieldModeChange('dom')">
+<option value="every">毎日 *</option>
+<option value="step">N日ごと */N</option>
+<option value="specific">日付を指定</option>
+<option value="range">範囲 N-M</option>
+</select>
+<div class="flex-1 min-w-[120px]" id="dom-controls"></div>
+</div>
+<div class="error-text hidden" id="dom-error"></div>
+</div>
+<!-- Month -->
+<div class="field-group" data-field="month">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">月 1–12</label>
+<span class="text-xs font-mono text-hub-accent" id="month-preview">*</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<select class="field-select text-xs" data-field="month" data-part="mode" onchange="onFieldModeChange('month')">
+<option value="every">毎月 *</option>
+<option value="step">Nか月ごと */N</option>
+<option value="specific">月を指定</option>
+<option value="range">範囲 N-M</option>
+</select>
+<div class="flex-1 min-w-[120px]" id="month-controls"></div>
+</div>
+<div class="error-text hidden" id="month-error"></div>
+</div>
+<!-- Day of Week -->
+<div class="field-group" data-field="dow">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">曜日（週）0=日曜</label>
+<span class="text-xs font-mono text-hub-accent" id="dow-preview">*</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<select class="field-select text-xs" data-field="dow" data-part="mode" onchange="onFieldModeChange('dow')">
+<option value="every">毎日 *</option>
+<option value="step">N日ごと */N</option>
+<option value="specific">週を指定</option>
+<option value="range">範囲 N-M</option>
+</select>
+<div class="flex-1 min-w-[120px]" id="dow-controls"></div>
+</div>
+<div class="error-text hidden" id="dow-error"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: Result -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Cron Expression -->
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-sm font-semibold text-white mb-3">Cron 式</h2>
+<div class="cron-display text-center py-4 px-2 bg-[#0B1120] rounded-lg border border-hub-700 mb-3 select-all" id="cron-expression">* * * * *</div>
+<!-- Human Readable -->
+<div class="text-sm text-slate-300 text-center mb-3 px-3 py-2 bg-slate-800/30 rounded-lg" id="human-readable">毎分実行</div>
+<!-- Validation Status -->
+<div class="text-xs flex items-center gap-2 mb-4" id="validation-status">
+<span class="text-green-400">✓ 正しい形式</span>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-2 flex-wrap">
+<button class="flex-1 min-w-[80px] inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-hub-accent/10 text-hub-accent border border-hub-accent/20 rounded-lg hover:bg-hub-accent/20 transition-colors" onclick="copyCron()">
+<i class="ph ph-copy-simple"></i> コピー
+                        </button>
+<button class="flex-1 min-w-[80px] inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors" onclick="downloadTXT()">
+<i class="ph ph-download-simple"></i> TXT
+                        </button>
+<button class="flex-1 min-w-[80px] inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors" onclick="downloadJSON()">
+<i class="ph ph-download-simple"></i> JSON
+                        </button>
+</div>
+</div>
+<!-- Next Run Preview -->
+<div class="glass-panel p-4 sm:p-6">
+<div class="flex items-center gap-2 mb-3">
+<i class="ph ph-clock-counter-clockwise text-hub-accent"></i>
+<h2 class="text-sm font-semibold text-white">次回実行プレビュー</h2>
+<span class="text-[10px] text-slate-500 ml-auto">現在時刻を基準に計算</span>
+</div>
+<div id="next-runs-container">
+<div class="text-center text-slate-500 text-sm py-4">schedule を設定すると、次の 5 回の execution time が表示されます。</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Reverse Parse -->
+<div class="glass-panel p-4 sm:p-6 mt-6">
+<div class="flex items-center gap-2 mb-3">
+<i class="ph ph-arrow-u-up-left text-hub-accent text-lg"></i>
+<h2 class="text-base font-bold text-white">Reverse Parse — Cron を貼り付けて解析</h2>
+</div>
+<div class="flex flex-col sm:flex-row gap-3">
+<input class="field-input flex-1 font-mono" id="reverse-input" onkeydown="if(event.key==='Enter')reverseParse()" placeholder="Cron Expression を貼り付けます。例：30 18 * * 1-5" type="text"/>
+<button class="px-5 py-2.5 bg-hub-accent text-white rounded-lg font-medium text-sm hover:bg-sky-400 transition-colors whitespace-nowrap" onclick="reverseParse()">
+                    解析
+                </button>
+<button class="px-3 py-2.5 text-xs text-slate-500 hover:text-red-400 border border-hub-700 rounded-lg transition-colors" onclick="document.getElementById('reverse-input').value=''; document.getElementById('reverse-result').classList.add('hidden');">
+                    クリア
+                </button>
+</div>
+<div class="hidden mt-3 p-3 bg-slate-800/50 rounded-lg border border-hub-700 text-sm text-slate-300" id="reverse-result"></div>
+</div>
+<!-- FAQ & SEO Content -->
+<div class="mt-8 space-y-6">
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-question text-hub-accent"></i>
+                    よくある質問（FAQ）
+                </h2>
+<div class="space-y-2 divide-y divide-hub-700/50">
+<details class="faq-item">
+<summary class="text-slate-200">Cron Expression とは何ですか？</summary>
+<div class="faq-answer">
+                            Cron Expression は定期タスクの実行時刻を記述する文字列形式で、Linux Crontab、Kubernetes CronJob、GitHub Actions などで広く使われます。標準的な 5 フィールド形式は：<br/><br/>
+<code class="text-hub-accent font-mono text-xs">分 時 日 月 星期</code><br/><br/>
+                            各フィールドには数値を指定できます。<code class="text-slate-400 font-mono text-xs">*</code>（任意）、<code class="text-slate-400 font-mono text-xs">,</code>（リスト）、<code class="text-slate-400 font-mono text-xs">-</code>（範囲）、<code class="text-slate-400 font-mono text-xs">/</code>（ステップ動作）。
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">5-field Cron と 6-field Cron にはどのような違いがありますか？</summary>
+<div class="faq-answer">
+                            標準 Linux Crontab は 5 フィールドを使用します：<code class="text-slate-400 font-mono text-xs">分 時 日 月 星期</code>. 一部の application（Java Quartz Scheduler など）は 6 column をサポートし、先頭に <code class="text-slate-400 font-mono text-xs">秒</code>：<code class="text-slate-400 font-mono text-xs">秒 分 時 日 月 星期</code>. このツールは Linux Crontab と Kubernetes CronJob で一般的な標準 5 列形式を使用します。
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">特殊記号 * と - / はそれぞれ何を表しますか？</summary>
+<div class="faq-answer">
+                            • <code class="text-hub-accent font-mono text-xs">*</code> （アスタリスク）："すべて"を意味します。例：毎日、毎時<br/>
+                            • <code class="text-hub-accent font-mono text-xs">,</code> （カンマ）：リスト、例： <code class="text-slate-400 font-mono text-xs">1,3,5</code> 1 番目、3 番目、5 番目を表します<br/>
+                            • <code class="text-hub-accent font-mono text-xs">-</code> （マイナス記号）：範囲、例 <code class="text-slate-400 font-mono text-xs">1-5</code> 1～5 を表します<br/>
+                            • <code class="text-hub-accent font-mono text-xs">/</code> （slash）：step、例： <code class="text-slate-400 font-mono text-xs">*/5</code> 5 単位ごとを意味します<br/>
+                            これらの記号は組み合わせて使用できます。例: <code class="text-slate-400 font-mono text-xs">*/15 9-17 * * 1-5</code> 月曜日から金曜日まで、9:00～17:00 の間に 15 分ごとに実行されることを示します。
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Linux で Crontab を使うには？</summary>
+<div class="faq-answer">
+                            使用 <code class="text-slate-400 font-mono text-xs">crontab -e</code> 現在の user の Crontab file を編集します。1 行 1 task、形式は：<br/><br/>
+<code class="text-slate-400 font-mono text-xs">0 3 * * * /usr/bin/backup.sh</code><br/><br/>
+                            使用 <code class="text-slate-400 font-mono text-xs">crontab -l</code> 現在のタスクを一覧表示、<code class="text-slate-400 font-mono text-xs">crontab -r</code> crontab のすべてのタスクを削除します。 <code class="text-slate-400 font-mono text-xs">%</code> escape が必要な場合は、script を .sh file に書いてから実行することを推奨します。
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Kubernetes CronJob の Cron 形式は Linux と同じですか？</summary>
+<div class="faq-answer">
+                            基本的には同じです。Kubernetes CronJob も同じ 5-field 形式を使いますが、重要な違いが 1 つあります。Kubernetes は system Localtime ではなく UTC を使い、field では非標準 alias（例： <code class="text-slate-400 font-mono text-xs">@yearly</code>）。さらに Kubernetes CronJob は次をサポートします <code class="text-slate-400 font-mono text-xs">timeZone</code> Field でタイムゾーンを指定します（有効化が必要 <code class="text-slate-400 font-mono text-xs">CronJobTimeZone</code> 関数ゲート）。<br/><br/>
+                            Kubernetes CronJob YAML の例：<br/>
+<code class="text-slate-400 font-mono text-xs">spec:<br/>  schedule: "0 3 * * *"<br/>  timeZone: "Asia/Taipei"<br/>  jobTemplate:<br/>    spec:<br/>      template:<br/>        spec:<br/>          containers:<br/>          name: hello</code>
+</div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">Cron で日曜日は 0 と 7 のどちらですか？</summary>
+<div class="faq-answer">
+                            どちらでも構いません。standard Cron の Day of Week field は <code class="text-slate-400 font-mono text-xs">0</code> または <code class="text-slate-400 font-mono text-xs">7</code> 日曜日を示します。一部の実装（Quartz Scheduler など）では <code class="text-slate-400 font-mono text-xs">1</code>（月曜日）から <code class="text-slate-400 font-mono text-xs">7</code>（日曜日）。このツールは標準的な Linux Crontab の規則に従います：<code class="text-slate-400 font-mono text-xs">0</code> 日曜日の場合、<code class="text-slate-400 font-mono text-xs">1-6</code> 月曜日から土曜日まで。
+                        </div>
+</details>
+<details class="faq-item">
+<summary class="text-slate-200">cron スケジュールが正しいか確認するには？</summary>
+<div class="faq-answer">
+                            このツールは3種類の verification method を提供します。<br/>
+                            • <strong>即時に人間が読める形式へ</strong>：生成直後に、人が読める説明テキストを表示します<br/>
+                            • <strong>次回実行プレビュー</strong>：次の 5 回の実際の実行時刻を表示し、schedule が期待どおりか確認できます。<br/>
+                            • <strong>形式の検証</strong>：field value が範囲外でないか、special symbol が正しく使われているかを自動確認します。<br/>
+                            schedule 作成後は Next Run preview を確認し、実行時刻が正しいことを確認してから deploy してください。
+                        </div>
+</details>
+</div>
+</div>
+<div class="glass-panel p-4 sm:p-6">
+<h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+<i class="ph ph-book-open text-hub-accent"></i>
+                    Cron スケジューリングの完全チュートリアル
+                </h2>
+<div class="prose prose-invert max-w-none space-y-4 text-sm text-slate-400 leading-relaxed">
+<section>
+<h3 class="text-white font-bold text-base mb-2">Cron とは何ですか？</h3>
+<p>Cron は Linux/Unix の定期実行スケジューラーです。名称はギリシャ語の Chronos（時間）に由来します。Cron はバックグラウンドサービス（daemon）として動作し、設定ファイル（Crontab）に記述した時刻ルールに従って、指定したコマンドやスクリプトを自動実行します。</p>
+<p class="mt-2">Cron は Linux のシステム管理以外にも幅広く活用できます：</p>
+<ul class="list-disc list-inside space-y-1 mt-1">
+<li><strong>Linux Crontab</strong> — system backup、log rotation、system update</li>
+<li><strong>Kubernetes CronJob</strong> — containerized environment 内の scheduled task</li>
+<li><strong>GitHub Actions</strong> — CI/CD パイプラインをスケジュール実行</li>
+<li><strong>NAS システム</strong> — data synchronization、snapshot scheduling</li>
+<li><strong>データベース保守</strong> — 定期的なバックアップとインデックス再構築</li>
+<li><strong>監視アラーム</strong> — 定期的なヘルスチェックと指標収集</li>
+</ul>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">Cron Expression の field 説明</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-xs border-collapse">
+<thead><tr class="border-b border-hub-700"><th class="text-left p-2 text-slate-500">フィールド</th><th class="text-left p-2 text-slate-500">範囲</th><th class="text-left p-2 text-slate-500">説明</th></tr></thead>
+<tbody>
+<tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">分</td><td class="p-2">0–59</td><td class="p-2 text-slate-400">1 時間あたりの分数</td></tr>
+<tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">時</td><td class="p-2">0–23</td><td class="p-2 text-slate-400">1 日の時間数</td></tr>
+<tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">月内の日</td><td class="p-2">1–31</td><td class="p-2 text-slate-400">月内の日</td></tr>
+<tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">月</td><td class="p-2">1–12</td><td class="p-2 text-slate-400">年内の月</td></tr>
+<tr class="border-b border-hub-700/50"><td class="p-2 font-mono text-hub-accent">曜日</td><td class="p-2">0–7</td><td class="p-2 text-slate-400">曜日（0,7=日曜、1=月曜…6=土曜）</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section>
+<h3 class="text-white font-bold text-base mb-2">実用的な使用例</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-hub-accent font-mono text-xs mb-1">0 3 * * *</p>
+<p class="text-xs text-slate-400">データベースのバックアップは毎日午前 3 時に実行されます</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-hub-accent font-mono text-xs mb-1">*/5 * * * *</p>
+<p class="text-xs text-slate-400">5 分ごとに Webサイトのヘルスチェックを実行</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-hub-accent font-mono text-xs mb-1">0 */6 * * *</p>
+<p class="text-xs text-slate-400">6 時間ごとにバックアップサイトへデータを同期</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-hub-accent font-mono text-xs mb-1">30 4 1 * *</p>
+<p class="text-xs text-slate-400">毎月1日の 4:30 に月次レポートを生成します</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-hub-accent font-mono text-xs mb-1">0 22 * * 5</p>
+<p class="text-xs text-slate-400">毎週金曜日 22:00 にリリースをデプロイ</p>
+</div>
+<div class="bg-slate-800/30 rounded-lg p-3">
+<p class="text-hub-accent font-mono text-xs mb-1">0 0 1 1 *</p>
+<p class="text-xs text-slate-400">年間統計は毎年 1 月 1 日にゼロへリセットされます</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-hub-800/95 backdrop-blur-md border border-hub-700 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4" id="toast">
+<span class="text-lg" id="toast-icon">✅</span>
+<span class="text-sm font-medium text-slate-300" id="toast-message"></span>
+</div>
+<div id="component-footer"></div>
+<!-- System Bootstrap -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) { console.error(`[System Error] ${filePath}:`, error); }
+        }
+        function setupSidebarActiveState() {
+            const currentPath = '/cron-builder';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                    const icon = item.querySelector('svg');
+                    if (icon) icon.classList.add('text-[#3ebcf0]');
+                }
+            });
+        }
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', function(e) {
+                const trigger = e.target.closest('#sidebar-trigger-btn');
+                if (trigger) window.dispatchEvent(new CustomEvent('toggle-toolhub-sidebar'));
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- Business Logic -->
+<script>
+        // ===================== STATE =====================
+        const FIELDS = ['minute', 'hour', 'dom', 'month', 'dow'];
+        const FIELD_NAMES = { minute: '分鐘', hour: '小時', dom: '日期', month: '月份', dow: '星期' };
+        const FIELD_LABELS = { minute: 'Minute', hour: 'Hour', dom: 'Day of Month', month: 'Month', dow: 'Day of Week' };
+        const FIELD_RANGES = { minute: [0,59], hour: [0,23], dom: [1,31], month: [1,12], dow: [0,7] };
+
+        let state = {
+            minute: { mode: 'every', value: 0, step: 5, rangeStart: 0, rangeEnd: 10 },
+            hour: { mode: 'every', value: 0, step: 6, rangeStart: 0, rangeEnd: 12 },
+            dom: { mode: 'every', value: 1, step: 2, rangeStart: 1, rangeEnd: 15 },
+            month: { mode: 'every', value: 1, step: 2, rangeStart: 1, rangeEnd: 6 },
+            dow: { mode: 'every', value: 0, step: 2, rangeStart: 0, rangeEnd: 5 },
+        };
+
+        let selectedValues = {
+            minute: new Set(),
+            hour: new Set(),
+            dom: new Set(),
+            month: new Set(),
+            dow: new Set()
+        };
+
+        const MONTH_NAMES = {1:'一月',2:'二月',3:'三月',4:'四月',5:'五月',6:'六月',7:'七月',8:'八月',9:'九月',10:'十月',11:'十一月',12:'十二月'};
+        const DOW_NAMES = {0:'日',1:'一',2:'二',3:'三',4:'四',5:'五',6:'六',7:'日'};
+
+        // ===================== FIELD RENDERING =====================
+        function onFieldModeChange(field) {
+            const mode = document.querySelector(`[data-field="${field}"][data-part="mode"]`).value;
+            state[field].mode = mode;
+            renderFieldControls(field);
+            updateCron();
+        }
+
+        function renderFieldControls(field) {
+            const container = document.getElementById(`${field}-controls`);
+            const mode = state[field].mode;
+            const range = FIELD_RANGES[field];
+
+            switch (mode) {
+                case 'every':
+                    container.innerHTML = `<span class="text-xs text-slate-500">* (所有${FIELD_NAMES[field]})</span>`;
+                    break;
+                case 'step':
+                    container.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500">*/</span>
+                            <input type="number" class="field-input text-xs w-16" min="1" max="${range[1]}" value="${state[field].step}"
+                                onchange="state['${field}'].step=Number(this.value);updateCron()">
+                            <span class="text-xs text-slate-500">${FIELD_NAMES[field]}</span>
+                        </div>`;
+                    break;
+                case 'specific':
+                    const labels = field === 'month' ? MONTH_NAMES : field === 'dow' ? DOW_NAMES : null;
+                    let html = '<div class="checkbox-grid">';
+                    for (let v = range[0]; v <= range[1]; v++) {
+                        const checked = selectedValues[field].has(v) ? 'checked' : '';
+                        const label = labels ? labels[v] : v;
+                        html += `<div><input type="checkbox" id="${field}-cb-${v}" value="${v}" ${checked}
+                            onchange="toggleCheckbox('${field}',${v})"><label for="${field}-cb-${v}">${label}</label></div>`;
+                    }
+                    html += '</div>';
+                    container.innerHTML = html;
+                    break;
+                case 'range':
+                    container.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <input type="number" class="field-input text-xs w-16" min="${range[0]}" max="${range[1]}" value="${state[field].rangeStart}"
+                                onchange="state['${field}'].rangeStart=Number(this.value);updateCron()">
+                            <span class="text-xs text-slate-500">—</span>
+                            <input type="number" class="field-input text-xs w-16" min="${range[0]}" max="${range[1]}" value="${state[field].rangeEnd}"
+                                onchange="state['${field}'].rangeEnd=Number(this.value);updateCron()">
+                        </div>`;
+                    break;
+            }
+        }
+
+        function toggleCheckbox(field, value) {
+            const cb = document.getElementById(`${field}-cb-${value}`);
+            if (cb.checked) selectedValues[field].add(value);
+            else selectedValues[field].delete(value);
+            updateCron();
+        }
+
+        // ===================== CRON GENERATION =====================
+        function getFieldExpression(field) {
+            const s = state[field];
+            const range = FIELD_RANGES[field];
+
+            switch (s.mode) {
+                case 'every': return '*';
+                case 'step': return `*/${Math.max(1, s.step)}`;
+                case 'specific': {
+                    const vals = [...selectedValues[field]].filter(v => v >= range[0] && v <= range[1]).sort((a,b) => a-b);
+                    if (vals.length === 0) return '*';
+                    if (vals.length === range[1] - range[0] + 1) return '*';
+                    return vals.join(',');
+                }
+                case 'range': {
+                    const a = Math.min(s.rangeStart, s.rangeEnd);
+                    const b = Math.max(s.rangeStart, s.rangeEnd);
+                    if (a === range[0] && b === range[1]) return '*';
+                    return `${a}-${b}`;
+                }
+                default: return '*';
+            }
+        }
+
+        function buildCronString() {
+            return FIELDS.map(f => getFieldExpression(f)).join(' ');
+        }
+
+        // ===================== CRON PARSER =====================
+        function parseCronField(value, rangeStart, rangeEnd) {
+            if (value === '*' || value === '') {
+                return { type: 'all', values: Array.from({length: rangeEnd - rangeStart + 1}, (_,i) => i + rangeStart) };
+            }
+            if (value.includes(',')) {
+                const nums = value.split(',').map(Number).filter(n => !isNaN(n) && n >= rangeStart && n <= rangeEnd);
+                return { type: 'list', values: nums };
+            }
+            if (value.includes('/')) {
+                const [base, step] = value.split('/');
+                const stepNum = parseInt(step);
+                const baseVals = base === '*' ? Array.from({length: rangeEnd - rangeStart + 1}, (_,i) => i + rangeStart) : [parseInt(base)];
+                const filtered = baseVals.filter(v => (v - rangeStart) % stepNum === 0);
+                return { type: 'step', values: filtered, step: stepNum };
+            }
+            if (value.includes('-')) {
+                const [a, b] = value.split('-').map(Number);
+                const start = Math.max(rangeStart, Math.min(a, b));
+                const end = Math.min(rangeEnd, Math.max(a, b));
+                const values = [];
+                for (let i = start; i <= end; i++) values.push(i);
+                return { type: 'range', values };
+            }
+            const n = parseInt(value);
+            if (!isNaN(n) && n >= rangeStart && n <= rangeEnd) {
+                return { type: 'single', values: [n] };
+            }
+            return { type: 'none', values: [] };
+        }
+
+        function parseCron(str) {
+            const parts = str.trim().split(/\s+/);
+            if (parts.length !== 5) return null;
+
+            const fields = ['minute', 'hour', 'dom', 'month', 'dow'];
+            const ranges = [[0,59],[0,23],[1,31],[1,12],[0,7]];
+            const result = {};
+
+            for (let i = 0; i < 5; i++) {
+                const parsed = parseCronField(parts[i], ranges[i][0], ranges[i][1]);
+                if (parsed.values.length === 0) return null;
+                result[fields[i]] = { raw: parts[i], ...parsed };
+            }
+            return result;
+        }
+
+        function getHumanReadable(cronStr) {
+            const parts = cronStr.trim().split(/\s+/);
+            if (parts.length !== 5) return '無效的 Cron Expression';
+
+            const p = parts;
+            const labels = [];
+
+            // Minute
+            if (p[0] === '*') labels.push('每分鐘');
+            else if (p[0].includes('/')) {
+                const step = p[0].split('/')[1];
+                labels.push(`每隔 ${step} 分鐘`);
+            }
+            else if (p[0].includes('-')) {
+                const [a, b] = p[0].split('-');
+                labels.push(`第 ${a}-${b} 分鐘`);
+            }
+            else if (p[0].includes(',')) labels.push(`於第 ${p[0]} 分鐘`);
+            else labels.push(`於第 ${p[0]} 分鐘`);
+
+            // Hour
+            if (p[1] === '*') labels.push('每小時');
+            else if (p[1].includes('/')) {
+                const step = p[1].split('/')[1];
+                labels.push(`每隔 ${step} 小時`);
+            }
+            else if (p[1].includes('-')) labels.push(`${p[1]} 點`);
+            else if (p[1].includes(',')) labels.push(`${p[1]} 點`);
+            else labels.push(`${p[1]} 點`);
+
+            // Day of Month
+            if (p[2] === '*') { /* skip */ }
+            else if (p[2].includes('/')) labels.push(`每隔 ${p[2].split('/')[1]} 天`);
+            else if (p[2].includes('-')) labels.push(`第 ${p[2]} 日`);
+            else if (p[2].includes(',')) labels.push(`第 ${p[2]} 日`);
+            else labels.push(`第 ${p[2]} 日`);
+
+            // Month
+            if (p[3] === '*') { /* skip */ }
+            else if (p[3].includes('/')) labels.push(`每隔 ${p[3].split('/')[1]} 月`);
+            else if (p[3].includes('-')) labels.push(`${p[3]} 月`);
+            else if (p[3].includes(',')) labels.push(`${p[3]} 月`);
+            else labels.push(`${p[3]} 月`);
+
+            // Day of Week
+            if (p[4] === '*') { if (p[2] === '*') {} }
+            else if (p[4].includes('/')) labels.push(`每隔 ${p[4].split('/')[1]} 天`);
+            else if (p[4].includes('-')) {
+                const ds = p[4].split('-').map(n => DOW_NAMES[n] || n);
+                labels.push(`週${ds[0]}到週${ds[1]}`);
+            }
+            else if (p[4].includes(',')) {
+                const ds = p[4].split(',').map(n => DOW_NAMES[n] || n);
+                labels.push(`週${ds.join('、')}`);
+            }
+            else labels.push(`週${DOW_NAMES[p[4]] || p[4]}`);
+
+            // Build sentence
+            let desc = '';
+            if (p[0] === '*' && p[1] === '*' && p[2] === '*' && p[3] === '*' && p[4] === '*') {
+                return '每分鐘執行';
+            }
+
+            // Special combos
+            if (p[0] === '0' && p[1] === '*' && p[2] === '*' && p[3] === '*' && p[4] === '*') return '每小時整點執行';
+            if (p[0] === '0' && p[1] === '0' && p[2] === '*' && p[3] === '*' && p[4] === '*') return '每天午夜執行';
+            if (p[0] === '0' && p[1] === '0' && p[2] === '1' && p[3] === '*' && p[4] === '*') return '每月 1 日午夜執行';
+            if (p[0] === '0' && p[1] === '0' && p[2] === '1' && p[3] === '1' && p[4] === '*') return '每年 1 月 1 日午夜執行';
+
+            let timeStr = '';
+            if (p[0] !== '*' && p[0] !== '0') {
+                timeStr = `${p[0]}分`;
+            }
+            if (p[0] === '0') timeStr = '';
+            if (p[1] !== '*') {
+                if (p[1].includes('-') || p[1].includes(',')) timeStr = `${p[1]}時${timeStr}`;
+                else timeStr = `${p[1]}時${timeStr}`;
+            }
+            if (timeStr) timeStr += ' ';
+
+            let dowStr = '';
+            if (p[4] !== '*') {
+                if (p[4].includes('-')) {
+                    const ds = p[4].split('-').map(n => DOW_NAMES[n] || n);
+                    dowStr = `（週${ds[0]}至週${ds[1]}）`;
+                } else if (p[4].includes(',')) {
+                    const ds = p[4].split(',').map(n => DOW_NAMES[n] || n);
+                    dowStr = `（週${ds.join('、')}）`;
+                } else {
+                    dowStr = `（週${DOW_NAMES[p[4]] || p[4]}）`;
+                }
+            }
+
+            let domStr = '';
+            if (p[2] !== '*') {
+                if (p[2].includes('/')) domStr = `每隔 ${p[2].split('/')[1]} 天`;
+                else domStr = `第 ${p[2]} 日`;
+            }
+
+            let monthStr = '';
+            if (p[3] !== '*') {
+                if (p[3].includes('/')) monthStr = `每隔 ${p[3].split('/')[1]} 月`;
+                else monthStr = `${p[3]} 月`;
+            }
+
+            const parts_desc = [];
+            if (timeStr) parts_desc.push(timeStr);
+            if (domStr) parts_desc.push(domStr);
+            if (monthStr) parts_desc.push(monthStr);
+            if (dowStr) parts_desc.push(dowStr);
+
+            if (parts_desc.length === 0) {
+                if (p[0] === '*') return '每分鐘執行';
+                return `${p[0]}分執行`;
+            }
+
+            return parts_desc.join('') + '執行';
+        }
+
+        // ===================== VALIDATION =====================
+        function validateCron(str) {
+            const parts = str.trim().split(/\s+/);
+            if (parts.length !== 5) return { valid: false, message: 'Cron 必須包含 5 個欄位' };
+
+            const ranges = [[0,59],[0,23],[1,31],[1,12],[0,7]];
+            const names = ['Minute', 'Hour', 'Day of Month', 'Month', 'Day of Week'];
+            const errors = [];
+
+            for (let i = 0; i < 5; i++) {
+                const val = parts[i];
+                const [min, max] = ranges[i];
+
+                if (/^(\d+|\*)(\/(\d+))?$/.test(val)) {
+                    const nums = val.split('/')[0];
+                    const step = val.split('/')[1];
+                    if (step && (parseInt(step) < 1 || parseInt(step) > max)) {
+                        errors.push(`${names[i]}：步進值超出範圍 (1-${max})`);
+                    }
+                    if (nums !== '*' && (parseInt(nums) < min || parseInt(nums) > max)) {
+                        errors.push(`${names[i]}：${nums} 超出範圍 (${min}-${max})`);
+                    }
+                } else if (/^\d+-\d+(\/\d+)?$/.test(val)) {
+                    const [a, b] = val.split('-')[0].split('-').map(Number);
+                    const step = val.includes('/') ? parseInt(val.split('/')[1]) : null;
+                    if (a < min || a > max || b < min || b > max) {
+                        errors.push(`${names[i]}：範圍值超出 (${min}-${max})`);
+                    }
+                    if (step && (step < 1 || step > max)) {
+                        errors.push(`${names[i]}：步進值超出範圍`);
+                    }
+                } else if (/^[\d,\*\/-]+$/.test(val)) {
+                    // list or complex expression
+                    const nums = val.split(',').map(x => parseInt(x)).filter(n => !isNaN(n));
+                    if (nums.some(n => n < min || n > max)) {
+                        errors.push(`${names[i]}：列表中包含超出範圍的值 (${min}-${max})`);
+                    }
+                } else {
+                    errors.push(`${names[i]}：含有無效字元`);
+                }
+            }
+
+            return { valid: errors.length === 0, message: errors.length > 0 ? errors.join('；') : '格式正確' };
+        }
+
+        // ===================== NEXT RUN PREVIEW =====================
+        function getNextCronRuns(cronStr, count = 5) {
+            const parsed = parseCron(cronStr);
+            if (!parsed) return [];
+
+            const runs = [];
+            const now = new Date();
+            now.setSeconds(0, 0);
+
+            let current = new Date(now);
+            // Start from the next minute
+            current.setMinutes(current.getMinutes() + 1, 0, 0);
+
+            let attempts = 0;
+            const maxAttempts = 365 * 24 * 60; // 1 year worth of minutes
+
+            while (runs.length < count && attempts < maxAttempts) {
+                attempts++;
+
+                if (matchesCronDate(current, parsed)) {
+                    runs.push(new Date(current));
+                }
+
+                current.setMinutes(current.getMinutes() + 1);
+            }
+
+            return runs;
+        }
+
+        function matchesCronDate(date, parsed) {
+            const minute = date.getMinutes();
+            const hour = date.getHours();
+            const dom = date.getDate();
+            const month = date.getMonth() + 1;
+            const dow = date.getDay();
+
+            // Check all 5 fields
+            if (!parsed.minute.values.includes(minute)) return false;
+            if (!parsed.hour.values.includes(hour)) return false;
+            if (!parsed.dom.values.includes(dom)) return false;
+            if (!parsed.month.values.includes(month)) return false;
+            if (!parsed.dow.values.includes(dow)) return false;
+
+            return true;
+        }
+
+        // ===================== UPDATE =====================
+        function updateCron() {
+            const cronStr = buildCronString();
+            document.getElementById('cron-expression').textContent = cronStr;
+
+            // Human readable
+            const human = getHumanReadable(cronStr);
+            document.getElementById('human-readable').textContent = human;
+
+            // Validation
+            const validation = validateCron(cronStr);
+            const statusEl = document.getElementById('validation-status');
+            if (validation.valid) {
+                statusEl.innerHTML = `<span class="text-green-400 flex items-center gap-1">✓ ${validation.message}</span>`;
+            } else {
+                statusEl.innerHTML = `<span class="text-red-400 flex items-center gap-1">✗ ${validation.message}</span>`;
+            }
+
+            // Next runs
+            const runs = getNextCronRuns(cronStr);
+            const container = document.getElementById('next-runs-container');
+            if (runs.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 text-sm py-4">無法計算 Next Run，請檢查 Cron 格式</div>`;
+            } else {
+                let html = '';
+                runs.forEach((r, i) => {
+                    const dateStr = r.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                    const timeStr = r.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    html += `<div class="next-run-item">
+                        <span class="text-slate-400">#${i + 1}</span>
+                        <span class="text-white font-mono text-sm">${dateStr} ${timeStr}</span>
+                        <span class="text-xs text-slate-500">${getRelativeTime(r)}</span>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            // Update field previews
+            FIELDS.forEach(f => {
+                const el = document.getElementById(`${f}-preview`);
+                if (el) {
+                    const parts = cronStr.split(' ');
+                    const idx = FIELDS.indexOf(f);
+                    el.textContent = parts[idx] || '*';
+                }
+            });
+
+            // Clear reverse result if active
+            const reverseResult = document.getElementById('reverse-result');
+            if (!reverseResult.classList.contains('hidden')) {
+                reverseResult.classList.add('hidden');
+            }
+        }
+
+        function getRelativeTime(date) {
+            const now = new Date();
+            const diffMs = date - now;
+            const diffMin = Math.round(diffMs / 60000);
+            const diffHr = Math.round(diffMs / 3600000);
+            const diffDay = Math.round(diffMs / 86400000);
+
+            if (diffMin < 1) return '即將執行';
+            if (diffMin < 60) return `${diffMin} 分鐘後`;
+            if (diffHr < 24) return `${diffHr} 小時後`;
+            return `${diffDay} 天後`;
+        }
+
+        // ===================== PRESETS =====================
+        function applyPreset(cronStr) {
+            const parts = cronStr.split(' ');
+            if (parts.length !== 5) return;
+
+            FIELDS.forEach((f, i) => {
+                const val = parts[i];
+                const range = FIELD_RANGES[f];
+
+                // Reset selections
+                selectedValues[f] = new Set();
+
+                if (val === '*') {
+                    state[f].mode = 'every';
+                } else if (val.includes('/')) {
+                    state[f].mode = 'step';
+                    state[f].step = parseInt(val.split('/')[1]) || 5;
+                } else if (val.includes('-')) {
+                    state[f].mode = 'range';
+                    const [a, b] = val.split('-').map(Number);
+                    state[f].rangeStart = a;
+                    state[f].rangeEnd = b;
+                } else if (val.includes(',')) {
+                    state[f].mode = 'specific';
+                    val.split(',').forEach(v => selectedValues[f].add(parseInt(v)));
+                } else {
+                    state[f].mode = 'specific';
+                    selectedValues[f].add(parseInt(val));
+                }
+
+                // Update mode dropdown
+                const modeSelect = document.querySelector(`[data-field="${f}"][data-part="mode"]`);
+                if (modeSelect) modeSelect.value = state[f].mode;
+
+                renderFieldControls(f);
+            });
+
+            updateCron();
+        }
+
+        // ===================== REVERSE PARSE =====================
+        function reverseParse() {
+            const input = document.getElementById('reverse-input').value.trim();
+            if (!input) { showToast('請輸入 Cron Expression', true); return; }
+
+            const result = document.getElementById('reverse-result');
+            const parsed = parseCron(input);
+
+            if (!parsed) {
+                result.classList.remove('hidden');
+                result.innerHTML = `<span class="text-red-400">❌ 無效的 Cron Expression：格式不正確或數值超出範圍</span>`;
+                return;
+            }
+
+            const cronStr = input;
+            const human = getHumanReadable(cronStr);
+            const validation = validateCron(cronStr);
+            const runs = getNextCronRuns(cronStr, 3);
+
+            let runsHtml = '';
+            if (runs.length > 0) {
+                runsHtml = runs.map((r, i) => {
+                    const dateStr = r.toLocaleDateString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit' });
+                    const timeStr = r.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', hour12: false });
+                    return `#${i+1}: ${dateStr} ${timeStr}`;
+                }).join('<br>');
+            }
+
+            result.classList.remove('hidden');
+            result.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">Cron:</span>
+                        <span class="font-mono text-hub-accent font-bold">${cronStr}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">解讀:</span>
+                        <span class="text-white">${human}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">驗證:</span>
+                        ${validation.valid ? '<span class="text-green-400">✓ ' + validation.message + '</span>' : '<span class="text-red-400">✗ ' + validation.message + '</span>'}
+                    </div>
+                    ${runs.length > 0 ? `<div><span class="text-xs text-slate-500">Next Runs:</span><div class="text-sm text-slate-300 mt-1">${runsHtml}</div></div>` : ''}
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="applyReverseResult('${cronStr}')" class="text-xs px-3 py-1.5 bg-hub-accent/10 text-hub-accent border border-hub-accent/20 rounded-lg hover:bg-hub-accent/20 transition-colors">
+                            ← 套用到 Builder
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function applyReverseResult(cronStr) {
+            applyPreset(cronStr);
+            showToast('已套用到視覺化 Builder');
+        }
+
+        // ===================== EXPORT =====================
+        function copyCron() {
+            const cron = document.getElementById('cron-expression').textContent;
+            copyToClipboard(cron);
+        }
+
+        function downloadTXT() {
+            const cron = document.getElementById('cron-expression').textContent;
+            const human = document.getElementById('human-readable').textContent;
+            const now = new Date().toISOString();
+            const lines = [
+                '═══════════════════════════════════════',
+                '  Cron Expression Report',
+                '  ToolHub - Cron Expression Builder',
+                '═══════════════════════════════════════',
+                '',
+                `Cron Expression: ${cron}`,
+                `解讀:            ${human}`,
+                '',
+                '───────────────────────────────────────',
+                `Generated by ToolHub (https://toolhuben.com/cron-builder)`,
+                `Timestamp: ${now}`,
+                '───────────────────────────────────────'
+            ].join('\n');
+            downloadFile(lines, 'cron-expression.txt', 'text/plain');
+            showToast('TXT 已下載');
+        }
+
+        function downloadJSON() {
+            const cron = document.getElementById('cron-expression').textContent;
+            const human = document.getElementById('human-readable').textContent;
+            const runs = getNextCronRuns(cron, 5);
+            const data = {
+                tool: 'ToolHub Cron Expression Builder',
+                url: 'https://toolhuben.com/cron-builder/',
+                timestamp: new Date().toISOString(),
+                cronExpression: cron,
+                humanReadable: human,
+                nextRuns: runs.map(r => r.toISOString()),
+                fields: {
+                    minute: getFieldExpression('minute'),
+                    hour: getFieldExpression('hour'),
+                    dayOfMonth: getFieldExpression('dom'),
+                    month: getFieldExpression('month'),
+                    dayOfWeek: getFieldExpression('dow')
+                }
+            };
+            downloadFile(JSON.stringify(data, null, 2), 'cron-expression.json', 'application/json');
+            showToast('JSON 已下載');
+        }
+
+        function resetAll() {
+            FIELDS.forEach(f => {
+                state[f].mode = 'every';
+                state[f].step = 5;
+                selectedValues[f] = new Set();
+                const modeSelect = document.querySelector(`[data-field="${f}"][data-part="mode"]`);
+                if (modeSelect) modeSelect.value = 'every';
+                renderFieldControls(f);
+            });
+            updateCron();
+            showToast('已重置');
+        }
+
+        // ===================== UTILITIES =====================
+        function showToast(msg, isError) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const message = document.getElementById('toast-message');
+            icon.textContent = isError ? '❌' : '✅';
+            message.textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'pointer-events-auto');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'pointer-events-auto');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2500);
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => fallbackCopy(text));
+            } else { fallbackCopy(text); }
+        }
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); showToast('已複製到剪貼簿'); } catch (e) { showToast('複製失敗', true); }
+            document.body.removeChild(ta);
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ===================== INIT =====================
+        function initApp() {
+            // Render all field controls
+            FIELDS.forEach(f => {
+                renderFieldControls(f);
+                // Init mode dropdown value
+                const modeSelect = document.querySelector(`[data-field="${f}"][data-part="mode"]`);
+                if (modeSelect) modeSelect.value = 'every';
+            });
+
+            // Preset click handlers
+            document.querySelectorAll('.preset-chip').forEach(chip => {
+                chip.addEventListener('click', function() {
+                    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    applyPreset(this.dataset.cron);
+                });
+            });
+
+            // Initial update
+            updateCron();
+        }
+
+        // Global exports
+        window.onFieldModeChange = onFieldModeChange;
+        window.toggleCheckbox = toggleCheckbox;
+        window.copyCron = copyCron;
+        window.downloadTXT = downloadTXT;
+        window.downloadJSON = downloadJSON;
+        window.resetAll = resetAll;
+        window.reverseParse = reverseParse;
+        window.applyReverseResult = applyReverseResult;
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

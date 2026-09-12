@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>User Agent Parser｜無料オンラインツール - ToolHub</title>
+<meta content="無料のオンライン User-Agent Parser 解析ツールです。User-Agent 文字列を貼り付けるだけで、ブラウザー、OS、デバイスタイプ、レンダリングエンジン、CPU アーキテクチャ、Bot 判定をすばやく解析できます。現在のブラウザー UA のワンクリック取得、Raw Analysis の分割解説、コピー／ダウンロードなどに対応。処理はすべてフロントエンドで行われます。" name="description"/>
+<meta content="User-Agent Parser, UA 分析工具, User Agent 解析, 瀏覽器識別, OS 識別, Bot 偵測, Googlebot, 爬蟲識別, 裝置偵測, Browser Detection, UA 字串分析" name="keywords"/>
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #06B6D4; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+
+        .ua-textarea {
+            width: 100%;
+            min-height: 90px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            outline: none;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            word-break: break-all;
+        }
+        .ua-textarea:focus {
+            border-color: #06B6D4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+        .ua-textarea::placeholder { color: #475569; }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid #1e293b;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .action-btn:hover { color: #e2e8f0; background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.3); }
+        .action-btn.primary { background: rgba(6, 182, 212, 0.15); color: #06B6D4; border-color: rgba(6, 182, 212, 0.3); }
+        .action-btn.primary:hover { background: rgba(6, 182, 212, 0.25); }
+        .action-btn svg { width: 1rem; height: 1rem; }
+
+        /* Info Cards */
+        .info-card {
+            background: #151F32;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .info-card:hover { border-color: rgba(6, 182, 212, 0.25); }
+        .info-card .icon-box {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: #0f172a;
+            border-radius: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid #1e293b;
+        }
+        .info-card .icon-box .ph { font-size: 1.3rem; }
+        .info-card .label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .info-card .name { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; }
+        .info-card .detail { font-size: 0.78rem; color: #94a3b8; margin-top: 0.1rem; }
+
+        /* Bot Detection Badge */
+        .bot-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .bot-badge.is-bot { background: rgba(239, 68, 68, 0.15); color: #FCA5A5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .bot-badge.not-bot { background: rgba(16, 185, 129, 0.15); color: #6EE7B7; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        /* Raw Analysis segment */
+        .raw-segment {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.78rem;
+            cursor: default;
+            transition: all 0.2s;
+        }
+        .raw-segment .arrow { color: #475569; font-size: 0.65rem; }
+        .raw-segment .tag {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 600;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .raw-segment:hover { transform: translateY(-1px); }
+
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary {
+            cursor: pointer;
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            background: #151F32;
+            border: 1px solid #1e293b;
+            font-weight: 500;
+            color: #e2e8f0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .faq-item summary:hover { border-color: rgba(6, 182, 212, 0.3); }
+        .faq-item[open] summary { border-color: rgba(6, 182, 212, 0.3); border-radius: 0.75rem 0.75rem 0 0; }
+        .faq-item .faq-content { padding: 1rem 1.25rem; background: #151F32; border: 1px solid #1e293b; border-top: none; border-radius: 0 0 0.75rem 0.75rem; color: #94a3b8; font-size: 0.9rem; line-height: 1.7; }
+        .faq-item .chevron-icon { transition: transform 0.3s; }
+        .faq-item[open] .chevron-icon { transform: rotate(180deg); }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.5rem;
+        }
+        .summary-stat {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            text-align: center;
+        }
+        .summary-stat .num { font-size: 1.1rem; font-weight: 700; color: #e2e8f0; }
+        .summary-stat .lbl { font-size: 0.6rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .version-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 0.35rem; }
+        .version-dot.latest { background: #10B981; }
+        .version-dot.old { background: #F59E0B; }
+        .version-dot.unsupported { background: #EF4444; }
+
+        @media (max-width: 640px) {
+            .ua-textarea { font-size: 0.75rem; min-height: 70px; }
+            .info-card .name { font-size: 0.9rem; }
+            .info-card { padding: 0.75rem; gap: 0.5rem; }
+            .raw-segment { font-size: 0.7rem; flex-wrap: wrap; }
+        }
+    </style>
+<!-- SEO Structural Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/user-agent-parser/" property="og:url"/>
+<meta content="User Agent Parser｜無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="無料のオンライン User-Agent Parser 解析ツールです。User-Agent 文字列を貼り付けるだけで、ブラウザー、OS、デバイスタイプ、レンダリングエンジン、CPU アーキテクチャ、Bot 判定をすばやく解析できます。現在のブラウザー UA のワンクリック取得、Raw Analysis の分割解説、コピー／ダウンロードなどに対応。処理はすべてフロントエンドで行われます。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="User Agent Parser｜無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="無料のオンライン User-Agent Parser 解析ツールです。User-Agent 文字列を貼り付けるだけで、ブラウザー、OS、デバイスタイプ、レンダリングエンジン、CPU アーキテクチャ、Bot 判定をすばやく解析できます。現在のブラウザー UA のワンクリック取得、Raw Analysis の分割解説、コピー／ダウンロードなどに対応。処理はすべてフロントエンドで行われます。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"User-Agent Parser UA 解析ツール","url":"https://toolhuben.com/ja/user-agent-parser/","description":"無料のオンライン User-Agent Parser 解析ツールです。User-Agent 文字列を貼り付けるだけで、ブラウザー、OS、デバイスタイプ、レンダリングエンジン、CPU アーキテクチャ、Bot 判定をすばやく解析できます。現在のブラウザー UA のワンクリック取得、Raw Analysis の分割解説、コピー／ダウンロードなどに対応。処理はすべてフロントエンドで行われます。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"User-Agent Parser UA 解析ツール","item":"https://toolhuben.com/ja/user-agent-parser/"}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","--- Bot 偵測 --- ${result.bot.isBot ?":"--- Bot detection --- ${result.bot.isBot?","--- Browser --- 名稱:":"--- ブラウザー --- 名前：","--- CPU --- 架構:":"--- CPU --- アーキテクチャ：","--- Device --- 類型:":"--- デバイス --- 種類：","--- Operating System --- 名稱:":"--- オペレーティングシステム --- 名前：","--- Rendering Engine --- 引擎:":"--- Rendering Engine --- Engine:",": '否'} --- 安全評估 ---":": 'No'} --- セキュリティ評価 ---","======================================== User-Agent Parser 分析報告 ======================================== 產生時間:":"======================================== User-Agent Parser 分析レポート ======================================== 生成時刻：","Ahrefs SEO 分析爬蟲":"Ahrefs SEO 分析クローラー","Anthropic Claude 模型訓練資料收集爬蟲":"Anthropic Claude モデルの学習データ収集クローラー","Apple 搜尋引擎爬蟲（Siri 與 Spotlight）":"Apple Search Engine Crawler（Siri と Spotlight）","API 開發測試工具":"API 開発・テストツール","Bot 流量通常不執行 JavaScript，分析結果僅供參考。":"Bot traffic は通常 JavaScript を実行しないため、analysis result は参考値として扱ってください。","DotDash 爬蟲":"DotDash クローラー","DuckDuckGo 搜尋引擎索引爬蟲":"DuckDuckGo 検索エンジンのインデックスクローラー","Datadog 監控服務":"Datadog 監視サービス","Go 語言 HTTP 客戶端":"Go 言語 HTTP クライアント","Google 搜尋引擎索引爬蟲":"Google 検索エンジンのインデックスクローラー","Facebook Link Preview 與分享爬蟲":"Facebook Link Preview と共有クローラー","Internet Explorer (舊版)":"Internet Explorer（旧バージョン）","JSON 已下載":"JSON をダウンロードしました","Microsoft Bing 搜尋引擎索引爬蟲":"Microsoft Bing 検索エンジンのインデックスクローラー","Majestic SEO 分析爬蟲":"Majestic SEO 解析クローラー","Moz SEO 分析爬蟲":"Moz SEO 解析クローラー","New Relic 效能監控":"New Relic パフォーマンス監視","OpenAI GPT 模型訓練資料收集爬蟲":"OpenAI GPT モデルの学習データ収集クローラー","Perplexity AI 搜尋與答案引擎爬蟲":"Perplexity AI の search / answer engine crawler","Pingdom 網站監控服務":"Pingdom Webサイト監視サービス","Python HTTP 使用者端函式庫":"Python HTTP クライアントライブラリ","Semrush SEO 分析爬蟲":"Semrush SEO 解析クローラー","TXT 報告已下載":"TXT レポートをダウンロードしました","Twitter Card 連結預覽爬蟲":"Twitter Card リンクプレビュークローラー","VS Code API 測試擴充":"VS Code API テスト拡張機能","User-Agent 字串（無法進一步分段解析）":"User-Agent string（これ以上解析できません）","Wayback Machine 存檔爬蟲":"Wayback Machine アーカイブクローラー","Yahoo 搜尋引擎索引爬蟲":"Yahoo 検索エンジンのインデックスクローラー","Yandex 搜尋引擎索引爬蟲":"Yandex 検索エンジンのインデックスクローラー","不足":"不完全","位元組跳動爬蟲":"バイトホッピングクローラー","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","原始字串":"元の文字列","命令列 HTTP 客戶端工具":"コマンドライン HTTP クライアントツール","命令列下載工具":"コマンドライン用ダウンロードツール","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","型號:":"モデル：","尚無結果可複製":"まだコピーできる結果がありません","尚無資料可下載":"まだダウンロードできるデータがありません","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","已清除":"クリア済み","已複製到剪貼簿":"クリップボードにコピーしました","已停止支援。":"サポートは終了しました。","已取得目前瀏覽器的 User-Agent":"現在のブラウザの User-Agent を取得しました","已載入範例：":"サンプルを読み込みました：","平台:":"プラットフォーム：","廠商:":"メーカー：","建立理念":"創業時の理念","建議":"推奨事項","建議升級至最新版本以獲得更好的效能與安全性。":"performance と security を高めるため、最新 version への upgrade を推奨します。","強烈建議立即升級至最新版本以確保安全。":"安全性を保つため、最新版へすぐ upgrade することを強く推奨します。","搜狗搜尋引擎索引爬蟲":"Sogou 検索エンジンのインデックスクローラー","為最新或近期版本。":"最新または最も新しいバージョンです。","無已知安全風險。":"既知のセキュリティリスクはありません。","版本":"バージョン","版本:":"バージョン:","版本較舊。":"バージョンが古いです。","百度搜尋引擎索引爬蟲":"Baidu 検索エンジンのインデックスクローラー","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","相容性":"互換性","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","華為 Petal 搜尋爬蟲":"Huawei Petal 検索クローラー","請先輸入或貼上 User-Agent 字串":"先に User-Agent string を入力または貼り付けてください。","請輸入有效的 User-Agent 字串":"有効な User-Agent 文字列を入力してください","開發商:":"開発者：","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","下方為 UA 字串的逐段解析，包含每個部分的含義與用途說明：":"以下では UA string を segment ごとに解析し、それぞれの意味と用途を説明します：","執行處理":"実行","本機處理":"ローカルで処理されます","無法解析 UA 結構。":"UA 構造を解析できませんでした。","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","Android 版本與裝置資訊":"Android バージョンとデバイス情報","Chrome OS 平台資訊":"Chrome OS プラットフォーム情報","Chromium 核心瀏覽器版本號":"Chromium コアのブラウザバージョン番号","Linux 系統環境":"Linux システム環境","Firefox 瀏覽器版本號":"Firefox ブラウザーのバージョン番号","Microsoft (舊版 Edge)":"Microsoft（旧バージョンの Edge）","Microsoft (舊版 IE)":"Microsoft（旧バージョンの IE）","Microsoft Edge（Chromium）版本號":"Microsoft Edge（Chromium）のバージョン番号","OS + 架構":"OS + アーキテクチャ","Opera (舊版)":"Opera（旧バージョン）","Opera 瀏覽器版本號":"Opera ブラウザのバージョン番号","Safari 相容性標記（版本號對應 WebKit 建置）":"Safari 互換タグ（バージョン番号は WebKit ビルドに対応）","WebKit (或 Blink)":"WebKit（または Blink）","WebKit 渲染引擎版本（用於相容性標示）":"WebKit rendering engine の version です（compatibility marking に使用）。","Windows 版本與系統架構":"Windows のバージョンとシステムアーキテクチャ","iOS 裝置型號與系統版本":"iOS デバイスモデルとシステムバージョン","macOS 版本與硬體平台":"macOS バージョンとハードウェアプラットフォーム","作業系統":"オペレーティングシステム","作業系統與平台資訊":"オペレーティングシステムとプラットフォーム情報","已停止支援，可能存在安全風險。建議立即升級至最新版本。":"support が終了しており、security risk が存在する可能性があります。できるだけ早く最新 version へ upgrade することを推奨します。","引擎相容性宣告（聲明與 KHTML/Gecko 相容）":"engine compatibility declaration（KHTML/Gecko との compatibility 宣言）","未識別的爬蟲或自動化工具":"認識できないクローラーまたは自動化ツール","歷史遺留":"歴史的レガシー","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","版本較舊，建議升級至最新版本以獲得更好的效能與安全性。":"このバージョンは古くなっています。性能とセキュリティ向上のため、最新版への更新をおすすめします。","渲染引擎":"レンダリングエンジン","瀏覽器":"ブラウザ","瀏覽器代號（歷史相容性標記）":"ブラウザーコードネーム（歴史的な互換性表記）","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/user-agent-parser/" rel="canonical"/><link href="https://toolhuben.com/user-agent-parser/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/user-agent-parser/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/user-agent-parser/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/user-agent-parser/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="blueprint" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#06B6D4;--classic-accent-rgb:6,182,212">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<!-- ==================== HERO ==================== -->
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-hub-800 border border-hub-700 text-xs text-hub-accent">
+<span class="flex w-2 h-2 bg-hub-accent rounded-full animate-pulse mr-2"></span>
+                完全なフロントエンドローカル処理で、UA が端末外へ出ることはありません。
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                User-Agent <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-400">Parser</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                User-Agent string を貼り付けると、browser、OS、device、rendering engine、CPU architecture、bot 判定をすぐに解析できます。<br class="hidden sm:block"/>
+                Raw Analysis の区分ごとの説明に対応し、UA の各セグメントが何を意味するか詳しく確認できます。
+            </p>
+</div>
+<!-- ==================== MAIN TOOL CARD ==================== -->
+<div class="glass-panel shadow-2xl shadow-black/50 overflow-hidden mb-8">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-magnifying-glass text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">User-Agent アナライザー</span>
+<span class="text-[10px] text-slate-500 ml-auto">貼り付けて分析</span>
+</div>
+<div class="p-4 sm:p-6 space-y-4">
+<!-- Input -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-medium text-slate-400">User-Agent 文字列を入力</label>
+<button class="action-btn primary text-xs py-1.5 px-3" id="btn-get-ua">
+<i class="ph ph-target"></i> 現在の UA を取得
+                        </button>
+</div>
+<textarea class="ua-textarea" id="ua-input" placeholder="User-Agent string を貼り付けます。例: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" spellcheck="false"></textarea>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-wrap gap-2">
+<button class="action-btn primary" id="btn-parse"><i class="ph ph-play"></i> 分析</button>
+<button class="action-btn" id="btn-sample"><i class="ph ph-magic-wand"></i> サンプル UA</button>
+<button class="action-btn" id="btn-clear"><i class="ph ph-trash"></i> クリア</button>
+</div>
+</div>
+</div>
+<!-- ==================== RESULTS ==================== -->
+<div id="results-container" style="display:none">
+<!-- Summary -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-clipboard-text text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">総合概要</span>
+</div>
+<div class="p-4 sm:p-6">
+<div class="summary-stats" id="summary-stats"></div>
+</div>
+</div>
+<!-- Info Cards Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6" id="info-cards-container"></div>
+<!-- Bot Detection -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-robot text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">AI / Bot 検出</span>
+</div>
+<div class="p-4 sm:p-6" id="bot-detection-content">
+<div class="text-slate-500 text-sm">読み込み中...</div>
+</div>
+</div>
+<!-- Security Info -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-shield-check text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">安全情報</span>
+</div>
+<div class="p-4 sm:p-6" id="security-content">
+<div class="text-slate-500 text-sm">読み込み中...</div>
+</div>
+</div>
+<!-- Raw Analysis (⭐ Bonus Feature) -->
+<div class="glass-panel shadow-xl shadow-black/50 overflow-hidden mb-6">
+<div class="bg-hub-900 px-4 sm:px-6 py-3 border-b border-hub-700 flex items-center gap-2">
+<i class="ph ph-code-block text-hub-accent text-lg"></i>
+<span class="text-sm font-bold text-white">Raw Analysis — UA のセグメント別解説</span>
+<span class="text-[10px] text-hub-accent bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">機能</span>
+</div>
+<div class="p-4 sm:p-6 space-y-2" id="raw-analysis-content">
+<div class="text-slate-500 text-sm">読み込み中...</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-wrap gap-2 pt-2">
+<button class="action-btn" id="btn-copy"><i class="ph ph-copy"></i> 結果をコピー</button>
+<button class="action-btn" id="btn-download-json"><i class="ph ph-file-js"></i> JSON をダウンロード</button>
+<button class="action-btn" id="btn-download-txt"><i class="ph ph-file-text"></i> TXT をダウンロード</button>
+</div>
+</div>
+<!-- ==================== FAQ ==================== -->
+<div class="glass-panel p-6 shadow-xl mt-8">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+<i class="ph-fill ph-question-mark text-hub-accent"></i> User-Agent FAQ
+            </h3>
+<div class="space-y-4" itemscope="" itemtype="https://schema.org/FAQPage">
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q1：User-Agent とは何ですか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+<strong class="text-white">User-Agent（UA）</strong> HTTP リクエスト送信時にブラウザやクライアントアプリが付加する文字列で、アプリ名、バージョン、OS、レンダリングエンジンなどの情報を識別するために使われます。1990 年代に Netscape が先駆けて採用し、長年の変遷を経て現在ではインターネット基盤の一部になっています。<br/><br/>
+                                一般的な UA 文字列形式は次のとおりです：<br/>
+<code class="text-hub-accent text-xs">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36</code><br/><br/>
+                                server は UA を解析して対応 content を返したり、layout を調整したり、traffic source を集計したりします。
+                            </p>
+</div>
+</details>
+</div>
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q2：ほぼすべての UA が「Mozilla/5.0」で始まるのはなぜですか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                これはインターネット史に由来する古典的な事情です。初期の Netscape ブラウザの UA は「Mozilla」で始まっていました（Mozilla は Netscape の社内コードネームでした）。その後 Microsoft の IE がフル機能対応の Web ページを受け取れるようにするため、UA を Mozilla 互換に見せかけ、「Mozilla/4.0」プレフィックスを追加しました。<br/><br/>
+                                その後、Gecko エンジン系ブラウザ（Firefox など）は「Mozilla/5.0」プレフィックスを使用し、WebKit/Blink 系ブラウザ（Chrome、Safari、Edge）も互換性のため同じ「Mozilla/5.0」を引き継ぎました。その結果、現代の主要ブラウザの UA は「Mozilla/5.0」で始まるのが事実上の標準になっています。
+                            </p>
+</div>
+</details>
+</div>
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q3：User-Agent は信頼できますか？ どのような制約がありますか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                User-Agent は役立ちますが<strong class="text-white">100% 信頼できるわけではありません</strong>, 主な理由は次のとおりです：<br/><br/>
+<strong class="text-white">1. 偽装（Spoofing）が容易</strong>: browser や crawler は UA string を簡単に変更し、別 client を装うことができます。<br/>
+<strong class="text-white">2. 歴史的互換性の負債</strong>: 前述のとおり、すべてのブラウザが "Mozilla/5.0" を名乗るため、解析は複雑になります。<br/>
+<strong class="text-white">3. プライバシーモードとブロック</strong>: 一部のブラウザーでは、ユーザーが UA をカスタマイズまたは非表示にできます。<br/>
+<strong class="text-white">4. Client Hints</strong>: 最新ブラウザでは UA が段階的に Client Hints API へ置き換えられており、より正確で制御しやすいデバイス情報を提供できます。<br/><br/>
+                                そのため UA 解析は統計分析や一般的な端末識別には適していますが、不正防止などのセキュリティ判断を UA だけに依存すべきではありません。
+                            </p>
+</div>
+</details>
+</div>
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q4：Client Hints とは何ですか？ UA とはどのように関係しますか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+<strong class="text-white">Client Hints</strong> W3C が策定した新しい標準で、従来の User-Agent string を置き換えることを目指しています。UA と異なり Client Hints は browser に<strong class="text-white">選択的に</strong> UA 文字列全体を一度に公開する代わりに、端末やブラウザ情報を必要な範囲だけサーバーへ提供します。<br/><br/>
+                                主な違い：<br/>
+                                • <strong class="text-white">選択的開示</strong>：サーバーは次のような HTTP header を渡せます <code class="text-hub-accent">Accept-CH</code>) が特定情報を request し、その後 browser が response するか判断します。<br/>
+                                • <strong class="text-white">構造化データ</strong>：情報は key-value pair の形式で渡されます（例： <code class="text-hub-accent">Sec-CH-UA: "Chrome";v="140"</code>）、分析がより正確になります。<br/>
+                                • <strong class="text-white">UA の肥大化を抑える</strong>: Client Hints の普及に伴い、UA 文字列の内容は段階的に簡略化されていきます。<br/><br/>
+                                Chrome や Edge など主要 browser はすでに Client Hints をサポートしていますが、UA を完全に置き換えるまでにはまだ数年かかる見込みです。
+                            </p>
+</div>
+</details>
+</div>
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q5: Browser Engine とは何ですか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+<strong class="text-white">ブラウザーエンジン</strong> Rendering Engine とも呼ばれる browser の中核 component で、HTML、CSS、JavaScript を解析・描画し、ユーザーが見る Web ページへ変換します。<br/><br/>
+                                現在の主要ブラウザエンジン：<br/>
+                                • <strong class="text-white">Blink</strong>: Google が開発し、Chrome、Edge、Opera、Brave などで使われています。現在もっとも高い market share を持つ engine です。<br/>
+                                • <strong class="text-white">WebKit</strong>：Apple が開発し Safari と iOS 上のすべての browser で使用されます（Apple は iOS browser に WebKit を要求）。<br/>
+                                • <strong class="text-white">Gecko</strong>：Mozilla により開発され、Firefox で使用されています。<br/>
+                                • <strong class="text-white">Trident</strong>: Internet Explorer 向けの Microsoft 旧式レンダリングエンジンです（現在はサポート終了）。<br/>
+                                • <strong class="text-white">EdgeHTML</strong>：Microsoft の旧 Edge で使われた engine です（2020 年に Blink へ移行し廃止）。<br/><br/>
+                                レンダリングエンジンによって Web 標準への対応度が異なる場合があります。そのため Web 開発ではクロスブラウザーテストが必要です。
+                            </p>
+</div>
+</details>
+</div>
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q6：bot／crawler が browser UA に偽装するのはなぜですか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                Googlebot、Bingbot などの search engine bot は通常<strong class="text-white">明示的な UA 文字列</strong>、Web 管理者が識別しやすい情報です。ただし一部 crawler は block を回避したり content を取得したりするため、人間の browser UA を装うことがあります。これは <strong class="text-white">UA 偽装</strong>。<br/><br/>
+                                このツールの Bot 判定機能は既知 Bot の UA 特徴に基づいていますが、次の点に注意してください。<strong class="text-white">100% の正確性は保証されません</strong>. 高度な crawler は実ブラウザーとまったく同じ UA 文字列を偽装できます。より正確な Bot 対策には、IP reputation、行動分析、CAPTCHA など複数層の仕組みを組み合わせることを推奨します。
+                            </p>
+</div>
+</details>
+</div>
+<div class="faq-item" itemprop="mainEntity" itemscope="" itemtype="https://schema.org/Question">
+<details>
+<summary itemprop="name">
+<span>Q7：このツールは UA 情報をサーバーへアップロードしますか？</span>
+<i class="ph ph-caret-down chevron-icon text-slate-500"></i>
+</summary>
+<div class="faq-content" itemprop="acceptedAnswer" itemscope="" itemtype="https://schema.org/Answer">
+<p class="text-slate-400 text-sm leading-relaxed" itemprop="text">
+                                まったくありません。このツールは<strong class="text-white">純フロントエンドアプリケーション</strong>、User-Agent parsing、Bot detection、Raw Analysis はすべてブラウザ内でローカル処理され、データは server へ送信されません。オフラインでも動作します。<br/><br/>
+                                「Get current UA」機能は browser から直接読み取ります。 <code class="text-hub-accent">navigator.userAgent</code>, この情報は browser が公開しているもので、device 内にのみ保持されます。
+                            </p>
+</div>
+</details>
+</div>
+</div>
+</div>
+<!-- ==================== SEO ARTICLE ==================== -->
+<div class="glass-panel p-6 shadow-xl mt-8">
+<h3 class="text-base font-bold text-white flex items-center gap-2 mb-5">
+<i class="ph ph-book-open text-hub-accent"></i> User-Agent 完全ガイド：構造解析から実践的な活用まで
+            </h3>
+<div class="space-y-5 text-slate-400 text-sm leading-relaxed">
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">User-Agent 文字列の構造</h4>
+<p>
+                        完全な modern browser UA string は通常、次の部分で構成されます：
+                    </p>
+<div class="mt-2 p-3 bg-slate-900/50 rounded-lg border border-hub-700 font-mono text-xs leading-relaxed text-slate-300">
+<span class="text-sky-400">Mozilla/5.0</span> <span class="text-slate-600">← browser codename（historical compatibility）</span><br/>
+<span class="text-emerald-400">（Windows NT 10.0; Win64; x64）</span> <span class="text-slate-600">← オペレーティングシステムと CPU</span><br/>
+<span class="text-yellow-400">AppleWebKit/537.36</span> <span class="text-slate-600">← レンダリングエンジン</span><br/>
+<span class="text-slate-400">（KHTML、Gecko のように）</span> <span class="text-slate-600">← エンジン互換性のお知らせ</span><br/>
+<span class="text-orange-400">Chrome/140.0.0.0</span> <span class="text-slate-600">← ブラウザとバージョン</span><br/>
+<span class="text-purple-400">Safari/537.36</span> <span class="text-slate-600">← Safari 互換タグ</span>
+</div>
+<p class="mt-3">
+                        この複雑な構造は歴史的な進化の結果です。各部分には固有の意味があり、このツールの目的は <strong class="text-white">Raw Analysis</strong> この機能は各段落を自動的に 1 つずつ分解し、説明付きでラベルを付けます。
+                    </p>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">なぜ does the website need to parse User-Agent のですか？</h4>
+<p>
+                        Web サイトや Web application が UA を解析する主な理由は次のとおりです。
+                    </p>
+<ul class="mt-2 space-y-2 list-disc list-inside">
+<li><strong class="text-white">トラフィック分析</strong>：訪問者のブラウザー、OS、デバイス種別の分布を集計し、開発リソースの配分最適化に役立てます。</li>
+<li><strong class="text-white">アダプティブコンテンツ</strong>: デバイス種別（スマートフォン、タブレット、デスクトップ）に応じたレイアウトや機能を提供します。</li>
+<li><strong class="text-white">互換性処理</strong>: 特定 browser engine 固有の behavior に対して polyfill または fallback を提供します。</li>
+<li><strong class="text-white">ページをダウンロード</strong>: OS に対応する download version を自動推奨します。</li>
+<li><strong class="text-white">セキュリティ検出</strong>：古い／安全でない browser を検出し、upgrade を促します。</li>
+<li><strong class="text-white">Bot 管理</strong>：正規の search engine crawler は許可し、malicious crawler は block します。</li>
+</ul>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">一般的な Bot/Reptile UA の一覧</h4>
+<div class="overflow-x-auto mt-3">
+<table class="w-full text-xs font-mono border-collapse">
+<thead>
+<tr class="text-slate-500 border-b border-hub-700">
+<th class="text-left py-2 px-3">Bot 名</th>
+<th class="text-left py-2 px-3">目的</th>
+<th class="text-left py-2 px-3 hidden sm:table-cell">一般的な UA の特徴</th>
+</tr>
+</thead>
+<tbody class="text-slate-300">
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">Googlebot</td><td class="py-1.5 px-3">Google 検索インデックス</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">Googlebot/2.1</td></tr>
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">Bingbot</td><td class="py-1.5 px-3">Bing 検索インデックス</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">bingbot/2.0</td></tr>
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">GPTBot</td><td class="py-1.5 px-3">OpenAI の学習データ収集</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">GPTBot/1.0</td></tr>
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">ClaudeBot</td><td class="py-1.5 px-3">Anthropic の学習データ収集</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">ClaudeBot/1.0</td></tr>
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">PerplexityBot</td><td class="py-1.5 px-3">Perplexity AI Search</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">PerplexityBot/1.0</td></tr>
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">FacebookBot</td><td class="py-1.5 px-3">Facebook リンクプレビュー</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">facebookexternalhit/1.1</td></tr>
+<tr class="border-b border-hub-700/30 hover:bg-hub-800/50"><td class="py-1.5 px-3">TwitterBot</td><td class="py-1.5 px-3">Twitter Card Preview</td><td class="py-1.5 px-3 hidden sm:table-cell text-cyan-400">Twitterbot/1.0</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="bg-hub-900/50 rounded-lg border border-hub-700 p-4">
+<h4 class="text-sm font-bold text-white mb-2">過去から学ぶ：Netscape から Client Hints まで</h4>
+<p>
+                        User-Agent の歴史は、インターネットブラウザー発展の歴史でもあります。1994年の Netscape Navigator「Mozilla/1.0」から、ブラウザー戦争、IE の寡占、Firefox の復活、Chrome の台頭を経て、現在のモバイル端末や AI Bot の時代まで、UA 文字列は拡張と変化を続けてきました。
+                    </p>
+<p class="mt-2">
+                        今後を見据えると、<strong class="text-white">Client Hints</strong> および <strong class="text-white">UA-CH（User-Agent Client Hints）</strong> 従来の UA 文字列は徐々に新しい仕組みに置き換えられる予定です。新方式では、より正確かつプライバシーを保護した形で端末情報を交換できます。Google は今後数年かけて Chrome の UA 文字列に含まれる情報を段階的に減らし、最終的に従来型 UA を廃止する可能性があります。
+                    </p>
+<p class="mt-2">
+                        UA parsing を理解することは今後も重要ですが、将来の Web 標準に備えるため、開発者は Client Hints API にも慣れておく必要があります。
+                    </p>
+</div>
+</div>
+</div>
+</main>
+<!-- Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">完了</span>
+</div>
+<div id="component-footer"></div>
+<!-- ========================================== -->
+<!-- 系統引導程式                               -->
+<!-- ========================================== -->
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/user-agent-parser';
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => { container.classList.remove('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full'); overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+            initApp();
+        }
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 核心業務邏輯：UA Parser 引擎               -->
+<!-- ========================================== -->
+<script>
+        // ============================================================
+        // 1. Bot Database
+        // ============================================================
+        const BOT_DB = [
+            { pattern: /Googlebot/i, name: 'Googlebot', url: 'https://developers.google.com/search/docs/crawling-indexing/googlebot', desc: 'Google 搜尋引擎索引爬蟲' },
+            { pattern: /bingbot/i, name: 'Bingbot', url: 'https://www.bing.com/webmasters/help/which-crawlers-does-bing-use-8c184ec0', desc: 'Microsoft Bing 搜尋引擎索引爬蟲' },
+            { pattern: /GPTBot/i, name: 'GPTBot', url: 'https://platform.openai.com/docs/gptbot', desc: 'OpenAI GPT 模型訓練資料收集爬蟲' },
+            { pattern: /ClaudeBot/i, name: 'ClaudeBot', url: 'https://docs.anthropic.com/en/docs/build-with-claude/bot-management', desc: 'Anthropic Claude 模型訓練資料收集爬蟲' },
+            { pattern: /PerplexityBot/i, name: 'PerplexityBot', url: 'https://docs.perplexity.ai/docs/perplexitybot', desc: 'Perplexity AI 搜尋與答案引擎爬蟲' },
+            { pattern: /facebookexternalhit|Facebot/i, name: 'Facebook Bot', url: 'https://developers.facebook.com/docs/sharing/webmasters/crawler', desc: 'Facebook Link Preview 與分享爬蟲' },
+            { pattern: /Twitterbot/i, name: 'Twitter Bot', url: 'https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/markup', desc: 'Twitter Card 連結預覽爬蟲' },
+            { pattern: /Slurp/i, name: 'Yahoo Slurp', url: null, desc: 'Yahoo 搜尋引擎索引爬蟲' },
+            { pattern: /DuckDuckBot/i, name: 'DuckDuckBot', url: 'https://duckduckgo.com/duckduckbot', desc: 'DuckDuckGo 搜尋引擎索引爬蟲' },
+            { pattern: /YandexBot/i, name: 'Yandex Bot', url: 'https://yandex.com/support/webmaster/robot-workings/check-yandex-robots.html', desc: 'Yandex 搜尋引擎索引爬蟲' },
+            { pattern: /Baiduspider/i, name: 'Baidu Spider', url: null, desc: '百度搜尋引擎索引爬蟲' },
+            { pattern: /Sogou/i, name: 'Sogou Spider', url: null, desc: '搜狗搜尋引擎索引爬蟲' },
+            { pattern: /AhrefsBot/i, name: 'AhrefsBot', url: 'https://ahrefs.com/robot', desc: 'Ahrefs SEO 分析爬蟲' },
+            { pattern: /SemrushBot/i, name: 'SemrushBot', url: 'https://www.semrush.com/bot/', desc: 'Semrush SEO 分析爬蟲' },
+            { pattern: /MJ12bot/i, name: 'MJ12bot', url: null, desc: 'Majestic SEO 分析爬蟲' },
+            { pattern: /rogerbot/i, name: 'Rogerbot', url: null, desc: 'Moz SEO 分析爬蟲' },
+            { pattern: /DotBot/i, name: 'DotBot', url: null, desc: 'DotDash 爬蟲' },
+            { pattern: /Applebot/i, name: 'Applebot', url: 'https://support.apple.com/en-us/HT204683', desc: 'Apple 搜尋引擎爬蟲（Siri 與 Spotlight）' },
+            { pattern: /PetalBot/i, name: 'PetalBot', url: null, desc: '華為 Petal 搜尋爬蟲' },
+            { pattern: /Bytespider/i, name: 'ByteSpider', url: null, desc: '位元組跳動爬蟲' },
+            { pattern: /archive\.org|ia_archiver/i, name: 'Internet Archive Bot', url: 'https://archive.org/details/archive.org_bot', desc: 'Wayback Machine 存檔爬蟲' },
+            { pattern: /curl/i, name: 'curl', url: 'https://curl.se/', desc: '命令列 HTTP 客戶端工具' },
+            { pattern: /wget/i, name: 'Wget', url: 'https://www.gnu.org/software/wget/', desc: '命令列下載工具' },
+            { pattern: /python-requests/i, name: 'Python Requests', url: 'https://requests.readthedocs.io/', desc: 'Python HTTP 使用者端函式庫' },
+            { pattern: /Go-http-client/i, name: 'Go HTTP Client', url: null, desc: 'Go 語言 HTTP 客戶端' },
+            { pattern: /PostmanRuntime/i, name: 'Postman', url: 'https://www.postman.com/', desc: 'API 開發測試工具' },
+            { pattern: /Thunder Client/i, name: 'Thunder Client', url: null, desc: 'VS Code API 測試擴充' },
+            { pattern: /Pingdom/i, name: 'Pingdom Bot', url: null, desc: 'Pingdom 網站監控服務' },
+            { pattern: /NewRelicPinger/i, name: 'New Relic Bot', url: null, desc: 'New Relic 效能監控' },
+            { pattern: /Datadog/i, name: 'Datadog Bot', url: null, desc: 'Datadog 監控服務' },
+        ];
+
+        // ============================================================
+        // 2. 主要 UA Parser
+        // ============================================================
+        function parseUserAgent(ua) {
+            if (!ua || typeof ua !== 'string') return null;
+            const s = ua.trim();
+            if (!s) return null;
+
+            const result = {
+                raw: s,
+                browser: detectBrowser(s),
+                os: detectOS(s),
+                device: detectDevice(s),
+                engine: detectEngine(s),
+                cpu: detectCPU(s),
+                bot: detectBot(s),
+                isOld: false,
+                isUnsupported: false,
+                upgrade: null,
+                rawSegments: analyzeSegments(s),
+            };
+
+            // Determine if old/unsupported
+            result.isOld = isOldBrowser(result.browser.name, result.browser.version);
+            result.isUnsupported = isUnsupportedBrowser(result.browser.name, result.browser.version);
+            result.upgrade = getUpgradeMsg(result.browser.name, result.browser.version);
+
+            return result;
+        }
+
+        // ============================================================
+        // 3. Browser Detection
+        // ============================================================
+        function detectBrowser(ua) {
+            // Order matters: check specific before generic
+            if (/Edg\/|EdgA\/|EdgiOS\//.test(ua)) {
+                const m = ua.match(/Edg[\/A]\/([\d.]+)/);
+                return { name: 'Microsoft Edge', version: m ? m[1] : '?', icon: 'browser-edge' };
+            }
+            if (/OPR\/|Opera/.test(ua)) {
+                const m = ua.match(/OPR\/([\d.]+)/);
+                if (m) return { name: 'Opera', version: m[1], icon: 'browser-opera' };
+                const m2 = ua.match(/Version\/([\d.]+).*Opera/);
+                if (m2) return { name: 'Opera', version: m2[1], icon: 'browser-opera' };
+                return { name: 'Opera', version: '?', icon: 'browser-opera' };
+            }
+            if (/Brave/.test(ua)) {
+                const m = ua.match(/Chrome\/([\d.]+)/);
+                return { name: 'Brave', version: m ? m[1] : '?', icon: 'browser-brave' };
+            }
+            if (/Vivaldi/.test(ua)) {
+                const m = ua.match(/Chrome\/([\d.]+)/);
+                return { name: 'Vivaldi', version: m ? m[1] : '?', icon: 'browser-vivaldi' };
+            }
+            if (/Firefox\/|FxiOS\//.test(ua) && !/Seamonkey/.test(ua)) {
+                const m = ua.match(/Firefox\/([\d.]+)/);
+                if (m) return { name: 'Firefox', version: m[1], icon: 'browser-firefox' };
+                const m2 = ua.match(/FxiOS\/([\d.]+)/);
+                if (m2) return { name: 'Firefox', version: m2[1], icon: 'browser-firefox' };
+                return { name: 'Firefox', version: '?', icon: 'browser-firefox' };
+            }
+            if (/SamsungBrowser/.test(ua)) {
+                const m = ua.match(/SamsungBrowser\/([\d.]+)/);
+                return { name: 'Samsung Internet', version: m ? m[1] : '?', icon: 'browser-samsung' };
+            }
+            if (/UCBrowser/.test(ua)) {
+                const m = ua.match(/UCBrowser\/([\d.]+)/);
+                return { name: 'UC Browser', version: m ? m[1] : '?', icon: 'browser-uc' };
+            }
+            if (/Chrome\/|CriOS\//.test(ua) && !/Edge|Edg\//.test(ua)) {
+                // Check if it's actually Safari on iOS (all iOS browsers use WebKit)
+                // But Chrome on iOS still has CriOS/ version
+                if (/CriOS\//.test(ua)) {
+                    const m = ua.match(/CriOS\/([\d.]+)/);
+                    return { name: 'Chrome', version: m ? m[1] : '?', icon: 'browser-chrome' };
+                }
+                const m = ua.match(/Chrome\/([\d.]+)/);
+                return { name: 'Chrome', version: m ? m[1] : '?', icon: 'browser-chrome' };
+            }
+            if (/Safari\//.test(ua) && !/Chrome/.test(ua)) {
+                const m = ua.match(/Version\/([\d.]+)/);
+                return { name: 'Safari', version: m ? m[1] : '?', icon: 'browser-safari' };
+            }
+            if (/Trident|MSIE/.test(ua)) {
+                const m = ua.match(/MSIE ([\d.]+)/);
+                if (m) return { name: 'Internet Explorer', version: m[1], icon: 'browser-ie' };
+                const m2 = ua.match(/rv:([\d.]+)/);
+                if (m2) return { name: 'Internet Explorer', version: m2[1], icon: 'browser-ie' };
+                return { name: 'Internet Explorer', version: '?', icon: 'browser-ie' };
+            }
+            if (/YaBrowser/.test(ua)) {
+                const m = ua.match(/YaBrowser\/([\d.]+)/);
+                return { name: 'Yandex Browser', version: m ? m[1] : '?', icon: 'browser-yandex' };
+            }
+
+            // Generic fallback
+            const generic = ua.match(/([\w]+)\/([\d.]+)/);
+            if (generic) return { name: generic[1], version: generic[2], icon: 'browser-generic' };
+
+            return { name: 'Unknown', version: '?', icon: 'browser-generic' };
+        }
+
+        // ============================================================
+        // 4. OS Detection
+        // ============================================================
+        function detectOS(ua) {
+            if (/Windows NT 10/.test(ua)) return { name: 'Windows', version: '10', platform: 'x64' };
+            if (/Windows NT 11/.test(ua)) return { name: 'Windows', version: '11', platform: 'x64' };
+            if (/Windows NT 6\.3/.test(ua)) return { name: 'Windows', version: '8.1', platform: 'x64' };
+            if (/Windows NT 6\.2/.test(ua)) return { name: 'Windows', version: '8', platform: 'x64' };
+            if (/Windows NT 6\.1/.test(ua)) return { name: 'Windows', version: '7', platform: 'x64' };
+            if (/Windows NT 6\.0/.test(ua)) return { name: 'Windows', version: 'Vista', platform: 'x64' };
+            if (/Windows NT 5\.1/.test(ua)) return { name: 'Windows', version: 'XP', platform: 'x86' };
+            if (/Windows Phone|Windows Phone OS/.test(ua)) {
+                const m = ua.match(/Windows Phone ([\d.]+)/);
+                return { name: 'Windows Phone', version: m ? m[1] : '?', platform: 'ARM' };
+            }
+            if (/Windows/.test(ua)) return { name: 'Windows', version: '?', platform: 'x64' };
+
+            if (/Mac OS X/.test(ua) || /macOS/.test(ua)) {
+                const m = ua.match(/Mac OS X ([\d_]+)/);
+                const ver = m ? m[1].replace(/_/g, '.') : '?';
+                return { name: 'macOS', version: ver, platform: 'x64' };
+            }
+            if (/macintosh|Mac_PowerPC/i.test(ua)) return { name: 'macOS', version: '?', platform: 'x64' };
+
+            if (/Android/.test(ua)) {
+                const m = ua.match(/Android ([\d.]+)/);
+                return { name: 'Android', version: m ? m[1] : '?', platform: /ARM64|aarch64/.test(ua) ? 'ARM64' : /ARM/.test(ua) ? 'ARM' : '?'
+                };
+            }
+            if (/Linux/.test(ua)) {
+                if (/CrOS/.test(ua)) return { name: 'Chrome OS', version: '?', platform: /x86_64/.test(ua) ? 'x64' : '?' };
+                if (/Android/.test(ua)) return { name: 'Android', version: '?', platform: '?' };
+                return { name: 'Linux', version: '?', platform: /x86_64/.test(ua) ? 'x64' : /i[3-6]86/.test(ua) ? 'x86' : '?' };
+            }
+
+            if (/iPhone|iPad|iPod/.test(ua)) {
+                const m = ua.match(/OS ([\d_]+)/);
+                const ver = m ? m[1].replace(/_/g, '.') : '?';
+                return { name: 'iOS', version: ver, platform: 'ARM64' };
+            }
+
+            if (/KAIOS/.test(ua)) return { name: 'KaiOS', version: '?', platform: 'ARM' };
+            if (/FreeBSD/.test(ua)) return { name: 'FreeBSD', version: '?', platform: '?' };
+
+            return { name: 'Unknown OS', version: '?', platform: '?' };
+        }
+
+        // ============================================================
+        // 5. Device Detection
+        // ============================================================
+        function detectDevice(ua) {
+            const isMobile = /Mobile|mobi|Android.*Mobile/.test(ua);
+            const isTablet = /Tablet|iPad|tab/i.test(ua) && !/Mobile/.test(ua);
+            const isTV = /SmartTV|TV|BRAVIA|Tizen|Web0S|NetCast|Roku|FireTV|AppleTV/i.test(ua);
+            const isBot = /bot|crawl|spider|scrape|slurp|archive/i.test(ua);
+            const isConsole = /PlayStation|PS4|PS5|Xbox|Nintendo|Switch/i.test(ua);
+
+            let type = 'Desktop';
+            if (isTV) type = 'Smart TV';
+            else if (isConsole) type = 'Console';
+            else if (isBot) type = 'Bot';
+            else if (isTablet) type = 'Tablet';
+            else if (isMobile) type = 'Mobile';
+
+            let vendor = null;
+            let model = null;
+
+            // Vendor detection
+            if (/iPhone/.test(ua)) { vendor = 'Apple'; model = 'iPhone'; }
+            else if (/iPad/.test(ua)) { vendor = 'Apple'; model = 'iPad'; }
+            else if (/iPod/.test(ua)) { vendor = 'Apple'; model = 'iPod touch'; }
+            else if (/Pixel [\d]/.test(ua)) {
+                vendor = 'Google';
+                const m = ua.match(/(Pixel [\da-zA-Z]+(?: Pro)?)/);
+                model = m ? m[1] : 'Pixel';
+            }
+            else if (/SM-[A-Z]/.test(ua)) {
+                vendor = 'Samsung';
+                const m = ua.match(/(SM-[A-Za-z0-9]+)/);
+                model = m ? m[1] : 'Galaxy';
+            }
+            else if (/Samsung/.test(ua)) { vendor = 'Samsung'; }
+            else if (/Xiaomi|Mi\d|Redmi/.test(ua)) {
+                vendor = 'Xiaomi';
+                const m = ua.match(/(Mi[\sA-Z\d]+|Redmi[\sA-Z\d]+)/);
+                model = m ? m[1].trim() : null;
+            }
+            else if (/Huawei|HUAWEI/.test(ua)) { vendor = 'Huawei'; }
+            else if (/OPPO/.test(ua)) { vendor = 'OPPO'; }
+            else if (/vivo/.test(ua)) { vendor = 'vivo'; }
+            else if (/ASUS/.test(ua)) { vendor = 'ASUS'; }
+            else if (/Acer/.test(ua)) { vendor = 'Acer'; }
+            else if (/Dell/.test(ua)) { vendor = 'Dell'; }
+            else if (/HP/.test(ua)) { vendor = 'HP'; }
+            else if (/Lenovo/.test(ua)) { vendor = 'Lenovo'; }
+            else if (/LG/.test(ua)) { vendor = 'LG'; }
+            else if (/Nokia/.test(ua)) { vendor = 'Nokia'; }
+            else if (/OnePlus/.test(ua)) { vendor = 'OnePlus'; }
+            else if (/surface/.test(ua)) { vendor = 'Microsoft'; model = 'Surface'; }
+
+            return { type, vendor, model };
+        }
+
+        // ============================================================
+        // 6. Rendering Engine Detection
+        // ============================================================
+        function detectEngine(ua) {
+            if (/Trident/.test(ua)) return { name: 'Trident', version: '?', vendor: 'Microsoft (舊版 IE)' };
+            if (/EdgeHTML/.test(ua)) return { name: 'EdgeHTML', version: '?', vendor: 'Microsoft (舊版 Edge)' };
+            if (/AppleWebKit/.test(ua) && /Chrome/.test(ua) && !/OPR/.test(ua) && !/Edg/.test(ua)) {
+                // Blink-based (Chrome, Edge, Opera, Brave, etc. after 2013)
+                if (/Edg\//.test(ua)) return { name: 'Blink', version: '?', vendor: 'Google (Chromium)' };
+                return { name: 'Blink', version: '?', vendor: 'Google (Chromium)' };
+            }
+            if (/AppleWebKit/.test(ua)) {
+                const m = ua.match(/AppleWebKit\/([\d.]+)/);
+                // Need to differentiate WebKit (Safari) from Blink (Chrome)
+                if (/Safari\//.test(ua) && !/Chrome/.test(ua)) {
+                    return { name: 'WebKit', version: m ? m[1] : '?', vendor: 'Apple' };
+                }
+                // It could be Blink-based browser pretending to be WebKit
+                return { name: 'WebKit (或 Blink)', version: m ? m[1] : '?', vendor: 'Apple / Google' };
+            }
+            if (/Gecko/.test(ua) && /Firefox/.test(ua)) {
+                const m = ua.match(/rv:([\d.]+)/);
+                return { name: 'Gecko', version: m ? m[1] : '?', vendor: 'Mozilla' };
+            }
+            if (/Goanna/.test(ua)) return { name: 'Goanna', version: '?', vendor: 'Pale Moon' };
+            if (/Presto/.test(ua)) return { name: 'Presto', version: '?', vendor: 'Opera (舊版)' };
+
+            return { name: 'Unknown', version: '?', vendor: '?' };
+        }
+
+        // ============================================================
+        // 7. CPU Architecture Detection
+        // ============================================================
+        function detectCPU(ua) {
+            if (/x86_64|x64|Win64|amd64|wow64/i.test(ua)) return 'x64';
+            if (/i[3-6]86|x86/i.test(ua) && !/x64|x86_64/.test(ua)) return 'x86';
+            if (/aarch64|ARM64/i.test(ua)) return 'ARM64';
+            if (/ARMv?[6-9]/i.test(ua) || /arm;/i.test(ua) || /\(ARM/.test(ua)) return 'ARM';
+            if (/PPC|PowerPC/i.test(ua)) return 'PowerPC';
+            if (/MIPS/i.test(ua)) return 'MIPS';
+            if (/sparc|sun4/i.test(ua)) return 'SPARC';
+            return 'Unknown';
+        }
+
+        // ============================================================
+        // 8. Bot Detection
+        // ============================================================
+        function detectBot(ua) {
+            // First check known bots by specific name
+            for (const bot of BOT_DB) {
+                if (bot.pattern.test(ua)) {
+                    return { isBot: true, name: bot.name, url: bot.url, desc: bot.desc };
+                }
+            }
+            // Generic bot detection
+            if (/bot|crawl|spider|scrape|slurp|archive|wget|curl/i.test(ua)) {
+                // Extract name
+                const m = ua.match(/([\w-]+(?:bot|Bot|crawl|Crawl|Spider|spider))/);
+                return { isBot: true, name: m ? m[1] : 'Unknown Bot', url: null, desc: '未識別的爬蟲或自動化工具' };
+            }
+            return { isBot: false, name: null, url: null, desc: null };
+        }
+
+        // ============================================================
+        // 9. Version / Security Checks
+        // ============================================================
+        function isOldBrowser(name, version) {
+            const v = parseFloat(version);
+            if (!v) return false;
+            switch (name) {
+                case 'Chrome': return v < 100;
+                case 'Firefox': return v < 100;
+                case 'Safari': return v < 14;
+                case 'Microsoft Edge': return v < 100;
+                case 'Internet Explorer': return true;
+                default: return false;
+            }
+        }
+
+        function isUnsupportedBrowser(name, version) {
+            switch (name) {
+                case 'Internet Explorer': return true;
+                case 'Safari': return parseFloat(version) < 12;
+                case 'Chrome': return parseFloat(version) < 80;
+                case 'Firefox': return parseFloat(version) < 78;
+                case 'Microsoft Edge': return parseFloat(version) < 80 && !/EdgA|EdgiOS/.test(navigator.userAgent);
+                default: return false;
+            }
+        }
+
+        function getUpgradeMsg(name, version) {
+            if (isUnsupportedBrowser(name, version)) {
+                return `⚠️ ${name} ${version} 已停止支援，可能存在安全風險。建議立即升級至最新版本。`;
+            }
+            if (isOldBrowser(name, version)) {
+                return `💡 ${name} ${version} 版本較舊，建議升級至最新版本以獲得更好的效能與安全性。`;
+            }
+            return null;
+        }
+
+        // ============================================================
+        // 10. Raw Analysis — UA 分段解說 (⭐ Bonus Feature)
+        // ============================================================
+        function analyzeSegments(ua) {
+            const segments = [];
+
+            // Mozilla/5.0
+            const mozMatch = ua.match(/^(Mozilla\/[\d.]+)/);
+            if (mozMatch) {
+                segments.push({
+                    text: mozMatch[1],
+                    explanation: '瀏覽器代號（歷史相容性標記）',
+                    tag: '歷史遺留',
+                    color: '#38BDF8'
+                });
+            }
+
+            // (OS info)
+            const osMatch = ua.match(/\(([^)]+)\)/);
+            if (osMatch) {
+                let explanation = '作業系統與平台資訊';
+                const osContent = osMatch[1];
+                if (/Windows NT/.test(osContent)) explanation = 'Windows 版本與系統架構';
+                else if (/Mac OS X|macOS/.test(osContent)) explanation = 'macOS 版本與硬體平台';
+                else if (/Linux/.test(osContent)) explanation = 'Linux 系統環境';
+                else if (/Android/.test(osContent)) explanation = 'Android 版本與裝置資訊';
+                else if (/iPhone|iPad|iPod/.test(osContent)) explanation = 'iOS 裝置型號與系統版本';
+                else if (/CrOS/.test(osContent)) explanation = 'Chrome OS 平台資訊';
+
+                let tag = '作業系統';
+                if (/ARM|aarch64/.test(osContent)) tag = 'OS + CPU';
+                else if (/x64|Win64/.test(osContent)) tag = 'OS + 架構';
+
+                segments.push({
+                    text: '(' + osContent + ')',
+                    explanation,
+                    tag,
+                    color: '#34D399'
+                });
+            }
+
+            // AppleWebKit
+            const webkitMatch = ua.match(/(AppleWebKit\/[\d.]+)/);
+            if (webkitMatch) {
+                segments.push({
+                    text: webkitMatch[1],
+                    explanation: 'WebKit 渲染引擎版本（用於相容性標示）',
+                    tag: '渲染引擎',
+                    color: '#F59E0B'
+                });
+            }
+
+            // (KHTML, like Gecko)
+            const khtmlMatch = ua.match(/\(KHTML, like Gecko\)/);
+            if (khtmlMatch) {
+                segments.push({
+                    text: '(KHTML, like Gecko)',
+                    explanation: '引擎相容性宣告（聲明與 KHTML/Gecko 相容）',
+                    tag: '相容性',
+                    color: '#8B5CF6'
+                });
+            }
+
+            // Chrome/version
+            const chromeMatch = ua.match(/(Chrome\/[\d.]+)/);
+            if (chromeMatch && !/Edg|OPR/.test(ua)) {
+                segments.push({
+                    text: chromeMatch[1],
+                    explanation: 'Chromium 核心瀏覽器版本號',
+                    tag: '瀏覽器',
+                    color: '#F97316'
+                });
+            }
+
+            // Firefox/version
+            const ffMatch = ua.match(/(Firefox\/[\d.]+)/);
+            if (ffMatch) {
+                segments.push({
+                    text: ffMatch[1],
+                    explanation: 'Firefox 瀏覽器版本號',
+                    tag: '瀏覽器',
+                    color: '#F97316'
+                });
+            }
+
+            // Safari/version
+            const safariMatch = ua.match(/(Safari\/[\d.]+)/);
+            if (safariMatch) {
+                segments.push({
+                    text: safariMatch[1],
+                    explanation: 'Safari 相容性標記（版本號對應 WebKit 建置）',
+                    tag: '相容性',
+                    color: '#A855F7'
+                });
+            }
+
+            // Edg/version
+            const edgMatch = ua.match(/(Edg\/[\d.]+)/);
+            if (edgMatch) {
+                segments.push({
+                    text: edgMatch[1],
+                    explanation: 'Microsoft Edge（Chromium）版本號',
+                    tag: '瀏覽器',
+                    color: '#F97316'
+                });
+            }
+
+            // OPR/version
+            const oprMatch = ua.match(/(OPR\/[\d.]+)/);
+            if (oprMatch) {
+                segments.push({
+                    text: oprMatch[1],
+                    explanation: 'Opera 瀏覽器版本號',
+                    tag: '瀏覽器',
+                    color: '#F97316'
+                });
+            }
+
+            // Version/ (Safari uses this)
+            const verMatch = ua.match(/Version\/([\d.]+)/);
+            if (verMatch && /Safari/.test(ua) && !/Chrome/.test(ua)) {
+                // Already handled by Safari match above if present
+            }
+
+            // If we couldn't segment nicely, provide a single entry
+            if (segments.length === 0) {
+                segments.push({
+                    text: ua.length > 60 ? ua.substring(0, 60) + '...' : ua,
+                    explanation: 'User-Agent 字串（無法進一步分段解析）',
+                    tag: '原始字串',
+                    color: '#94a3b8'
+                });
+            }
+
+            return segments;
+        }
+
+        // ============================================================
+        // 11. UI Rendering
+        // ============================================================
+        function renderResults(result) {
+            if (!result) {
+                showToast('請輸入有效的 User-Agent 字串', true);
+                return;
+            }
+
+            const container = document.getElementById('results-container');
+            container.style.display = 'block';
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Summary
+            renderSummary(result);
+
+            // Info Cards
+            renderInfoCards(result);
+
+            // Bot Detection
+            renderBotDetection(result);
+
+            // Security Info
+            renderSecurity(result);
+
+            // Raw Analysis
+            renderRawAnalysis(result);
+        }
+
+        function renderSummary(result) {
+            const el = document.getElementById('summary-stats');
+            el.innerHTML = `
+                <div class="summary-stat"><div class="num">${result.browser.name}</div><div class="lbl">Browser</div></div>
+                <div class="summary-stat"><div class="num">${result.os.name}</div><div class="lbl">OS</div></div>
+                <div class="summary-stat"><div class="num">${result.device.type}</div><div class="lbl">Device</div></div>
+                <div class="summary-stat"><div class="num">${result.engine.name}</div><div class="lbl">Engine</div></div>
+                <div class="summary-stat"><div class="num">${result.cpu}</div><div class="lbl">CPU</div></div>
+            `;
+        }
+
+        function renderInfoCards(result) {
+            const el = document.getElementById('info-cards-container');
+            const cards = [
+                {
+                    icon: 'ph-browser',
+                    color: '#F97316',
+                    label: 'Browser',
+                    name: result.browser.name,
+                    detail: `版本 ${result.browser.version}`
+                },
+                {
+                    icon: 'ph-device-mobile',
+                    color: '#34D399',
+                    label: 'Operating System',
+                    name: result.os.name,
+                    detail: result.os.version !== '?' ? `版本 ${result.os.version}` : ''
+                },
+                {
+                    icon: result.device.type === 'Mobile' ? 'ph-device-mobile' : result.device.type === 'Tablet' ? 'ph-device-tablet' : 'ph-monitor',
+                    color: '#38BDF8',
+                    label: 'Device',
+                    name: result.device.type,
+                    detail: [result.device.vendor, result.device.model].filter(Boolean).join(' ')
+                },
+                {
+                    icon: 'ph-lightning',
+                    color: '#F59E0B',
+                    label: 'Rendering Engine',
+                    name: result.engine.name,
+                    detail: result.engine.vendor
+                },
+                {
+                    icon: 'ph-cpu',
+                    color: '#A855F7',
+                    label: 'CPU Architecture',
+                    name: result.cpu,
+                    detail: ''
+                },
+            ];
+
+            el.innerHTML = cards.map(c => `
+                <div class="info-card">
+                    <div class="icon-box" style="border-color: ${c.color}20">
+                        <i class="ph ${c.icon}" style="color: ${c.color}"></i>
+                    </div>
+                    <div>
+                        <div class="label">${c.label}</div>
+                        <div class="name">${c.name}</div>
+                        ${c.detail ? `<div class="detail">${c.detail}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderBotDetection(result) {
+            const el = document.getElementById('bot-detection-content');
+            const bot = result.bot;
+
+            if (!bot || !bot.isBot) {
+                el.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="bot-badge not-bot"><i class="ph ph-check-circle"></i> 非 Bot</span>
+                        <span class="text-slate-400 text-sm">此 User-Agent 為真人瀏覽器。</span>
+                    </div>
+                `;
+                return;
+            }
+
+            el.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="bot-badge is-bot"><i class="ph ph-robot"></i> ${bot.name}</span>
+                        <span class="text-slate-400 text-sm">${bot.desc || '已識別的爬蟲或自動化工具'}</span>
+                    </div>
+                    ${bot.url ? `
+                    <div class="text-sm">
+                        <span class="text-slate-500">官方網站：</span>
+                        <a href="${bot.url}" target="_blank" rel="noopener noreferrer" class="text-hub-accent hover:underline">${bot.url}</a>
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        function renderSecurity(result) {
+            const el = document.getElementById('security-content');
+            const items = [];
+
+            if (result.isUnsupported) {
+                items.push({ icon: 'ph-warning-circle', color: '#EF4444', text: `${result.browser.name} ${result.browser.version} 已停止支援。` });
+                items.push({ icon: 'ph-shield-warning', color: '#EF4444', text: '強烈建議立即升級至最新版本以確保安全。' });
+            } else if (result.isOld) {
+                items.push({ icon: 'ph-warning', color: '#F59E0B', text: `${result.browser.name} ${result.browser.version} 版本較舊。` });
+                items.push({ icon: 'ph-arrow-up', color: '#F59E0B', text: '建議升級至最新版本以獲得更好的效能與安全性。' });
+            } else {
+                items.push({ icon: 'ph-shield-check', color: '#10B981', text: `${result.browser.name} ${result.browser.version} 為最新或近期版本。` });
+                items.push({ icon: 'ph-check-circle', color: '#10B981', text: '無已知安全風險。' });
+            }
+
+            if (result.bot && result.bot.isBot) {
+                items.push({ icon: 'ph-info', color: '#38BDF8', text: 'Bot 流量通常不執行 JavaScript，分析結果僅供參考。' });
+            }
+
+            el.innerHTML = items.map(item => `
+                <div class="flex items-center gap-2 text-sm mb-2">
+                    <i class="ph ${item.icon}" style="color: ${item.color}"></i>
+                    <span class="text-slate-300">${item.text}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderRawAnalysis(result) {
+            const el = document.getElementById('raw-analysis-content');
+            const segments = result.rawSegments;
+
+            if (!segments || segments.length === 0) {
+                el.innerHTML = '<div class="text-slate-500 text-sm">無法解析 UA 結構。</div>';
+                return;
+            }
+
+            // Build a flow of segments with arrows
+            const html = segments.map((seg, i) => `
+                <div class="raw-segment" style="background: ${seg.color}10; border: 1px solid ${seg.color}20;">
+                    <span style="color: ${seg.color}; font-weight: 600;">${escapeHtml(seg.text)}</span>
+                    <span class="arrow"><i class="ph ph-arrow-right"></i></span>
+                    <span class="text-slate-300" style="font-family: 'Noto Sans TC', sans-serif;">${escapeHtml(seg.explanation)}</span>
+                    <span class="tag" style="background: ${seg.color}20; color: ${seg.color};">${seg.tag}</span>
+                </div>
+            `).join('');
+
+            el.innerHTML = `
+                <div class="text-xs text-slate-500 mb-3">下方為 UA 字串的逐段解析，包含每個部分的含義與用途說明：</div>
+                <div class="space-y-1.5">${html}</div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ============================================================
+        // 12. Sample UAs
+        // ============================================================
+        const SAMPLE_UAS = [
+            { label: 'Chrome (Windows)', ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' },
+            { label: 'Firefox (macOS)', ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0' },
+            { label: 'Safari (iOS)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1' },
+            { label: 'Edge (Windows 11)', ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0' },
+            { label: 'Googlebot', ua: 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36' },
+            { label: 'Samsung Internet (Android)', ua: 'Mozilla/5.0 (Linux; Android 15; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/130.0.6723.107 Mobile Safari/537.36' },
+            { label: 'GPTBot', ua: 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)' },
+            { label: 'PlayStation 5', ua: 'Mozilla/5.0 (PlayStation; PlayStation 5/10.00) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15' },
+            { label: 'Internet Explorer (舊版)', ua: 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko' },
+        ];
+
+        // ============================================================
+        // 13. Random Sample
+        // ============================================================
+        function getRandomSample() {
+            return SAMPLE_UAS[Math.floor(Math.random() * SAMPLE_UAS.length)];
+        }
+
+        // ============================================================
+        // 14. Tool Functions
+        // ============================================================
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-msg').textContent = msg;
+            if (isError) {
+                toast.classList.replace('bg-slate-800', 'bg-red-950');
+                toast.classList.replace('border-slate-700', 'border-red-900');
+                icon.className = 'ph-fill ph-warning-circle text-lg text-red-400';
+            } else {
+                toast.classList.replace('bg-red-950', 'bg-slate-800');
+                toast.classList.replace('border-red-900', 'border-slate-700');
+                icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+            }
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, 2500);
+        }
+
+        function performParse() {
+            const input = document.getElementById('ua-input').value.trim();
+            if (!input) {
+                showToast('請先輸入或貼上 User-Agent 字串', true);
+                return;
+            }
+            const result = parseUserAgent(input);
+            renderResults(result);
+        }
+
+        // ============================================================
+        // 15. Event Bindings
+        // ============================================================
+
+        // Parse on button click
+        document.getElementById('btn-parse').addEventListener('click', performParse);
+
+        // Get current UA
+        document.getElementById('btn-get-ua').addEventListener('click', function() {
+            const ua = navigator.userAgent;
+            document.getElementById('ua-input').value = ua;
+            // Auto-parse
+            const result = parseUserAgent(ua);
+            renderResults(result);
+            showToast('已取得目前瀏覽器的 User-Agent', false);
+        });
+
+        // Sample UA
+        document.getElementById('btn-sample').addEventListener('click', function() {
+            const sample = getRandomSample();
+            document.getElementById('ua-input').value = sample.ua;
+            const result = parseUserAgent(sample.ua);
+            renderResults(result);
+            showToast(`已載入範例：${sample.label}`, false);
+        });
+
+        // Clear
+        document.getElementById('btn-clear').addEventListener('click', function() {
+            document.getElementById('ua-input').value = '';
+            document.getElementById('results-container').style.display = 'none';
+            showToast('已清除', false);
+        });
+
+        // Copy
+        document.getElementById('btn-copy').addEventListener('click', function() {
+            const container = document.getElementById('results-container');
+            if (container.style.display === 'none') {
+                showToast('尚無結果可複製', true);
+                return;
+            }
+            const text = document.getElementById('results-container').textContent.trim();
+            navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿', false)).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('已複製到剪貼簿', false);
+            });
+        });
+
+        // Download JSON
+        document.getElementById('btn-download-json').addEventListener('click', function() {
+            const input = document.getElementById('ua-input').value.trim();
+            if (!input) { showToast('尚無資料可下載', true); return; }
+            const result = parseUserAgent(input);
+            const data = {
+                userAgent: result.raw,
+                browser: { name: result.browser.name, version: result.browser.version },
+                os: { name: result.os.name, version: result.os.version, platform: result.os.platform },
+                device: { type: result.device.type, vendor: result.device.vendor, model: result.device.model },
+                engine: { name: result.engine.name, version: result.engine.version, vendor: result.engine.vendor },
+                cpu: result.cpu,
+                bot: result.bot.isBot ? { name: result.bot.name, url: result.bot.url, description: result.bot.desc } : null,
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ua-parser-${Date.now()}.json`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+            showToast('JSON 已下載', false);
+        });
+
+        // Download TXT
+        document.getElementById('btn-download-txt').addEventListener('click', function() {
+            const input = document.getElementById('ua-input').value.trim();
+            if (!input) { showToast('尚無資料可下載', true); return; }
+            const result = parseUserAgent(input);
+            const report =
+`========================================
+User-Agent Parser 分析報告
+========================================
+產生時間: ${new Date().toLocaleString('zh-TW')}
+
+User-Agent: ${result.raw}
+
+--- Browser ---
+名稱: ${result.browser.name}
+版本: ${result.browser.version}
+
+--- Operating System ---
+名稱: ${result.os.name}
+版本: ${result.os.version}
+平台: ${result.os.platform}
+
+--- Device ---
+類型: ${result.device.type}
+廠商: ${result.device.vendor || 'N/A'}
+型號: ${result.device.model || 'N/A'}
+
+--- Rendering Engine ---
+引擎: ${result.engine.name}
+版本: ${result.engine.version}
+開發商: ${result.engine.vendor}
+
+--- CPU ---
+架構: ${result.cpu}
+
+--- Bot 偵測 ---
+${result.bot.isBot ? `是 (${result.bot.name})` : '否'}
+
+--- 安全評估 ---
+${result.isUnsupported ? '⚠️ 已停止支援，請立即升級！' : result.isOld ? '💡 版本較舊，建議升級' : '✅ 版本正常'}
+========================================
+`;
+            const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ua-parser-${Date.now()}.txt`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+            showToast('TXT 報告已下載', false);
+        });
+
+        // Allow Enter to parse
+        document.getElementById('ua-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                performParse();
+            }
+        });
+
+        // ============================================================
+        // 16. Init
+        // ============================================================
+        function initApp() {
+            // Nothing special to init - user starts with empty input
+        }
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>

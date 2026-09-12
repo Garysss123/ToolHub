@@ -22,8 +22,9 @@
   const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('zh-TW').replace(/[\s_./\\-]+/g,' ').trim();
   const escapeHtml=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const i18n=window.ToolHubI18n;
-  const isEnglish=document.documentElement.lang.toLowerCase().startsWith('en');
-  const tr=value=>i18n?.locale==='en'?i18n.t(value):value;
+  const pageLanguage=document.documentElement.lang.toLowerCase();
+  const isEnglish=pageLanguage.startsWith('en'),isJapanese=pageLanguage.startsWith('ja');
+  const tr=value=>i18n?.locale==='en'||i18n?.locale==='ja'?i18n.t(value):value;
   let tools=[],visible=[],activeIndex=0,lastFocus=null,sidebarObserver=null;
 
   function collectTools(){
@@ -32,7 +33,7 @@
     const seen=new Set(),items=[];
     sidebar.querySelectorAll('a.nav-item[href]').forEach(link=>{
       let href=(link.getAttribute('href')||'').replace(/\/index\.html$/,'').replace(/\/$/,'')||'/';
-      if(href==='/'||href==='/en'||seen.has(href))return;
+      if(href==='/'||href==='/en'||href==='/ja'||seen.has(href))return;
       const originalName=(link.querySelector('span')?.textContent||link.textContent||'').replace(/\s+/g,' ').trim();
       if(!originalName)return;
       const group=link.closest('.nav-group');
@@ -40,11 +41,12 @@
       const slug=decodeURIComponent(href.split('/').filter(Boolean).pop()||'');
       const name=tr(originalName),category=tr(originalCategory);
       if(isEnglish&&!href.startsWith('/en/'))href=`/en${href==='/'?'':href}${href.endsWith('/')?'':'/'}`;
+      if(isJapanese&&!href.startsWith('/ja/'))href=`/ja${href==='/'?'':href}${href.endsWith('/')?'':'/'}`;
       seen.add(href);
       items.push({name,category,href,slug,haystack:normalize(`${name} ${category} ${originalName} ${originalCategory} ${slug}`)});
     });
     tools=items;
-    total.textContent=isEnglish?`${tools.length} tools`:`共 ${tools.length} 個工具`;
+    total.textContent=isEnglish?`${tools.length} tools`:isJapanese?`${tools.length} 個のツール`:`共 ${tools.length} 個工具`;
     if(!overlay.hidden)search(input.value);
     return tools.length>0;
   }
@@ -73,7 +75,9 @@
     if(!visible.length){
       results.innerHTML=isEnglish
         ?`<div class="tool-search-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8.5 11h5"/></svg><strong>No matching tools</strong><span>Try a shorter name, acronym, or category such as “JSON”, “image”, or “SEO”.</span></div>`
-        :`<div class="tool-search-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8.5 11h5"/></svg><strong>找不到符合的工具</strong><span>試試較短的名稱、英文縮寫或分類，例如「JSON」、「圖片」、「SEO」。</span></div>`;
+        :isJapanese
+          ?`<div class="tool-search-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8.5 11h5"/></svg><strong>一致するツールがありません</strong><span>「JSON」「画像」「SEO」など、短い名前・略語・カテゴリで検索してください。</span></div>`
+          :`<div class="tool-search-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8.5 11h5"/></svg><strong>找不到符合的工具</strong><span>試試較短的名稱、英文縮寫或分類，例如「JSON」、「圖片」、「SEO」。</span></div>`;
       return;
     }
     results.innerHTML=visible.map(resultMarkup).join('');
@@ -85,16 +89,16 @@
     if(!query){
       visible=tools.slice(0,10);
       activeIndex=0;
-      status.textContent=tools.length?(isEnglish?`Search ${tools.length} tools`:`輸入關鍵字搜尋 ${tools.length} 個工具`):(isEnglish?'Building the tool index…':'正在建立工具索引…');
+      status.textContent=tools.length?(isEnglish?`Search ${tools.length} tools`:isJapanese?`${tools.length} 個のツールを検索`:`輸入關鍵字搜尋 ${tools.length} 個工具`):(isEnglish?'Building the tool index…':isJapanese?'ツール一覧を作成しています…':'正在建立工具索引…');
       render();
       return;
     }
-    const matches=tools.map(tool=>({tool,score:scoreTool(tool,query,tokens)})).filter(item=>item.score>=0).sort((a,b)=>b.score-a.score||a.tool.name.localeCompare(b.tool.name,'zh-TW'));
+    const matches=tools.map(tool=>({tool,score:scoreTool(tool,query,tokens)})).filter(item=>item.score>=0).sort((a,b)=>b.score-a.score||a.tool.name.localeCompare(b.tool.name,isJapanese?'ja-JP':isEnglish?'en':'zh-TW'));
     visible=matches.slice(0,12).map(item=>item.tool);
     activeIndex=0;
     status.textContent=matches.length
-      ?(isEnglish?`${matches.length} results${matches.length>12?' · showing the first 12':''}`:`找到 ${matches.length} 個符合結果${matches.length>12?'，顯示前 12 個':''}`)
-      :(isEnglish?`No results for “${raw.trim()}”`:`找不到「${raw.trim()}」`);
+      ?(isEnglish?`${matches.length} results${matches.length>12?' · showing the first 12':''}`:isJapanese?`${matches.length} 件${matches.length>12?' · 最初の12件を表示':''}`:`找到 ${matches.length} 個符合結果${matches.length>12?'，顯示前 12 個':''}`)
+      :(isEnglish?`No results for “${raw.trim()}”`:isJapanese?`「${raw.trim()}」の結果はありません`:`找不到「${raw.trim()}」`);
     render();
   }
 

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+HTML
+<html class="scroll-smooth" lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="index,follow,max-image-preview:large" name="robots"/>
+<title>E-Step Calibrator | 無料オンラインツール - ToolHub</title>
+<meta content="commanded extrusion volume、actual extrusion volume、current E-step から新しい calibration value を計算し、Klipper Rotation Distance への変換と手順も提示します。" name="description"/>
+<!-- 系統核心依賴 -->
+<link href="/components/tailwind-en.css?v=20260821-1" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&amp;family=Fira+Code:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
+<style>
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-attachment: fixed;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 10px; border: 2px solid #0B1120; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+
+        .glass-panel {
+            background-color: rgba(21, 31, 50, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #1E293B;
+            border-radius: 1rem;
+        }
+
+        /* 韌體切換開關 (Radio Pills) */
+        .fw-radio:checked + .fw-label {
+            font-weight: bold;
+        }
+        #fw-marlin:checked + .fw-label {
+            background-color: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+        #fw-klipper:checked + .fw-label {
+            background-color: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
+
+        /* G-Code 高亮 */
+        .gcode-cmd { color: #38bdf8; font-weight: bold; }
+        .gcode-param { color: #34d399; }
+        .gcode-comment { color: #64748b; font-style: italic; }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.2s ease-out; }
+    </style>
+<!-- SEO Upgrade 2026 -->
+<meta content="website" property="og:type"/>
+<meta content="https://toolhuben.com/ja/estep-calibrator/" property="og:url"/>
+<meta content="E-Step Calibrator | 無料オンラインツール - ToolHub" property="og:title"/>
+<meta content="commanded extrusion volume、actual extrusion volume、current E-step から新しい calibration value を計算し、Klipper Rotation Distance への変換と手順も提示します。" property="og:description"/>
+<meta content="https://toolhuben.com/favicon.svg" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="E-Step Calibrator | 無料オンラインツール - ToolHub" name="twitter:title"/>
+<meta content="commanded extrusion volume、actual extrusion volume、current E-step から新しい calibration value を計算し、Klipper Rotation Distance への変換と手順も提示します。" name="twitter:description"/>
+<link href="/components/seo-upgrade.css" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"3D printing E-step calibration calculator","url":"https://toolhuben.com/ja/estep-calibrator/","description":"commanded extrusion volume、actual extrusion volume、current E-step から新しい calibration value を計算し、Klipper Rotation Distance への変換と手順も提示します。","applicationCategory":"UtilitiesApplication","operatingSystem":"すべて","offers":{"@type":"提案","price":"0","priceCurrency":"TWD"},"author":{"@type":"組織","name":"ToolHub"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://toolhuben.com/ja/"},{"@type":"ListItem","position":2,"name":"3D printing E-step calibration calculator","item":"https://toolhuben.com/ja/estep-calibrator/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"質問","name":"3D printing E-step calibration calculator はどのような用途に適していますか？","acceptedAnswer":{"@type":"回答","text":"E-step または Rotation Distance の校正は、Extruder に指示した送り長と実際のフィラメント送り長を一致させるために行います。校正前にノズル詰まり、ギアの滑り、フィラメント抵抗などを解消し、Firmware に応じた正しいパラメーターを使用してください。"}},{"@type":"質問","name":"3D printing E-step calibration calculator の使い方は？","acceptedAnswer":{"@type":"回答","text":"安全な温度と安定した送り条件でフィラメントに印を付けて測定します。現在の設定値、指令長、実際の押出長を入力し、新しい値を適用して再測定します。結果を確認したうえで firmware に保存してください。"}},{"@type":"質問","name":"3D printer の E-step calibration calculator を使う際に注意すべき点は何ですか？","acceptedAnswer":{"@type":"回答","text":"ファームウェアパラメータを変更する前に、元の設定を保存してください。エクストルーダーの機械的な送り量を校正した後で、flow または extrusion multiplier を校正し、2 つのパラメータが互いの誤差を打ち消す状態を避けます。"}},{"@type":"質問","name":"the 3D printing E-step calibration calculator はデータをアップロードしますか？","acceptedAnswer":{"@type":"回答","text":"測定値はローカルで計算するだけで、このツールが 3D プリンターへ接続したり書き込んだりすることはありません。"}},{"@type":"質問","name":"ソフトウェアのインストールやアカウント登録は必要ですか？","acceptedAnswer":{"@type":"回答","text":"不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。"}}]}]}</script>
+<link href="/components/tool-visual-core.css" rel="stylesheet"/><link href="/components/tool-classic-upgrade.css" rel="stylesheet"/>
+<!-- TOOLHUB I18N START -->
+<!-- TOOLHUB I18N END -->
+
+
+
+<script>window.ToolHubI18nDictionary={"首頁":"ホーム","首頁工具":"ホームツール","儀表板首頁":"ダッシュボードホーム","關於本站":"ToolHubについて","關於我們":"ToolHubについて","聯絡我們":"お問い合わせ","隱私權政策":"プライバシーポリシー","服務條款":"利用規約","搜尋工具":"ツールを検索","搜尋 ToolHub 工具":"ToolHubのツールを検索","搜尋工具名稱、分類或網址關鍵字…":"ツール名、カテゴリ、URLで検索…","正在建立工具索引…":"ツール一覧を作成しています…","工具索引載入中":"ツール一覧を読み込んでいます","搜尋全程在瀏覽器本機完成":"検索はブラウザ内だけで実行されます","↑ ↓ 選擇・Enter 開啟":"↑ ↓ 選択 · Enter で開く","關閉搜尋":"検索を閉じる","切換網站語言":"サイトの言語を切り替える","切換主題顏色":"テーマカラーを変更","主題":"テーマ","選擇全站主題":"サイトテーマを選択","午夜黑":"ミッドナイト","海洋藍":"オーシャン","紫羅蘭":"バイオレット","森林綠":"フォレスト","晨曦淺色":"デイライト","開啟或關閉側邊欄":"サイドバーを開閉","系統導航 (ToolHub v5.1)":"ツールナビゲーション (ToolHub v5.1)","編碼與轉換":"エンコード・変換","開發者工具":"開発者ツール","文字與資料":"テキスト・データ","影像與設計":"画像・デザイン","網路與安全":"ネットワーク・セキュリティ","硬體與效能":"ハードウェア・性能","數學與計算":"数学・計算","生活與實用":"日常ツール","內容與創作":"コンテンツ・制作","時間與日期":"日時","產生器":"ジェネレーター","分析工具":"分析ツール","全部工具":"すべてのツール","立即使用":"ツールを使う","開始使用":"使ってみる","免費使用":"無料で使う","常見問題":"よくある質問","使用說明":"使い方","功能特色":"機能","計算結果":"結果","結果":"結果","輸入":"入力","清除":"クリア","重設":"リセット","複製":"コピー","下載":"ダウンロード","上傳檔案":"ファイルをアップロード","選擇檔案":"ファイルを選択","拖放檔案至此":"ここにファイルをドロップ","執行":"実行","轉換":"変換","產生":"生成","分析":"分析","新增":"追加","移除":"削除","範例":"例","錯誤":"エラー","請輸入內容":"内容を入力してください","處理完成":"完了","已複製":"コピーしました","無需上傳":"アップロード不要","純前端運算":"ブラウザ内だけで処理","資料不離開您的裝置":"データは端末外へ送信されません","所有處理都在瀏覽器本機完成":"すべての処理はブラウザ内で完結します","台灣與香港":"台湾と香港","繁體中文":"繁體中文","閏年":"うるう年","• 2024 年 → ✅ 閏年（能被 4 整除，不能被 100 整除）":"• 2024 → ✅ leap year（4 で割り切れ、100 では割り切れない）。","完整的工作流程：從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"完全な workflow：JSON を validation → pretty-print → conversion → 結果を copy → XML を download。","完整的工作流程：":"完全なワークフロー：","從 JSON 驗證 → Pretty Print → 轉換 → 複製 → 下載，一氣呵成。":"JSON を検証・整形・変換し、結果をコピーしたり XML をダウンロードしたりできます。","在波形上按下滑鼠拖曳選取範圍，然後使用工具列的 Trim、Delete、Copy 等功能。你也可以直接在「Trim」欄位輸入起訖秒數進行精確剪輯。":"waveform 上をドラッグして範囲を選び、Trim、Delete、Copy を使用します。Trim field へ正確な start/end time を入力することもできます。","選擇要檢視的檔案":"検査するファイルを選択","最多讀取位元組":"読み取る最大バイト数","處理檔案":"ファイルを処理","所有資料只在目前瀏覽器分頁中處理。":"すべてのデータはこのブラウザータブ内だけで処理されます。","原始字元":"元の文字","網址字元":"URL 文字","部署參數與規則":"デプロイパラメーターとルール","書籤名稱":"ブックマーク名","解析與轉換結果":"解析・変換結果","純前端本地運算 · 保障您的資料隱私":"プライベートな browser-based tool。データは端末内に留まります。","專為開發與創作者打造的":"開発者とクリエイター向けに設計","全能線上工具箱":"オールインワン Online Toolbox","免安裝、隨開即用。涵蓋網路 IP 觀測、數位資產防禦、軟體編碼到高畫質物理機率模擬。您的檔案絕不離開設備，體驗極致的安全與效率。":"インストールも登録も不要です。ネットワーク、セキュリティ、コーディング、デザイン、データなど幅広いツールを利用できます。ファイルは端末内に留まり、高速でプライベートな作業が可能です。","免費本機工具":"無料・ブラウザ内処理","資料不上傳":"アップロードなし","支援手機操作":"スマートフォン対応","支援主題切換":"テーマ切替対応","Binary Viewer ・ 免費本機工具":"Binary Viewer · 無料ローカルツール","讀取本機檔案並以 Offset、Hex Bytes 與 ASCII 三欄顯示內容，支援限制預覽大小。":"ローカルファイルを Offset、Hex Bytes、ASCII の各列で確認し、プレビュー上限も設定できます。","; Klipper 不透過終端機保存步進值。":"；Klipper はターミナル経由でステップ値を保存しません。","; --- [Step 1] Preparation (準備階段) ---":"; --- [Step 1] 準備（準備段階） ---","; --- [Step 2] Execution (測量擠出) ---":"; --- [Step 2] 実行（押出量の測定） ---","; --- [Step 3] Apply & Save (套用與寫入) ---":"; --- [ステップ3] 適用＆保存（適用して書き込み）---","; 在擠出機入口處的耗材上，用奇異筆畫下距離入口 120mm 的記號":"; エクストルーダー入口のフィラメントに、入口から 120 mm の位置へ油性ペンなどで印を付けます。","; 將 rotation_distance 修改為：":"; rotation_distance を次の値へ変更：","; 找到 [extruder] 區塊":"; [extruder] ブロックを検索","; 擠出停止後，用尺測量記號到擠出機入口的剩餘距離。填入左側步驟 3":"; extrusion 停止後、mark から extruder inlet までの残距離を ruler で測定し、左側の step 3 へ入力します","; 然後存檔並執行 FIRMWARE_RESTART":"; その後アーカイブして FIRMWARE_RESTART を実行","; 等待填入實測數值以生成寫入指令...":"; 実測値が入力され、write command を生成できる状態になるのを待っています...","; 請打開你的 printer.cfg 檔案":"; printer.cfg ファイルを開いてください","不足":"不完全","個項目":"項目","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構":"高度な query-string parser を備えた完全な URL string toolkit です。decode でき、","在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"簡潔さと明確さのバランスを取ります。「the」「a」「of」など不要な stop word を削除し、core keyword だけを残します。","嵌套參數解析矩陣 (qs Engine) 已掛載":"Nested Query Parameter Engine の準備ができました","建立理念":"創業時の理念","建議":"推奨事項","查看 printer.cfg":"printer.cfg を表示","查看指令: M503":"表示コマンド：M503","物理錯誤：剩餘長度不可能大於標記長度":"物理エラー：remaining length は tag length より大きくできません。","白色右手食指（White Right Pointing Index）":"White Right Pointing Index","等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"などの nested structure に対応し、flat table と JSON tree の双方向編集ができます。","缺少":"不足","顯示":"表示中","全方位的網址字串處理引擎。內建高階 qs 解析器，完美解構 filter[name] 等複雜嵌套結構，支援扁平表格與 JSON 樹狀雙模編輯重鑄。":"高度な query-string parser を備えた URL 文字列 toolkit です。filter[name] のような nested key を decode し、flat table または JSON tree として編集できます。","💡 最佳實踐： 在簡潔與描述性之間取得平衡。移除不必要的停用詞（如「的」、「了」、「在」），只保留核心關鍵字。":"💡 ベストプラクティス：短さと分かりやすさのバランスを取ります。「the」「a」「of」など不要な stop word を除き、主要キーワードだけを残します。","廣告 Cookie：":"広告 Cookie：","必要 Cookie：":"必須 Cookie：","您主動提供的資訊：":"入力する情報：","您的權利":"あなたの権利","我們使用 Cookie 來改善您的瀏覽體驗、分析網站流量及顯示個人化廣告（詳見下方 Cookie 說明）。":"Cookie はブラウジング体験の改善、サイトトラフィック分析、パーソナライズ広告の表示に使用されます。詳細は下記の Cookie セクションを参照してください。","我們收集的資訊":"収集する情報","政策更新":"ポリシー更新","本機運算與資料安全":"ローカル処理とデータセキュリティ","法律條款":"法的情報","當您訪問本網站時，我們可能會自動收集您的瀏覽器類型、操作系統、IP 位址、訪問時間及瀏覽的頁面等基本資訊。":"本サイトへのアクセス時、ブラウザー種別、OS、IP アドレス、アクセス時刻、閲覧ページなどの基本情報を自動取得する場合があります。","第三方服務":"サードパーティサービス","自動收集的資訊：":"自動的に収集される情報：","若您透過聯絡表單或電子郵件與我們聯繫，我們將收集您提供的姓名、電子郵件地址及訊息內容。":"お問い合わせフォームまたはメールで連絡された場合、提供された氏名、メールアドレス、メッセージ内容を収集します。","資料保存政策":"データ保持期間","Cookie 使用說明":"Cookie の使用方法","Cookie 及類似技術：":"Cookie および類似技術：","Cookie 是小型文字檔案，當您訪問網站時儲存在您的裝置上。ToolHub 使用以下類型的 Cookie：":"Cookie は Web サイト訪問時に device へ保存される小さな text file です。ToolHub では次の種類の cookie を使用します：","分析 Cookie：":"分析 Cookie：","在使用 ToolHub 時，我們可能會收集以下類型的資訊：":"ToolHub を利用する際、次の種類の情報を収集する場合があります。","等待選擇檔案":"ファイルを待っています","產生設定":"構成を生成","可用設定檔":"すぐに使える設定","Bookmarklet 已產生":"Bookmarklet を生成しました","⭐ 常用":"⭐ 人気","SEO 相關":"SEO 関連","查看詳細":"詳細を表示","📋 官方說明":"📋 公式リファレンス","📝 詳細說明":"📝 詳細","❌ 未加密":"❌ 暗号化なし","尚無查詢記錄":"検索履歴なし","🔤 副檔名":"🔤 拡張子","🔤 其他副檔名":"🔤 その他の拡張子","📂 類別":"📂 カテゴリ","必填":"必須","Google 搜尋結果預覽":"Google 検索結果プレビュー","Schema 標題":"Schema タイトル","Schema 描述將顯示於此":"スキーマの説明がここに表示されます","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留手部標籤。":"アニメ調にも写実画像にも使いやすい汎用的な構成です。品質を示す語を前方へ置き、手の崩れを抑える negative tag を維持してください。","泛用性最強，動漫與寫實皆可。品質詞放開頭，負向務必保留":"anime と photorealistic image の両方で汎用性が高い設定です。quality term を先に置き、negative は","手部標籤。":"hand タグ。","🔍 常見原因":"🔍 よくある原因","🔧 修復建議":"🔧 推奨修正","💾 快取策略":"💾 キャッシュ戦略","不可快取":"キャッシュ不可","✅ 加密傳輸":"✅ 暗号化済み","📝 說明":"📝 説明","💡 常見用途":"💡 よくある用途","白色上箭头（Upwards White Arrow / Shift Key）":"上向き白矢印 / Shift キー","（無特定副檔名）":"（特定の拡張子なし）","執行處理":"実行","本機處理":"ローカルで処理されます","所有資料都在瀏覽器":"すべてのデータはブラウザ内に保持されます","分享到":"共有先","決定項不是 Superkey，右側也不是 Prime Attribute":"determinant が superkey ではなく、右辺も prime attribute ではありません。","總時長":"合計時間","完成度":"完全性","個推薦欄位":"推奨フィールド","Google 建議加入以下欄位":"Google はこれらの field を追加することを推奨しています","決定項不是":"行列式は次の値ではありません","右側也不是":"右側は次の形式ではありません","完成度偏低":"完全性が低いです","建議補充更多欄位以獲得更好的搜尋呈現效果":"検索結果でより良く表示されるよう、フィールドの追加を検討してください"};</script><script src="/components/i18n-runtime-ja.js?v=20260913-1"></script> <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1732059148394592"></script>
+<link href="https://toolhuben.com/ja/estep-calibrator/" rel="canonical"/><link href="https://toolhuben.com/estep-calibrator/" hreflang="zh-Hant" rel="alternate"/><link href="https://toolhuben.com/en/estep-calibrator/" hreflang="en" rel="alternate"/><link href="https://toolhuben.com/ja/estep-calibrator/" hreflang="ja" rel="alternate"/><link href="https://toolhuben.com/en/estep-calibrator/" hreflang="x-default" rel="alternate"/></head>
+<body class="flex flex-col min-h-screen relative font-sans" data-classic-layout="blueprint" data-classic-tool="" data-locale="ja" data-tool-visual="" style="--classic-accent:#38BDF8;--classic-accent-rgb:56,189,248">
+<div id="component-header"></div>
+<div id="component-sidebar"></div>
+<main class="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 animate-[fadeIn_0.5s_ease-out]">
+<nav aria-label="パンくずリスト" class="seo-upgrade-breadcrumb"><a href="/ja/">ホーム</a><span>›</span><span>3D printing E-step calibration calculator</span></nav>
+<div class="text-center space-y-4 mb-8 mt-2">
+<div class="inline-flex items-center justify-center p-2 mb-1 rounded-full bg-amber-950/30 border border-amber-900/50 text-xs text-amber-400 shadow-inner">
+<i class="ph-fill ph-printer mr-1.5 text-sm"></i>
+                solid／fluid propulsion calibration matrix を公開しました。
+            </div>
+<h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                押出キネマティクス <span class="text-transparent bg-clip-text bg-gradient-to-r from-print-marlin to-print-klipper">キャリブレーター</span>
+</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                3D プリントの押出不良を診断するための総合ダッシュボードです。Marlin（E-Steps）と Klipper（Rotation Distance）の両方式に対応し、補正パラメータをすばやく算出して G-Code 制御コマンドを動的に生成できます。
+            </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ========================================== -->
+<!-- 左側：物理量測與演算法輸入 (Physical Inputs)   -->
+<!-- ========================================== -->
+<div class="lg:col-span-5 flex flex-col gap-5">
+<!-- 韌體維度切換 (Firmware Universe Switcher) -->
+<div class="glass-panel p-2 flex rounded-xl shadow-xl border border-hub-700/50">
+<label class="flex-1 cursor-pointer relative">
+<input checked="" class="fw-radio hidden" id="fw-marlin" name="firmware" type="radio" value="marlin"/>
+<div class="fw-label py-3 text-center rounded-lg text-sm text-slate-400 border border-transparent transition-all flex items-center justify-center gap-2">
+<i class="ph-fill ph-code"></i> Marlin / RepRap（E-Steps）
+                        </div>
+</label>
+<label class="flex-1 cursor-pointer relative">
+<input class="fw-radio hidden" id="fw-klipper" name="firmware" type="radio" value="klipper"/>
+<div class="fw-label py-3 text-center rounded-lg text-sm text-slate-400 border border-transparent transition-all flex items-center justify-center gap-2">
+<i class="ph-fill ph-rocket"></i> Klipper（Rotation Dist.）
+                        </div>
+</label>
+</div>
+<!-- 核心參數採集區 -->
+<div class="glass-panel p-5 sm:p-6 flex flex-col gap-6 shadow-xl relative overflow-hidden">
+<!-- Step 1: 當前硬體步進值 -->
+<div class="space-y-3 relative z-10">
+<div class="flex justify-between items-end border-b border-hub-700 pb-2">
+<label class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+<span class="bg-hub-700 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span>
+<span id="label-current-val">現在の E-Steps</span>
+</label>
+<span class="text-[10px] text-slate-500 font-mono" id="hint-current-cmd">表示コマンド：M503</span>
+</div>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-print-filament transition-colors">
+<input class="w-full bg-transparent px-4 py-3 text-white font-mono text-lg outline-none" id="in-current" min="0" step="any" type="number" value="93.0"/>
+<span class="px-4 py-3 bg-hub-800 text-slate-400 font-bold border-l border-hub-700 font-mono text-sm" id="unit-current">steps/mm</span>
+</div>
+</div>
+<!-- Step 2: 物理推演設定 -->
+<div class="space-y-3 relative z-10">
+<div class="flex justify-between items-end border-b border-hub-700 pb-2">
+<label class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+<span class="bg-hub-700 text-slate-300 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span>
+                                押し出し長をテスト
+                            </label>
+<span class="text-[10px] text-slate-500">標準基準長</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<span class="text-[10px] text-slate-400 font-bold uppercase">マーク済み長さ（Marked）</span>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden">
+<input class="w-full bg-transparent px-3 py-2 text-slate-300 font-mono text-sm outline-none" id="in-mark" min="0" type="number" value="120"/>
+<span class="px-2 py-2 bg-hub-800 text-slate-500 font-mono text-xs border-l border-hub-700">mm</span>
+</div>
+</div>
+<div class="space-y-1">
+<span class="text-[10px] text-print-filament font-bold uppercase drop-shadow">目標押出量（Requested）</span>
+<div class="flex bg-hub-900 border border-hub-700 rounded-lg overflow-hidden focus-within:border-print-filament transition-colors shadow-[0_0_10px_rgba(245,158,11,0.1)]">
+<input class="w-full bg-transparent px-3 py-2 text-print-filament font-mono text-sm font-bold outline-none" id="in-request" min="0" type="number" value="100"/>
+<span class="px-2 py-2 bg-hub-800 text-slate-500 font-mono text-xs border-l border-hub-700">mm</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 3: 實測結果輸入 -->
+<div class="space-y-3 relative z-10 bg-hub-800/30 p-4 rounded-xl border border-hub-700/50">
+<div class="flex justify-between items-end border-b border-hub-700 pb-2">
+<label class="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+<span class="bg-hub-700 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-[0_0_5px_rgba(255,255,255,0.5)]">3</span>
+                                残りの測定値を入力してください
+                            </label>
+<span class="text-[10px] text-slate-400">extrusion 後の marked point までの距離</span>
+</div>
+<div class="flex bg-hub-900 border-2 border-hub-700 rounded-xl overflow-hidden focus-within:border-sky-400 transition-colors shadow-inner">
+<input class="w-full bg-transparent px-4 py-4 text-sky-300 font-mono text-2xl outline-none" id="in-remain" min="0" placeholder="例：22.5" step="any" type="number"/>
+<span class="px-4 py-4 bg-hub-800 text-slate-400 font-bold border-l border-hub-700 font-mono">mm</span>
+</div>
+<div class="flex justify-between items-center text-xs mt-2">
+<span class="text-slate-500">システムが実際の押出量（Actual）を推定します。</span>
+<span class="font-mono font-bold text-white bg-hub-900 px-2 py-0.5 rounded border border-hub-700" id="calc-actual-extruded">-- mm</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 右側：校準結果與 G-Code 終端 (Result & G-Code) -->
+<!-- ========================================== -->
+<div class="lg:col-span-7 flex flex-col gap-5">
+<!-- 核心運算結果儀表板 -->
+<div class="glass-panel p-6 shadow-2xl relative overflow-hidden flex flex-col justify-center min-h-[180px] border-l-4 border-hub-700 transition-colors" id="result-card">
+<div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+<i class="ph-fill ph-target text-9xl"></i>
+</div>
+<div class="relative z-10 flex flex-col items-start w-full">
+<div class="w-full flex justify-between items-end mb-2">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+<i class="ph-fill ph-check-circle text-emerald-400 hidden" id="icon-perfect"></i>
+<i class="ph-fill ph-wrench text-amber-400 hidden" id="icon-adjust"></i>
+<span id="label-new-val">新しい値</span>
+</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700" id="status-badge">待機中</span>
+</div>
+<div class="flex items-baseline gap-3">
+<span class="text-5xl sm:text-7xl font-mono font-bold text-white drop-shadow-lg tracking-tight" id="out-new-val">--</span>
+<span class="text-xl font-bold text-slate-500 font-mono" id="out-new-unit"></span>
+</div>
+<div class="mt-3 flex gap-2 text-[10px] font-mono text-slate-400 bg-hub-900/50 px-3 py-1.5 rounded border border-hub-700 w-full overflow-hidden">
+<span class="shrink-0 text-slate-500">数式：</span>
+<span class="truncate" id="out-formula">--</span>
+</div>
+</div>
+</div>
+<!-- G-Code 控制台同步產生器 -->
+<div class="glass-panel flex flex-col overflow-hidden shadow-xl border border-hub-700/50">
+<div class="bg-hub-900/80 px-4 py-3 border-b border-hub-700 flex justify-between items-center z-10">
+<div class="flex items-center gap-2">
+<i class="ph-fill ph-terminal-window text-sky-400 text-lg"></i>
+<h3 class="text-sm font-bold text-white tracking-widest uppercase">G-Code ターミナル（自動生成）</h3>
+</div>
+<button class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors bg-hub-800 px-2 py-1 rounded border border-hub-700" onclick="copyToClipboard('gcode-output', 'G-Code 指令')">
+<i class="ph ph-copy"></i> すべてコピー
+                        </button>
+</div>
+<!-- G-Code 顯示區 -->
+<div class="bg-[#0a0f18] p-4 sm:p-5 overflow-y-auto font-mono text-xs sm:text-sm leading-loose relative min-h-[160px] max-h-[220px]" id="gcode-container">
+<!-- G-Code 內容由 JS 動態渲染並高亮 -->
+</div>
+</div>
+<!-- 專家提示區塊 (Expert Tips Matrix) -->
+<div class="flex flex-col gap-3">
+<div class="bg-amber-900/10 border border-amber-900/50 rounded-xl p-4 text-xs text-amber-500/80 leading-relaxed flex gap-3 shadow-inner">
+<i class="ph-fill ph-warning-circle text-amber-500 text-xl shrink-0 mt-0.5"></i>
+<p>
+<strong class="text-amber-400">物理層の防御に関する推奨事項：</strong> 機械的に完全に正確なステップ値を得るには、次の方法を推奨します<strong>remote extruder から Bowden tube を外します。</strong>、または hot end に nozzle を取り付けない状態で無負荷 extrude を行い、hot end の backpressure や filament slip による非線形な影響を減らします。
+                        </p>
+</div>
+<!-- The Killer Feature: 維度收斂提示 -->
+<div class="bg-sky-900/10 border border-sky-900/50 rounded-xl p-4 text-xs text-sky-400/80 leading-relaxed flex gap-3 shadow-inner">
+<i class="ph-fill ph-cube text-sky-400 text-xl shrink-0 mt-0.5"></i>
+<p>
+<strong class="text-sky-300">1 次元から 3 次元への次元収束：</strong> ⚠️ 注意：E-Step は stepper motor だけを calibration します。<strong>1 次元の送り長さ</strong>. キャリブレーション完了後も過押出または押出不足が発生する場合は、ノギスでフィラメントの実際の直径を測定し、スライサーの Flow Rate / Extrusion Multiplier を微調整して、適正な押出量になるよう調整してください。<strong>3D 押し出し体積での絶対精度</strong>。
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- SEO Upgrade 2026 Content -->
+<article aria-label="3D printing E-step calibration calculator tutorial／FAQ" class="seo-upgrade">
+<section class="seo-upgrade-card">
+<h2>3D Printing E-step Calibration Calculator 完全ユーザーガイド</h2>
+<p>E-step または Rotation Distance の校正は、Extruder に指示した送り長と実際のフィラメント送り長を一致させるために行います。校正前にノズル詰まり、ギアの滑り、フィラメント抵抗などを解消し、Firmware に応じた正しいパラメーターを使用してください。</p>
+<h3>操作手順</h3>
+<ol><li>安全な temperature と安定した feeding condition で consumable を label・measure します</li><li>現在の設定値、command length、実際の extrusion length を入力します</li><li>new value を適用して再測定し、result を確認して firmware へ保存します。</li></ol>
+<h3>実用的な提案と制限事項</h3>
+<p>ファームウェアパラメータを変更する前に、元の設定を保存してください。エクストルーダーの機械的な送り量を校正した後で、flow または extrusion multiplier を校正し、2 つのパラメータが互いの誤差を打ち消す状態を避けます。</p>
+<h3>プライバシーと端末内処理</h3>
+<p>測定値はローカルで計算するだけで、このツールが 3D プリンターへ接続したり書き込んだりすることはありません。</p>
+</section>
+<section class="seo-upgrade-card">
+<h2>3D Printing E-step Calculator FAQ</h2>
+<details><summary>3D printing E-step calibration calculator はどのような用途に適していますか？</summary><div class="seo-upgrade-answer">E-step または Rotation Distance の校正は、Extruder に指示した送り長と実際のフィラメント送り長を一致させるために行います。校正前にノズル詰まり、ギアの滑り、フィラメント抵抗などを解消し、Firmware に応じた正しいパラメーターを使用してください。</div></details>
+<details><summary>3D printing E-step calibration calculator の使い方は？</summary><div class="seo-upgrade-answer">安全な温度と安定した送り条件でフィラメントに印を付けて測定します。現在の設定値、指令長、実際の押出長を入力し、新しい値を適用して再測定します。結果を確認したうえで firmware に保存してください。</div></details>
+<details><summary>3D printer の E-step calibration calculator を使う際に注意すべき点は何ですか？</summary><div class="seo-upgrade-answer">ファームウェアパラメータを変更する前に、元の設定を保存してください。エクストルーダーの機械的な送り量を校正した後で、flow または extrusion multiplier を校正し、2 つのパラメータが互いの誤差を打ち消す状態を避けます。</div></details>
+<details><summary>the 3D printing E-step calibration calculator はデータをアップロードしますか？</summary><div class="seo-upgrade-answer">測定値はローカルで計算するだけで、このツールが 3D プリンターへ接続したり書き込んだりすることはありません。</div></details>
+<details><summary>ソフトウェアのインストールやアカウント登録は必要ですか？</summary><div class="seo-upgrade-answer">不要です。ToolHub は純フロントエンドの Web ツールを提供しており、ページを開けばすぐに利用できます。ただし、ブラウザーが必要な JavaScript やファイル権限をブロックしている場合、一部の機能は実行できません。</div></details>
+</section>
+</article>
+</main>
+<!-- 全域 Toast -->
+<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-6 py-3 rounded-full font-medium shadow-xl opacity-0 pointer-events-none transition-all duration-300 z-[100] flex items-center gap-2 translate-y-4" id="toast">
+<i class="ph-fill ph-check-circle text-lg text-hub-accent" id="toast-icon"></i>
+<span id="toast-msg">操作に成功しました</span>
+</div>
+<!-- 動態載入：頁尾 -->
+<div id="component-footer"></div>
+<script>
+        async function loadComponent(elementId, filePath) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const html = await response.text();
+                const container = document.getElementById(elementId);
+                container.innerHTML = html;
+                Array.from(container.querySelectorAll('script')).forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {}
+        }
+
+        function setupSidebarActiveState() {
+            const currentPath = '/estep-calibrator'; 
+            document.querySelectorAll('#sidebar-container .nav-item').forEach(item => {
+                const href = item.getAttribute('href');
+                if (!href) return;
+                const itemPath = href.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+                if (currentPath === itemPath || (currentPath !== '/' && itemPath !== '/' && currentPath.startsWith(itemPath))) {
+                    item.classList.remove('text-slate-400', 'border-transparent', 'hover:bg-slate-800/50');
+                    item.classList.add('text-[#3ebcf0]', 'border-[#3ebcf0]', 'bg-slate-800/70', 'shadow-[inset_0_0_10px_rgba(62,188,240,0.05)]');
+                }
+            });
+        }
+
+        async function initializeSystem() {
+            await Promise.all([
+                loadComponent('component-header', '/components/header-ja.html'),
+                loadComponent('component-sidebar', '/components/sidebar-ja.html'),
+                loadComponent('component-footer', '/components/footer-ja.html')
+            ]);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            document.body.addEventListener('click', (e) => {
+                const triggerBtn = e.target.closest('#sidebar-trigger-btn');
+                const closeBtn = e.target.closest('#sidebar-close-btn');
+                const overlayLayer = e.target.closest('#sidebar-overlay');
+                if (triggerBtn || closeBtn || overlayLayer) {
+                    const container = document.getElementById('sidebar-container');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    if (container && overlay) {
+                        const isClosed = container.classList.contains('translate-x-full');
+                        if (isClosed && triggerBtn) {
+                            overlay.classList.remove('pointer-events-none');
+                            requestAnimationFrame(() => {
+                                container.classList.remove('translate-x-full');
+                                overlay.classList.remove('opacity-0');
+                                overlay.classList.add('opacity-100');
+                            });
+                        } else if (!isClosed && (closeBtn || overlayLayer || triggerBtn)) {
+                            container.classList.add('translate-x-full');
+                            overlay.classList.remove('opacity-100');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+                        }
+                    }
+                }
+            });
+            setupSidebarActiveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+<!-- ========================================== -->
+<!-- 工具級業務邏輯：流體推進校準與 G-Code 引擎   -->
+<!-- ========================================== -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            window.showToast = (msg, isError = false) => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').textContent = msg;
+                if (isError) {
+                    toast.classList.replace('bg-slate-800', 'bg-red-950');
+                    toast.classList.replace('border-slate-700', 'border-red-900');
+                    icon.className = 'ph-fill ph-warning-circle text-lg text-red-500';
+                } else {
+                    toast.classList.replace('bg-red-950', 'bg-slate-800');
+                    toast.classList.replace('border-red-900', 'border-slate-700');
+                    icon.className = 'ph-fill ph-check-circle text-lg text-hub-accent';
+                }
+                toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }, 2000);
+            };
+
+            window.copyToClipboard = (elementId, name) => {
+                const text = document.getElementById(elementId).innerText;
+                if (!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(`${name} 已複製`);
+                }).catch(() => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("Copy");
+                    textArea.remove();
+                    showToast(`${name} 已複製`);
+                });
+            };
+
+            // --- DOM Elements ---
+            const fwRadios = document.getElementsByName('firmware');
+            
+            const labelCurrentVal = document.getElementById('label-current-val');
+            const hintCurrentCmd = document.getElementById('hint-current-cmd');
+            const unitCurrent = document.getElementById('unit-current');
+            const inCurrent = document.getElementById('in-current');
+            
+            const inMark = document.getElementById('in-mark');
+            const inRequest = document.getElementById('in-request');
+            const inRemain = document.getElementById('in-remain');
+            const calcActualExtruded = document.getElementById('calc-actual-extruded');
+
+            const resultCard = document.getElementById('result-card');
+            const labelNewVal = document.getElementById('label-new-val');
+            const outNewVal = document.getElementById('out-new-val');
+            const outNewUnit = document.getElementById('out-new-unit');
+            const outFormula = document.getElementById('out-formula');
+            const statusBadge = document.getElementById('status-badge');
+            const iconPerfect = document.getElementById('icon-perfect');
+            const iconAdjust = document.getElementById('icon-adjust');
+
+            let currentFw = 'marlin'; 
+
+            const triggerPop = (el) => {
+                el.classList.remove('animate-pop');
+                void el.offsetWidth;
+                el.classList.add('animate-pop');
+            };
+
+            const switchFirmware = () => {
+                currentFw = document.querySelector('input[name="firmware"]:checked').value;
+                
+                if (currentFw === 'marlin') {
+                    labelCurrentVal.textContent = 'Current E-Steps';
+                    hintCurrentCmd.textContent = '查看指令: M503';
+                    unitCurrent.textContent = 'steps/mm';
+                    outNewUnit.textContent = 'steps/mm';
+                    labelNewVal.textContent = 'New E-Steps';
+                    if (inCurrent.value === '22.5' || inCurrent.value === '') inCurrent.value = '93.0'; 
+                    
+                    resultCard.classList.remove('border-print-klipper');
+                    resultCard.classList.add('border-print-marlin');
+                } else {
+                    labelCurrentVal.textContent = 'Current Rotation Dist.';
+                    hintCurrentCmd.textContent = '查看 printer.cfg';
+                    unitCurrent.textContent = 'mm/rev';
+                    outNewUnit.textContent = 'mm/rev';
+                    labelNewVal.textContent = 'New Rotation Distance';
+                    if (inCurrent.value === '93.0' || inCurrent.value === '') inCurrent.value = '22.5'; 
+                    
+                    resultCard.classList.add('border-print-klipper');
+                    resultCard.classList.remove('border-print-marlin');
+                }
+                calculateMatrix();
+            };
+
+            const calculateMatrix = () => {
+                const currentVal = parseFloat(inCurrent.value);
+                const mark = parseFloat(inMark.value) || 0;
+                const req = parseFloat(inRequest.value) || 0;
+                const remainStr = inRemain.value.trim();
+
+                generateGCode(currentVal, req, null, currentFw);
+
+                if (!remainStr || isNaN(parseFloat(remainStr)) || !currentVal || req <= 0) {
+                    outNewVal.textContent = '--';
+                    outFormula.textContent = '--';
+                    calcActualExtruded.textContent = '-- mm';
+                    calcActualExtruded.className = 'font-mono font-bold text-slate-500 bg-hub-900 px-2 py-0.5 rounded border border-hub-700';
+                    
+                    statusBadge.textContent = 'Waiting';
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700';
+                    iconPerfect.classList.add('hidden'); iconAdjust.classList.add('hidden');
+                    return;
+                }
+
+                const remain = parseFloat(remainStr);
+                if (remain > mark) {
+                    showToast('物理錯誤：剩餘長度不可能大於標記長度', true);
+                    return;
+                }
+
+                const actual = mark - remain;
+                calcActualExtruded.textContent = `${actual.toFixed(2)} mm`;
+                
+                if (Math.abs(actual - req) < 0.1) {
+                    calcActualExtruded.className = 'font-mono font-bold text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded border border-emerald-500/50';
+                    statusBadge.textContent = 'Perfectly Calibrated';
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900/50 text-emerald-400 border border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]';
+                    iconPerfect.classList.remove('hidden'); iconAdjust.classList.add('hidden');
+                } else {
+                    calcActualExtruded.className = 'font-mono font-bold text-print-filament bg-amber-900/30 px-2 py-0.5 rounded border border-amber-500/50';
+                    statusBadge.textContent = 'Needs Adjustment';
+                    statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-900/50 text-amber-400 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]';
+                    iconAdjust.classList.remove('hidden'); iconPerfect.classList.add('hidden');
+                }
+
+                let newVal = 0;
+                let formulaStr = '';
+
+                if (actual > 0) {
+                    if (currentFw === 'marlin') {
+                        newVal = (req / actual) * currentVal;
+                        formulaStr = `(${req} / ${actual}) × ${currentVal}`;
+                    } else {
+                        newVal = (actual / req) * currentVal;
+                        formulaStr = `(${actual} / ${req}) × ${currentVal}`;
+                    }
+
+                    outNewVal.textContent = newVal.toFixed(3); 
+                    outFormula.textContent = formulaStr;
+                    triggerPop(outNewVal);
+                    
+                    generateGCode(currentVal, req, newVal.toFixed(3), currentFw);
+                } else {
+                    outNewVal.textContent = 'ERR';
+                    outFormula.textContent = 'Division by zero (Actual is 0)';
+                }
+            };
+
+            const generateGCode = (currentVal, req, newVal, fw) => {
+                let html = '';
+                
+                const hlCmd = (cmd) => `<span class="gcode-cmd">${cmd}</span>`;
+                const hlParam = (param) => `<span class="gcode-param">${param}</span>`;
+                const hlComment = (comment) => `<span class="gcode-comment">${comment}</span>`;
+                
+                html += hlComment('; --- [Step 1] Preparation (準備階段) ---') + '\n';
+                html += `${hlCmd('M83')}                               ${hlComment('; Set extruder to relative mode (設定擠出機為相對模式)')}\n`;
+                html += `${hlCmd('M104')} ${hlParam('S200')}                         ${hlComment('; Heat hotend to 200C (加熱噴嘴至 200度)')}\n`;
+                html += `${hlCmd('M109')} ${hlParam('S200')}                         ${hlComment('; Wait for hotend temp (等待加熱完成)')}\n\n`;
+                
+                html += hlComment('; --- [Step 2] Execution (測量擠出) ---') + '\n';
+                html += hlComment('; 在擠出機入口處的耗材上，用奇異筆畫下距離入口 120mm 的記號') + '\n';
+                html += `${hlCmd('G1')} ${hlParam(`E${req}`)} ${hlParam('F100')}                      ${hlComment('; Extrude requested mm at slow speed (以 F100 慢速擠出指定長度)')}\n`;
+                html += hlComment('; 擠出停止後，用尺測量記號到擠出機入口的剩餘距離。填入左側步驟 3') + '\n\n';
+
+                if (newVal !== null) {
+                    html += hlComment('; --- [Step 3] Apply & Save (套用與寫入) ---') + '\n';
+                    if (fw === 'marlin') {
+                        html += `${hlCmd('M92')} ${hlParam(`E${newVal}`)}                       ${hlComment('; Set new E-steps in RAM (將新數值寫入記憶體)')}\n`;
+                        html += `${hlCmd('M500')}                              ${hlComment('; Save to EEPROM (永久保存至主機板)')}\n`;
+                    } else {
+                        html += hlComment('; Klipper 不透過終端機保存步進值。') + '\n';
+                        html += hlComment('; 請打開你的 printer.cfg 檔案') + '\n';
+                        html += hlComment('; 找到 [extruder] 區塊') + '\n';
+                        html += hlComment(`; 將 rotation_distance 修改為：${newVal}`) + '\n';
+                        html += hlComment('; 然後存檔並執行 FIRMWARE_RESTART') + '\n';
+                    }
+                } else {
+                    html += hlComment('; --- [Step 3] Apply & Save ---') + '\n';
+                    html += hlComment('; 等待填入實測數值以生成寫入指令...') + '\n';
+                }
+
+                const container = document.getElementById('gcode-container');
+                container.innerHTML = `<pre id="gcode-output" class="w-full">${html}</pre>`;
+            };
+
+            Array.from(fwRadios).forEach(r => r.addEventListener('change', switchFirmware));
+            [inCurrent, inMark, inRequest, inRemain].forEach(el => {
+                el.addEventListener('input', calculateMatrix);
+            });
+
+            switchFirmware();
+        });
+    </script>
+<script src="/components/tool-classic-upgrade.js"></script></body>
+</html>
