@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup, Comment, Doctype
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +38,8 @@ MANUAL = {
     "Search runs entirely in your browser": "検索はブラウザ内だけで実行されます",
     "Close search": "検索を閉じる",
     "Switch website language": "サイトの言語を切り替える",
+    "Choose language": "言語を選択",
+    "Language": "言語",
     "Change theme color": "テーマカラーを変更",
     "Theme": "テーマ",
     "Choose site theme": "サイトテーマを選択",
@@ -164,7 +166,7 @@ def collect_phrases_from_html(text: str, phrases: set[str]) -> None:
     soup = BeautifulSoup(text, "html.parser")
     skip = {"script", "style", "code", "pre", "textarea", "noscript"}
     for node in soup.find_all(string=True):
-        if isinstance(node, Comment) or not node.parent or node.parent.name in skip:
+        if isinstance(node, (Comment, Doctype)) or not node.parent or node.parent.name in skip:
             continue
         clean = normalize(str(node))
         if should_translate(clean) and len(clean) <= 1600:
@@ -268,7 +270,7 @@ def translate_soup(
 ) -> None:
     skip = {"script", "style", "code", "pre", "textarea", "noscript"}
     for node in soup.find_all(string=True):
-        if isinstance(node, Comment) or not node.parent or node.parent.name in skip:
+        if isinstance(node, (Comment, Doctype)) or not node.parent or node.parent.name in skip:
             continue
         if should_translate(str(node)):
             node.replace_with(translated(str(node), mapping))
@@ -354,11 +356,11 @@ def build_components(mapping: dict[str, str]) -> None:
         soup = BeautifulSoup(source.read_text(encoding="utf-8"), "html.parser")
         translate_soup(soup, mapping, component=True)
         for button in soup.select("[data-language-switch]"):
-            button["title"] = "繁體中文に切り替え"
-            button["aria-label"] = "繁體中文に切り替え"
+            button["title"] = "言語を選択"
+            button["aria-label"] = "言語を選択"
             label = button.select_one("[data-language-switch-label]")
             if label:
-                label.string = "繁體中文"
+                label.string = "言語"
         target = ROOT / "components" / f"{name}-ja.html"
         target.write_text(str(soup), encoding="utf-8")
 

@@ -38,6 +38,7 @@ for(const slug of pages){
   const file=path.join(root,'ja',...(slug?[slug,'index.html']:['index.html']));
   check(fs.existsSync(file),`Missing Japanese page: /ja/${slug}`);if(!fs.existsSync(file))continue;
   const html=read(file),s=seo(html),jaUrl=url(slug,'ja'),zhUrl=url(slug,'zh-Hant'),enUrl=url(slug,'en');
+  check(/^\s*<!doctype\s+html>\s*<html\b/i.test(html),`Japanese page has stray content before <html>: ${slug||'/'}`);
   check(s.canonical===jaUrl,`Japanese canonical mismatch ${slug||'/'}: ${s.canonical}`);
   for(const [label,expected] of [['zh-Hant',zhUrl],['en',enUrl],['ja',jaUrl],['x-default',enUrl]])check(s.alternates[label]===expected,`Japanese hreflang ${label} mismatch: ${slug||'/'}`);
   check(/<html\b[^>]*\blang=["']ja["']/i.test(html),`Japanese lang mismatch: ${slug||'/'}`);
@@ -69,7 +70,7 @@ check((sitemap.match(/<xhtml:link/g)||[]).length===locs.length*4,`Sitemap hrefla
 check((sitemap.match(/hreflang="ja"/g)||[]).length===locs.length,'Sitemap Japanese hreflang count mismatch');
 
 const language=read(path.join(root,'components','language.js')),search=read(path.join(root,'components','tool-search.js'));
-check(language.includes("current==='en'?'ja'")&&language.includes("locale==='ja'"),'Language switch does not include Japanese route');
+check(language.includes('showPrompt(true)')&&language.includes('data-language-choice="ja"')&&language.includes("locale==='ja'"),'Language chooser does not include Japanese route');
 check(search.includes('isJapanese')&&search.includes('個のツール'),'Search UI does not include Japanese locale');
 const allFiles=[];(function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){if(entry.name.startsWith('.'))continue;const full=path.join(dir,entry.name);entry.isDirectory()?walk(full):allFiles.push(full)}})(root);
 check(allFiles.length<=20000,`Deployment file count exceeds Wrangler direct upload limit: ${allFiles.length}`);
