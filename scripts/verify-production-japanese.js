@@ -8,8 +8,15 @@ if(slugs.length!==expectedTools)throw new Error(`Expected ${expectedTools} tools
 function checkPage(route,html){
   const expected=base+route;
   if(!/<html\b[^>]*\blang=["']ja["']/i.test(html))failures.push(`${route}: lang is not ja`);
-  const canonical=html.match(/<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["']([^"']+)["']/i)?.[1]||html.match(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']canonical["']/i)?.[1];
-  if(canonical!==expected)failures.push(`${route}: canonical=${canonical||'missing'}`);
+  const head=(html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1]||html)
+    .replace(/<!--[\s\S]*?-->/g,' ')
+    .replace(/<(script|style|template|noscript)\b[\s\S]*?<\/\1>/gi,' ');
+  const canonicals=[...head.matchAll(/<link\b[^>]*>/gi)]
+    .map(match=>match[0])
+    .filter(tag=>/\brel=["']canonical["']/i.test(tag))
+    .map(tag=>tag.match(/\bhref=["']([^"']+)["']/i)?.[1])
+    .filter(Boolean);
+  if(!canonicals.includes(expected))failures.push(`${route}: canonical=${canonicals.join(',')||'missing'}`);
   if(/href=["']\/en\//i.test(html))failures.push(`${route}: contains /en/ internal anchor`);
   if(/�/.test(html))failures.push(`${route}: replacement character found`);
 }
